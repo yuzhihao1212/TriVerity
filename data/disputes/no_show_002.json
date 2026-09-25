@@ -1,0 +1,19 @@
+{
+  "dispute_id": "D005",
+  "type": "no_show_charge",
+  "rider_claim": "I waited at the pickup point but the driver never came, and I was charged a no-show fee.",
+  "driver_statement": "I was at the pickup point and the rider didn't show up.",
+  "trip": {
+    "pickup_lat": 1.3521,
+    "pickup_lng": 103.8198,
+    "driver_arrival_lat": 1.3555,
+    "driver_arrival_lng": 103.8198,
+    "driver_wait_min": 6
+  },
+  "fare": {
+    "cancellation_fee": 4.0
+  },
+  "chat_logs": [
+    {"sender": "driver", "message": "I'm here, where are you?"}
+  ]
+}

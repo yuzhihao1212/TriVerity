@@ -1,0 +1,20 @@
+{
+  "dispute_id": "D006",
+  "type": "no_show_charge",
+  "rider_claim": "I was only a few minutes late and still got charged.",
+  "driver_statement": "I waited at the pickup point and messaged the rider, but they didn't come.",
+  "trip": {
+    "pickup_lat": 1.3521,
+    "pickup_lng": 103.8198,
+    "driver_arrival_lat": 1.3522,
+    "driver_arrival_lng": 103.8199,
+    "driver_wait_min": 7
+  },
+  "fare": {
+    "cancellation_fee": 4.0
+  },
+  "chat_logs": [
+    {"sender": "driver", "message": "I've arrived at the pickup point."},
+    {"sender": "driver", "message": "Still waiting, are you coming?"}
+  ]
+}

@@ -12,6 +12,7 @@ class TripData(BaseModel):
     pickup_lng: float | None = None
     driver_arrival_lat: float | None = None
     driver_arrival_lng: float | None = None
+    driver_wait_min: float | None = None
 
 class FareData(BaseModel):
     expected: float | None = None
@@ -25,6 +26,7 @@ class DisputeCase(BaseModel):
     driver_statement: str | None = None
     trip: TripData = Field(default_factory=TripData)
     fare: FareData = Field(default_factory=FareData)
+    # Each entry: {"sender": "rider" | "driver", "message": str, ...}
     chat_logs: list[dict[str, Any]] = Field(default_factory=list)
     gps_points: list[dict[str, Any]] = Field(default_factory=list)
     rider_history: dict[str, Any] = Field(default_factory=dict)

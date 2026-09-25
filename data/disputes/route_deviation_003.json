@@ -1,0 +1,16 @@
+{
+  "dispute_id": "D004",
+  "type": "route_deviation",
+  "rider_claim": "The driver took the expressway, which was a longer route.",
+  "driver_statement": "The direct road was jammed, so I used the expressway to get there faster.",
+  "trip": {
+    "expected_distance_km": 10.0,
+    "actual_distance_km": 13.0,
+    "expected_duration_min": 25,
+    "actual_duration_min": 21
+  },
+  "fare": {
+    "expected": 18.0,
+    "actual": 21.0
+  }
+}

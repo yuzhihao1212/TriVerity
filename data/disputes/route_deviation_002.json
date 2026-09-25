@@ -1,0 +1,16 @@
+{
+  "dispute_id": "D003",
+  "type": "route_deviation",
+  "rider_claim": "The driver went a slightly different way than the app suggested.",
+  "driver_statement": "I followed the navigation app.",
+  "trip": {
+    "expected_distance_km": 10.2,
+    "actual_distance_km": 11.0,
+    "expected_duration_min": 22,
+    "actual_duration_min": 23
+  },
+  "fare": {
+    "expected": 18.5,
+    "actual": 19.3
+  }
+}

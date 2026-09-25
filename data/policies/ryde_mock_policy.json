@@ -1,18 +1,45 @@
 {
-  "version": "0.1-mock",
+  "version": "0.2-mock",
   "note": "Hackathon mock policy. Replace with organiser-provided or team-defined policy rules.",
   "route_deviation": {
     "principles": [
       "Compare expected and actual route evidence.",
       "Consider legitimate traffic, safety or road-closure reasons.",
       "Avoid ruling solely from rider or driver narrative."
-    ]
+    ],
+    "thresholds": {
+      "max_distance_excess_ratio": 0.15
+    },
+    "rules": {
+      "RD-1": "A route up to 15% longer than expected is within normal tolerance; no refund is due.",
+      "RD-2": "A longer route that did not take longer than expected is consistent with avoiding congestion; no refund is due.",
+      "RD-3": "A route more than 15% longer than expected that also took longer is treated as an unjustified detour; the fare above the expected fare is refunded.",
+      "RD-4": "If expected and actual distance are not both available, the dispute is escalated to human review."
+    }
   },
   "no_show_charge": {
     "principles": [
       "Check driver proximity to pickup point.",
       "Check waiting time and communication attempts.",
       "Check cancellation timestamps before deciding."
-    ]
+    ],
+    "thresholds": {
+      "max_pickup_distance_m": 100,
+      "min_wait_min": 5
+    },
+    "rules": {
+      "NS-1": "A no-show fee applies only if the driver arrived within 100 m of the pickup point.",
+      "NS-2": "A no-show fee applies only if the driver waited at least 5 minutes after arriving.",
+      "NS-3": "A no-show fee applies only if the driver tried to contact the rider through in-app chat.",
+      "NS-4": "If the driver's arrival location or waiting time is missing, the dispute is escalated to human review."
+    }
+  },
+  "escalation": {
+    "thresholds": {
+      "min_confidence": 0.6
+    },
+    "rules": {
+      "ESC-1": "Any ruling with confidence below 60% is escalated to a human reviewer."
+    }
   }
 }

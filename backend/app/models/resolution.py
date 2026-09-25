@@ -1,5 +1,7 @@
-from typing import Any
+from typing import Literal
 from pydantic import BaseModel, Field
+
+Decision = Literal["partial_refund", "full_refund", "no_action", "needs_review"]
 
 class AgentCase(BaseModel):
     agent: str
@@ -7,12 +9,22 @@ class AgentCase(BaseModel):
     evidence: list[str] = Field(default_factory=list)
     policy_refs: list[str] = Field(default_factory=list)
 
-class Resolution(BaseModel):
-    decision: str
+class AgentLogEntry(BaseModel):
+    step: int
+    agent: str
+    status: str
+    message: str = ""
+
+class Ruling(BaseModel):
+    decision: Decision
     recommended_action: str
-    confidence: float
+    refund_amount: float | None = None
+    confidence: float = Field(ge=0.0, le=1.0)
     explanation: str
+    judge_evidence: list[str] = Field(default_factory=list)
+    policy_refs: list[str] = Field(default_factory=list)
+
+class Resolution(Ruling):
     rider_case: AgentCase
     driver_case: AgentCase
-    judge_evidence: list[str] = Field(default_factory=list)
-    agent_log: list[dict[str, Any]] = Field(default_factory=list)
+    agent_log: list[AgentLogEntry] = Field(default_factory=list)
