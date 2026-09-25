@@ -11,6 +11,8 @@ credentials.
 
 from __future__ import annotations
 
+import re
+
 import httpx
 
 from app.core.config import settings
@@ -19,6 +21,14 @@ OFFLINE_PLACEHOLDER = (
     "[LLM offline] no llm_api_key configured — returning placeholder response."
 )
 
+_CODE_FENCE_RE = re.compile(r"^\s*```(?:json)?\s*\n?(.*?)```\s*$", re.DOTALL)
+
+
+def _strip_fences(text: str) -> str:
+    """Strip ```json ... ``` fences if the model wrapped its output."""
+    match = _CODE_FENCE_RE.match(text)
+    return match.group(1).strip() if match else text.strip()
+
 
 def complete(system: str, user: str) -> str:
     """Send a chat-completions request and return the assistant's text.
@@ -26,6 +36,9 @@ def complete(system: str, user: str) -> str:
     Uses the OpenAI-compatible ``/chat/completions`` endpoint pointed at by
     ``settings.llm_base_url``.  If ``settings.llm_api_key`` is empty, returns
     :data:`OFFLINE_PLACEHOLDER` so callers (and tests) can run without a key.
+
+    Requests JSON-mode (``response_format``) so compatible providers return
+    parseable JSON, and strips ``\\`\\`\\`json`` code fences from the response.
     """
     if not settings.llm_api_key:
         return OFFLINE_PLACEHOLDER
@@ -43,6 +56,7 @@ def complete(system: str, user: str) -> str:
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
+        "response_format": {"type": "json_object"},
     }
 
     with httpx.Client(timeout=60) as client:
@@ -50,4 +64,4 @@ def complete(system: str, user: str) -> str:
         response.raise_for_status()
 
     data = response.json()
-    return data["choices"][0]["message"]["content"]
+    return _strip_fences(data["choices"][0]["message"]["content"])

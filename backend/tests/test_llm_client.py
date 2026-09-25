@@ -55,6 +55,7 @@ def test_sends_request_to_chat_completions(configured_settings):
         {"role": "system", "content": "system prompt"},
         {"role": "user", "content": "user prompt"},
     ]
+    assert payload["response_format"] == {"type": "json_object"}
 
 
 def test_uses_default_base_url_when_not_set(configured_settings, monkeypatch):

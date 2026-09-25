@@ -1,7 +1,7 @@
 # Ryde Multi-Agent Dispute Resolution
-Digital Native Track (Rdye)
+Digital Native Track (Ryde)
 
-Hackathon scaffold for Digital Native Track (Rdye): **Multi-Agent Autonomous Dispute Resolution System**.
+Hackathon scaffold for Digital Native Track (Ryde): **Multi-Agent Autonomous Dispute Resolution System**.
 
 ## MVP scope
 
