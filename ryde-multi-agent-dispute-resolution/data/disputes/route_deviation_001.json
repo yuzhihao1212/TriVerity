@@ -1,0 +1,21 @@
+{
+  "dispute_id": "D001",
+  "type": "route_deviation",
+  "rider_claim": "The driver took a much longer route and I was overcharged.",
+  "driver_statement": "I diverted because the normal road was congested.",
+  "trip": {
+    "expected_distance_km": 10.2,
+    "actual_distance_km": 14.7,
+    "expected_duration_min": 22,
+    "actual_duration_min": 35
+  },
+  "fare": {
+    "expected": 18.5,
+    "actual": 24.8,
+    "cancellation_fee": null
+  },
+  "chat_logs": [],
+  "gps_points": [],
+  "rider_history": {},
+  "driver_history": {}
+}

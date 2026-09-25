@@ -1,0 +1,19 @@
+{
+  "dispute_id": "D002",
+  "type": "no_show_charge",
+  "rider_claim": "The driver did not arrive at the pickup point but I was charged a cancellation fee.",
+  "driver_statement": "I arrived near the pickup point and waited for the rider.",
+  "trip": {
+    "pickup_lat": 1.3521,
+    "pickup_lng": 103.8198,
+    "driver_arrival_lat": 1.3526,
+    "driver_arrival_lng": 103.8204
+  },
+  "fare": {
+    "cancellation_fee": 4.0
+  },
+  "chat_logs": [],
+  "gps_points": [],
+  "rider_history": {},
+  "driver_history": {}
+}

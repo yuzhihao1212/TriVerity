@@ -1,0 +1,18 @@
+{
+  "version": "0.1-mock",
+  "note": "Hackathon mock policy. Replace with organiser-provided or team-defined policy rules.",
+  "route_deviation": {
+    "principles": [
+      "Compare expected and actual route evidence.",
+      "Consider legitimate traffic, safety or road-closure reasons.",
+      "Avoid ruling solely from rider or driver narrative."
+    ]
+  },
+  "no_show_charge": {
+    "principles": [
+      "Check driver proximity to pickup point.",
+      "Check waiting time and communication attempts.",
+      "Check cancellation timestamps before deciding."
+    ]
+  }
+}
