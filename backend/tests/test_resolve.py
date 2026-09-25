@@ -104,10 +104,17 @@ def test_every_ruling_is_explained_to_both_parties(sample):
 
 def test_refund_explanation_states_amount():
     result = resolve(load("route_deviation_001.json"))
-    assert "you will be refunded 6.30." in result["rider_explanation"]
-    assert "6.30" in result["driver_explanation"]
+    assert "you will be refunded $6.30." in result["rider_explanation"]
+    assert "$6.30" in result["driver_explanation"]
 
 def test_unknown_history_fields_are_accepted():
     payload = load("no_show_001.json")
     payload["rider_history"]["cancellation_rate"] = 0.4
     assert resolve(payload)["decision"] == "needs_review"
+
+def test_samples_endpoint_lists_every_sample():
+    response = client.get("/api/disputes/samples")
+    assert response.status_code == 200
+    ids = [case["dispute_id"] for case in response.json()]
+    assert len(ids) == len(list(DISPUTES.glob("*.json")))
+    assert ids == sorted(ids)

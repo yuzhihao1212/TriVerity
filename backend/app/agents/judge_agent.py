@@ -68,7 +68,7 @@ def _judge_route_deviation(case: DisputeCase, facts: CaseFacts, section: dict) -
         explanation += " The driver's explanation is noted but is not supported by the trip data."
     return Ruling(
         decision="partial_refund",
-        recommended_action=f"Refund {refund:.2f}, the fare charged above the expected fare.",
+        recommended_action=f"Refund ${refund:.2f}, the fare charged above the expected fare.",
         refund_amount=refund,
         confidence=confidence,
         explanation=explanation,
@@ -86,7 +86,7 @@ def _judge_no_show(case: DisputeCase, facts: CaseFacts, section: dict) -> Ruling
     def refund(rule_id: str, reason: str, confidence: float) -> Ruling:
         return Ruling(
             decision="full_refund",
-            recommended_action=f"Refund the no-show fee{f' of {fee:.2f}' if fee is not None else ''}.",
+            recommended_action=f"Refund the no-show fee{f' of ${fee:.2f}' if fee is not None else ''}.",
             refund_amount=fee,
             confidence=confidence,
             explanation=reason,
@@ -156,7 +156,7 @@ def _apply_escalation(ruling: Ruling, section: dict) -> Ruling:
 
 def _explain_to_parties(ruling: Ruling) -> Ruling:
     """Word the ruling for each party. Template baseline; an LLM can rewrite these later."""
-    amount = f" {ruling.refund_amount:.2f}" if ruling.refund_amount is not None else ""
+    amount = f" ${ruling.refund_amount:.2f}" if ruling.refund_amount is not None else ""
     reason = ruling.explanation
     match ruling.decision:
         case "partial_refund" | "full_refund":
