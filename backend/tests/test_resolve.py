@@ -63,3 +63,51 @@ def test_invalid_dispute_type_rejected():
     payload = load("route_deviation_001.json")
     payload["type"] = "lost_item"
     assert client.post("/api/disputes/resolve", json=payload).status_code == 422
+
+def test_threat_in_chat_escalates_to_human_review():
+    result = resolve(load("route_deviation_004.json"))
+    assert result["decision"] == "needs_review"
+    assert any(ref.startswith("SAFE-1:") for ref in result["policy_refs"])
+    # The fare ruling is kept as the proposal for the reviewer.
+    assert "RD-3" in " ".join(result["policy_refs"])
+    assert any("regret" in e for e in result["judge_evidence"])
+
+def test_chat_analysis_flags_agreement_and_disagreement():
+    evidence = " ".join(resolve(load("route_deviation_001.json"))["judge_evidence"])
+    assert 'Disagreement in chat: rider: "Why are we going this way?' in evidence
+    evidence = " ".join(resolve(load("no_show_003.json"))["judge_evidence"])
+    assert 'Agreement in chat: rider: "Ok, 5 more minutes."' in evidence
+
+def test_fare_breakdown_checked_against_charge():
+    evidence = resolve(load("route_deviation_001.json"))["judge_evidence"]
+    assert "Fare breakdown matches the charged fare" in evidence
+    evidence = resolve(load("route_deviation_004.json"))["judge_evidence"]
+    assert "Surge pricing applied: x1.2" in evidence
+    assert "Promo code RYDE10 applied (1.50 off)" in evidence
+    assert "Fare breakdown matches the charged fare" in evidence  # 23.40 itemised - 1.50 promo
+
+def test_fare_breakdown_mismatch_reported():
+    payload = load("route_deviation_001.json")
+    payload["fare"]["actual"] = 26.80
+    evidence = resolve(payload)["judge_evidence"]
+    assert "Charged fare is +2.00 vs the itemised breakdown" in evidence
+
+def test_history_included_in_evidence():
+    evidence = resolve(load("route_deviation_001.json"))["judge_evidence"]
+    assert "Driver history: account 1460 days old, rating 4.7, 3890 trips, 2 disputes in last 90 days" in evidence
+
+@pytest.mark.parametrize("sample", sorted(p.name for p in DISPUTES.glob("*.json")))
+def test_every_ruling_is_explained_to_both_parties(sample):
+    result = resolve(load(sample))
+    assert result["rider_explanation"].startswith("Your dispute")
+    assert result["driver_explanation"]
+
+def test_refund_explanation_states_amount():
+    result = resolve(load("route_deviation_001.json"))
+    assert "you will be refunded 6.30." in result["rider_explanation"]
+    assert "6.30" in result["driver_explanation"]
+
+def test_unknown_history_fields_are_accepted():
+    payload = load("no_show_001.json")
+    payload["rider_history"]["cancellation_rate"] = 0.4
+    assert resolve(payload)["decision"] == "needs_review"

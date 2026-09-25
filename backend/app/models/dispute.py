@@ -1,5 +1,5 @@
 from typing import Any, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 DisputeType = Literal["route_deviation", "no_show_charge"]
 
@@ -14,10 +14,35 @@ class TripData(BaseModel):
     driver_arrival_lng: float | None = None
     driver_wait_min: float | None = None
 
+class FareLine(BaseModel):
+    label: str
+    amount: float
+
 class FareData(BaseModel):
     expected: float | None = None
     actual: float | None = None
     cancellation_fee: float | None = None
+    surge_multiplier: float | None = None
+    promo_code: str | None = None
+    promo_discount: float | None = None
+    # Itemised charges before any promo discount, e.g. base, distance, time, surge, tolls.
+    breakdown: list[FareLine] = Field(default_factory=list)
+
+class ChatMessage(BaseModel):
+    # Keep unknown fields from external datasets instead of rejecting them.
+    model_config = ConfigDict(extra="allow")
+
+    sender: Literal["rider", "driver", "system"]
+    message: str
+    timestamp: str | None = None
+
+class PartyHistory(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    account_age_days: int | None = None
+    rating: float | None = None
+    completed_trips: int | None = None
+    disputes_last_90d: int | None = None
 
 class DisputeCase(BaseModel):
     dispute_id: str
@@ -26,8 +51,7 @@ class DisputeCase(BaseModel):
     driver_statement: str | None = None
     trip: TripData = Field(default_factory=TripData)
     fare: FareData = Field(default_factory=FareData)
-    # Each entry: {"sender": "rider" | "driver", "message": str, ...}
-    chat_logs: list[dict[str, Any]] = Field(default_factory=list)
+    chat_logs: list[ChatMessage] = Field(default_factory=list)
     gps_points: list[dict[str, Any]] = Field(default_factory=list)
-    rider_history: dict[str, Any] = Field(default_factory=dict)
-    driver_history: dict[str, Any] = Field(default_factory=dict)
+    rider_history: PartyHistory = Field(default_factory=PartyHistory)
+    driver_history: PartyHistory = Field(default_factory=PartyHistory)

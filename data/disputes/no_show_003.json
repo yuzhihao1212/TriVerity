@@ -14,7 +14,20 @@
     "cancellation_fee": 4.0
   },
   "chat_logs": [
-    {"sender": "driver", "message": "I've arrived at the pickup point."},
-    {"sender": "driver", "message": "Still waiting, are you coming?"}
+    {
+      "sender": "driver",
+      "message": "I've arrived at the pickup point.",
+      "timestamp": "2026-09-21T19:02:00+08:00"
+    },
+    {
+      "sender": "driver",
+      "message": "Still waiting, are you coming?",
+      "timestamp": "2026-09-21T19:06:00+08:00"
+    },
+    {
+      "sender": "rider",
+      "message": "Ok, 5 more minutes.",
+      "timestamp": "2026-09-21T19:07:00+08:00"
+    }
   ]
 }

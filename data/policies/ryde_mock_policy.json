@@ -1,5 +1,5 @@
 {
-  "version": "0.2-mock",
+  "version": "0.3-mock",
   "note": "Hackathon mock policy. Replace with organiser-provided or team-defined policy rules.",
   "route_deviation": {
     "principles": [
@@ -32,6 +32,11 @@
       "NS-2": "A no-show fee applies only if the driver waited at least 5 minutes after arriving.",
       "NS-3": "A no-show fee applies only if the driver tried to contact the rider through in-app chat.",
       "NS-4": "If the driver's arrival location or waiting time is missing, the dispute is escalated to human review."
+    }
+  },
+  "safety": {
+    "rules": {
+      "SAFE-1": "Any threatening message in the chat log is escalated to human review, whatever the fare outcome."
     }
   },
   "escalation": {

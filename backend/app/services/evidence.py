@@ -1,10 +1,32 @@
+import re
 from math import asin, cos, radians, sin, sqrt
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from app.models.dispute import DisputeCase
+from app.models.dispute import ChatMessage, DisputeCase, PartyHistory
 
 EARTH_RADIUS_M = 6_371_000
+
+# Keyword baseline for chat analysis. Swap for an LLM classifier later, keeping
+# the ChatAnalysis shape so the Judge and tests don't change.
+THREAT_PATTERNS = [
+    r"\bkill\b", r"\bhurt you\b", r"\bbeat you\b", r"\bfind you\b",
+    r"\bregret\b", r"\bwatch yourself\b", r"\bor else\b",
+]
+AGREEMENT_PATTERNS = [
+    r"\bok(ay)?\b", r"\bsure\b", r"\bagreed?\b", r"\bno problem\b",
+    r"\bsounds good\b", r"\bon my way\b",
+]
+DISAGREEMENT_PATTERNS = [
+    r"\bwrong\b", r"\bunfair\b", r"\bnot fair\b", r"\brefuse\b",
+    r"\bdisagree\b", r"\bnot true\b", r"\blying\b", r"\bliar\b",
+]
+
+class ChatAnalysis(BaseModel):
+    """Chat messages flagged by category, each quoted as 'sender: "message"'."""
+    threats: list[str] = Field(default_factory=list)
+    agreements: list[str] = Field(default_factory=list)
+    disagreements: list[str] = Field(default_factory=list)
 
 class CaseFacts(BaseModel):
     """Facts computed deterministically from the case data.
@@ -18,6 +40,15 @@ class CaseFacts(BaseModel):
     driver_distance_from_pickup_m: float | None = None
     driver_wait_min: float | None = None
     driver_contact_attempted: bool = False
+    surge_multiplier: float | None = None
+    promo_code: str | None = None
+    promo_discount: float | None = None
+    # Charged fare minus (itemised breakdown - promo discount); non-zero means the
+    # breakdown doesn't explain the charge.
+    fare_breakdown_gap: float | None = None
+    chat: ChatAnalysis = Field(default_factory=ChatAnalysis)
+    rider_history: PartyHistory = Field(default_factory=PartyHistory)
+    driver_history: PartyHistory = Field(default_factory=PartyHistory)
 
     def describe(self) -> list[str]:
         lines = []
@@ -36,7 +67,52 @@ class CaseFacts(BaseModel):
             if self.driver_contact_attempted
             else "No driver contact attempt in chat log"
         )
+        if self.surge_multiplier and self.surge_multiplier > 1:
+            lines.append(f"Surge pricing applied: x{self.surge_multiplier:g}")
+        if self.promo_code:
+            discount = f" ({self.promo_discount:.2f} off)" if self.promo_discount is not None else ""
+            lines.append(f"Promo code {self.promo_code} applied{discount}")
+        if self.fare_breakdown_gap is not None:
+            lines.append(
+                "Fare breakdown matches the charged fare"
+                if abs(self.fare_breakdown_gap) < 0.01
+                else f"Charged fare is {self.fare_breakdown_gap:+.2f} vs the itemised breakdown"
+            )
+        lines += [f"Threatening message: {m}" for m in self.chat.threats]
+        lines += [f"Agreement in chat: {m}" for m in self.chat.agreements]
+        lines += [f"Disagreement in chat: {m}" for m in self.chat.disagreements]
+        for party, history in (("Rider", self.rider_history), ("Driver", self.driver_history)):
+            summary = _describe_history(history)
+            if summary:
+                lines.append(f"{party} history: {summary}")
         return lines
+
+def _describe_history(history: PartyHistory) -> str:
+    parts = []
+    if history.account_age_days is not None:
+        parts.append(f"account {history.account_age_days} days old")
+    if history.rating is not None:
+        parts.append(f"rating {history.rating:g}")
+    if history.completed_trips is not None:
+        parts.append(f"{history.completed_trips} trips")
+    if history.disputes_last_90d is not None:
+        parts.append(f"{history.disputes_last_90d} disputes in last 90 days")
+    return ", ".join(parts)
+
+def _matches(text: str, patterns: list[str]) -> bool:
+    return any(re.search(p, text, re.IGNORECASE) for p in patterns)
+
+def analyse_chat(messages: list[ChatMessage]) -> ChatAnalysis:
+    analysis = ChatAnalysis()
+    for m in messages:
+        quoted = f'{m.sender}: "{m.message}"'
+        if _matches(m.message, THREAT_PATTERNS):
+            analysis.threats.append(quoted)
+        elif _matches(m.message, DISAGREEMENT_PATTERNS):
+            analysis.disagreements.append(quoted)
+        elif _matches(m.message, AGREEMENT_PATTERNS):
+            analysis.agreements.append(quoted)
+    return analysis
 
 def _excess_ratio(expected: float | None, actual: float | None) -> float | None:
     if not expected or actual is None:
@@ -61,11 +137,23 @@ def compute_facts(case: DisputeCase) -> CaseFacts:
     if all(c is not None for c in coords):
         pickup_distance = round(_haversine_m(*coords), 1)
 
+    breakdown_gap = None
+    if fare.breakdown and fare.actual is not None:
+        itemised = sum(line.amount for line in fare.breakdown) - (fare.promo_discount or 0.0)
+        breakdown_gap = round(fare.actual - itemised, 2)
+
     return CaseFacts(
         distance_excess_ratio=_excess_ratio(trip.expected_distance_km, trip.actual_distance_km),
         duration_excess_ratio=_excess_ratio(trip.expected_duration_min, trip.actual_duration_min),
         fare_difference=fare_difference,
         driver_distance_from_pickup_m=pickup_distance,
         driver_wait_min=trip.driver_wait_min,
-        driver_contact_attempted=any(m.get("sender") == "driver" for m in case.chat_logs),
+        driver_contact_attempted=any(m.sender == "driver" for m in case.chat_logs),
+        surge_multiplier=fare.surge_multiplier,
+        promo_code=fare.promo_code,
+        promo_discount=fare.promo_discount,
+        fare_breakdown_gap=breakdown_gap,
+        chat=analyse_chat(case.chat_logs),
+        rider_history=case.rider_history,
+        driver_history=case.driver_history,
     )

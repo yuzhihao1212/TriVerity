@@ -1,0 +1,61 @@
+{
+  "dispute_id": "D007",
+  "type": "route_deviation",
+  "rider_claim": "The driver took a detour, overcharged me and then threatened me when I complained.",
+  "driver_statement": "The rider was rude. I took the route the rider asked for.",
+  "trip": {
+    "expected_distance_km": 8.0,
+    "actual_distance_km": 11.2,
+    "expected_duration_min": 18,
+    "actual_duration_min": 27
+  },
+  "fare": {
+    "expected": 15.0,
+    "actual": 21.9,
+    "surge_multiplier": 1.2,
+    "promo_code": "RYDE10",
+    "promo_discount": 1.5,
+    "breakdown": [
+      {
+        "label": "Base fare",
+        "amount": 3.0
+      },
+      {
+        "label": "Distance (11.2 km)",
+        "amount": 11.2
+      },
+      {
+        "label": "Time (27 min)",
+        "amount": 5.4
+      },
+      {
+        "label": "Surge x1.2",
+        "amount": 3.8
+      }
+    ]
+  },
+  "chat_logs": [
+    {
+      "sender": "rider",
+      "message": "This is not the route I asked for, you're lying.",
+      "timestamp": "2026-09-22T22:40:00+08:00"
+    },
+    {
+      "sender": "driver",
+      "message": "Complain and you'll regret it.",
+      "timestamp": "2026-09-22T22:41:00+08:00"
+    }
+  ],
+  "rider_history": {
+    "account_age_days": 1200,
+    "rating": 4.9,
+    "completed_trips": 530,
+    "disputes_last_90d": 0
+  },
+  "driver_history": {
+    "account_age_days": 90,
+    "rating": 4.1,
+    "completed_trips": 310,
+    "disputes_last_90d": 4
+  }
+}

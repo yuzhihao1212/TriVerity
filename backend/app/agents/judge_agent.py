@@ -15,7 +15,9 @@ def judge(case: DisputeCase, facts: CaseFacts, rider_case: AgentCase, driver_cas
         ruling = _judge_route_deviation(case, facts, policy["route_deviation"])
     else:
         ruling = _judge_no_show(case, facts, policy["no_show_charge"])
-    return _apply_escalation(ruling, policy["escalation"])
+    ruling = _apply_safety(ruling, facts, policy["safety"])
+    ruling = _apply_escalation(ruling, policy["escalation"])
+    return _explain_to_parties(ruling)
 
 def _judge_route_deviation(case: DisputeCase, facts: CaseFacts, section: dict) -> Ruling:
     evidence = facts.describe()
@@ -133,11 +135,40 @@ def _judge_no_show(case: DisputeCase, facts: CaseFacts, section: dict) -> Ruling
         policy_refs=[cite(section, r) for r in ("NS-1", "NS-2", "NS-3")],
     )
 
-def _apply_escalation(ruling: Ruling, section: dict) -> Ruling:
-    if ruling.decision == "needs_review" or ruling.confidence >= section["thresholds"]["min_confidence"]:
-        return ruling
+def _escalate(ruling: Ruling, citation: str, reason: str | None = None) -> Ruling:
+    explanation = f"{reason} {ruling.explanation}" if reason else ruling.explanation
     return ruling.model_copy(update={
         "decision": "needs_review",
         "recommended_action": f"Escalate to a human reviewer (proposed: {ruling.recommended_action})",
-        "policy_refs": [*ruling.policy_refs, cite(section, "ESC-1")],
+        "explanation": explanation,
+        "policy_refs": [*ruling.policy_refs, citation],
     })
+
+def _apply_safety(ruling: Ruling, facts: CaseFacts, section: dict) -> Ruling:
+    if not facts.chat.threats:
+        return ruling
+    return _escalate(ruling, cite(section, "SAFE-1"), "The chat log contains a threatening message.")
+
+def _apply_escalation(ruling: Ruling, section: dict) -> Ruling:
+    if ruling.decision == "needs_review" or ruling.confidence >= section["thresholds"]["min_confidence"]:
+        return ruling
+    return _escalate(ruling, cite(section, "ESC-1"))
+
+def _explain_to_parties(ruling: Ruling) -> Ruling:
+    """Word the ruling for each party. Template baseline; an LLM can rewrite these later."""
+    amount = f" {ruling.refund_amount:.2f}" if ruling.refund_amount is not None else ""
+    reason = ruling.explanation
+    match ruling.decision:
+        case "partial_refund" | "full_refund":
+            rider = f"Your dispute was upheld and you will be refunded{amount}. {reason}"
+            driver = f"The rider has been refunded{amount}. {reason}"
+        case "compensation":
+            rider = f"Your dispute was upheld and you will receive compensation{amount}. {reason}"
+            driver = f"The rider will receive compensation{amount}. {reason}"
+        case "no_action":
+            rider = f"Your dispute was not upheld and the charge stands. {reason}"
+            driver = f"The rider's dispute was not upheld; no change to your earnings. {reason}"
+        case _:
+            rider = f"Your dispute has been passed to a human reviewer, who will contact you. {reason}"
+            driver = f"This dispute has been passed to a human reviewer, who will contact you. {reason}"
+    return ruling.model_copy(update={"rider_explanation": rider, "driver_explanation": driver})
