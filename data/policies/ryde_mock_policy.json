@@ -46,5 +46,10 @@
     "rules": {
       "ESC-1": "Any ruling with confidence below 60% is escalated to a human reviewer."
     }
+  },
+  "fraud": {
+    "rules": {
+      "FRAUD-1": "If either party shows a high bad-faith risk, the dispute is escalated to human review."
+    }
   }
 }

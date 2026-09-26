@@ -1,0 +1,48 @@
+{
+  "dispute_id": "D008",
+  "type": "route_deviation",
+  "rider_claim": "The driver took a much longer route and I was overcharged.",
+  "driver_statement": "I diverted because the normal road was congested.",
+  "trip": {
+    "expected_distance_km": 10.2,
+    "actual_distance_km": 14.7,
+    "expected_duration_min": 22,
+    "actual_duration_min": 35
+  },
+  "fare": {
+    "expected": 18.5,
+    "actual": 24.8,
+    "cancellation_fee": null,
+    "surge_multiplier": 1.0,
+    "breakdown": [
+      {"label": "Base fare", "amount": 3.1},
+      {"label": "Distance (14.7 km)", "amount": 14.7},
+      {"label": "Time (35 min)", "amount": 7.0}
+    ]
+  },
+  "chat_logs": [
+    {
+      "sender": "rider",
+      "message": "Why are we going this way? This is the wrong direction.",
+      "timestamp": "2026-09-25T08:12:00+08:00"
+    },
+    {
+      "sender": "driver",
+      "message": "Traffic on the usual road, this is faster.",
+      "timestamp": "2026-09-25T08:12:30+08:00"
+    }
+  ],
+  "gps_points": [],
+  "rider_history": {
+    "account_age_days": 20,
+    "rating": 4.0,
+    "completed_trips": 5,
+    "disputes_last_90d": 3
+  },
+  "driver_history": {
+    "account_age_days": 1460,
+    "rating": 4.7,
+    "completed_trips": 3890,
+    "disputes_last_90d": 2
+  }
+}

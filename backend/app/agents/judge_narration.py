@@ -35,12 +35,17 @@ SYSTEM = (
     "Only mention rule IDs listed in the ruling. Do not state consequences the ruling "
     "does not give, such as who pays, penalties or account actions. If the decision is needs_review, say a human "
     "reviewer will decide and do not promise any refund or outcome.\n"
+    "Never mention bad-faith or fraud risk, or either party's account or dispute history, in the "
+    "rider_explanation or driver_explanation. These are internal signals only.\n"
     "Respond with the JSON object only."
 )
 
 _AMOUNT_RE = re.compile(r"\$\s?(\d+(?:\.\d{1,2})?)")
 _RULE_ID_RE = re.compile(r"\b([A-Z]{2,5}-\d+)\b")
 _PROMISE_RE = re.compile(r"\b(will|shall) (be refunded|receive a refund|get a refund)\b", re.I)
+# Fraud and bad-faith signals and party history are internal evidence: they must never
+# reach the messages to the rider or the driver.
+_FORBIDDEN_PARTY_RE = re.compile(r"\b(fraud|bad[-\s]?faith|history|disputes?\s+in)\b", re.I)
 
 
 def narrate(case: DisputeCase, ruling: Ruling, rider_case: AgentCase, driver_case: AgentCase) -> Ruling:
@@ -108,6 +113,10 @@ def _check(texts: dict, case: DisputeCase, ruling: Ruling) -> str | None:
             return "rider explanation omits the refund amount"
     if ruling.decision == "needs_review" and _PROMISE_RE.search(joined):
         return "promises a refund on an escalated case"
+
+    for key in ("rider_explanation", "driver_explanation"):
+        if _FORBIDDEN_PARTY_RE.search(texts[key]):
+            return f"{key} mentions fraud, bad-faith or party history"
     return None
 
 

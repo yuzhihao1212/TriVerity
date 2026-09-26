@@ -44,6 +44,15 @@ export interface AgentCase {
   source: "llm" | "fallback";
 }
 
+export type RiskLevel = "low" | "medium" | "high";
+
+export interface RiskAssessment {
+  rider_risk: RiskLevel;
+  driver_risk: RiskLevel;
+  signals: string[];
+  summary: string;
+}
+
 export interface AgentLogEntry {
   step: number;
   agent: string;
@@ -64,5 +73,6 @@ export interface Resolution {
   policy_refs: string[];
   rider_case: AgentCase;
   driver_case: AgentCase;
+  risk: RiskAssessment;
   agent_log: AgentLogEntry[];
 }

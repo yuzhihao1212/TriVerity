@@ -1,10 +1,16 @@
 from app.agents.judge_narration import narrate
 from app.models.dispute import DisputeCase
-from app.models.resolution import AgentCase, Ruling
+from app.models.resolution import AgentCase, RiskAssessment, Ruling
 from app.services.evidence import CaseFacts
 from app.services.policy_service import cite, load_policy
 
-def judge(case: DisputeCase, facts: CaseFacts, rider_case: AgentCase, driver_case: AgentCase) -> Ruling:
+def judge(
+    case: DisputeCase,
+    facts: CaseFacts,
+    rider_case: AgentCase,
+    driver_case: AgentCase,
+    risk: RiskAssessment,
+) -> Ruling:
     """Policy-grounded judge that decides from computed facts only.
 
     The advocates' cases do not change the decision: narratives can't be
@@ -17,6 +23,7 @@ def judge(case: DisputeCase, facts: CaseFacts, rider_case: AgentCase, driver_cas
     else:
         ruling = _judge_no_show(case, facts, policy["no_show_charge"])
     ruling = _apply_safety(ruling, facts, policy["safety"])
+    ruling = _apply_fraud(ruling, risk, policy["fraud"])
     ruling = _apply_escalation(ruling, policy["escalation"])
     return narrate(case, _explain_to_parties(ruling), rider_case, driver_case)
 
@@ -137,6 +144,15 @@ def _judge_no_show(case: DisputeCase, facts: CaseFacts, section: dict) -> Ruling
     )
 
 def _escalate(ruling: Ruling, citation: str, reason: str | None = None) -> Ruling:
+    # If the ruling is already needs_review, a second escalation wraps the
+    # proposed action a second time. Instead, only fold in the new citation
+    # and (optionally) prepend the new reason to the explanation.
+    if ruling.decision == "needs_review":
+        explanation = f"{reason} {ruling.explanation}" if reason else ruling.explanation
+        return ruling.model_copy(update={
+            "explanation": explanation,
+            "policy_refs": [*ruling.policy_refs, citation],
+        })
     explanation = f"{reason} {ruling.explanation}" if reason else ruling.explanation
     return ruling.model_copy(update={
         "decision": "needs_review",
@@ -150,14 +166,40 @@ def _apply_safety(ruling: Ruling, facts: CaseFacts, section: dict) -> Ruling:
         return ruling
     return _escalate(ruling, cite(section, "SAFE-1"), "The chat log contains a threatening message.")
 
+def _apply_fraud(ruling: Ruling, risk: RiskAssessment, section: dict) -> Ruling:
+    if risk.rider_risk != "high" and risk.driver_risk != "high":
+        return ruling
+    high = [p for p, r in (("rider", risk.rider_risk), ("driver", risk.driver_risk)) if r == "high"]
+    return _escalate(
+        ruling,
+        cite(section, "FRAUD-1"),
+        f"The {' and '.join(high)} {'show' if len(high) > 1 else 'shows'} a high bad-faith risk.",
+    )
+
 def _apply_escalation(ruling: Ruling, section: dict) -> Ruling:
     if ruling.decision == "needs_review" or ruling.confidence >= section["thresholds"]["min_confidence"]:
         return ruling
     return _escalate(ruling, cite(section, "ESC-1"))
 
 def _explain_to_parties(ruling: Ruling) -> Ruling:
-    """Word the ruling for each party. Template baseline; an LLM can rewrite these later."""
+    """Word the ruling for each party. Template baseline; an LLM can rewrite these later.
+
+    Fraud/bad-faith signals never appear in the messages to either party; they
+    are internal evidence only. A FRAUD-1 escalation tells the parties only that
+    the dispute needs additional review.
+    """
     amount = f" ${ruling.refund_amount:.2f}" if ruling.refund_amount is not None else ""
+    is_fraud_escalation = any("FRAUD-1" in ref for ref in ruling.policy_refs)
+    if is_fraud_escalation:
+        rider = (
+            "Your dispute needs additional review. A human reviewer will "
+            "look into it and follow up with you."
+        )
+        driver = (
+            "This dispute needs additional review. A human reviewer will "
+            "look into it and follow up with you."
+        )
+        return ruling.model_copy(update={"rider_explanation": rider, "driver_explanation": driver})
     reason = ruling.explanation
     match ruling.decision:
         case "partial_refund" | "full_refund":

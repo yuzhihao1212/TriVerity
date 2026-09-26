@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 
 Decision = Literal["partial_refund", "full_refund", "compensation", "no_action", "needs_review"]
 CaseSource = Literal["llm", "fallback"]
+RiskLevel = Literal["low", "medium", "high"]
 
 class AgentCase(BaseModel):
     agent: str
@@ -10,6 +11,12 @@ class AgentCase(BaseModel):
     evidence: list[str] = Field(default_factory=list)
     policy_refs: list[str] = Field(default_factory=list)
     source: CaseSource = "fallback"
+
+class RiskAssessment(BaseModel):
+    rider_risk: RiskLevel = "low"
+    driver_risk: RiskLevel = "low"
+    signals: list[str] = Field(default_factory=list)
+    summary: str = ""
 
 class AgentLogEntry(BaseModel):
     step: int
@@ -34,4 +41,5 @@ class Ruling(BaseModel):
 class Resolution(Ruling):
     rider_case: AgentCase
     driver_case: AgentCase
+    risk: RiskAssessment = Field(default_factory=RiskAssessment)
     agent_log: list[AgentLogEntry] = Field(default_factory=list)

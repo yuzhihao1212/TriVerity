@@ -56,7 +56,7 @@ def test_response_includes_both_advocates_and_log():
     assert result["rider_case"]["agent"] == "rider_advocate"
     assert result["driver_case"]["agent"] == "driver_advocate"
     assert [e["agent"] for e in result["agent_log"]] == [
-        "evidence_loader", "rider_advocate", "driver_advocate", "judge",
+        "evidence_loader", "rider_advocate", "driver_advocate", "fraud_detector", "judge",
     ]
 
 def test_invalid_dispute_type_rejected():

@@ -21,7 +21,7 @@ Measured against the Ryde challenge brief and the hackathon submission requireme
 | | Goal | Status |
 |---|---|---|
 | ✅ | Escalation protocol | `SAFE-1` threats and `ESC-1` confidence below 60% go to human review |
-| ⬜ | Fraud and bad-faith detection agent | Next: risk signal from rider/driver history for the Judge |
+| ✅ | Fraud and bad-faith detection agent | Deterministic risk from history and contradicted claims; high risk escalates via `FRAUD-1` |
 | ⬜ | Policy and precedent agent | Past rulings as precedent for consistency |
 | ⬜ | Evidence collection agent, image analysis, feedback loop, SLA routing | Not planned |
 

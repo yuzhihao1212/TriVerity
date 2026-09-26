@@ -52,6 +52,12 @@ See `backend/app/models/resolution.py`.
   "policy_refs": ["RD-3: A route more than 15% longer ..."],
   "rider_case": {"agent": "rider_advocate", "summary": "string", "evidence": [], "policy_refs": [], "source": "llm | fallback"},
   "driver_case": {"agent": "driver_advocate", "summary": "string", "evidence": [], "policy_refs": [], "source": "llm | fallback"},
+  "risk": {
+    "rider_risk": "low | medium | high",
+    "driver_risk": "low | medium | high",
+    "signals": ["Rider has 4 disputes in the last 90 days"],
+    "summary": "Rider: medium risk (1 signal); Driver: low risk"
+  },
   "agent_log": [{"step": 1, "agent": "evidence_loader", "status": "completed", "message": "string"}]
 }
 ```
@@ -66,6 +72,11 @@ See `backend/app/models/resolution.py`.
 - `policy_refs` cite rule IDs from `data/policies/ryde_mock_policy.json`.
 - An advocate's `source` is `llm` when the model wrote its case, `fallback` when the
   deterministic backup was used (no key, API error or unusable reply).
+- `risk` is the Fraud & Bad-Faith Detection agent's assessment. `rider_risk` and
+  `driver_risk` are `"low"`, `"medium"` or `"high"`; `signals` lists human-readable
+  bad-faith indicators (e.g. 3+ disputes in 90 days, low rating, claims contradicted
+  by trip data). The fraud agent never changes a refund or penalises anyone; a
+  `high` risk for either party triggers `FRAUD-1` escalation to human review.
 - `compensation` is reserved for payouts beyond a refund; no rule produces it yet.
 
 Keep this contract stable so frontend and backend development can proceed independently.
