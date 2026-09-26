@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 import httpx
 import pytest
+from pydantic import ValidationError
 
 from app.agents.driver_agent import build_driver_case
 from app.agents.rider_agent import build_rider_case
@@ -72,6 +73,7 @@ def test_rider_valid_json(case, facts, section):
         result = build_rider_case(case, facts)
 
     assert result.agent == "rider_advocate"
+    assert result.source == "llm"
     assert result.summary == "Rider was overcharged due to detour."
     assert "Distance was +44% longer" in result.evidence
     assert result.policy_refs == [cite(section, "RD-3")]
@@ -86,6 +88,7 @@ def test_rider_fenced_json(case, facts, section):
     )):
         result = build_rider_case(case, facts)
 
+    assert result.source == "llm"
     assert result.summary == "Fenced response summary."
     assert "Fenced evidence" in result.evidence
     assert result.policy_refs == [cite(section, "RD-3")]
@@ -104,6 +107,7 @@ def test_rider_invented_rule_id_dropped(case, facts, section):
     )):
         result = build_rider_case(case, facts)
 
+    assert result.source == "llm"
     assert result.policy_refs == [cite(section, "RD-3"), cite(section, "RD-1")]
 
 
@@ -113,6 +117,7 @@ def test_rider_http_error_falls_back(case, facts):
         result = build_rider_case(case, facts)
 
     assert result.agent == "rider_advocate"
+    assert result.source == "fallback"
     assert result.summary.startswith("Rider disputes the charge:")
     assert result.policy_refs == []
     assert any("Rider claim:" in e for e in result.evidence)
@@ -125,6 +130,7 @@ def test_rider_offline_placeholder_falls_back(case, facts):
         result = build_rider_case(case, facts)
 
     assert result.agent == "rider_advocate"
+    assert result.source == "fallback"
     assert result.policy_refs == []
 
 
@@ -133,8 +139,64 @@ def test_rider_bad_json_falls_back(case, facts):
     with patch("app.agents._advocate.complete", return_value="not json at all"):
         result = build_rider_case(case, facts)
 
+    assert result.source == "fallback"
     assert result.policy_refs == []
     assert result.summary.startswith("Rider disputes the charge:")
+
+
+def test_rider_validation_error_falls_back(case, facts):
+    """When the parsed JSON fails pydantic validation (e.g. missing summary), fall back."""
+    with patch("app.agents._advocate.complete", return_value=json.dumps({
+        "evidence": ["some evidence"],
+        "policy_refs": [],
+    })):
+        result = build_rider_case(case, facts)
+
+    assert result.source == "fallback"
+    assert result.summary.startswith("Rider disputes the charge:")
+    assert result.policy_refs == []
+
+
+def test_rider_evidence_is_string_falls_back(case, facts):
+    """When evidence is a string instead of a list (AttributeError), fall back."""
+    with patch("app.agents._advocate.complete", return_value=json.dumps({
+        "summary": "Summary",
+        "evidence": "should be a list",
+        "policy_refs": [],
+    })):
+        result = build_rider_case(case, facts)
+
+    assert result.source == "fallback"
+    assert result.summary.startswith("Rider disputes the charge:")
+
+
+def test_rider_non_string_policy_refs_skipped(case, facts, section):
+    """Non-string policy refs (dicts, numbers) are skipped, valid ones kept."""
+    with patch("app.agents._advocate.complete", return_value=json.dumps({
+        "summary": "Summary",
+        "evidence": ["Evidence"],
+        "policy_refs": [
+            "RD-3: real text",
+            {"rule": "FAKE-1", "text": "object ref"},
+            42,
+            "RD-1: another real rule",
+            None,
+        ],
+    })):
+        result = build_rider_case(case, facts)
+
+    assert result.source == "llm"
+    assert result.policy_refs == [cite(section, "RD-3"), cite(section, "RD-1")]
+
+
+def test_rider_generic_exception_falls_back(case, facts):
+    """When complete() raises an unexpected exception, fall back."""
+    with patch("app.agents._advocate.complete", side_effect=RuntimeError("unexpected")):
+        result = build_rider_case(case, facts)
+
+    assert result.source == "fallback"
+    assert result.summary.startswith("Rider disputes the charge:")
+    assert result.policy_refs == []
 
 
 # -- Driver tests --------------------------------------------------------------
@@ -148,6 +210,7 @@ def test_driver_valid_json(case, facts, section):
         result = build_driver_case(case, facts)
 
     assert result.agent == "driver_advocate"
+    assert result.source == "llm"
     assert result.summary == "Driver had a legitimate traffic reason."
     assert result.policy_refs == [cite(section, "RD-2")]
 
@@ -160,6 +223,7 @@ def test_driver_fenced_json(case, facts, section):
     )):
         result = build_driver_case(case, facts)
 
+    assert result.source == "llm"
     assert result.summary == "Driver fenced summary."
     assert result.policy_refs == [cite(section, "RD-2")]
 
@@ -172,6 +236,7 @@ def test_driver_invented_rule_id_dropped(case, facts, section):
     )):
         result = build_driver_case(case, facts)
 
+    assert result.source == "llm"
     assert result.policy_refs == [cite(section, "RD-1")]
 
 
@@ -180,6 +245,7 @@ def test_driver_http_error_falls_back(case, facts):
         result = build_driver_case(case, facts)
 
     assert result.agent == "driver_advocate"
+    assert result.source == "fallback"
     assert result.summary.startswith("Driver's position:")
     assert result.policy_refs == []
     assert any("Driver statement:" in e for e in result.evidence)
@@ -191,6 +257,7 @@ def test_driver_offline_placeholder_falls_back(case, facts):
         result = build_driver_case(case, facts)
 
     assert result.agent == "driver_advocate"
+    assert result.source == "fallback"
     assert result.policy_refs == []
 
 
@@ -198,5 +265,77 @@ def test_driver_bad_json_falls_back(case, facts):
     with patch("app.agents._advocate.complete", return_value="{ broken"):
         result = build_driver_case(case, facts)
 
+    assert result.source == "fallback"
     assert result.policy_refs == []
     assert result.summary.startswith("Driver's position:")
+
+
+def test_driver_validation_error_falls_back(case, facts):
+    """When the parsed JSON fails pydantic validation (e.g. missing summary), fall back."""
+    with patch("app.agents._advocate.complete", return_value=json.dumps({
+        "evidence": ["some evidence"],
+        "policy_refs": [],
+    })):
+        result = build_driver_case(case, facts)
+
+    assert result.source == "fallback"
+    assert result.summary.startswith("Driver's position:")
+
+
+def test_driver_evidence_is_string_falls_back(case, facts):
+    """When evidence is a string instead of a list (AttributeError), fall back."""
+    with patch("app.agents._advocate.complete", return_value=json.dumps({
+        "summary": "Summary",
+        "evidence": "should be a list",
+        "policy_refs": [],
+    })):
+        result = build_driver_case(case, facts)
+
+    assert result.source == "fallback"
+    assert result.summary.startswith("Driver's position:")
+
+
+def test_driver_non_string_policy_refs_skipped(case, facts, section):
+    """Non-string policy refs (dicts, numbers) are skipped, valid ones kept."""
+    with patch("app.agents._advocate.complete", return_value=json.dumps({
+        "summary": "Summary",
+        "evidence": ["Evidence"],
+        "policy_refs": [
+            "RD-2: real",
+            {"rule": "FAKE"},
+            99,
+            "RD-1: another real",
+        ],
+    })):
+        result = build_driver_case(case, facts)
+
+    assert result.source == "llm"
+    assert result.policy_refs == [cite(section, "RD-2"), cite(section, "RD-1")]
+
+
+def test_driver_generic_exception_falls_back(case, facts):
+    """When complete() raises an unexpected exception, fall back."""
+    with patch("app.agents._advocate.complete", side_effect=ValueError("unexpected")):
+        result = build_driver_case(case, facts)
+
+    assert result.source == "fallback"
+    assert result.summary.startswith("Driver's position:")
+    assert result.policy_refs == []
+
+
+def test_rider_fallback_logs_warning(case, facts, caplog):
+    """A warning is logged with the reason when the fallback path is taken."""
+    import logging
+    with patch("app.agents._advocate.complete", side_effect=httpx.ConnectError("boom")):
+        with caplog.at_level(logging.WARNING, logger="app.agents._advocate"):
+            build_rider_case(case, facts)
+
+    assert any("fell back" in r.message and "rider_advocate" in r.message for r in caplog.records)
+
+
+def test_orchestrator_log_includes_source(case):
+    """The orchestrator's agent_log messages include the source tag."""
+    from app.services.orchestrator import resolve_dispute
+    rider_log = resolve_dispute(case).agent_log
+    advocate_msgs = [e.message for e in rider_log if e.agent in ("rider_advocate", "driver_advocate")]
+    assert all("[fallback]" in m for m in advocate_msgs)

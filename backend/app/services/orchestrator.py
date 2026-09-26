@@ -15,10 +15,10 @@ def resolve_dispute(case: DisputeCase) -> Resolution:
     log("evidence_loader", f"Computed {len(facts.describe())} facts from case data.")
 
     rider_case = build_rider_case(case, facts)
-    log("rider_advocate", rider_case.summary)
+    log("rider_advocate", f"[{rider_case.source}] {rider_case.summary}")
 
     driver_case = build_driver_case(case, facts)
-    log("driver_advocate", driver_case.summary)
+    log("driver_advocate", f"[{driver_case.source}] {driver_case.summary}")
 
     ruling = judge(case, facts, rider_case, driver_case)
     log("judge", f"{ruling.decision} ({ruling.confidence:.0%} confidence)")

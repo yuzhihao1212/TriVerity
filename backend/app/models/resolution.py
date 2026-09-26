@@ -2,12 +2,14 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 Decision = Literal["partial_refund", "full_refund", "compensation", "no_action", "needs_review"]
+CaseSource = Literal["llm", "fallback"]
 
 class AgentCase(BaseModel):
     agent: str
     summary: str
     evidence: list[str] = Field(default_factory=list)
     policy_refs: list[str] = Field(default_factory=list)
+    source: CaseSource = "fallback"
 
 class AgentLogEntry(BaseModel):
     step: int

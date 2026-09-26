@@ -7,22 +7,31 @@ Both ``build_rider_case`` and ``build_driver_case`` delegate to
 2. Strips ``\\`\\`\\`json`` code fences and parses the JSON response.
 3. Validates ``policy_refs`` — keeping only rule IDs that exist in the policy
    section and rebuilding each citation via ``cite()`` so the text is exact.
-4. Falls back to a deterministic ``AgentCase`` (with no policy refs) when the
-   LLM is offline, raises ``httpx.HTTPError``, or returns unparseable JSON.
+   Non-string refs are skipped instead of crashing.
+4. Falls back to a deterministic ``AgentCase`` (with no policy refs) on *any*
+   failure: the LLM is offline, raises any exception, returns unparseable JSON,
+   or the parsed output fails pydantic validation.
+
+The ``source`` field on ``AgentCase`` records whether the LLM path (``"llm"``)
+or the fallback path (``"fallback"``) produced the case, and a warning is
+logged with the reason whenever the fallback is taken.
 """
 
 from __future__ import annotations
 
 import json
+import logging
 import re
 
-import httpx
+from pydantic import ValidationError
 
 from app.models.dispute import DisputeCase
 from app.models.resolution import AgentCase
 from app.services.evidence import CaseFacts
 from app.services.llm_client import OFFLINE_PLACEHOLDER, _strip_fences, complete
 from app.services.policy_service import cite, load_policy
+
+logger = logging.getLogger(__name__)
 
 # Extracts a leading rule ID like "RD-3" or "SAFE-1" from a citation string.
 _RULE_ID_RE = re.compile(r"^([A-Z]+-\d+)")
@@ -34,11 +43,18 @@ def _policy_section(case: DisputeCase) -> dict:
     return policy.get(case.type, {})
 
 
-def _validate_refs(refs: list[str], section: dict) -> list[str]:
-    """Keep only refs whose rule ID exists in the section, rebuilt via cite()."""
+def _validate_refs(refs: object, section: dict) -> list[str]:
+    """Keep only refs whose rule ID exists in the section, rebuilt via cite().
+
+    Non-string entries (e.g. dicts or numbers) are silently skipped.
+    """
+    if not isinstance(refs, list):
+        return []
     valid_ids = set(section.get("rules", {}))
     validated: list[str] = []
     for ref in refs:
+        if not isinstance(ref, str):
+            continue
         match = _RULE_ID_RE.match(ref.strip())
         if match and match.group(1) in valid_ids:
             validated.append(cite(section, match.group(1)))
@@ -50,13 +66,16 @@ def _fallback(
     claim_line: str,
     summary: str,
     facts: CaseFacts,
+    reason: str,
 ) -> AgentCase:
     """Deterministic fallback with no policy citations."""
+    logger.warning("%s fell back to deterministic case: %s", agent, reason)
     return AgentCase(
         agent=agent,
         summary=summary,
         evidence=[claim_line, *facts.describe()],
         policy_refs=[],
+        source="fallback",
     )
 
 
@@ -89,19 +108,22 @@ def build_advocate_case(
     """
     try:
         raw = complete(system, user)
-    except httpx.HTTPError:
-        return _fallback(agent, claim_line, fallback_summary, facts)
+    except Exception as exc:
+        return _fallback(agent, claim_line, fallback_summary, facts, f"complete() raised {type(exc).__name__}: {exc}")
 
     if raw == OFFLINE_PLACEHOLDER:
-        return _fallback(agent, claim_line, fallback_summary, facts)
+        return _fallback(agent, claim_line, fallback_summary, facts, "no API key configured")
 
     try:
         parsed = json.loads(_strip_fences(raw))
-        return AgentCase(
+        case = AgentCase(
             agent=agent,
             summary=parsed["summary"],
             evidence=parsed.get("evidence", []),
-            policy_refs=_validate_refs(parsed.get("policy_refs", []), section),
+            policy_refs=_validate_refs(parsed.get("policy_refs"), section),
+            source="llm",
         )
-    except (json.JSONDecodeError, KeyError, TypeError):
-        return _fallback(agent, claim_line, fallback_summary, facts)
+    except (json.JSONDecodeError, KeyError, TypeError, ValidationError, AttributeError) as exc:
+        return _fallback(agent, claim_line, fallback_summary, facts, f"parse failed: {type(exc).__name__}: {exc}")
+
+    return case

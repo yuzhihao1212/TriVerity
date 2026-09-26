@@ -199,7 +199,12 @@ function Workflow({ resolution }: { resolution: Resolution }) {
 function AdvocateCard({ title, side, agentCase }: { title: string; side: string; agentCase: AgentCase }) {
   return (
     <div className={`advocate ${side}`}>
-      <h3>{title}</h3>
+      <h3>
+        {title}
+        <span className={`source-badge ${agentCase.source}`}>
+          {agentCase.source === "llm" ? "AI" : "Fallback"}
+        </span>
+      </h3>
       <p>{agentCase.summary}</p>
       <h4 className="section-label">Evidence</h4>
       <ul className="small">

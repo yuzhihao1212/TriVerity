@@ -41,6 +41,7 @@ export interface AgentCase {
   summary: string;
   evidence: string[];
   policy_refs: string[];
+  source: "llm" | "fallback";
 }
 
 export interface AgentLogEntry {
