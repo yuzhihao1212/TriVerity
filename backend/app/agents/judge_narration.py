@@ -43,6 +43,9 @@ SYSTEM = (
 _AMOUNT_RE = re.compile(r"\$\s?(\d+(?:\.\d{1,2})?)")
 _RULE_ID_RE = re.compile(r"\b([A-Z]{2,5}-\d+)\b")
 _PROMISE_RE = re.compile(r"\b(will|shall) (be refunded|receive a refund|get a refund)\b", re.I)
+# Fraud and bad-faith signals and party history are internal evidence: they must never
+# reach the messages to the rider or the driver.
+_FORBIDDEN_PARTY_RE = re.compile(r"\b(fraud|bad[-\s]?faith|history|disputes?\s+in)\b", re.I)
 
 
 def narrate(case: DisputeCase, ruling: Ruling, rider_case: AgentCase, driver_case: AgentCase) -> Ruling:
@@ -111,11 +114,6 @@ def _check(texts: dict, case: DisputeCase, ruling: Ruling) -> str | None:
     if ruling.decision == "needs_review" and _PROMISE_RE.search(joined):
         return "promises a refund on an escalated case"
 
-    # Fraud/bad-faith signals and party history must never appear in the
-    # messages to either party — they are internal evidence only.
-    _FORBIDDEN_PARTY_RE = re.compile(
-        r"\b(fraud|bad[-\s]?faith|bad faith|history|disputes?\s+in)\b", re.I
-    )
     for key in ("rider_explanation", "driver_explanation"):
         if _FORBIDDEN_PARTY_RE.search(texts[key]):
             return f"{key} mentions fraud, bad-faith or party history"

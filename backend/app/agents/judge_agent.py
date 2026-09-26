@@ -173,7 +173,7 @@ def _apply_fraud(ruling: Ruling, risk: RiskAssessment, section: dict) -> Ruling:
     return _escalate(
         ruling,
         cite(section, "FRAUD-1"),
-        f"The {' and '.join(high)} show a high bad-faith risk.",
+        f"The {' and '.join(high)} {'show' if len(high) > 1 else 'shows'} a high bad-faith risk.",
     )
 
 def _apply_escalation(ruling: Ruling, section: dict) -> Ruling:

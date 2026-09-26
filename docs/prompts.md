@@ -1,6 +1,7 @@
 # How prompts drive the agents
 
-TriVerity makes three LLM calls per dispute. Each has a narrow job, receives only verified inputs, and
+TriVerity makes three LLM calls per dispute. (The fourth agent, the Fraud detector, is deterministic and
+makes no LLM call.) Each has a narrow job, receives only verified inputs, and
 must answer in JSON that the code checks before use (see [architecture.md](architecture.md)).
 
 | Agent | Job | Prompt source |
@@ -63,28 +64,31 @@ and each advocate's argument and citations.
 **System prompt:**
 
 ```text
-You are the impartial Judge in a ride-hailing dispute resolution system. The ruling you are given is FINAL:
-it was decided by company policy rules from verified trip data. Do not change the decision, the amount, or
-the policy applied. Your job is to explain it.
+You are the impartial Judge in a ride-hailing dispute resolution system. The ruling you are given is
+FINAL: it was decided by company policy rules from verified trip data. Do not change the decision, the
+amount, or the policy applied. Your job is to explain it.
 Write a JSON object with three strings:
 - "explanation": 3-5 sentences for the case record, neutral in tone. State the decision and the policy
-  rule(s) applied by rule ID, the decisive facts, and respond to each advocate's main argument: say which
-  argument the facts support and why the other was not decisive.
+rule(s) applied by rule ID, the decisive facts, and respond to each advocate's main argument: say which
+argument the facts support and why the other was not decisive.
 - "rider_explanation": 2-3 plain, respectful sentences addressed to the rider as "you": the outcome, the
-  main reason, and what happens next.
-- "driver_explanation": the same, addressed to the driver. The rider filed this dispute, so call it
-  "the rider's dispute", never "your dispute".
+main reason, and what happens next.
+- "driver_explanation": the same, addressed to the driver. The rider filed this dispute, so call it "the
+rider's dispute", never "your dispute".
 Rules: use only the facts given. Describe decisions in plain words (e.g. "the fare stands", "a partial
 refund"), never internal codes such as no_action or needs_review. Write money exactly as given, with $ and
 two decimals. Only mention rule IDs listed in the ruling. Do not state consequences the ruling does not
 give, such as who pays, penalties or account actions. If the decision is needs_review, say a human
 reviewer will decide and do not promise any refund or outcome.
+Never mention bad-faith or fraud risk, or either party's account or dispute history, in the
+rider_explanation or driver_explanation. These are internal signals only.
 Respond with the JSON object only.
 ```
 
 **Output checks:** all three texts present; every `$` amount must be one that appears in the case; only
 rule IDs the ruling applied may be named; for a refund, the rider's message must state the amount; for an
-escalated case, no text may promise a refund. Otherwise the rule-based template wording is used.
+escalated case, no text may promise a refund; the rider and driver messages must not mention fraud, bad
+faith or anyone's history. Otherwise the rule-based template wording is used.
 
 **Example output** (D001):
 
@@ -108,6 +112,7 @@ after each change.
 | The Judge told the driver "$6.30 will be deducted from your earnings", which nothing in the case states | "Do not state consequences the ruling does not give" |
 | Messages said "decided as no_action" | "Describe decisions in plain words… never internal codes" |
 | The driver was told "your dispute" about the rider's dispute | Explicit instruction in the `driver_explanation` field |
+| After the Fraud detector was added, the rider was told "your account's dispute history triggered a review" and the driver "the rider's history led to review" | "Never mention bad-faith or fraud risk, or either party's account or dispute history" in party messages, plus a check that rejects them |
 
 Reasoning ("thinking") is turned off for all three calls. With it on, the two advocates alone took about
 40 seconds per dispute and the Judge's explanation about 20 more; with it off, a whole dispute takes 6–8

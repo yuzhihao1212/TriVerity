@@ -7,6 +7,8 @@ any API key.
 import json
 from pathlib import Path
 
+import pytest
+
 from app.agents.fraud_agent import assess_risk
 from app.models.dispute import DisputeCase
 from app.models.resolution import RiskAssessment
@@ -392,3 +394,20 @@ def test_narration_check_rejects_fraud_in_party_message():
     problem = _check(texts, case, ruling)
     assert problem is not None
     assert "fraud" in problem.lower()
+
+
+@pytest.mark.parametrize(
+    ("rider", "driver", "expected"),
+    [
+        ("high", "low", "The rider shows a high bad-faith risk."),
+        ("low", "high", "The driver shows a high bad-faith risk."),
+        ("high", "high", "The rider and driver show a high bad-faith risk."),
+    ],
+)
+def test_fraud_reason_grammar(rider, driver, expected):
+    from app.agents.judge_agent import _apply_fraud
+    from app.models.resolution import Ruling
+
+    ruling = Ruling(decision="no_action", recommended_action="Uphold the fare.", confidence=0.85, explanation="Base.")
+    risk = RiskAssessment(rider_risk=rider, driver_risk=driver)
+    assert _apply_fraud(ruling, risk, load_policy()["fraud"]).explanation.startswith(expected)
