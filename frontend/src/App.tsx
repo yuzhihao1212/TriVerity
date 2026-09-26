@@ -97,11 +97,14 @@ export default function App() {
               >
                 {resolving === selected.dispute_id ? "Agents working…" : resolution ? "Re-run agents" : "Resolve dispute"}
               </button>
-              <span className="small muted">
-                {resolution
-                  ? "Showing the saved result. Re-running calls the AI agents again."
-                  : "Runs the Rider advocate, Driver advocate and Judge (3 AI calls)."}
+              <span className="token-warning" role="note">
+                <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                  <path d="M8 1.5 15 14H1L8 1.5Z" fill="currentColor" />
+                  <path d="M8 6v3.5M8 11.4v.1" stroke="var(--warn-soft)" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+                Uses real AI tokens (~3–4k per run)
               </span>
+              {resolution && <span className="small muted">Showing the saved result.</span>}
             </div>
           )}
           {resolution && (
