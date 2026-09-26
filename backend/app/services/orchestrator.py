@@ -25,7 +25,7 @@ def resolve_dispute(case: DisputeCase) -> Resolution:
     log("driver_advocate", f"[{driver_case.source}] {driver_case.summary}")
 
     ruling = judge(case, facts, rider_case, driver_case)
-    log("judge", f"{ruling.decision} ({ruling.confidence:.0%} confidence)")
+    log("judge", f"[{ruling.explanation_source}] {ruling.decision} ({ruling.confidence:.0%} confidence)")
 
     return Resolution(
         **ruling.model_dump(),

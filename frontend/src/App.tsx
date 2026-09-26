@@ -231,7 +231,12 @@ function RulingPanel({ resolution }: { resolution: Resolution }) {
   return (
     <section className={`card ruling ${resolution.decision}`}>
       <div className="card-head">
-        <h2>Judge's ruling</h2>
+        <h2>
+          Judge's ruling
+          <span className={`source-badge ${resolution.explanation_source}`}>
+            {resolution.explanation_source === "llm" ? "AI" : "Fallback"}
+          </span>
+        </h2>
         <span className="decision">{DECISION_LABELS[resolution.decision]}</span>
       </div>
 

@@ -59,6 +59,7 @@ export interface Resolution {
   explanation: string;
   rider_explanation: string;
   driver_explanation: string;
+  explanation_source: "llm" | "fallback";
   judge_evidence: string[];
   policy_refs: string[];
   rider_case: AgentCase;

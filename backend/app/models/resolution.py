@@ -28,6 +28,8 @@ class Ruling(BaseModel):
     driver_explanation: str = ""
     judge_evidence: list[str] = Field(default_factory=list)
     policy_refs: list[str] = Field(default_factory=list)
+    # Whether the LLM wrote the three explanations or the rule templates were kept.
+    explanation_source: CaseSource = "fallback"
 
 class Resolution(Ruling):
     rider_case: AgentCase
