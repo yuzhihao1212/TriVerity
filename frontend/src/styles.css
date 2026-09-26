@@ -169,6 +169,43 @@ ul {
   overflow: hidden;
 }
 
+.dispute-done {
+  align-self: flex-start;
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 70px;
+  background: var(--neutral-soft);
+  color: var(--muted);
+}
+
+.run-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.run-button {
+  font: 600 15px Poppins, system-ui, sans-serif;
+  padding: 12px 28px;
+  border: none;
+  border-radius: 70px;
+  background: var(--accent);
+  color: var(--on-accent);
+  cursor: pointer;
+}
+
+.run-button:hover:not(:disabled) {
+  filter: brightness(0.95);
+}
+
+.run-button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
 .content {
   padding: 20px 24px 40px;
   display: flex;
