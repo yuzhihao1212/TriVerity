@@ -1,3 +1,4 @@
+from app.agents.judge_narration import narrate
 from app.models.dispute import DisputeCase
 from app.models.resolution import AgentCase, Ruling
 from app.services.evidence import CaseFacts
@@ -6,9 +7,9 @@ from app.services.policy_service import cite, load_policy
 def judge(case: DisputeCase, facts: CaseFacts, rider_case: AgentCase, driver_case: AgentCase) -> Ruling:
     """Policy-grounded judge that decides from computed facts only.
 
-    The advocates' cases are shown alongside the ruling but do not change it:
-    narratives can't be verified, facts can. An LLM may later write the
-    explanation, but the decision itself should stay rule-based and testable.
+    The advocates' cases do not change the decision: narratives can't be
+    verified, facts can. The LLM then explains the ruling and answers both
+    advocates (see judge_narration); the decision itself stays rule-based.
     """
     policy = load_policy()
     if case.type == "route_deviation":
@@ -17,7 +18,7 @@ def judge(case: DisputeCase, facts: CaseFacts, rider_case: AgentCase, driver_cas
         ruling = _judge_no_show(case, facts, policy["no_show_charge"])
     ruling = _apply_safety(ruling, facts, policy["safety"])
     ruling = _apply_escalation(ruling, policy["escalation"])
-    return _explain_to_parties(ruling)
+    return narrate(case, _explain_to_parties(ruling), rider_case, driver_case)
 
 def _judge_route_deviation(case: DisputeCase, facts: CaseFacts, section: dict) -> Ruling:
     evidence = facts.describe()

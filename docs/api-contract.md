@@ -47,6 +47,7 @@ See `backend/app/models/resolution.py`.
   "explanation": "string",
   "rider_explanation": "string",
   "driver_explanation": "string",
+  "explanation_source": "llm | fallback",
   "judge_evidence": ["string"],
   "policy_refs": ["RD-3: A route more than 15% longer ..."],
   "rider_case": {"agent": "rider_advocate", "summary": "string", "evidence": [], "policy_refs": [], "source": "llm | fallback"},
@@ -58,7 +59,10 @@ See `backend/app/models/resolution.py`.
 - `refund_amount` is `null` when no refund applies. On `needs_review` it is the amount
   proposed to the human reviewer.
 - `explanation` is the neutral reasoning; `rider_explanation` and `driver_explanation`
-  word the same ruling for each party.
+  word the same ruling for each party. The decision, amount and `policy_refs` always
+  come from the policy rules; the LLM only writes these three texts
+  (`explanation_source: "llm"`), and any text that contradicts the ruling is replaced
+  by the rule templates (`"fallback"`).
 - `policy_refs` cite rule IDs from `data/policies/ryde_mock_policy.json`.
 - An advocate's `source` is `llm` when the model wrote its case, `fallback` when the
   deterministic backup was used (no key, API error or unusable reply).

@@ -26,29 +26,36 @@ const AGENT_LABELS: Record<string, string> = {
 export default function App() {
   const [samples, setSamples] = useState<DisputeCase[]>([]);
   const [selected, setSelected] = useState<DisputeCase | null>(null);
-  const [resolution, setResolution] = useState<Resolution | null>(null);
-  const [loading, setLoading] = useState(false);
+  // Results are kept per dispute so revisiting a case doesn't call the LLM again.
+  const [results, setResults] = useState<Record<string, Resolution>>({});
+  const [resolving, setResolving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Loading the samples is free; the agents (and LLM tokens) only run on "Resolve".
   useEffect(() => {
     getSamples()
       .then((cases) => {
         setSamples(cases);
-        if (cases.length) select(cases[0]);
+        if (cases.length) setSelected(cases[0]);
       })
       .catch(() => setError("Can't reach the backend. Start it with: cd backend && uvicorn app.main:app --reload"));
   }, []);
 
   function select(dispute: DisputeCase) {
     setSelected(dispute);
-    setResolution(null);
     setError(null);
-    setLoading(true);
-    resolveDispute(dispute)
-      .then(setResolution)
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
   }
+
+  function resolve(dispute: DisputeCase) {
+    setError(null);
+    setResolving(dispute.dispute_id);
+    resolveDispute(dispute)
+      .then((r) => setResults((prev) => ({ ...prev, [dispute.dispute_id]: r })))
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setResolving(null));
+  }
+
+  const resolution = selected ? results[selected.dispute_id] : undefined;
 
   return (
     <div className="app">
@@ -71,6 +78,9 @@ export default function App() {
                 {d.dispute_id} · {TYPE_LABELS[d.type]}
               </span>
               <span className="dispute-claim">{d.rider_claim}</span>
+              {results[d.dispute_id] && (
+                <span className="dispute-done">{DECISION_LABELS[results[d.dispute_id].decision]}</span>
+              )}
             </button>
           ))}
         </nav>
@@ -78,7 +88,25 @@ export default function App() {
         <main className="content">
           {error && <div className="error">{error}</div>}
           {selected && <CasePanel dispute={selected} />}
-          {loading && <p className="muted">Resolving…</p>}
+          {selected && (
+            <div className="run-bar">
+              <button
+                className="run-button"
+                onClick={() => resolve(selected)}
+                disabled={resolving !== null}
+              >
+                {resolving === selected.dispute_id ? "Agents working…" : resolution ? "Re-run agents" : "Resolve dispute"}
+              </button>
+              <span className="token-warning" role="note">
+                <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                  <path d="M8 1.5 15 14H1L8 1.5Z" fill="currentColor" />
+                  <path d="M8 6v3.5M8 11.4v.1" stroke="var(--warn-soft)" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+                Uses real AI tokens (~3–4k per run)
+              </span>
+              {resolution && <span className="small muted">Showing the saved result.</span>}
+            </div>
+          )}
           {resolution && (
             <>
               <Workflow resolution={resolution} />
@@ -231,7 +259,12 @@ function RulingPanel({ resolution }: { resolution: Resolution }) {
   return (
     <section className={`card ruling ${resolution.decision}`}>
       <div className="card-head">
-        <h2>Judge's ruling</h2>
+        <h2>
+          Judge's ruling
+          <span className={`source-badge ${resolution.explanation_source}`}>
+            {resolution.explanation_source === "llm" ? "AI" : "Fallback"}
+          </span>
+        </h2>
         <span className="decision">{DECISION_LABELS[resolution.decision]}</span>
       </div>
 
