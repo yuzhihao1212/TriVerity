@@ -104,3 +104,21 @@ def test_raises_on_http_error(configured_settings):
 
         with pytest.raises(httpx.HTTPStatusError):
             complete("s", "u")
+
+
+@pytest.mark.parametrize("disabled", [True, False])
+def test_thinking_flag_controls_payload(configured_settings, monkeypatch, disabled):
+    monkeypatch.setattr(llm_client.settings, "llm_disable_thinking", disabled)
+    with patch("app.services.llm_client.httpx.Client") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.post.return_value = _mock_response("ok")
+        mock_client_cls.return_value = mock_client
+
+        complete("s", "u")
+
+    payload = mock_client.post.call_args.kwargs["json"]
+    assert ("thinking" in payload) is disabled
+    if disabled:
+        assert payload["thinking"] == {"type": "disabled"}

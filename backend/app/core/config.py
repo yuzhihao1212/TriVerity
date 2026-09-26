@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     llm_api_key: str = ""
     llm_model: str = ""
     llm_base_url: str = ""
+    # Sends `thinking: {"type": "disabled"}`; cuts Hy3 latency and tokens several-fold.
+    # Leave off for providers that reject unknown request fields.
+    llm_disable_thinking: bool = False
     database_url: str = "sqlite:///./ryde_disputes.db"
 
 settings = Settings()

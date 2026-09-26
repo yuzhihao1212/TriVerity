@@ -58,6 +58,8 @@ def complete(system: str, user: str) -> str:
         ],
         "response_format": {"type": "json_object"},
     }
+    if settings.llm_disable_thinking:
+        payload["thinking"] = {"type": "disabled"}
 
     with httpx.Client(timeout=60) as client:
         response = client.post(url, headers=headers, json=payload)

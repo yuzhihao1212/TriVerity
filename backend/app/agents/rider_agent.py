@@ -3,18 +3,9 @@ import json
 from app.models.dispute import DisputeCase
 from app.models.resolution import AgentCase
 from app.services.evidence import CaseFacts
-from app.agents._advocate import build_advocate_case, _policy_section
+from app.agents._advocate import _policy_section, advocate_system_prompt, build_advocate_case
 
-_SYSTEM = (
-    "You are the Rider Advocate in a ride-hailing dispute resolution system.\n"
-    "Your job: argue the rider's side using ONLY the provided case facts and the "
-    "rider's own claim. You must NEVER invent or contradict trip data (distances, "
-    "durations, fares, locations, wait times). Cite policy rule IDs verbatim from "
-    "the provided policy section when they support the rider's position.\n"
-    "Respond with a JSON object: {\"summary\": str, \"evidence\": [str], "
-    "\"policy_refs\": [str]}. Each policy_ref must start with the rule ID "
-    "followed by \": \" and the rule text."
-)
+_SYSTEM = advocate_system_prompt("rider", own_account="claim")
 
 
 def build_rider_case(case: DisputeCase, facts: CaseFacts) -> AgentCase:
