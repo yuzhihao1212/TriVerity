@@ -38,6 +38,14 @@ scripts/        run_sample.py: resolve every sample from the command line
 
 ## Getting started
 
+### Prerequisites
+
+- **Python 3.10 or newer** (the code uses `match` statements and `X | None` types; CI runs 3.12)
+- **Node.js 18, or 20 or newer** (required by Vite 5)
+- Git, and access to this private repository
+
+Check with `python3 --version` and `node --version`.
+
 ### Backend
 
 ```bash
