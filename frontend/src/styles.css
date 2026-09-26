@@ -402,6 +402,11 @@ blockquote.driver {
   color: var(--on-accent);
 }
 
+.step.fraud_detector .step-num {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
 .advocates {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -450,6 +455,65 @@ blockquote.driver {
 .source-badge.fallback {
   background: var(--warn-soft);
   color: var(--warn);
+}
+
+.risk-panel {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--neutral-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.risk-badges {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.risk-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.risk-party {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.risk-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.03em;
+}
+
+.risk-badge.low {
+  background: var(--neutral-soft);
+  color: var(--muted);
+}
+
+.risk-badge.medium {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.risk-badge.high {
+  background: var(--error-soft);
+  color: var(--error);
+}
+
+.risk-signals {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.risk-signals li {
+  color: var(--muted);
 }
 
 .ruling {

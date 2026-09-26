@@ -1,10 +1,16 @@
 from app.agents.judge_narration import narrate
 from app.models.dispute import DisputeCase
-from app.models.resolution import AgentCase, Ruling
+from app.models.resolution import AgentCase, RiskAssessment, Ruling
 from app.services.evidence import CaseFacts
 from app.services.policy_service import cite, load_policy
 
-def judge(case: DisputeCase, facts: CaseFacts, rider_case: AgentCase, driver_case: AgentCase) -> Ruling:
+def judge(
+    case: DisputeCase,
+    facts: CaseFacts,
+    rider_case: AgentCase,
+    driver_case: AgentCase,
+    risk: RiskAssessment,
+) -> Ruling:
     """Policy-grounded judge that decides from computed facts only.
 
     The advocates' cases do not change the decision: narratives can't be
@@ -17,6 +23,7 @@ def judge(case: DisputeCase, facts: CaseFacts, rider_case: AgentCase, driver_cas
     else:
         ruling = _judge_no_show(case, facts, policy["no_show_charge"])
     ruling = _apply_safety(ruling, facts, policy["safety"])
+    ruling = _apply_fraud(ruling, risk, policy["fraud"])
     ruling = _apply_escalation(ruling, policy["escalation"])
     return narrate(case, _explain_to_parties(ruling), rider_case, driver_case)
 
@@ -149,6 +156,16 @@ def _apply_safety(ruling: Ruling, facts: CaseFacts, section: dict) -> Ruling:
     if not facts.chat.threats:
         return ruling
     return _escalate(ruling, cite(section, "SAFE-1"), "The chat log contains a threatening message.")
+
+def _apply_fraud(ruling: Ruling, risk: RiskAssessment, section: dict) -> Ruling:
+    if risk.rider_risk != "high" and risk.driver_risk != "high":
+        return ruling
+    high_party = "rider" if risk.rider_risk == "high" else "driver"
+    return _escalate(
+        ruling,
+        cite(section, "FRAUD-1"),
+        f"The {high_party} shows a high bad-faith risk.",
+    )
 
 def _apply_escalation(ruling: Ruling, section: dict) -> Ruling:
     if ruling.decision == "needs_review" or ruling.confidence >= section["thresholds"]["min_confidence"]:

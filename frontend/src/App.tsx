@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { getSamples, resolveDispute } from "./services/api";
-import type { AgentCase, Decision, DisputeCase, PartyHistory, Resolution } from "./types";
+import type { AgentCase, Decision, DisputeCase, PartyHistory, Resolution, RiskLevel } from "./types";
 
 const TYPE_LABELS: Record<DisputeCase["type"], string> = {
   route_deviation: "Route deviation",
@@ -20,6 +20,7 @@ const AGENT_LABELS: Record<string, string> = {
   evidence_loader: "Evidence loader",
   rider_advocate: "Rider advocate",
   driver_advocate: "Driver advocate",
+  fraud_detector: "Fraud detector",
   judge: "Judge",
 };
 
@@ -216,11 +217,45 @@ function Workflow({ resolution }: { resolution: Resolution }) {
           </li>
         ))}
       </ol>
+      {resolution.risk.signals.length > 0 && <RiskPanel risk={resolution.risk} />}
       <div className="advocates">
         <AdvocateCard title="Rider advocate" side="rider" agentCase={resolution.rider_case} />
         <AdvocateCard title="Driver advocate" side="driver" agentCase={resolution.driver_case} />
       </div>
     </section>
+  );
+}
+
+function RiskPanel({ risk }: { risk: Resolution["risk"] }) {
+  return (
+    <div className="risk-panel">
+      <h3 className="section-label">Fraud & bad-faith risk</h3>
+      <div className="risk-badges">
+        <div className="risk-row">
+          <span className="risk-party">Rider</span>
+          <RiskBadge level={risk.rider_risk} />
+        </div>
+        <div className="risk-row">
+          <span className="risk-party">Driver</span>
+          <RiskBadge level={risk.driver_risk} />
+        </div>
+      </div>
+      {risk.signals.length > 0 && (
+        <ul className="small risk-signals">
+          {risk.signals.map((s, i) => (
+            <li key={i}>{s}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function RiskBadge({ level }: { level: RiskLevel }) {
+  return (
+    <span className={`risk-badge ${level}`}>
+      {level.charAt(0).toUpperCase() + level.slice(1)}
+    </span>
   );
 }
 
