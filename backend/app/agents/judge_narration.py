@@ -35,6 +35,8 @@ SYSTEM = (
     "Only mention rule IDs listed in the ruling. Do not state consequences the ruling "
     "does not give, such as who pays, penalties or account actions. If the decision is needs_review, say a human "
     "reviewer will decide and do not promise any refund or outcome.\n"
+    "Never mention bad-faith or fraud risk, or either party's account or dispute history, in the "
+    "rider_explanation or driver_explanation. These are internal signals only.\n"
     "Respond with the JSON object only."
 )
 
@@ -108,6 +110,15 @@ def _check(texts: dict, case: DisputeCase, ruling: Ruling) -> str | None:
             return "rider explanation omits the refund amount"
     if ruling.decision == "needs_review" and _PROMISE_RE.search(joined):
         return "promises a refund on an escalated case"
+
+    # Fraud/bad-faith signals and party history must never appear in the
+    # messages to either party — they are internal evidence only.
+    _FORBIDDEN_PARTY_RE = re.compile(
+        r"\b(fraud|bad[-\s]?faith|bad faith|history|disputes?\s+in)\b", re.I
+    )
+    for key in ("rider_explanation", "driver_explanation"):
+        if _FORBIDDEN_PARTY_RE.search(texts[key]):
+            return f"{key} mentions fraud, bad-faith or party history"
     return None
 
 

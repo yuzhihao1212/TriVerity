@@ -8,31 +8,36 @@ anyone; it only raises signals.
 
 from __future__ import annotations
 
-from app.models.dispute import DisputeCase
+from app.models.dispute import DisputeCase, PartyHistory
 from app.models.resolution import RiskAssessment
 from app.services.evidence import CaseFacts
 
 
 def _party_signals(
     party: str,
-    history: object,
+    history: PartyHistory,
     case: DisputeCase,
     facts: CaseFacts,
 ) -> list[str]:
     """Return human-readable bad-faith signals for one party."""
     signals: list[str] = []
 
-    disputes_90d = getattr(history, "disputes_last_90d", None)
-    account_age = getattr(history, "account_age_days", None)
-    rating = getattr(history, "rating", None)
+    disputes_90d = history.disputes_last_90d
+    account_age = history.account_age_days
+    rating = history.rating
 
+    many_disputes_fired = False
     if disputes_90d is not None and disputes_90d >= 3:
+        many_disputes_fired = True
         signals.append(
             f"{party} has {disputes_90d} disputes in the last 90 days"
         )
 
+    # Only count the new-account signal when the 3+ disputes signal did not
+    # already fire — a high-volume account already explains the risk.
     if (
-        account_age is not None
+        not many_disputes_fired
+        and account_age is not None
         and account_age < 30
         and disputes_90d is not None
         and disputes_90d >= 1
