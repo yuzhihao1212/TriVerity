@@ -80,6 +80,7 @@ _NEGATION_RE = re.compile(r"\b(no|not|never|without|nor|cannot|tidak|tiada|bukan
 # "whether a refund is due", "your request for a refund": not promises.
 _HEDGE_RE = re.compile(r"\b(whether|if|request\w*|ask\w*|seek\w*|sought|claim\w*)\b", re.IGNORECASE)
 _UPHELD_RE = re.compile(r"\bupheld\b", re.IGNORECASE)
+_CHARGE_RE = re.compile(r"\b(fare|charge|fee)s?\b", re.IGNORECASE)
 _STANDS_RE = re.compile(r"\b(charge|fare|fee)\s+(?:still\s+)?stands\b", re.IGNORECASE)
 _CONTEXT_WORDS = 5
 _REFUND_DECISIONS = ("partial_refund", "full_refund", "compensation")
@@ -213,7 +214,13 @@ def _wording_problem(text: str, decision: str) -> str | None:
         if decision not in _REFUND_DECISIONS and not negated and not _HEDGE_RE.search(context):
             return "promise: promises a refund the ruling does not give"
     for m in _UPHELD_RE.finditer(text):
-        negated = bool(_NEGATION_RE.search(_context(text, m.start())))
+        context = _context(text, m.start())
+        if _CHARGE_RE.search(context):
+            # "the fare is upheld" means the charge stands, not the dispute.
+            if decision != "no_action":
+                return "wording: says the charge stands against the decision"
+            continue
+        negated = bool(_NEGATION_RE.search(context))
         if decision == "needs_review" or (decision == "no_action" and not negated) \
                 or (decision in _REFUND_DECISIONS and negated):
             return "wording: says upheld or not upheld against the decision"

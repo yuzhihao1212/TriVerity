@@ -267,6 +267,28 @@ def test_good_narration_still_accepted(sample):
     assert result.rider_explanation == GOOD[sample]["rider_explanation"]
 
 
+def test_live_hy3_no_action_narration_accepted():
+    """A real Hy3 reply from the first live run (D003), wrongly rejected at first:
+    "the fare is upheld" means the charge stands, which is right for no_action."""
+    reply = {
+        "explanation": "The decision is to uphold the fare with no refund, applying policy rule RD-1 which states "
+                       "a route up to 15% longer than expected is within normal tolerance and no refund is due.",
+        "rider_explanation": "Your dispute was reviewed and the fare stands with no refund. The route was 8% longer "
+                             "than expected, which is within the 15% normal tolerance under our policy.",
+        "driver_explanation": "The rider's dispute was reviewed and the fare is upheld with no refund. The trip route "
+                              "was 8% longer than expected, which is within the 15% normal tolerance under policy rule RD-1.",
+    }
+    assert narrate(D003, reply).explanation_source == "llm"
+
+
+@pytest.mark.parametrize(("sample", "text"), [
+    (D001, "The fare is upheld and you will be refunded $6.30."),
+    (D007, "The charge is upheld while a reviewer checks it."),
+])
+def test_fare_upheld_rejected_unless_no_action(sample, text):
+    assert narrate(sample, {**GOOD[sample], "rider_explanation": text}).explanation_source == "fallback"
+
+
 ZW = "​"
 BAD_NARRATION = [
     # -- F5, on D003 (no_action, RD-1) --
