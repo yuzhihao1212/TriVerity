@@ -13,9 +13,11 @@ that has not been run is marked **to run**, never as clean.
 | Frontend, after fix | npm 11.9.0 | 2026-10-12 | f57d68a | all deps: 2 (1 moderate, 1 high), dev only; `--omit=dev`: **0** |
 | Logs carry no personal data | pytest | 2026-10-12 | b51e1d5 | `backend/tests/test_log_privacy.py` passes (failure modes of guide 3.2) |
 | Git history, interim regex pass (not gitleaks) | Python regex over `git log --all -p` | 2026-10-12 13:53 | 495a4a6 | 0 findings in 54 commits on 10 refs (local and remote-tracking; no PR refs) |
-| Git history, full scan | gitleaks | **to run** | | |
-| Git history, second tool | trufflehog | **to run** | | |
-| Working tree and docs | gitleaks `dir` | **to run** | | |
+| Git history on GitHub, all refs incl. 7 pull-request refs | gitleaks 8.24.2 (Docker), repo config | 2026-10-12 14:08 | mirror of origin at that time (`main` f5eb144, `security/api-hardening` f03845a) | **no leaks found** (35 commits scanned, 333 KB) |
+| Local history, every local branch (incl. unpushed PR 2-4) | gitleaks 8.24.2 (Docker), repo config | 2026-10-12 14:08 | local tips incl. cbfd76d | **no leaks found** (51 commits scanned, 462 KB) |
+| Working tree, incl. untracked and ignored files | gitleaks 8.24.2 `dir` (Docker) | 2026-10-12 14:09 | cbfd76d | 1 finding, **expected**: `llm-api-key-assignment` in `backend/.env` line 2 (the real key, git-ignored, never committed); nothing else |
+| Git history on GitHub, all refs incl. pull-request refs | trufflehog 3.88.0 (Docker), `--no-verification` | 2026-10-12 14:12 | same mirror, as a full clone | **0 findings** (344 chunks, 349 KB, 41 commits) |
+| Local history, every local branch | trufflehog 3.88.0 (Docker), `--no-verification` | 2026-10-12 14:11 | local tips | **0 findings** (540 chunks, 487 KB) |
 
 ## Python dependencies
 
@@ -57,10 +59,19 @@ runtime exposure.
 CI fails on any runtime advisory of high severity (`npm audit --omit=dev --audit-level=high`)
 and reports the full audit without failing.
 
-## Secrets in git history: to run
+## Secrets in git history
 
-gitleaks and trufflehog are not installed on the machine that prepared this file, so they
-have not been run. Run them as below and fill in the summary table (date, commit, result).
+Run on 2026-10-12 with the official Docker images (gitleaks 8.24.2, trufflehog 3.88.0);
+results are in the summary table. **No secret was found in any commit on any ref**,
+including closed pull requests. The only working-tree finding is the real key in
+`backend/.env`, which is expected: `git check-ignore backend/.env` prints the path,
+`git ls-files backend/.env` prints nothing, and `git log --all -- backend/.env` lists no
+commit. The custom `llm-api-key-assignment` rule matching that file also shows the rule
+catches the real key's format. Reports used `--redact` and were deleted after reading.
+
+Two practical notes from the run: trufflehog reads nothing from a bare `--mirror` clone
+(it reported 0 chunks, which is not a clean result), so scan a normal clone with the
+pull-request refs fetched; and on Windows, Docker Desktop must be running. To repeat:
 
 1. Get every ref, including closed pull requests (a mirror clone fetches `refs/pull/*`):
 
@@ -86,10 +97,13 @@ have not been run. Run them as below and fill in the summary table (date, commit
    and `git ls-files backend/.env` (prints nothing).
 
 3. trufflehog, which catches different things (`--no-verification`: it can't verify
-   TokenHub keys anyway, so "0 verified" would not mean clean):
+   TokenHub keys anyway, so "0 verified" would not mean clean). It needs a normal clone:
 
    ```bash
-   trufflehog git file://triverity-mirror.git --no-verification
+   git clone triverity-mirror.git triverity-full
+   git -C triverity-full fetch origin "+refs/pull/*:refs/remotes/origin/pr/*"
+   docker run --rm -v "$PWD:/scan:ro" trufflesecurity/trufflehog:3.88.0 \
+     git file:///scan/triverity-full --no-verification --no-update
    ```
 
 4. Also check by eye the CodeBuddy proof screenshots and any exported chat logs: a key in
