@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { DisputeForm } from "./DisputeForm";
 import { getSamples, resolveDispute } from "./services/api";
 import type { AgentCase, Decision, DisputeCase, PartyHistory, Resolution, RiskLevel } from "./types";
 
@@ -24,8 +25,33 @@ const AGENT_LABELS: Record<string, string> = {
   judge: "Judge",
 };
 
+// The judge types their access code; it is kept for this browser tab only and is
+// never part of the built bundle.
+const ACCESS_CODE_KEY = "triverity.accessCode";
+
+function loadAccessCode(): string {
+  try {
+    return sessionStorage.getItem(ACCESS_CODE_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function saveAccessCode(code: string) {
+  try {
+    if (code) sessionStorage.setItem(ACCESS_CODE_KEY, code);
+    else sessionStorage.removeItem(ACCESS_CODE_KEY);
+  } catch {
+    // Storage blocked: the code still works until the page reloads.
+  }
+}
+
 export default function App() {
   const [samples, setSamples] = useState<DisputeCase[]>([]);
+  // Disputes the judge typed in; resolved with their access code.
+  const [own, setOwn] = useState<DisputeCase[]>([]);
+  const [form, setForm] = useState<{ template?: DisputeCase } | null>(null);
+  const [accessCode, setAccessCode] = useState(loadAccessCode);
   const [selected, setSelected] = useState<DisputeCase | null>(null);
   // Results are kept per dispute so revisiting a case doesn't call the LLM again.
   const [results, setResults] = useState<Record<string, Resolution>>({});
@@ -44,13 +70,27 @@ export default function App() {
 
   function select(dispute: DisputeCase) {
     setSelected(dispute);
+    setForm(null);
     setError(null);
+  }
+
+  function addOwn(dispute: DisputeCase) {
+    setOwn((prev) => [dispute, ...prev]);
+    select(dispute);
+  }
+
+  function changeAccessCode(code: string) {
+    setAccessCode(code);
+    saveAccessCode(code.trim());
   }
 
   function resolve(dispute: DisputeCase) {
     setError(null);
     setResolving(dispute.dispute_id);
-    resolveDispute(dispute)
+    // Samples never send the code: they are served from the server's cache and
+    // don't use up the judge's quota.
+    const isOwn = own.some((d) => d.dispute_id === dispute.dispute_id);
+    resolveDispute(dispute, isOwn ? accessCode.trim() || undefined : undefined)
       .then((r) => setResults((prev) => ({ ...prev, [dispute.dispute_id]: r })))
       .catch((e: Error) => setError(e.message))
       .finally(() => setResolving(null));
@@ -58,38 +98,75 @@ export default function App() {
 
   const resolution = selected ? results[selected.dispute_id] : undefined;
 
+  const disputeButton = (d: DisputeCase) => (
+    <button
+      key={d.dispute_id}
+      className={`dispute-item ${!form && selected?.dispute_id === d.dispute_id ? "active" : ""}`}
+      onClick={() => select(d)}
+    >
+      <span className="dispute-meta">
+        {d.dispute_id} · {TYPE_LABELS[d.type]}
+      </span>
+      <span className="dispute-claim">{d.rider_claim}</span>
+      {results[d.dispute_id] && (
+        <span className="dispute-done">{DECISION_LABELS[results[d.dispute_id].decision]}</span>
+      )}
+    </button>
+  );
+
   return (
     <div className="app">
       <header className="topbar">
         <h1 className="brand">TriVerity</h1>
         <span className="muted">Multi-agent dispute resolution for Ryde</span>
-        <span className="pill">Demo</span>
+        <div className="topbar-right">
+          <label className="access-code">
+            <span className="small muted">Judge access code</span>
+            <input
+              type="password"
+              autoComplete="off"
+              spellCheck={false}
+              value={accessCode}
+              onChange={(e) => changeAccessCode(e.target.value)}
+              placeholder="Needed for your own disputes"
+            />
+          </label>
+          <span
+            className="pill"
+            title="Internal reviewer view: it shows fraud signals and both parties' data, which riders and drivers never see."
+          >
+            Reviewer console
+          </span>
+        </div>
       </header>
 
       <div className="layout">
-        <nav className="sidebar" aria-label="Sample disputes">
+        <nav className="sidebar" aria-label="Disputes">
+          <button className="secondary-button" onClick={() => { setForm({}); setError(null); }}>
+            + New dispute
+          </button>
+          {own.length > 0 && (
+            <>
+              <h2 className="section-label">Your disputes</h2>
+              {own.map(disputeButton)}
+            </>
+          )}
           <h2 className="section-label">Sample disputes</h2>
-          {samples.map((d) => (
-            <button
-              key={d.dispute_id}
-              className={`dispute-item ${selected?.dispute_id === d.dispute_id ? "active" : ""}`}
-              onClick={() => select(d)}
-            >
-              <span className="dispute-meta">
-                {d.dispute_id} · {TYPE_LABELS[d.type]}
-              </span>
-              <span className="dispute-claim">{d.rider_claim}</span>
-              {results[d.dispute_id] && (
-                <span className="dispute-done">{DECISION_LABELS[results[d.dispute_id].decision]}</span>
-              )}
-            </button>
-          ))}
+          {samples.map(disputeButton)}
         </nav>
 
         <main className="content">
           {error && <div className="error">{error}</div>}
-          {selected && <CasePanel dispute={selected} />}
-          {selected && (
+          {form && (
+            <DisputeForm
+              key={form.template?.dispute_id ?? "blank"}
+              template={form.template}
+              onSubmit={addOwn}
+              onCancel={() => setForm(null)}
+            />
+          )}
+          {!form && selected && <CasePanel dispute={selected} />}
+          {!form && selected && (
             <div className="run-bar">
               <button
                 className="run-button"
@@ -106,9 +183,12 @@ export default function App() {
                 Uses real AI tokens (~3–4k per run)
               </span>
               {resolution && <span className="small muted">Showing the saved result.</span>}
+              <button className="secondary-button" onClick={() => { setForm({ template: selected }); setError(null); }}>
+                Edit as new dispute
+              </button>
             </div>
           )}
-          {resolution && (
+          {!form && resolution && (
             <>
               <Workflow resolution={resolution} />
               <RulingPanel resolution={resolution} />

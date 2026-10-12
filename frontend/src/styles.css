@@ -100,8 +100,81 @@ ul {
   color: var(--accent);
 }
 
-.topbar .pill {
+.topbar-right {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.access-code {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.access-code input {
+  width: 220px;
+}
+
+.topbar .pill {
+  cursor: help;
+}
+
+input,
+textarea,
+select {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 7px 10px;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+textarea {
+  resize: vertical;
+  width: 100%;
+}
+
+.dispute-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dispute-form label .muted {
+  font-weight: 400;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px 16px;
+}
+
+.secondary-button {
+  font: 600 14px Poppins, system-ui, sans-serif;
+  padding: 10px 20px;
+  border: 1px solid var(--accent);
+  border-radius: 70px;
+  background: var(--surface);
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.secondary-button:hover {
+  background: var(--accent-soft);
 }
 
 .pill {
@@ -616,6 +689,14 @@ blockquote.driver {
 
   .content {
     padding: 16px;
+  }
+
+  .topbar {
+    flex-wrap: wrap;
+  }
+
+  .access-code input {
+    width: 100%;
   }
 
   .statements,

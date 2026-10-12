@@ -2,10 +2,37 @@ import type { DisputeCase, Resolution } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "/api";
 
+/** An API error with a message a judge can act on (see docs/api-contract.md, "Limits and errors"). */
+export class ApiError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+  }
+}
+
+function describe(status: number, retryAfter: number | null): string {
+  switch (status) {
+    case 401:
+      return "Access code not recognised. Check it and try again.";
+    case 404:
+      return "This demo resolves the sample disputes only. Enter your access code (top right) to submit your own.";
+    case 413:
+      return "That dispute is too large to send.";
+    case 422:
+      return "Some fields are too long or out of range: claims and statements up to 2,000 characters, up to 50 chat messages of 500 characters, and realistic trip and fare numbers.";
+    case 429:
+      return `Rate limit reached. Try again in ${retryAfter ?? 60} seconds.`;
+    case 503:
+      return `The agents are busy with other disputes. Try again in ${retryAfter ?? 5} seconds.`;
+    default:
+      return `API error: ${status}`;
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, init);
   if (!response.ok) {
-    throw new Error(`API error: ${response.status}`);
+    const retryAfter = Number(response.headers.get("Retry-After")) || null;
+    throw new ApiError(response.status, describe(response.status, retryAfter));
   }
   return response.json();
 }
@@ -14,10 +41,13 @@ export function getSamples() {
   return request<DisputeCase[]>("/disputes/samples");
 }
 
-export function resolveDispute(payload: DisputeCase) {
+/** Resolve a dispute. Pass the judge's access code only for their own disputes. */
+export function resolveDispute(payload: DisputeCase, accessCode?: string) {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (accessCode) headers["X-Demo-Key"] = accessCode;
   return request<Resolution>("/disputes/resolve", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(payload),
   });
 }
