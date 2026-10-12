@@ -1,0 +1,61 @@
+name: Security checks
+
+# Secret scan of the full history, and dependency audits for the backend and the
+# frontend. Separate from backend-tests.yml. Results and accepted risks: docs/security-scans.md.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 2 * * 1"   # weekly, Monday 02:00 UTC, to catch newly published advisories
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history, not just the last commit
+      - name: Install gitleaks
+        env:
+          GITLEAKS_VERSION: "8.24.2"
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz gitleaks
+      - name: Scan the full git history
+        run: ./gitleaks git --config .gitleaks.toml --redact --verbose .
+
+  pip-audit:
+    name: Python dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pip-audit==2.10.1
+      - run: pip-audit -r backend/requirements-dev.txt
+
+  npm-audit:
+    name: Frontend dependency audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm ci
+      - name: Runtime dependencies (must be clean)
+        run: npm audit --omit=dev --audit-level=high
+      - name: All dependencies (report only; dev-server advisory accepted, see docs/security-scans.md)
+        run: npm audit
+        continue-on-error: true
