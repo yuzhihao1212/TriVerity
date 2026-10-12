@@ -1,7 +1,29 @@
-fastapi
-uvicorn[standard]
-pydantic
-pydantic-settings
-python-dotenv
-httpx
-pytest
+# Runtime dependencies, pinned so installs and audits are reproducible (finding F12).
+# Frozen from a clean virtual environment on 2026-10-12 (Python 3.13). To upgrade: install
+# the unpinned names (fastapi uvicorn[standard] pydantic pydantic-settings python-dotenv httpx)
+# in a fresh venv, run the tests, then `pip freeze` and copy the result here.
+# Test-only packages are in requirements-dev.txt.
+annotated-doc==0.0.5
+annotated-types==0.8.0
+anyio==4.15.1
+certifi==2026.7.22
+click==8.5.0
+fastapi==0.143.0
+h11==0.16.0
+httpcore==1.0.9
+httptools==0.9.0
+httpx==0.28.1
+idna==3.20
+opentelemetry-api==1.45.1
+pydantic==2.14.1
+pydantic-settings==2.15.0
+pydantic_core==2.50.1
+python-dotenv==1.2.4
+PyYAML==6.0.3
+starlette==1.7.0
+typing-inspection==0.4.4
+typing_extensions==4.16.0
+# [standard] also installs uvloop on Linux and macOS (not pinned here: it is not available on Windows).
+uvicorn[standard]==0.54.0
+watchfiles==1.3.0
+websockets==17.2

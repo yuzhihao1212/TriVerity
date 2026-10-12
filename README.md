@@ -83,7 +83,9 @@ LLM calls (about 3–4k tokens).
 ### Tests
 
 ```bash
-cd backend && pytest
+cd backend
+pip install -r requirements-dev.txt   # once: adds pytest to the pinned runtime packages
+pytest
 ```
 
 Tests never call a real LLM.
