@@ -115,7 +115,7 @@ brackets; OWASP LLM Top 10 (2025) IDs where they apply. Tests are in `backend/te
 | T-10 | Client forges a chat sender (`driver`) to satisfy NS-3 (S, T) | 1 | A2 | 2 x 3 | public demo resolves only server-side samples for visitors; production loads chat from Ryde's records | `test_pi21_forged_driver_message_changes_no_show_ruling` (documents the gap) | **accepted for the prototype**; judges with codes can do it |
 | T-11 | Keyword abuse ("kill the time") forces SAFE-1 escalation and floods reviewers (D; finding F7) | 1 | A5 | 3 x 2 | documented; escalations are visible; context-aware classifier with keyword fallback planned (Lennon) | `test_pi20_keyword_abuse_forces_human_review_finding_f7` | queue flooding is possible; money is unchanged |
 | T-12 | Personal data or model output written to logs (I; finding F9) | 3 | A3 | 3 x 2 | log sites record only the error class and HTTP status (`safe_reason`) and short check categories | `test_log_privacy.py::test_failure_logs_carry_no_personal_data` (8 failure modes), `test_real_client_error_logged_safely` | uvicorn's access log records client IPs and paths |
-| T-13 | API key or access code committed or shown in a screenshot (I) | 5 | A1, A8 | 2 x 3 | `.env` ignored; gitleaks rules for `LLM_API_KEY`, `DEMO_ACCESS_CODES` and Tencent SecretIds in pre-commit and CI; codes shown once and only in the terminal; screenshot checklist | `.gitleaks.toml`, `.github/workflows/security.yml`, `test_setup_demo_access.py::test_list_shows_names_not_codes`, `docs/security-scans.md` | human error; the full gitleaks history scan is still **to run** |
+| T-13 | API key or access code committed or shown in a screenshot (I) | 5 | A1, A8 | 2 x 3 | `.env` ignored; gitleaks rules for `LLM_API_KEY`, `DEMO_ACCESS_CODES` and Tencent SecretIds in pre-commit and CI; codes shown once and only in the terminal; screenshot checklist | `.gitleaks.toml`, `.github/workflows/security.yml`, `test_setup_demo_access.py::test_list_shows_names_not_codes`, `docs/security-scans.md` (gitleaks and trufflehog over every ref incl. pull requests: no secrets) | human error, e.g. a key in a screenshot |
 | T-14 | Guessing or timing an access code (S, E) | 1 | A8 | 1 x 2 | codes of 18 random bytes, at least 16 characters, compared in constant time; wrong code gets 401; limits per code | `test_demo_access.py::test_code_compared_in_constant_time`, `test_wrong_code_rejected`, `test_short_codes_are_never_accepted` | a code shared beyond its judge (revoke by name) |
 | T-15 | Spoofed client IP via `X-Forwarded-For` to dodge rate limits (S) | 1 | A1 | 2 x 2 | uvicorn trusts forwarded headers only from the proxy IP (`--forwarded-allow-ips`), documented | `docs/demo-deployment.md` | misconfiguration at deploy time |
 | T-16 | Vulnerable dependency (E; LLM03) | 5 | A7 | 2 x 2 | pinned Python requirements; build tools in devDependencies; pip-audit and npm audit in CI | `docs/security-scans.md` (pip-audit clean; npm runtime 0) | Vite/esbuild dev-server advisory until a Vite major upgrade |
@@ -136,10 +136,13 @@ code, advocate output, numbers and senders) and goals G1 to G8.
 | A: input side (mocked) | Attacker text reaches the prompts only as quoted JSON values, through the expected channels; system prompts unchanged (19 cases). `json.dumps` escapes quotes and newlines, so "break out of the JSON" attacks fail. Finding F4 (the chat keyword door) documented. |
 | B: compromised model (mocked) | 51 malicious narrations, 6 malicious advocate outputs, the advocate-to-Judge infection and 5 malformed replies are all rejected, with the deterministic text kept. |
 | Fact layer | PI-20 (keyword abuse) and PI-21 (forged sender) change the facts and the ruling: recorded as findings, not injection. PI-07 and PI-22 are rejected at input (422). |
-| C: live model | **To run** with `scripts/redteam_live.py` (the script records raw replies, canary hits and which check fired; it never writes the key). |
+| C: live model (hy3) | 68 runs over 17 attacks (51 after hardening, 17 before): **no ruling changed and no attacker text reached a rider or driver.** After hardening the model obeyed in 22% of runs (65% before), never inside Judge-written text (3 times before), and the checks blocked the genuine refund-promise and amount attacks. Two over-strict checks found live were fixed (RT-17). Logs: `docs/redteam/live-run-*.jsonl`. |
 
-What this shows: the system contains a fooled model. What it does not show: that the model
-resists injection. Do not claim "immune to prompt injection".
+What this shows: the system contains a fooled model, and the live run confirms the model
+*is* fooled often enough (about one run in five after hardening) that the architecture,
+not the prompt, is the defence. Claim: "Across 17 attacks and 68 live runs, no injection
+changed the decision, amount, confidence or cited policy, and no attacker text reached a
+rider or driver." Do not claim "immune to prompt injection".
 
 ## 7. API hardening
 
@@ -231,7 +234,7 @@ samples are committed.
 | Vite/esbuild dev-server advisory | dev-only; the demo serves the built bundle; a major upgrade before the freeze is risky | upgrade Vite in its own PR |
 | Rate-limit and budget counters are in memory, per process | one uvicorn worker for the demo | shared store (Redis) |
 | Party messages are English only | the checks read English; non-Latin scripts are rejected | multilingual checks, or translate after checking |
-| The live red-team run and the full gitleaks/trufflehog scans have not been run yet | need a real key and tools on the team's machine | run as documented and fill in the tables |
+| Advocate summaries can carry attacker text into the reviewer console (11 of 51 live runs after hardening: a canary, a repeated invented figure, or no rule cited) | internal only, labelled as an unverified argument, checked for links and markup, never decides | reviewer training; a second-opinion check if the console is ever shown to parties |
 | Claims and chat go to a third-party model | needed for the product | data-processing agreement; regional model hosting |
 | No audit log of decisions | nothing is persisted | append-only audit log |
 
