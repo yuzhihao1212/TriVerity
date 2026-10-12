@@ -26,6 +26,7 @@ import re
 from pydantic import ValidationError
 
 from app.core import limits
+from app.core.safe_log import safe_reason
 from app.models.dispute import DisputeCase
 from app.models.resolution import AgentCase
 from app.services.evidence import CaseFacts
@@ -146,7 +147,7 @@ def build_advocate_case(
     try:
         raw = complete(system, user, max_tokens=limits.ADVOCATE_MAX_TOKENS)
     except Exception as exc:
-        return _fallback(agent, claim_line, fallback_summary, facts, f"complete() raised {type(exc).__name__}: {exc}")
+        return _fallback(agent, claim_line, fallback_summary, facts, f"complete() raised {safe_reason(exc)}")
 
     if raw == OFFLINE_PLACEHOLDER:
         return _fallback(agent, claim_line, fallback_summary, facts, "no API key configured")
@@ -161,7 +162,7 @@ def build_advocate_case(
             source="llm",
         )
     except (json.JSONDecodeError, KeyError, TypeError, ValidationError, AttributeError) as exc:
-        return _fallback(agent, claim_line, fallback_summary, facts, f"parse failed: {type(exc).__name__}: {exc}")
+        return _fallback(agent, claim_line, fallback_summary, facts, f"parse failed: {safe_reason(exc)}")
 
     problem = _check_output(case, system)
     if problem:
