@@ -1,5 +1,6 @@
 import threading
 import time
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -7,7 +8,7 @@ from app.core import limits
 from app.core.config import settings
 from app.core.rate_limit import enforce_resolve_rate_limit
 from app.models.dispute import DisputeCase
-from app.models.resolution import Resolution
+from app.models.resolution import PartyResolution, Resolution
 from app.services.budget import budget
 from app.services.orchestrator import ServiceBusy, resolve_dispute
 from app.services.sample_service import load_samples
@@ -22,12 +23,24 @@ _demo_lock = threading.Lock()
 def samples() -> list[DisputeCase]:
     return load_samples()
 
-@router.post("/disputes/resolve", response_model=Resolution)
-def resolve(case: DisputeCase, code_id: str | None = Depends(enforce_resolve_rate_limit)) -> Resolution:
+@router.post("/disputes/resolve", response_model=Resolution | PartyResolution)
+def resolve(
+    case: DisputeCase,
+    view: Literal["internal", "rider", "driver"] = "internal",
+    code_id: str | None = Depends(enforce_resolve_rate_limit),
+) -> Resolution | PartyResolution:
+    """Resolve a dispute.
+
+    ``view=internal`` (default) is the full record for the reviewer console;
+    ``view=rider`` / ``view=driver`` is what that party may see (finding F8).
+    In production the internal view must require a reviewer login (auth tier T3).
+    """
     # In the public demo only access-code holders may submit their own dispute.
     if settings.public_demo and code_id is None:
-        return _resolve_public_sample(case.dispute_id)
-    return _run(case)
+        result = _resolve_public_sample(case.dispute_id)
+    else:
+        result = _run(case)
+    return result if view == "internal" else PartyResolution.of(result, case.dispute_id, view)
 
 def _run(case: DisputeCase) -> Resolution:
     budget.record_resolve()

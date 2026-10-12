@@ -43,3 +43,27 @@ class Resolution(Ruling):
     driver_case: AgentCase
     risk: RiskAssessment = Field(default_factory=RiskAssessment)
     agent_log: list[AgentLogEntry] = Field(default_factory=list)
+
+class PartyResolution(BaseModel):
+    """What the rider or the driver may see (finding F8).
+
+    No fraud signals, evidence, history, advocate cases or internal reasoning.
+    ``refund_amount`` is set only when a refund is actually given, never for a
+    proposal that a human reviewer still has to decide.
+    """
+    dispute_id: str
+    decision: Decision
+    refund_amount: float | None = None
+    message: str
+    explanation_source: CaseSource
+
+    @classmethod
+    def of(cls, resolution: Resolution, dispute_id: str, party: Literal["rider", "driver"]) -> "PartyResolution":
+        refund_given = resolution.decision in ("partial_refund", "full_refund", "compensation")
+        return cls(
+            dispute_id=dispute_id,
+            decision=resolution.decision,
+            refund_amount=resolution.refund_amount if refund_given else None,
+            message=resolution.rider_explanation if party == "rider" else resolution.driver_explanation,
+            explanation_source=resolution.explanation_source,
+        )

@@ -35,6 +35,23 @@ All evidence fields are optional. `breakdown` lists charges before `promo_discou
 Chat messages and history accept extra fields, so external datasets can pass through,
 but unknown fields are dropped (not kept or returned).
 
+### Views: `?view=internal | rider | driver`
+
+The default, `internal`, returns the full `Resolution` below, for the reviewer console.
+It contains internal data: the fraud `risk`, both parties' history in `judge_evidence`,
+the advocates' cases and the agent log. A client facing the rider or the driver must ask
+for its own view instead:
+
+```json
+{"dispute_id": "D001", "decision": "partial_refund", "refund_amount": 6.3,
+ "message": "Your dispute was upheld and you will be refunded $6.30. ...", "explanation_source": "llm | fallback"}
+```
+
+`message` is that party's explanation. `refund_amount` is set only when a refund is
+actually given (`null` on `needs_review`, where it is only a proposal for the reviewer).
+The view parameter shapes the response but is not access control: in production the
+internal view must require a reviewer login.
+
 ### Limits and errors
 
 All numbers live in `backend/app/core/limits.py`; the values below are the defaults.
