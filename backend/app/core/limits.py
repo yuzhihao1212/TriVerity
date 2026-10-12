@@ -55,8 +55,9 @@ BUSY_RETRY_AFTER_S = 5
 
 # -- Public demo mode (PUBLIC_DEMO=true) --------------------------------------
 # Each sample's result is reused for this long, so LLM cost is bounded by
-# (number of samples) x (resolves per cache window).
-PUBLIC_DEMO_CACHE_S = 600
+# (number of samples) per window. Long enough that one pre-warm
+# (scripts/prewarm_demo.py) covers a whole judging session.
+PUBLIC_DEMO_CACHE_S = 6 * 3600
 
 # -- Demo access codes (X-Demo-Key) -------------------------------------------
 # Code holders are limited per code instead of per IP, since judges may share

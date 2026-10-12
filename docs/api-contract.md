@@ -56,7 +56,7 @@ is `"fallback"`. A refund never exceeds `fare.actual`.
 For a public link. The request shape is unchanged, but the server reads only
 `dispute_id`: it resolves its own copy of that sample from `data/disputes/` and
 ignores every other field the client sent. An unknown `dispute_id` gets 404. Each
-sample's result is cached for 10 minutes. `/docs`, `/redoc` and `/openapi.json` are
+sample's result is cached for 6 hours. `/docs`, `/redoc` and `/openapi.json` are
 switched off. The rate limits above still apply.
 
 ### Access codes (`X-Demo-Key` header)
