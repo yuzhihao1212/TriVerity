@@ -18,6 +18,7 @@ MAX_CHAT_MESSAGE_CHARS = 500
 MAX_TIMESTAMP_CHARS = 64
 MAX_FARE_LINES = 20
 MAX_FARE_LABEL_CHARS = 80
+MAX_GPS_POINTS = 500               # nothing in the pipeline reads gps_points yet
 
 # -- Numeric ranges -----------------------------------------------------------
 MAX_DISTANCE_KM = 500

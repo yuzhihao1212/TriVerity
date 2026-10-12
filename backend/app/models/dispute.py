@@ -68,6 +68,6 @@ class DisputeCase(BaseModel):
     trip: TripData = Field(default_factory=TripData)
     fare: FareData = Field(default_factory=FareData)
     chat_logs: list[ChatMessage] = Field(default_factory=list, max_length=limits.MAX_CHAT_MESSAGES)
-    gps_points: list[dict[str, Any]] = Field(default_factory=list)
+    gps_points: list[dict[str, Any]] = Field(default_factory=list, max_length=limits.MAX_GPS_POINTS)
     rider_history: PartyHistory = Field(default_factory=PartyHistory)
     driver_history: PartyHistory = Field(default_factory=PartyHistory)
