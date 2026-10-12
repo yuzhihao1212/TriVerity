@@ -12,7 +12,9 @@ token budget. The controls behind it are described in `docs/api-contract.md`
 | Invited judge with an access code | Also type in their own dispute ("+ New dispute", or "Edit as new dispute" on a sample). | At most 3 per minute and 20 per day per code |
 | Everyone together | At most 10 resolves per minute. After 300,000 tokens or 75 resolves in a day, rulings continue with Fallback badges instead of the LLM. | Capped |
 
-All numbers are in `backend/app/core/limits.py`.
+All numbers are in `backend/app/core/limits.py`. They can be overridden in `backend/.env`
+(for local evaluation runs); on the demo server, keep the defaults and check the backend's
+start-up log: any line "Limit override from backend/.env" means someone raised a limit.
 
 ## 1. A separate LLM key for the demo
 

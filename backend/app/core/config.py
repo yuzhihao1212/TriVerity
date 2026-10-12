@@ -21,6 +21,15 @@ class Settings(BaseSettings):
     # Access codes (auth tier T2), comma-separated, one per invited judge. A valid
     # X-Demo-Key header lets the caller resolve their own dispute. Keep them in .env only.
     demo_access_codes: str = ""
+    # Optional overrides of the defaults in app/core/limits.py, e.g. a bigger budget
+    # for a local evaluation run. Bounds are checked there; overrides are logged.
+    daily_token_budget: int | None = None
+    daily_resolve_budget: int | None = None
+    per_ip_per_minute: int | None = None
+    per_ip_per_day: int | None = None
+    global_per_minute: int | None = None
+    per_code_per_minute: int | None = None
+    per_code_per_day: int | None = None
     database_url: str = "sqlite:///./ryde_disputes.db"
 
 settings = Settings()

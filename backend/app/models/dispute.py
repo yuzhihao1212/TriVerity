@@ -1,5 +1,5 @@
 from typing import Annotated, Any, Literal
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core import limits
 
@@ -39,10 +39,16 @@ class FareData(BaseModel):
     cancellation_fee: Money | None = None
     surge_multiplier: Surge | None = None
     # Codes only: free text here would reach the prompts raw (finding F4, attack PI-07).
+    # Any case is accepted (external datasets) and stored upper-cased.
     promo_code: str | None = Field(default=None, pattern=limits.PROMO_CODE_PATTERN)
     promo_discount: Money | None = None
     # Itemised charges before any promo discount, e.g. base, distance, time, surge, tolls.
     breakdown: list[FareLine] = Field(default_factory=list, max_length=limits.MAX_FARE_LINES)
+
+    @field_validator("promo_code")
+    @classmethod
+    def _upper_promo_code(cls, code: str | None) -> str | None:
+        return code.upper() if code else code
 
 class ChatMessage(BaseModel):
     # Accept external datasets' unknown fields but drop them, so callers can't attach junk (F2).

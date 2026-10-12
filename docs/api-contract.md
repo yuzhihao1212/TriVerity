@@ -38,11 +38,16 @@ but unknown fields are dropped (not kept or returned).
 ### Limits and errors
 
 All numbers live in `backend/app/core/limits.py`; the values below are the defaults.
+The daily budget and the rate limits can be overridden in `backend/.env`
+(`DAILY_TOKEN_BUDGET`, `DAILY_RESOLVE_BUDGET`, `PER_IP_PER_MINUTE`, `PER_IP_PER_DAY`,
+`GLOBAL_PER_MINUTE` (at most 10), `PER_CODE_PER_MINUTE`, `PER_CODE_PER_DAY`). Overrides are
+logged at start-up, and an out-of-range value stops the backend from starting.
+`promo_code` may be in any case and is stored upper-cased.
 
 | Status | When |
 | --- | --- |
 | 413 | Request body over 64 KB (checked on `Content-Length` and on the bytes received). |
-| 422 | A field breaks a limit: `dispute_id` not `^[A-Za-z0-9_-]{1,64}$`; `rider_claim` or `driver_statement` over 2,000 characters; more than 50 chat messages or a message over 500 characters; more than 20 `breakdown` lines or a `label` over 80 characters; `promo_code` not `^[A-Z0-9_-]{1,32}$`; any number that is `NaN`/`Infinity` or out of range (distances 0-500 km, durations and waits 0-600 min, money 0-1,000, breakdown amounts -1,000 to 1,000, surge 1-10, rating 0-5, latitude ±90, longitude ±180, counts ≥ 0). |
+| 422 | A field breaks a limit: `dispute_id` not `^[A-Za-z0-9_-]{1,64}$`; `rider_claim` or `driver_statement` over 2,000 characters; more than 50 chat messages or a message over 500 characters; more than 20 `breakdown` lines or a `label` over 80 characters; `promo_code` not `^[A-Za-z0-9_-]{1,32}$`; any number that is `NaN`/`Infinity` or out of range (distances 0-500 km, durations and waits 0-600 min, money 0-1,000, breakdown amounts -1,000 to 1,000, surge 1-10, rating 0-5, latitude ±90, longitude ±180, counts ≥ 0). |
 | 422 | More than 500 `gps_points`. |
 | 429 | Rate limit: 3 resolves per minute and 30 per day per client IP, 10 per minute across all callers. `Retry-After` gives the seconds to wait. |
 | 503 | All 3 resolve slots are busy. `Retry-After: 5`. |

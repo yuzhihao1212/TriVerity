@@ -2,8 +2,15 @@
 
 Change a number here, not at the place that uses it. A real claim is a few
 hundred characters, so the input limits are generous; the budget numbers are
-sized for the hackathon key (see docs/security.md).
+sized for the hackathon key (see docs/security.md). The budget and rate limits
+can also be overridden from backend/.env, within bounds (see the end of this file).
 """
+
+import logging
+
+from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 # -- Request size -------------------------------------------------------------
 # A legitimate maximum (50 x 500-char messages + two 2,000-char texts) is under 40 KB.
@@ -11,7 +18,7 @@ MAX_BODY_BYTES = 64 * 1024
 
 # -- DisputeCase fields (models/dispute.py) -----------------------------------
 DISPUTE_ID_PATTERN = r"^[A-Za-z0-9_-]{1,64}$"
-PROMO_CODE_PATTERN = r"^[A-Z0-9_-]{1,32}$"
+PROMO_CODE_PATTERN = r"^[A-Za-z0-9_-]{1,32}$"   # stored upper-cased
 MAX_STATEMENT_CHARS = 2_000        # rider_claim, driver_statement
 MAX_CHAT_MESSAGES = 50
 MAX_CHAT_MESSAGE_CHARS = 500
@@ -65,3 +72,32 @@ PUBLIC_DEMO_CACHE_S = 6 * 3600
 PER_CODE_PER_MINUTE = 3
 PER_CODE_PER_DAY = 20
 MIN_ACCESS_CODE_CHARS = 16
+
+# -- Overrides from backend/.env ----------------------------------------------
+# These can be set in backend/.env (e.g. DAILY_TOKEN_BUDGET=2000000 for a local
+# evaluation run) without a code change. Each must stay within (min, max), or the
+# backend refuses to start; every override is logged at start-up.
+MAX_GLOBAL_PER_MINUTE = 10   # the model allows 60 requests/min and a resolve is 3 calls
+
+_OVERRIDABLE = {
+    "DAILY_TOKEN_BUDGET": (0, None),
+    "DAILY_RESOLVE_BUDGET": (0, None),
+    "PER_IP_PER_MINUTE": (1, None),
+    "PER_IP_PER_DAY": (1, None),
+    "GLOBAL_PER_MINUTE": (1, MAX_GLOBAL_PER_MINUTE),
+    "PER_CODE_PER_MINUTE": (1, None),
+    "PER_CODE_PER_DAY": (1, None),
+}
+
+def _apply_overrides() -> None:
+    for name, (low, high) in _OVERRIDABLE.items():
+        value = getattr(settings, name.lower())
+        if value is None:
+            continue
+        if value < low or (high is not None and value > high):
+            bound = f"at least {low}" if high is None else f"from {low} to {high}"
+            raise ValueError(f"{name}={value} in backend/.env is out of range; it must be {bound}.")
+        logger.warning("Limit override from backend/.env: %s=%s (default %s)", name, value, globals()[name])
+        globals()[name] = value
+
+_apply_overrides()
