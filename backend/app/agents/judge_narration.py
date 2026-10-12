@@ -10,6 +10,7 @@ import json
 import logging
 import re
 
+from app.core import limits
 from app.models.dispute import DisputeCase
 from app.models.resolution import AgentCase, Ruling
 from app.services.llm_client import OFFLINE_PLACEHOLDER, _strip_fences, complete
@@ -51,7 +52,7 @@ _FORBIDDEN_PARTY_RE = re.compile(r"\b(fraud|bad[-\s]?faith|history|disputes?\s+i
 def narrate(case: DisputeCase, ruling: Ruling, rider_case: AgentCase, driver_case: AgentCase) -> Ruling:
     """Return ``ruling`` with LLM-written explanations, or unchanged on any failure."""
     try:
-        raw = complete(SYSTEM, _user_prompt(case, ruling, rider_case, driver_case))
+        raw = complete(SYSTEM, _user_prompt(case, ruling, rider_case, driver_case), max_tokens=limits.JUDGE_MAX_TOKENS)
     except Exception as exc:
         return _keep_templates(ruling, f"complete() raised {type(exc).__name__}: {exc}")
     if raw == OFFLINE_PLACEHOLDER:
