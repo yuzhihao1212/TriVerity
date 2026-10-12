@@ -34,6 +34,21 @@ See `backend/app/models/dispute.py` and the samples in `data/disputes/`.
 All evidence fields are optional. `breakdown` lists charges before `promo_discount`.
 Chat messages and history accept extra fields, so external datasets can pass through.
 
+### Limits and errors
+
+All numbers live in `backend/app/core/limits.py`; the values below are the defaults.
+
+| Status | When |
+| --- | --- |
+| 413 | Request body over 64 KB (checked on `Content-Length` and on the bytes received). |
+| 422 | A field breaks a limit: `dispute_id` not `^[A-Za-z0-9_-]{1,64}$`; `rider_claim` or `driver_statement` over 2,000 characters; more than 50 chat messages or a message over 500 characters; more than 20 `breakdown` lines or a `label` over 80 characters; `promo_code` not `^[A-Z0-9_-]{1,32}$`; any number that is `NaN`/`Infinity` or out of range (distances 0-500 km, durations and waits 0-600 min, money 0-1,000, breakdown amounts -1,000 to 1,000, surge 1-10, rating 0-5, latitude ±90, longitude ±180, counts ≥ 0). |
+| 429 | Rate limit: 3 resolves per minute and 30 per day per client IP, 10 per minute across all callers. `Retry-After` gives the seconds to wait. |
+| 503 | All 3 resolve slots are busy. `Retry-After: 5`. |
+
+When the daily LLM budget (300,000 tokens or 75 resolves) is spent, `/resolve` still
+returns 200 with the full rule-based ruling, but every `source` and `explanation_source`
+is `"fallback"`. A refund never exceeds `fare.actual`.
+
 ### Output: `Resolution`
 
 See `backend/app/models/resolution.py`.
