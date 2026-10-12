@@ -106,10 +106,15 @@ def _git_commit() -> str:
 
 
 def _clean_ruling(attack: Attack) -> dict:
-    """The rule-based ruling of the clean case, with the model offline."""
+    """The rule-based ruling of the clean case, with the model offline (no tokens spent)."""
     offline = lambda *a, **k: OFFLINE_PLACEHOLDER  # noqa: E731
-    with patch("app.agents._advocate.complete", offline), patch("app.agents.judge_narration.complete", offline):
-        r = resolve_dispute(DisputeCase(**attack.clean()))
+    previous = logging.root.manager.disable
+    logging.disable(logging.WARNING)  # the offline fallbacks would log "no API key configured"
+    try:
+        with patch("app.agents._advocate.complete", offline), patch("app.agents.judge_narration.complete", offline):
+            r = resolve_dispute(DisputeCase(**attack.clean()))
+    finally:
+        logging.disable(previous)
     return {"decision": r.decision, "refund_amount": r.refund_amount, "confidence": r.confidence,
             "policy_refs": _rule_ids(r.policy_refs)}
 
