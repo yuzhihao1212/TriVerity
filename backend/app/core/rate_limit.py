@@ -17,6 +17,7 @@ from collections import defaultdict, deque
 from fastapi import HTTPException, Request
 
 from app.core import limits
+from app.core.access import DEMO_KEY_HEADER, verify_demo_code
 
 _MINUTE = 60
 _DAY = 24 * 3600
@@ -57,17 +58,29 @@ class RateLimiter:
 limiter = RateLimiter()
 
 
-def enforce_resolve_rate_limit(request: Request) -> None:
-    """FastAPI dependency for the resolve endpoint."""
-    ip = request.client.host if request.client else "unknown"
-    wait = limiter.hit([
-        (f"ip:{ip}", limits.PER_IP_PER_MINUTE, _MINUTE),
-        (f"ip:{ip}", limits.PER_IP_PER_DAY, _DAY),
-        ("global", limits.GLOBAL_PER_MINUTE, _MINUTE),
-    ])
+def enforce_resolve_rate_limit(request: Request) -> str | None:
+    """FastAPI dependency for the resolve endpoint.
+
+    Returns the access-code ID when a valid X-Demo-Key was sent (and limits per
+    code), else None (and limits per IP).
+    """
+    code_id = verify_demo_code(request.headers.get(DEMO_KEY_HEADER))
+    if code_id:
+        rules = [
+            (f"code:{code_id}", limits.PER_CODE_PER_MINUTE, _MINUTE),
+            (f"code:{code_id}", limits.PER_CODE_PER_DAY, _DAY),
+        ]
+    else:
+        ip = request.client.host if request.client else "unknown"
+        rules = [
+            (f"ip:{ip}", limits.PER_IP_PER_MINUTE, _MINUTE),
+            (f"ip:{ip}", limits.PER_IP_PER_DAY, _DAY),
+        ]
+    wait = limiter.hit([*rules, ("global", limits.GLOBAL_PER_MINUTE, _MINUTE)])
     if wait is not None:
         raise HTTPException(
             status_code=429,
             detail="Too many requests; try again later.",
             headers={"Retry-After": str(max(1, math.ceil(wait)))},
         )
+    return code_id

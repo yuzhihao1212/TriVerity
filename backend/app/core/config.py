@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     # Public demo (auth tier T1): resolve only the bundled samples, loaded by the
     # server, cached, with the API docs switched off. Set PUBLIC_DEMO=true.
     public_demo: bool = False
+    # Access codes (auth tier T2), comma-separated, one per invited judge. A valid
+    # X-Demo-Key header lets the caller resolve their own dispute. Keep them in .env only.
+    demo_access_codes: str = ""
     database_url: str = "sqlite:///./ryde_disputes.db"
 
 settings = Settings()

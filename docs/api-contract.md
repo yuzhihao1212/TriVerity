@@ -59,6 +59,15 @@ ignores every other field the client sent. An unknown `dispute_id` gets 404. Eac
 sample's result is cached for 10 minutes. `/docs`, `/redoc` and `/openapi.json` are
 switched off. The rate limits above still apply.
 
+### Access codes (`X-Demo-Key` header)
+
+Invited judges get a personal access code (configured in `backend/.env` as
+`DEMO_ACCESS_CODES`, comma-separated, each at least 16 characters). Sending it as
+`X-Demo-Key: <code>` in public demo mode resolves the caller's own `DisputeCase`
+instead of a sample; all input limits still apply. A wrong code gets 401. Code
+holders are limited per code (3 per minute, 20 per day) instead of per IP; the
+global limit and the daily LLM budget still apply.
+
 ### Output: `Resolution`
 
 See `backend/app/models/resolution.py`.

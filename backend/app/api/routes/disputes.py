@@ -22,13 +22,10 @@ _demo_lock = threading.Lock()
 def samples() -> list[DisputeCase]:
     return load_samples()
 
-@router.post(
-    "/disputes/resolve",
-    response_model=Resolution,
-    dependencies=[Depends(enforce_resolve_rate_limit)],
-)
-def resolve(case: DisputeCase) -> Resolution:
-    if settings.public_demo:
+@router.post("/disputes/resolve", response_model=Resolution)
+def resolve(case: DisputeCase, code_id: str | None = Depends(enforce_resolve_rate_limit)) -> Resolution:
+    # In the public demo only access-code holders may submit their own dispute.
+    if settings.public_demo and code_id is None:
         return _resolve_public_sample(case.dispute_id)
     return _run(case)
 
