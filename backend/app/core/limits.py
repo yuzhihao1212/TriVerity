@@ -52,3 +52,8 @@ LLM_TIMEOUT_S = 25
 # -- Concurrency (503 with Retry-After when full) -----------------------------
 MAX_CONCURRENT_RESOLVES = 3
 BUSY_RETRY_AFTER_S = 5
+
+# -- Public demo mode (PUBLIC_DEMO=true) --------------------------------------
+# Each sample's result is reused for this long, so LLM cost is bounded by
+# (number of samples) x (resolves per cache window).
+PUBLIC_DEMO_CACHE_S = 600

@@ -51,6 +51,14 @@ When the daily LLM budget (300,000 tokens or 75 resolves) is spent, `/resolve` s
 returns 200 with the full rule-based ruling, but every `source` and `explanation_source`
 is `"fallback"`. A refund never exceeds `fare.actual`.
 
+### Public demo mode (`PUBLIC_DEMO=true`)
+
+For a public link. The request shape is unchanged, but the server reads only
+`dispute_id`: it resolves its own copy of that sample from `data/disputes/` and
+ignores every other field the client sent. An unknown `dispute_id` gets 404. Each
+sample's result is cached for 10 minutes. `/docs`, `/redoc` and `/openapi.json` are
+switched off. The rate limits above still apply.
+
 ### Output: `Resolution`
 
 See `backend/app/models/resolution.py`.

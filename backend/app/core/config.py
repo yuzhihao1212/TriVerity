@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     # Sends `thinking: {"type": "disabled"}`; cuts Hy3 latency and tokens several-fold.
     # Leave off for providers that reject unknown request fields.
     llm_disable_thinking: bool = False
+    # Public demo (auth tier T1): resolve only the bundled samples, loaded by the
+    # server, cached, with the API docs switched off. Set PUBLIC_DEMO=true.
+    public_demo: bool = False
     database_url: str = "sqlite:///./ryde_disputes.db"
 
 settings = Settings()
