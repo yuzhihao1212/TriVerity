@@ -45,15 +45,15 @@ class FareData(BaseModel):
     breakdown: list[FareLine] = Field(default_factory=list, max_length=limits.MAX_FARE_LINES)
 
 class ChatMessage(BaseModel):
-    # Keep unknown fields from external datasets instead of rejecting them.
-    model_config = ConfigDict(extra="allow")
+    # Accept external datasets' unknown fields but drop them, so callers can't attach junk (F2).
+    model_config = ConfigDict(extra="ignore")
 
     sender: Literal["rider", "driver", "system"]
     message: str = Field(max_length=limits.MAX_CHAT_MESSAGE_CHARS)
     timestamp: str | None = Field(default=None, max_length=limits.MAX_TIMESTAMP_CHARS)
 
 class PartyHistory(BaseModel):
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="ignore")
 
     account_age_days: int | None = Field(default=None, ge=0, le=limits.MAX_ACCOUNT_AGE_DAYS)
     rating: Rating | None = None

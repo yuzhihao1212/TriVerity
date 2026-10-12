@@ -32,7 +32,8 @@ See `backend/app/models/dispute.py` and the samples in `data/disputes/`.
 ```
 
 All evidence fields are optional. `breakdown` lists charges before `promo_discount`.
-Chat messages and history accept extra fields, so external datasets can pass through.
+Chat messages and history accept extra fields, so external datasets can pass through,
+but unknown fields are dropped (not kept or returned).
 
 ### Limits and errors
 
