@@ -12,9 +12,10 @@ security guide, Task 1; catalogue in `backend/tests/attacks.py` (23 attacks, PI-
 
 ## Headline (mocked)
 
-Across the 17 attacks whose payload reaches the model, run with the model offline and
+Across the 19 attacks in the invariance set (the 17 whose payload reaches the model, plus
+PI-19 and PI-23, whose attack is the model's own output), run with the model offline and
 with a fully compromised model that obeys every attack (`test_attack_does_not_change_ruling`,
-34 cases), **no attack changed the decision, refund amount, confidence, recommended
+38 cases), **no attack changed the decision, refund amount, confidence, recommended
 action or cited policy.** The ruling is computed by rules from facts; the model only
 argues and explains. Two further attacks change the *facts* (PI-20, PI-21) and two are
 rejected at input (PI-07, PI-22); they are listed below as deterministic-layer findings.
