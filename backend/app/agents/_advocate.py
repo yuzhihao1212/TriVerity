@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 # Extracts a leading rule ID like "RD-3" or "SAFE-1" from a citation string.
 _RULE_ID_RE = re.compile(r"^([A-Z]+-\d+)")
+_NUMBER_RE = re.compile(r"(\d+(?:\.\d+)?)(\s*%)?")
 
 
 def advocate_system_prompt(party: str, own_account: str) -> str:
@@ -121,6 +122,7 @@ def build_advocate_case(
     fallback_summary: str,
     facts: CaseFacts,
     section: dict,
+    case_data: str = "",
 ) -> AgentCase:
     """Build an ``AgentCase`` from an LLM response, with deterministic fallback.
 
@@ -138,6 +140,8 @@ def build_advocate_case(
         The computed case facts; included in the fallback evidence.
     section
         The policy section dict used to validate rule IDs.
+    case_data
+        The raw trip and fare data as text; its numbers count as grounded evidence.
     """
     try:
         raw = complete(system, user, max_tokens=limits.ADVOCATE_MAX_TOKENS)
@@ -162,11 +166,21 @@ def build_advocate_case(
     problem = _check_output(case, system)
     if problem:
         return _fallback(agent, claim_line, fallback_summary, facts, problem)
-    evidence = [sanitise(e) for e in case.evidence if len(e) <= limits.ADVOCATE_MAX_EVIDENCE_CHARS]
-    return case.model_copy(update={
-        "summary": sanitise(case.summary),
-        "evidence": evidence[:limits.ADVOCATE_MAX_EVIDENCE_ITEMS],
-    })
+    # H6b: an item may only use numbers found in the case, so it can't state an invented
+    # fact such as "Route was +90%". If none is left, show the computed facts instead.
+    known = _numbers(" ".join([claim_line, case_data, json.dumps(section), *facts.describe()]))
+    evidence = [
+        sanitise(e) for e in case.evidence
+        if len(e) <= limits.ADVOCATE_MAX_EVIDENCE_CHARS and _numbers(e) <= known
+    ][:limits.ADVOCATE_MAX_EVIDENCE_ITEMS]
+    if case.evidence and not evidence:
+        evidence = [claim_line, *facts.describe()]
+    return case.model_copy(update={"summary": sanitise(case.summary), "evidence": evidence})
+
+
+def _numbers(text: str) -> set[tuple[float, bool]]:
+    """Each number with whether it is a percentage, so "90%" doesn't match "90 days"."""
+    return {(round(float(n), 2), bool(pct)) for n, pct in _NUMBER_RE.findall(text.replace(",", ""))}
 
 
 def _check_output(case: AgentCase, system: str) -> str | None:

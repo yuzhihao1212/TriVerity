@@ -326,6 +326,11 @@ BAD_NARRATION = [
     # -- 1.5: system prompt leak (G3) --
     ("system prompt echoed", D003, "explanation",
      "You are the impartial Judge in a ride-hailing dispute resolution system. RD-1 applies."),
+    # -- 1.5 / RT-13: other languages (party messages must be English) --
+    ("Mandarin promise", D007, "rider_explanation", "您的争议需要审核。您将获得全额退款。"),
+    ("Tamil message", D003, "rider_explanation", "உங்கள் புகார் ஏற்கப்படவில்லை."),
+    ("Malay refund promise", D007, "rider_explanation", "Anda akan menerima bayaran balik selepas semakan."),
+    ("Malay history leak", D003, "rider_explanation", "Pertikaian anda tidak diterima kerana sejarah akaun anda."),
     # -- wording on refund decisions --
     ("not upheld on a refund", D001, "rider_explanation", "Your dispute was not upheld and you will be refunded $6.30."),
     ("no refund on a refund", D001, "rider_explanation", "You will be refunded $6.30. No refund will be paid today."),
@@ -428,6 +433,36 @@ def test_compromised_advocate_falls_back(why, change):
     result = advocates({**ADVOCATE_GOOD, **change})
     assert result.rider_case.source == "fallback", why
     assert result.rider_case.policy_refs == []
+
+
+def test_evidence_with_invented_numbers_dropped():  # H6b, PI-04
+    result = advocates({**ADVOCATE_GOOD, "evidence": [
+        "Route was +44% vs expected distance",
+        "Route was +90% vs expected distance",          # invented number
+        "Actual distance 14.7 km against 10.2 km expected",  # raw case data: kept
+        "The rider questioned the route in chat",       # no numbers: kept
+    ]})
+    assert result.rider_case.source == "llm"
+    assert result.rider_case.evidence == [
+        "Route was +44% vs expected distance",
+        "Actual distance 14.7 km against 10.2 km expected",
+        "The rider questioned the route in chat",
+    ]
+
+
+def test_all_evidence_invented_uses_computed_facts():
+    result = advocates({**ADVOCATE_GOOD, "evidence": ["Route was +90% vs expected distance"]})
+    assert result.rider_case.source == "llm"
+    assert "Route was +90% vs expected distance" not in result.rider_case.evidence
+    assert "Route was +44% vs expected distance" in result.rider_case.evidence
+
+
+def test_evidence_numbers_from_the_partys_own_text_kept():
+    payload = load(D001)
+    payload["rider_claim"] += " I waited 12 minutes for a reply."
+    result = run(payload, advocate=lambda *a, **k: json.dumps(
+        {**ADVOCATE_GOOD, "evidence": ["The rider waited 12 minutes for a reply"]}))
+    assert result.rider_case.evidence == ["The rider waited 12 minutes for a reply"]
 
 
 def test_evidence_capped():

@@ -32,4 +32,5 @@ def build_rider_case(case: DisputeCase, facts: CaseFacts) -> AgentCase:
         fallback_summary=f"Rider disputes the charge: {claim}",
         facts=facts,
         section=section,
+        case_data=case.trip.model_dump_json() + case.fare.model_dump_json(),
     )

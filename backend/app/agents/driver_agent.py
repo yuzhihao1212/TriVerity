@@ -32,4 +32,5 @@ def build_driver_case(case: DisputeCase, facts: CaseFacts) -> AgentCase:
         fallback_summary=f"Driver's position: {statement}",
         facts=facts,
         section=section,
+        case_data=case.trip.model_dump_json() + case.fare.model_dump_json(),
     )
