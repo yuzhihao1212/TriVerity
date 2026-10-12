@@ -43,7 +43,9 @@ policy_ref is the rule ID, then ": ", then the rule text.
 
 **Output checks:** the reply must parse as JSON with a non-empty `summary` of at most 800 characters;
 the summary and evidence may not contain links, email addresses, phone numbers, HTML or markdown, or
-repeat the system prompt; evidence items over 300 characters are dropped and at most 8 are kept;
+repeat the system prompt; evidence items over 300 characters, or with a number that appears nowhere in
+the case data, facts, policy or the party's own text, are dropped (if none is left, the computed facts
+are shown), and at most 8 are kept;
 `policy_refs` are kept only if the rule ID exists in the policy, and each is rewritten with the exact
 rule text. The claim, statement and chat quotes are cleaned of control characters before they reach
 any prompt. Limits are in `backend/app/core/limits.py`.
@@ -93,7 +95,7 @@ give, such as who pays, penalties or account actions. If the decision is needs_r
 reviewer will decide and do not promise any refund or outcome.
 Never mention bad-faith or fraud risk, or either party's account or dispute history, in the
 rider_explanation or driver_explanation. These are internal signals only. Write plain text only: no
-links, email addresses, phone numbers, HTML or markdown.
+links, email addresses, phone numbers, HTML or markdown. Write all three texts in English.
 Respond with the JSON object only.
 ```
 
@@ -103,8 +105,8 @@ most 600; no links, email addresses, phone numbers, HTML, markdown or copied sys
 `$` amounts that appear in the case (no "dollars", "SGD" or "S$"); only rule IDs the ruling applied may
 be named, in any spelling; for a refund, the rider's message must state the amount and may not deny it;
 for no_action or an escalated case, the party messages may not promise a refund, reimbursement or "money
-back"; "upheld" must match the decision; the rider and driver messages must not mention fraud, risk,
-ratings, account age, trips or anyone's history. Otherwise the rule-based template wording is used. The
+back"; "upheld" must match the decision; the rider and driver messages must be in English and must not
+mention fraud, risk, ratings, account age, trips or anyone's history. Otherwise the rule-based template wording is used. The
 attack tests are in `backend/tests/test_prompt_injection.py`; findings in `docs/redteam/findings.md`.
 
 **Example output** (D001):
