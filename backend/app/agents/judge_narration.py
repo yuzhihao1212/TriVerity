@@ -20,7 +20,7 @@ from app.models.dispute import DisputeCase
 from app.models.resolution import AgentCase, Ruling
 from app.services.llm_client import OFFLINE_PLACEHOLDER, _strip_fences, complete
 from app.services.policy_service import load_policy
-from app.services.text_safety import echoes, find_link_or_markup, normalise, sanitise
+from app.services.text_safety import echoes, find_link_or_markup, is_latin_script, normalise, sanitise
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,8 @@ SYSTEM = (
     "reviewer will decide and do not promise any refund or outcome.\n"
     "Never mention bad-faith or fraud risk, or either party's account or dispute history, in the "
     "rider_explanation or driver_explanation. These are internal signals only. "
-    "Write plain text only: no links, email addresses, phone numbers, HTML or markdown.\n"
+    "Write plain text only: no links, email addresses, phone numbers, HTML or markdown. "
+    "Write all three texts in English.\n"
     "Respond with the JSON object only."
 )
 
@@ -64,11 +65,17 @@ _LEAK_RE = re.compile(
     r"|rating|rated|stars?|new account|account age|days? old|disputes?\s+in"
     r"|(?:several|many|multiple|frequent|repeated|recent|previous|past|prior)\s+(?:\w+\s+)?"
     r"(?:claims|disputes|complaints|reports)"
-    r"|\d[\d,]*\s+(?:trips|rides|disputes|claims|complaints))\b",
+    r"|\d[\d,]*\s+(?:trips|rides|disputes|claims|complaints)"
+    # Malay, which passes the English-only script check below.
+    r"|penipuan|sejarah|risiko|penarafan|mencurigakan)\b",
     re.IGNORECASE,
 )
-_REFUND_RE = re.compile(r"\b(refund\w*|reimburs\w*|compensat\w*|money back|credit(?:ed)?)\b", re.IGNORECASE)
-_NEGATION_RE = re.compile(r"\b(no|not|never|without|nor|cannot)\b|n't\b", re.IGNORECASE)
+_REFUND_RE = re.compile(
+    r"\b(refund\w*|reimburs\w*|compensat\w*|money back|credit(?:ed)?"
+    r"|bayaran balik|pulangan wang|wang dikembalikan|ganti rugi|pampasan)\b",
+    re.IGNORECASE,
+)
+_NEGATION_RE = re.compile(r"\b(no|not|never|without|nor|cannot|tidak|tiada|bukan)\b|n't\b", re.IGNORECASE)
 # "whether a refund is due", "your request for a refund": not promises.
 _HEDGE_RE = re.compile(r"\b(whether|if|request\w*|ask\w*|seek\w*|sought|claim\w*)\b", re.IGNORECASE)
 _UPHELD_RE = re.compile(r"\bupheld\b", re.IGNORECASE)
@@ -184,6 +191,9 @@ def _check(texts: dict, case: DisputeCase, ruling: Ruling) -> str | None:
             return "amount: rider explanation omits the refund amount"
 
     for key, text in party.items():
+        # The wording and leak checks read English, so other scripts can't be checked (RT-13).
+        if not is_latin_script(text):
+            return f"language: {key} is not in English"
         problem = _wording_problem(text, ruling.decision)
         if problem:
             return f"{problem} ({key})"

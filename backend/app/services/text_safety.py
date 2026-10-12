@@ -60,6 +60,11 @@ def find_link_or_markup(text: str) -> str | None:
     return None
 
 
+def is_latin_script(text: str) -> bool:
+    """True if every letter in ``text`` (already normalised) is a Latin letter."""
+    return all(unicodedata.name(c, "").startswith("LATIN") for c in text if c.isalpha())
+
+
 def _shingles(text: str) -> set[tuple[str, ...]]:
     words = _WORD_RE.findall(normalise(text).lower())
     return {tuple(words[i:i + _ECHO_WORDS]) for i in range(len(words) - _ECHO_WORDS + 1)}
