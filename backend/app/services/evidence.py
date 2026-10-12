@@ -4,6 +4,7 @@ from math import asin, cos, radians, sin, sqrt
 from pydantic import BaseModel, Field
 
 from app.models.dispute import ChatMessage, DisputeCase, PartyHistory
+from app.services.text_safety import sanitise
 
 EARTH_RADIUS_M = 6_371_000
 
@@ -105,7 +106,8 @@ def _matches(text: str, patterns: list[str]) -> bool:
 def analyse_chat(messages: list[ChatMessage]) -> ChatAnalysis:
     analysis = ChatAnalysis()
     for m in messages:
-        quoted = f'{m.sender}: "{m.message}"'
+        # Quoted chat reaches the prompts, so strip control characters first (H8).
+        quoted = f'{m.sender}: "{sanitise(m.message)}"'
         if _matches(m.message, THREAT_PATTERNS):
             analysis.threats.append(quoted)
         elif _matches(m.message, DISAGREEMENT_PATTERNS):
