@@ -25,6 +25,7 @@ import re
 
 from pydantic import ValidationError
 
+from app.core import limits
 from app.models.dispute import DisputeCase
 from app.models.resolution import AgentCase
 from app.services.evidence import CaseFacts
@@ -135,7 +136,7 @@ def build_advocate_case(
         The policy section dict used to validate rule IDs.
     """
     try:
-        raw = complete(system, user)
+        raw = complete(system, user, max_tokens=limits.ADVOCATE_MAX_TOKENS)
     except Exception as exc:
         return _fallback(agent, claim_line, fallback_summary, facts, f"complete() raised {type(exc).__name__}: {exc}")
 

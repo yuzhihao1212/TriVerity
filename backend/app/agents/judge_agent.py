@@ -25,7 +25,26 @@ def judge(
     ruling = _apply_safety(ruling, facts, policy["safety"])
     ruling = _apply_fraud(ruling, risk, policy["fraud"])
     ruling = _apply_escalation(ruling, policy["escalation"])
+    ruling = _cap_refund(ruling, case, policy["refund"])
     return narrate(case, _explain_to_parties(ruling), rider_case, driver_case)
+
+def _cap_refund(ruling: Ruling, case: DisputeCase, section: dict | None = None) -> Ruling:
+    """REF-1: a refund can never exceed the fare actually charged.
+
+    Defence in depth: input validation already bounds the fare, and the facts
+    still come from the client until the server looks cases up itself. When it
+    applies, REF-1 is cited in the ruling like any other rule.
+    """
+    actual = case.fare.actual
+    if ruling.refund_amount is None or actual is None or ruling.refund_amount <= actual:
+        return ruling
+    section = section or load_policy()["refund"]
+    action = ruling.recommended_action.replace(f"${ruling.refund_amount:.2f}", f"${actual:.2f}")
+    return ruling.model_copy(update={
+        "refund_amount": actual,
+        "recommended_action": action,
+        "policy_refs": [*ruling.policy_refs, cite(section, "REF-1")],
+    })
 
 def _judge_route_deviation(case: DisputeCase, facts: CaseFacts, section: dict) -> Ruling:
     evidence = facts.describe()

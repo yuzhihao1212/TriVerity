@@ -1,3 +1,4 @@
+import threading
 from concurrent.futures import ThreadPoolExecutor
 
 from app.agents.fraud_agent import assess_risk
@@ -6,7 +7,15 @@ from app.agents.driver_agent import build_driver_case
 from app.agents.judge_agent import judge
 from app.models.dispute import DisputeCase
 from app.models.resolution import AgentLogEntry, Resolution
+from app.core import limits
 from app.services.evidence import compute_facts
+
+# Caps how many resolves run their LLM calls at once, so slow model calls can't
+# starve the server's thread pool (and /health with it).
+resolve_slots = threading.BoundedSemaphore(limits.MAX_CONCURRENT_RESOLVES)
+
+class ServiceBusy(Exception):
+    """Every resolve slot is taken; the API answers 503."""
 
 def resolve_dispute(case: DisputeCase) -> Resolution:
     agent_log = []
@@ -17,22 +26,27 @@ def resolve_dispute(case: DisputeCase) -> Resolution:
     facts = compute_facts(case)
     log("evidence_loader", f"Computed {len(facts.describe())} facts from case data.")
 
-    # The advocates and the fraud assessor are all independent of each other,
-    # so run them concurrently.
-    with ThreadPoolExecutor(max_workers=3) as pool:
-        rider_future = pool.submit(build_rider_case, case, facts)
-        driver_future = pool.submit(build_driver_case, case, facts)
-        risk_future = pool.submit(assess_risk, case, facts)
-        rider_case, driver_case, risk = (
-            rider_future.result(),
-            driver_future.result(),
-            risk_future.result(),
-        )
-    log("rider_advocate", f"[{rider_case.source}] {rider_case.summary}")
-    log("driver_advocate", f"[{driver_case.source}] {driver_case.summary}")
-    log("fraud_detector", risk.summary)
+    if not resolve_slots.acquire(blocking=False):
+        raise ServiceBusy
+    try:
+        # The advocates and the fraud assessor are all independent of each other,
+        # so run them concurrently.
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            rider_future = pool.submit(build_rider_case, case, facts)
+            driver_future = pool.submit(build_driver_case, case, facts)
+            risk_future = pool.submit(assess_risk, case, facts)
+            rider_case, driver_case, risk = (
+                rider_future.result(),
+                driver_future.result(),
+                risk_future.result(),
+            )
+        log("rider_advocate", f"[{rider_case.source}] {rider_case.summary}")
+        log("driver_advocate", f"[{driver_case.source}] {driver_case.summary}")
+        log("fraud_detector", risk.summary)
 
-    ruling = judge(case, facts, rider_case, driver_case, risk)
+        ruling = judge(case, facts, rider_case, driver_case, risk)
+    finally:
+        resolve_slots.release()
     log("judge", f"[{ruling.explanation_source}] {ruling.decision} ({ruling.confidence:.0%} confidence)")
 
     return Resolution(

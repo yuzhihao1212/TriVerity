@@ -32,7 +32,46 @@ See `backend/app/models/dispute.py` and the samples in `data/disputes/`.
 ```
 
 All evidence fields are optional. `breakdown` lists charges before `promo_discount`.
-Chat messages and history accept extra fields, so external datasets can pass through.
+Chat messages and history accept extra fields, so external datasets can pass through,
+but unknown fields are dropped (not kept or returned).
+
+### Limits and errors
+
+All numbers live in `backend/app/core/limits.py`; the values below are the defaults.
+The daily budget and the rate limits can be overridden in `backend/.env`
+(`DAILY_TOKEN_BUDGET`, `DAILY_RESOLVE_BUDGET`, `PER_IP_PER_MINUTE`, `PER_IP_PER_DAY`,
+`GLOBAL_PER_MINUTE` (at most 10), `PER_CODE_PER_MINUTE`, `PER_CODE_PER_DAY`). Overrides are
+logged at start-up, and an out-of-range value stops the backend from starting.
+`promo_code` may be in any case and is stored upper-cased.
+
+| Status | When |
+| --- | --- |
+| 413 | Request body over 512 KB (checked on `Content-Length` and on the bytes received). |
+| 422 | A field breaks a limit: `dispute_id` not `^[A-Za-z0-9_-]{1,64}$`; `rider_claim` or `driver_statement` over 2,000 characters; more than 50 chat messages or a message over 500 characters; more than 20 `breakdown` lines or a `label` over 80 characters; `promo_code` not `^[A-Za-z0-9_-]{1,32}$`; any number that is `NaN`/`Infinity` or out of range (distances 0-500 km, durations and waits 0-600 min, money 0-1,000, breakdown amounts -1,000 to 1,000, surge 1-10, rating 0-5, latitude ±90, longitude ±180, counts ≥ 0). |
+| 422 | More than 5,000 `gps_points` (a 35-minute trip logged once a second is about 2,100). |
+| 429 | Rate limit: 3 resolves per minute and 30 per day per client IP, 10 per minute across all callers. `Retry-After` gives the seconds to wait. |
+| 503 | All 3 resolve slots are busy. `Retry-After: 5`. |
+
+When the daily LLM budget (300,000 tokens or 75 resolves) is spent, `/resolve` still
+returns 200 with the full rule-based ruling, but every `source` and `explanation_source`
+is `"fallback"`. A refund never exceeds `fare.actual` (policy rule REF-1, cited in `policy_refs` when it applies).
+
+### Public demo mode (`PUBLIC_DEMO=true`)
+
+For a public link. The request shape is unchanged, but the server reads only
+`dispute_id`: it resolves its own copy of that sample from `data/disputes/` and
+ignores every other field the client sent. An unknown `dispute_id` gets 404. Each
+sample's result is cached for 6 hours. `/docs`, `/redoc` and `/openapi.json` are
+switched off. The rate limits above still apply.
+
+### Access codes (`X-Demo-Key` header)
+
+Invited judges get a personal access code (configured in `backend/.env` as
+`DEMO_ACCESS_CODES`, comma-separated, each at least 16 characters). Sending it as
+`X-Demo-Key: <code>` in public demo mode resolves the caller's own `DisputeCase`
+instead of a sample; all input limits still apply. A wrong code gets 401. Code
+holders are limited per code (3 per minute, 20 per day) instead of per IP; the
+global limit and the daily LLM budget still apply.
 
 ### Output: `Resolution`
 

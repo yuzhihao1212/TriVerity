@@ -11,11 +11,16 @@ credentials.
 
 from __future__ import annotations
 
+import logging
 import re
 
 import httpx
 
+from app.core import limits
 from app.core.config import settings
+from app.services.budget import budget
+
+logger = logging.getLogger(__name__)
 
 OFFLINE_PLACEHOLDER = (
     "[LLM offline] no llm_api_key configured — returning placeholder response."
@@ -30,17 +35,31 @@ def _strip_fences(text: str) -> str:
     return match.group(1).strip() if match else text.strip()
 
 
-def complete(system: str, user: str) -> str:
+def _tokens_used(data: dict, system: str, user: str, reply: str) -> int:
+    """Real token count from the response's ``usage``; about 4 chars per token if absent."""
+    usage = data.get("usage")
+    total = usage.get("total_tokens") if isinstance(usage, dict) else None
+    if isinstance(total, int):
+        return total
+    return (len(system) + len(user) + len(reply)) // 4
+
+
+def complete(system: str, user: str, *, max_tokens: int = limits.DEFAULT_MAX_TOKENS) -> str:
     """Send a chat-completions request and return the assistant's text.
 
     Uses the OpenAI-compatible ``/chat/completions`` endpoint pointed at by
-    ``settings.llm_base_url``.  If ``settings.llm_api_key`` is empty, returns
-    :data:`OFFLINE_PLACEHOLDER` so callers (and tests) can run without a key.
+    ``settings.llm_base_url``.  If ``settings.llm_api_key`` is empty, or the daily
+    budget (``services.budget``) is spent, returns :data:`OFFLINE_PLACEHOLDER` so
+    callers fall back to their deterministic output.
 
     Requests JSON-mode (``response_format``) so compatible providers return
     parseable JSON, and strips ``\\`\\`\\`json`` code fences from the response.
+    ``max_tokens`` bounds the reply. Errors are raised, never retried.
     """
     if not settings.llm_api_key:
+        return OFFLINE_PLACEHOLDER
+    if budget.exhausted():
+        logger.warning("Daily LLM budget spent; using deterministic fallbacks.")
         return OFFLINE_PLACEHOLDER
 
     base_url = settings.llm_base_url or "https://api.openai.com/v1"
@@ -57,13 +76,16 @@ def complete(system: str, user: str) -> str:
             {"role": "user", "content": user},
         ],
         "response_format": {"type": "json_object"},
+        "max_tokens": max_tokens,
     }
     if settings.llm_disable_thinking:
         payload["thinking"] = {"type": "disabled"}
 
-    with httpx.Client(timeout=60) as client:
+    with httpx.Client(timeout=limits.LLM_TIMEOUT_S) as client:
         response = client.post(url, headers=headers, json=payload)
         response.raise_for_status()
 
     data = response.json()
-    return _strip_fences(data["choices"][0]["message"]["content"])
+    reply = data["choices"][0]["message"]["content"]
+    budget.add_tokens(_tokens_used(data, system, user, reply if isinstance(reply, str) else ""))
+    return _strip_fences(reply)
