@@ -24,3 +24,15 @@ def test_gps_points_at_the_cap_accepted():
 
 def test_gps_points_over_the_cap_rejected():
     assert client.post("/api/disputes/resolve", json=_with_points(limits.MAX_GPS_POINTS + 1)).status_code == 422
+
+
+def test_realistic_trip_log_fits_under_the_body_cap():
+    """A 35-minute trip logged once a second (~2,100 points) must be accepted, and so must
+    the full cap of realistic points: the body cap must not reject what the field cap allows."""
+    assert limits.MAX_GPS_POINTS >= 2_100
+    payload = json.loads((DISPUTES / "route_deviation_001.json").read_text())
+    payload["gps_points"] = [
+        {"lat": 1.352083, "lng": 103.819836, "timestamp": "2026-09-22T22:40:00+08:00"}
+    ] * limits.MAX_GPS_POINTS
+    assert len(json.dumps(payload).encode()) <= limits.MAX_BODY_BYTES
+    assert client.post("/api/disputes/resolve", json=payload).status_code == 200

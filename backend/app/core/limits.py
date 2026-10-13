@@ -13,8 +13,10 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 # -- Request size -------------------------------------------------------------
-# A legitimate maximum (50 x 500-char messages + two 2,000-char texts) is under 40 KB.
-MAX_BODY_BYTES = 64 * 1024
+# The text fields stay under 40 KB (50 x 500-char messages + two 2,000-char texts);
+# the rest is room for MAX_GPS_POINTS of trip log (~75 bytes each with a timestamp,
+# ~375 KB). GPS points never reach the LLM, so this adds no token cost.
+MAX_BODY_BYTES = 512 * 1024
 
 # -- DisputeCase fields (models/dispute.py) -----------------------------------
 DISPUTE_ID_PATTERN = r"^[A-Za-z0-9_-]{1,64}$"
@@ -25,7 +27,8 @@ MAX_CHAT_MESSAGE_CHARS = 500
 MAX_TIMESTAMP_CHARS = 64
 MAX_FARE_LINES = 20
 MAX_FARE_LABEL_CHARS = 80
-MAX_GPS_POINTS = 500               # nothing in the pipeline reads gps_points yet
+# A 35-minute trip logged once a second is ~2,100 points; nothing reads gps_points yet.
+MAX_GPS_POINTS = 5_000
 
 # -- Numeric ranges -----------------------------------------------------------
 MAX_DISTANCE_KM = 500
@@ -51,6 +54,8 @@ DAILY_TOKEN_BUDGET = 300_000
 DAILY_RESOLVE_BUDGET = 75
 
 # -- Per LLM call -------------------------------------------------------------
+# Sized for LLM_DISABLE_THINKING=true. With thinking on, reasoning tokens count
+# against max_tokens, replies get cut off mid-JSON and every agent falls back.
 ADVOCATE_MAX_TOKENS = 600
 JUDGE_MAX_TOKENS = 800
 DEFAULT_MAX_TOKENS = 800

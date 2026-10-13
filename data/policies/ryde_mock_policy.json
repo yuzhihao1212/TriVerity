@@ -51,5 +51,10 @@
     "rules": {
       "FRAUD-1": "If either party shows a high bad-faith risk, the dispute is escalated to human review."
     }
+  },
+  "refund": {
+    "rules": {
+      "REF-1": "A refund never exceeds the fare actually charged; a larger computed refund is reduced to the charged fare."
+    }
   }
 }

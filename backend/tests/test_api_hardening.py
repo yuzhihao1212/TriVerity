@@ -71,6 +71,8 @@ def test_refund_never_exceeds_fare_actual():
     capped = _cap_refund(ruling, case)
     assert capped.refund_amount == pytest.approx(24.80)
     assert "$24.80" in capped.recommended_action and "$99.00" not in capped.recommended_action
+    # The cap is a policy rule, so it is cited in the ruling like the others.
+    assert any(ref.startswith("REF-1:") for ref in capped.policy_refs)
 
 
 def test_refund_cap_leaves_normal_refund_alone():
@@ -180,7 +182,8 @@ def test_body_over_cap_without_content_length_gives_413():
     chunk = b"a" * 16 * 1024
 
     def chunks():
-        for _ in range(8):  # 128 KB, sent chunked with no Content-Length
+        # Just over the cap, sent chunked with no Content-Length.
+        for _ in range(limits.MAX_BODY_BYTES // len(chunk) + 1):
             yield chunk
 
     response = client.post(RESOLVE, content=chunks(), headers={"Content-Type": "application/json"})
