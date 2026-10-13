@@ -90,9 +90,10 @@ main reason, and what happens next.
 rider's dispute", never "your dispute".
 Rules: use only the facts given. Describe decisions in plain words (e.g. "the fare stands", "a partial
 refund"), never internal codes such as no_action or needs_review. Write money exactly as given, with $ and
-two decimals. Only mention rule IDs listed in the ruling. Do not state consequences the ruling does not
-give, such as who pays, penalties or account actions. If the decision is needs_review, say a human
-reviewer will decide and do not promise any refund or outcome.
+two decimals. Only mention rule IDs listed in the ruling, or rules an advocate cited when explaining why
+they did not decide the case. Do not state consequences the ruling does not give, such as who pays,
+penalties or account actions. If the decision is needs_review, say a human reviewer will decide and do not
+promise any refund or outcome.
 Never mention bad-faith or fraud risk, or either party's account or dispute history, in the
 rider_explanation or driver_explanation. These are internal signals only. Write plain text only: no
 links, email addresses, phone numbers, HTML or markdown. Write all three texts in English.
@@ -102,8 +103,9 @@ Respond with the JSON object only.
 **Output checks** (after folding look-alike characters, odd hyphens and invisible characters, so they
 can't be dodged): all three texts present, the record at most 1,200 characters and each party message at
 most 600; no links, email addresses, phone numbers, HTML, markdown or copied system prompt; money only as
-`$` amounts that appear in the case (no "dollars", "SGD" or "S$"); only rule IDs the ruling applied may
-be named, in any spelling; for a refund, the rider's message must state the amount and may not deny it;
+`$` amounts that appear in the case (no "dollars", "SGD" or "S$"); only rule IDs the ruling applied or an
+advocate cited may be named, in any spelling (a rule nobody cited is rejected); for a refund, the rider's
+message must state the amount and may not deny it;
 for no_action or an escalated case, the party messages may not promise a refund, reimbursement or "money
 back"; "upheld" must match the decision; the rider and driver messages must be in English and must not
 mention fraud, risk, ratings, account age, trips or anyone's history. Otherwise the rule-based template wording is used. The
@@ -129,6 +131,7 @@ after each change.
 | With reasoning turned off for speed, advocates argued the other side ("the no-show charge should not apply", from the *driver* advocate) and ruled on the case themselves | Advocate rules 1 and 3: argue only for your client, never rule, acknowledge bad facts without conceding |
 | Advocates cited rules that favour the other party: 9 wrong-side citations across the 14 advocate cases in the seven samples | Advocate rule 4: cite only rules whose conditions support your client, or none. Down to 2 |
 | The Judge told the driver "$6.30 will be deducted from your earnings", which nothing in the case states | "Do not state consequences the ruling does not give" |
+| The check rejected good explanations that named an advocate's cited rules to say why they lost (e.g. "the driver's advocate cited NS-2 and NS-3, but…"), so the Judge's badge flipped between AI and Fallback on re-runs | The check allows rules the ruling applied **or an advocate cited**, and the prompt allows naming advocate-cited rules only to explain why they didn't decide the case |
 | Messages said "decided as no_action" | "Describe decisions in plain words… never internal codes" |
 | The driver was told "your dispute" about the rider's dispute | Explicit instruction in the `driver_explanation` field |
 | After the Fraud detector was added, the rider was told "your account's dispute history triggered a review" and the driver "the rider's history led to review" | "Never mention bad-faith or fraud risk, or either party's account or dispute history" in party messages, plus a check that rejects them |

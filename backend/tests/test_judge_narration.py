@@ -45,7 +45,7 @@ def test_fenced_json_accepted():
     [
         ({"rider_explanation": "You will be refunded $9.99."}, "invented amount"),
         ({"rider_explanation": "Your dispute was upheld and you will get a refund."}, "missing amount"),
-        ({"explanation": "Under RD-1 and RD-3 the rider wins."}, "rule not applied"),
+        ({"explanation": "Under RD-1 and RD-3 the rider wins."}, "rule nobody cited"),
         ({"driver_explanation": ""}, "empty text"),
     ],
 )
@@ -84,3 +84,43 @@ def test_offline_keeps_templates_and_logs_source():
     result = resolve_dispute(case)
     assert result.explanation_source == "fallback"
     assert result.agent_log[-1].message.startswith("[fallback] no_action")
+
+
+def _no_show_ruling_with_advocates():
+    """D005: the ruling applies NS-1; the driver advocate argues NS-2 and NS-3."""
+    from app.agents.judge_narration import narrate
+    from app.models.resolution import AgentCase
+    from app.services.policy_service import cite, load_policy
+
+    case = DisputeCase(**json.loads((DISPUTES / "no_show_002.json").read_text()))
+    with patch("app.agents.judge_narration.complete", return_value="not json"):
+        ruling = resolve_dispute(case)
+    section = load_policy()["no_show_charge"]
+    rider = AgentCase(agent="rider_advocate", summary="x", policy_refs=[cite(section, "NS-1")], source="llm")
+    driver = AgentCase(agent="driver_advocate", summary="x", policy_refs=[cite(section, "NS-2"), cite(section, "NS-3")], source="llm")
+    return case, ruling, rider, driver, narrate
+
+
+def test_judge_may_name_rules_an_advocate_cited():
+    case, ruling, rider, driver, narrate = _no_show_ruling_with_advocates()
+    reply = {
+        "explanation": "NS-1 decides this: the driver stopped 378 m away. The driver's advocate cited NS-2 and "
+                       "NS-3, but waiting and messaging don't matter when the driver was not at the pickup point.",
+        "rider_explanation": "Your no-show fee of $4.00 will be refunded because the driver stopped 378 m away.",
+        "driver_explanation": "The rider's dispute was upheld because you stopped 378 m from the pickup point.",
+    }
+    with patch("app.agents.judge_narration.complete", return_value=json.dumps(reply)):
+        result = narrate(case, ruling, rider, driver)
+    assert result.explanation_source == "llm"
+
+
+def test_judge_still_cannot_name_a_rule_nobody_cited():
+    case, ruling, rider, driver, narrate = _no_show_ruling_with_advocates()
+    reply = {
+        "explanation": "NS-1 and NS-4 decide this: the driver stopped 378 m away.",
+        "rider_explanation": "Your no-show fee of $4.00 will be refunded.",
+        "driver_explanation": "The rider's dispute was upheld.",
+    }
+    with patch("app.agents.judge_narration.complete", return_value=json.dumps(reply)):
+        result = narrate(case, ruling, rider, driver)
+    assert result.explanation_source == "fallback"

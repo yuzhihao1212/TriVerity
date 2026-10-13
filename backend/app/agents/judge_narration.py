@@ -2,7 +2,7 @@
 
 The decision, amount and cited policy are fixed by the rules in judge_agent.
 The model only explains them, answering both advocates. Any narration that
-contradicts the ruling (wrong amount, uncited rule, a promised refund on an
+contradicts the ruling (wrong amount, a rule nobody cited, a promised refund on an
 escalated case), leaks internal signals, or contains links, markup or the
 system prompt is rejected and the template wording is kept.
 
@@ -43,7 +43,8 @@ SYSTEM = (
     'so call it "the rider\'s dispute", never "your dispute".\n'
     "Rules: use only the facts given. Describe decisions in plain words (e.g. \"the fare stands\", "
     "\"a partial refund\"), never internal codes such as no_action or needs_review. Write money exactly as given, with $ and two decimals. "
-    "Only mention rule IDs listed in the ruling. Do not state consequences the ruling "
+    "Only mention rule IDs listed in the ruling, or rules an advocate cited when explaining why "
+    "they did not decide the case. Do not state consequences the ruling "
     "does not give, such as who pays, penalties or account actions. If the decision is needs_review, say a human "
     "reviewer will decide and do not promise any refund or outcome.\n"
     "Never mention bad-faith or fraud risk, or either party's account or dispute history, in the "
@@ -109,7 +110,7 @@ def narrate(case: DisputeCase, ruling: Ruling, rider_case: AgentCase, driver_cas
     except (json.JSONDecodeError, KeyError, TypeError) as exc:
         return _keep_templates(ruling, f"unparseable reply: {safe_reason(exc)}")
 
-    problem = _check(texts, case, ruling)
+    problem = _check(texts, case, ruling, rider_case, driver_case)
     if problem:
         return _keep_templates(ruling, problem)
     return ruling.model_copy(update={**{k: sanitise(v) for k, v in texts.items()}, "explanation_source": "llm"})
@@ -147,7 +148,7 @@ def _context(text: str, start: int) -> str:
     return " ".join(clause.split()[-_CONTEXT_WORDS:])
 
 
-def _check(texts: dict, case: DisputeCase, ruling: Ruling) -> str | None:
+def _check(texts: dict, case: DisputeCase, ruling: Ruling, rider_case: AgentCase, driver_case: AgentCase) -> str | None:
     """Return why the narration is unsafe or contradicts the ruling, or None if it is fine.
 
     The reason starts with a short category (e.g. ``amount:``) for logs and the red-team script.
@@ -183,10 +184,14 @@ def _check(texts: dict, case: DisputeCase, ruling: Ruling) -> str | None:
         if round(float(amount.replace(",", "")), 2) not in allowed:
             return "amount: mentions an amount not in the case"  # the value itself is not logged
 
-    cited = {ref.split(":")[0] for ref in ruling.policy_refs}
+    # The Judge may name rules the advocates cited (to explain why they didn't
+    # decide the case), but never a rule that no one in the case cited (PR #7).
+    # Rule IDs are matched after normalisation, in any case and with any dash.
+    refs = [*ruling.policy_refs, *rider_case.policy_refs, *driver_case.policy_refs]
+    cited = {ref.split(":")[0] for ref in refs}
     mentioned = {f"{p.upper()}-{n}" for p, n in _rule_id_re().findall(joined)}
     if mentioned - cited:
-        return f"rule: mentions rules not applied: {sorted(mentioned - cited)}"
+        return f"rule: mentions rules nobody cited: {sorted(mentioned - cited)}"
 
     if ruling.decision in _REFUND_DECISIONS and ruling.refund_amount is not None:
         if f"${ruling.refund_amount:.2f}" not in norm["rider_explanation"]:

@@ -281,6 +281,25 @@ def test_live_hy3_no_action_narration_accepted():
     assert narrate(D003, reply).explanation_source == "llm"
 
 
+@pytest.mark.parametrize(("mention", "accepted"), [
+    ("the driver's advocate cited NS‑2 and ns-3, but NS-1 decides it", True),  # cited, odd spelling
+    ("NS-4 also applies", False),                                                   # nobody cited NS-4
+    ("n​s-4 also applies", False),                                             # disguised, still nobody
+])
+def test_rules_cited_by_an_advocate_may_be_named(mention, accepted):
+    """PR #7: the Judge may name rules an advocate cited, checked after normalisation."""
+    advocate = json.dumps({"summary": "The driver followed the rules.", "evidence": [],
+                           "policy_refs": ["NS-2: x", "NS-3: y"]})
+    narration = json.dumps({
+        "explanation": f"NS-1 applies: the driver arrived 380 m from pickup; {mention}.",
+        "rider_explanation": "Your dispute was upheld and you will be refunded $4.00, the no-show fee.",
+        "driver_explanation": "The rider has been refunded $4.00 because you stopped too far from the pickup point.",
+    })
+    result = run(load("no_show_002.json"), advocate=lambda *a, **k: advocate, judge=lambda *a, **k: narration)
+    assert result.decision == "full_refund"
+    assert (result.explanation_source == "llm") is accepted
+
+
 @pytest.mark.parametrize(("sample", "text"), [
     (D001, "The fare is upheld and you will be refunded $6.30."),
     (D007, "The charge is upheld while a reviewer checks it."),

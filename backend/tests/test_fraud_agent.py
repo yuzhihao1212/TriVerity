@@ -376,9 +376,11 @@ def test_narration_check_rejects_fraud_in_party_message():
     """The _check guard rejects rider/driver explanations that mention fraud."""
     from app.agents.judge_narration import _check
     from app.models.dispute import DisputeCase
-    from app.models.resolution import Ruling
+    from app.models.resolution import AgentCase, Ruling
 
     case = _case(BASE_CASE)
+    rider = AgentCase(agent="rider_advocate", summary="x")
+    driver = AgentCase(agent="driver_advocate", summary="x")
     ruling = Ruling(
         decision="needs_review",
         recommended_action="Escalate to a human reviewer.",
@@ -391,7 +393,7 @@ def test_narration_check_rejects_fraud_in_party_message():
         "rider_explanation": "We found fraud in your account history.",
         "driver_explanation": "The rider's dispute is under review.",
     }
-    problem = _check(texts, case, ruling)
+    problem = _check(texts, case, ruling, rider, driver)
     assert problem is not None
     assert "fraud" in problem.lower()
 
