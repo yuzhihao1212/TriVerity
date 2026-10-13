@@ -51,7 +51,7 @@ flowchart LR
     U["Browser: reviewer console,<br/>visitor or judge"]
   end
   subgraph S["TriVerity server (trusted code)"]
-    BC["Body cap 64 KB"] --> RL["Rate limits and<br/>access code"]
+    BC["Body cap 512 KB"] --> RL["Rate limits and<br/>access code"]
     RL --> V["Input validation<br/>(422)"]
     V --> F["compute_facts<br/>(deterministic)"]
     F --> RA["Rider advocate"]
@@ -104,14 +104,14 @@ brackets; OWASP LLM Top 10 (2025) IDs where they apply. Tests are in `backend/te
 | ID | Threat | TB | Asset | L x I | Mitigation | Evidence | Residual |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | T-01 | Prompt injection in a claim, statement, chat or promo code tries to change the outcome (T, E; LLM01) | 1, 3 | A2 | 3 x 3 | rulings come from rules on computed facts; the LLM never sets decision or amount | `test_prompt_injection.py::test_attack_does_not_change_ruling` (19 attacks x offline and fully compromised model) | the model may still be fooled in its wording; contained by T-02 |
-| T-02 | A fooled narration states a wrong amount, promises a refund, cites a rule not applied or says "upheld" against the decision (T; LLM05) | 3 | A2 | 2 x 3 | `_check` after normalisation (NFKC, dashes, invisible characters, look-alike letters): only `$` amounts from the case, rule IDs from the ruling, wording per decision; fallback to templates | `test_prompt_injection.py::test_compromised_narration_rejected` (51 cases: findings F5, F6 and guide 1.5) | phrasings not yet seen |
+| T-02 | A fooled narration states a wrong amount, promises a refund, cites a rule nobody in the case cited or says "upheld" against the decision (T; LLM05) | 3 | A2 | 2 x 3 | `_check` after normalisation (NFKC, dashes, invisible characters, look-alike letters): only `$` amounts from the case, rule IDs the ruling applied or an advocate cited (PR #7), wording per decision; fallback to templates | `test_prompt_injection.py::test_compromised_narration_rejected` (51 cases: findings F5, F6 and guide 1.5) | phrasings not yet seen |
 | T-03 | Fraud signals or one party's history leak to a party (I; LLM02) | 3, 4 | A4 | 2 x 3 | the narration model never receives history or fraud wording (H1); leak check; English-only party messages; party views without `risk` | `test_narration_prompt_gets_no_history_or_fraud_wording`, `test_party_messages_never_leak_with_compromised_narration`, `test_party_view.py::test_party_view_carries_no_internal_data` | the internal view still carries them (by design, for reviewers) |
 | T-04 | LLM output carries a phishing link, email, phone number or markup to a user (T; LLM05) | 3 | A3 | 2 x 2 | links, emails, phone numbers, `<`, `](`, backticks rejected in narration and advocate output; React renders text escaped (no `dangerouslySetInnerHTML` in `frontend/src`) | `test_compromised_narration_rejected[bare domain / email / phone / HTML / markdown ...]`, `test_compromised_advocate_falls_back` | none known |
 | T-05 | The model repeats its system prompt (I; LLM07) | 3 | A2 | 1 x 1 | reject any 8 words copied from a system prompt | `test_compromised_narration_rejected[system prompt echoed]`, `test_compromised_advocate_falls_back` (system-prompt case) | paraphrase; the prompts hold no secrets |
 | T-06 | Prompt infection: an advocate's output carries an instruction to the Judge (T; LLM01) | 3 | A2 | 2 x 2 | advocate output length-capped and checked; evidence with invented numbers dropped (H6b); labelled `unverified_argument` for the Judge | `test_pi19_prompt_infection_from_advocate_to_judge`, `test_evidence_with_invented_numbers_dropped` | a wrong claim without numbers stays in the internal UI as an argument |
-| T-07 | Token drain by flooding resolve or sending huge input (D; LLM10) | 1 | A1, A5 | 3 x 3 | 64 KB body cap, field limits, 3/min and 30/day per IP, 10/min global, daily budget with fallback, `max_tokens`, provider key quota | `test_api_hardening.py::test_body_over_cap_without_content_length_gives_413`, `test_fourth_request_in_a_minute_gets_429`, `test_global_limit_applies_across_ips`, `test_budget_spent_still_returns_full_fallback_ruling` | many IPs share the global limit; counters are per process |
+| T-07 | Token drain by flooding resolve or sending huge input (D; LLM10) | 1 | A1, A5 | 3 x 3 | 512 KB body cap, field limits, 3/min and 30/day per IP, 10/min global, daily budget with fallback, `max_tokens`, provider key quota | `test_api_hardening.py::test_body_over_cap_without_content_length_gives_413`, `test_fourth_request_in_a_minute_gets_429`, `test_global_limit_applies_across_ips`, `test_budget_spent_still_returns_full_fallback_ruling` | many IPs share the global limit; counters are per process |
 | T-08 | Slow LLM calls starve the server (D) | 1, 2 | A5 | 2 x 2 | at most 3 resolves at once, 503 otherwise; 25 s timeout; no retries | `test_full_semaphore_gives_503_and_health_still_works`, `test_max_tokens_and_timeout_sent`, `test_no_retry_on_4xx` | none known |
-| T-09 | Client forges facts: a huge fare, NaN, a negative distance (T; finding F1, F3) | 1 | A2 | 3 x 3 | numeric ranges with no NaN/Infinity (422); a refund never above `fare.actual`; public demo uses server-side samples | `test_f1_huge_fare_rejected`, `test_f3_bad_numbers_rejected`, `test_refund_never_exceeds_fare_actual`, `test_public_demo.py::test_public_mode_ignores_client_facts` | plausible forged facts are accepted until the server loads cases itself (roadmap) |
+| T-09 | Client forges facts: a huge fare, NaN, a negative distance (T; finding F1, F3) | 1 | A2 | 3 x 3 | numeric ranges with no NaN/Infinity (422); a refund never above `fare.actual` (REF-1); public demo uses server-side samples | `test_f1_huge_fare_rejected`, `test_f3_bad_numbers_rejected`, `test_refund_never_exceeds_fare_actual`, `test_public_demo.py::test_public_mode_ignores_client_facts` | plausible forged facts are accepted until the server loads cases itself (roadmap) |
 | T-10 | Client forges a chat sender (`driver`) to satisfy NS-3 (S, T) | 1 | A2 | 2 x 3 | public demo resolves only server-side samples for visitors; production loads chat from Ryde's records | `test_pi21_forged_driver_message_changes_no_show_ruling` (documents the gap) | **accepted for the prototype**; judges with codes can do it |
 | T-11 | Keyword abuse ("kill the time") forces SAFE-1 escalation and floods reviewers (D; finding F7) | 1 | A5 | 3 x 2 | documented; escalations are visible; context-aware classifier with keyword fallback planned (Lennon) | `test_pi20_keyword_abuse_forces_human_review_finding_f7` | queue flooding is possible; money is unchanged |
 | T-12 | Personal data or model output written to logs (I; finding F9) | 3 | A3 | 3 x 2 | log sites record only the error class and HTTP status (`safe_reason`) and short check categories | `test_log_privacy.py::test_failure_logs_carry_no_personal_data` (8 failure modes), `test_real_client_error_logged_safely` | uvicorn's access log records client IPs and paths |
@@ -148,11 +148,15 @@ rider or driver." Do not claim "immune to prompt injection".
 
 All numbers are in `backend/app/core/limits.py`; the budget and rate limits can be
 overridden in `backend/.env` within bounds, and overrides are logged at start-up.
+`.env.example` has two presets: local development and evaluation (everyone on localhost
+shares 127.0.0.1, so 10/min per IP and a budget sized to the run) and the demo server
+(5/min per IP and per code, a budget below the demo key's quota). `max_tokens` assumes
+thinking is disabled.
 
 | Control | Value | Response | Evidence |
 | --- | --- | --- | --- |
-| Request body | 64 KB, on `Content-Length` and on bytes received | 413 | `test_body_over_cap_with_content_length_gives_413`, `test_middleware_counts_bytes_when_content_length_lies` |
-| Text fields | claim and statement 2,000 chars; 50 chat messages of 500; 20 fare lines (label 80); 500 GPS points; ID and promo-code patterns | 422 | `test_f2_oversized_or_malformed_fields_rejected` |
+| Request body | 512 KB (room for 5,000 GPS points; text fields stay under 40 KB), on `Content-Length` and on bytes received | 413 | `test_body_over_cap_with_content_length_gives_413`, `test_middleware_counts_bytes_when_content_length_lies` |
+| Text fields | claim and statement 2,000 chars; 50 chat messages of 500; 20 fare lines (label 80); 5,000 GPS points (a 35-minute trip at 1 Hz is ~2,100); ID and promo-code patterns | 422 | `test_f2_oversized_or_malformed_fields_rejected` |
 | Numbers | no NaN/Infinity; distance 0–500 km; durations 0–600 min; money 0–1,000; surge 1–10; rating 0–5; valid lat/lng; counts ≥ 0 | 422 | `test_f3_bad_numbers_rejected` |
 | Per IP | 3 per minute, 30 per day | 429 + `Retry-After` | `test_fourth_request_in_a_minute_gets_429`, `test_per_ip_daily_limit` |
 | Per access code | 3 per minute, 20 per day | 429 + `Retry-After` | `test_judges_sharing_one_ip_are_limited_per_code`, `test_per_code_daily_quota` |
@@ -160,7 +164,7 @@ overridden in `backend/.env` within bounds, and overrides are logged at start-up
 | Daily LLM budget | 300,000 tokens or 75 resolves, counted from the provider's `usage` | 200 with Fallback badges | `test_budget_spent_still_returns_full_fallback_ruling`, `test_real_token_usage_is_counted` |
 | Per call | `max_tokens` 600 (advocates), 800 (Judge); timeout 25 s; no retries | — | `test_max_tokens_and_timeout_sent`, `test_no_retry_on_4xx` |
 | Concurrency | 3 resolves at once | 503 + `Retry-After: 5` | `test_full_semaphore_gives_503_and_health_still_works` |
-| Refund cap | never above `fare.actual` | — | `test_refund_never_exceeds_fare_actual` |
+| Refund cap | never above `fare.actual`: policy rule REF-1, cited in `policy_refs` when it applies | — | `test_refund_never_exceeds_fare_actual` |
 | Errors | no traceback in a 500 | 500 | `test_500_has_no_traceback` |
 
 **Cost arithmetic.** One resolve is three LLM calls, about 3,000–4,000 tokens. The free
