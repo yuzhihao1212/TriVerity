@@ -13,8 +13,9 @@ token budget. The controls behind it are described in `docs/api-contract.md`
 | Everyone together | At most 10 resolves per minute. After 300,000 tokens or 75 resolves in a day, rulings continue with Fallback badges instead of the LLM. | Capped |
 
 All numbers are in `backend/app/core/limits.py`. They can be overridden in `backend/.env`
-(for local evaluation runs); on the demo server, keep the defaults and check the backend's
-start-up log: any line "Limit override from backend/.env" means someone raised a limit.
+(see the two presets in `.env.example`: local development and evaluation, and the demo server);
+on the demo server, use Preset 2 and check the backend's start-up log: it prints one
+"Limit override from backend/.env" line per setting, which should match the preset.
 
 ## 1. A separate LLM key for the demo
 
