@@ -71,7 +71,7 @@ can forge `X-Forwarded-For` and get a fresh rate limit on every request.
 demo.example.com {
     encode gzip
     request_body {
-        max_size 64KB
+        max_size 512KB
     }
     @api path /api/* /health
     handle @api {
