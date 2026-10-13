@@ -71,6 +71,8 @@ def test_refund_never_exceeds_fare_actual():
     capped = _cap_refund(ruling, case)
     assert capped.refund_amount == pytest.approx(24.80)
     assert "$24.80" in capped.recommended_action and "$99.00" not in capped.recommended_action
+    # The cap is a policy rule, so it is cited in the ruling like the others.
+    assert any(ref.startswith("REF-1:") for ref in capped.policy_refs)
 
 
 def test_refund_cap_leaves_normal_refund_alone():

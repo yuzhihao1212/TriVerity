@@ -54,7 +54,7 @@ logged at start-up, and an out-of-range value stops the backend from starting.
 
 When the daily LLM budget (300,000 tokens or 75 resolves) is spent, `/resolve` still
 returns 200 with the full rule-based ruling, but every `source` and `explanation_source`
-is `"fallback"`. A refund never exceeds `fare.actual`.
+is `"fallback"`. A refund never exceeds `fare.actual` (policy rule REF-1, cited in `policy_refs` when it applies).
 
 ### Public demo mode (`PUBLIC_DEMO=true`)
 
