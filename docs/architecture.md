@@ -48,7 +48,7 @@ side's case and explaining the outcome to the people affected.
 |---|---|---|
 | Advocates | Valid JSON with the expected fields; cited rule IDs must exist in the policy and are rebuilt with the exact rule text | Deterministic case built from the facts, with no policy citations |
 | Fraud detection | Deterministic — no LLM involved | N/A |
-| Judge explanation | Amounts must match the case; only rules the ruling applied may be named; a refund's amount must appear in the rider's message; an escalated case must not promise a refund; party messages must not mention fraud risk or anyone's history | Rule-based template explanations |
+| Judge explanation | Amounts must match the case; only rules the ruling applied or an advocate cited may be named; a refund's amount must appear in the rider's message; an escalated case must not promise a refund; party messages must not mention fraud risk or anyone's history | Rule-based template explanations |
 
 Each step records `source: "llm" | "fallback"`, shown as an **AI / Fallback** badge in the UI, so a silent
 fallback can't pass for an AI answer.
