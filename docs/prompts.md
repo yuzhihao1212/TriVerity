@@ -70,7 +70,9 @@ deterministic policy checks in `backend/app/agents/judge_agent.py`. The LLM only
 (decision, recommended action, refund amount, confidence, the rule-based reasoning, the rules applied),
 and each advocate's argument (labelled `unverified_argument`) and citations. The Judge's call is **not**
 given either party's history, the fraud reasoning, or the FRAUD-1 rule wording: the rules have already
-used them, and a model that never sees them can't leak them to a party.
+used them, and a model that never sees them can't leak them to a party. On an escalated case
+(`needs_review`) the refund is sent as `proposed_refund_for_the_reviewer_only`, so the model treats it
+as the reviewer's proposal rather than an outcome to tell the parties.
 
 **System prompt:**
 
@@ -92,8 +94,9 @@ Rules: use only the facts given. Describe decisions in plain words (e.g. "the fa
 refund"), never internal codes such as no_action or needs_review. Write money exactly as given, with $ and
 two decimals. Only mention rule IDs listed in the ruling, or rules an advocate cited when explaining why
 they did not decide the case. Do not state consequences the ruling does not give, such as who pays,
-penalties or account actions. If the decision is needs_review, say a human reviewer will decide and do not
-promise any refund or outcome.
+penalties or account actions. If the decision is needs_review, rider_explanation and driver_explanation
+must not mention any refund, amount or proposed action, and no dollar amounts at all: say only that a
+human reviewer will decide and follow up. The explanation (case record) may state the proposed action.
 Never mention bad-faith or fraud risk, or either party's account or dispute history, in the
 rider_explanation or driver_explanation. These are internal signals only. Write plain text only: no
 links, email addresses, phone numbers, HTML or markdown. Write all three texts in English.
@@ -107,7 +110,8 @@ most 600; no links, email addresses, phone numbers, HTML, markdown or copied sys
 advocate cited may be named, in any spelling (a rule nobody cited is rejected); for a refund, the rider's
 message must state the amount and may not deny it;
 for no_action or an escalated case, the party messages may not promise a refund, reimbursement or "money
-back"; "upheld" must match the decision; the rider and driver messages must be in English and must not
+back" (or "get … back"), and on an escalated case they may not mention the proposal; "upheld" must match
+the decision; the rider and driver messages must be in English and must not
 mention fraud, risk, ratings, account age, trips or anyone's history. Otherwise the rule-based template wording is used. The
 attack tests are in `backend/tests/test_prompt_injection.py`; findings in `docs/redteam/findings.md`.
 
@@ -132,6 +136,7 @@ after each change.
 | Advocates cited rules that favour the other party: 9 wrong-side citations across the 14 advocate cases in the seven samples | Advocate rule 4: cite only rules whose conditions support your client, or none. Down to 2 |
 | The Judge told the driver "$6.30 will be deducted from your earnings", which nothing in the case states | "Do not state consequences the ruling does not give" |
 | The check rejected good explanations that named an advocate's cited rules to say why they lost (e.g. "the driver's advocate cited NS-2 and NS-3, but…"), so the Judge's badge flipped between AI and Fallback on re-runs | The check allows rules the ruling applied **or an advocate cited**, and the prompt allows naming advocate-cited rules only to explain why they didn't decide the case |
+| On escalated cases with a proposed refund (D007, D008) the Judge told the rider "a refund of $6.30 … has been proposed", which the promise check rejected, so the badge was Fallback in most runs (D007 4 of 5, D008 1 of 1) | The party messages must not mention any refund, amount or proposal, only that a human reviewer will decide and follow up; the refund is labelled as for the reviewer only. Live after the fix: D007 5/5 and D008 5/5 AI |
 | Messages said "decided as no_action" | "Describe decisions in plain words… never internal codes" |
 | The driver was told "your dispute" about the rider's dispute | Explicit instruction in the `driver_explanation` field |
 | After the Fraud detector was added, the rider was told "your account's dispute history triggered a review" and the driver "the rider's history led to review" | "Never mention bad-faith or fraud risk, or either party's account or dispute history" in party messages, plus a check that rejects them |

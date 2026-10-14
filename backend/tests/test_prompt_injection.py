@@ -281,6 +281,39 @@ def test_live_hy3_no_action_narration_accepted():
     assert narrate(D003, reply).explanation_source == "llm"
 
 
+def test_escalated_prompt_keeps_the_proposal_out_of_party_messages():
+    """Lead review: on needs_review Hy3 repeated the proposed refund to the rider, so the
+    narration fell back in most live runs. The prompt now says party messages must not
+    mention it, and the amount is labelled as for the reviewer only."""
+    assert "must not mention any refund, amount or proposed action" in judge_narration.SYSTEM
+    ruling = json.loads(capture(load(D007))["judge"])["ruling"]
+    assert ruling["decision"] == "needs_review"
+    assert "refund_amount" not in ruling
+    assert ruling["proposed_refund_for_the_reviewer_only"] == pytest.approx(6.90)
+    assert json.loads(capture(load(D001))["judge"])["ruling"]["refund_amount"] == pytest.approx(6.30)
+
+
+@pytest.mark.parametrize(("text", "accepted"), [
+    # Hy3's real wording from the lead's live runs: a promise of the proposal.
+    ("Your dispute is being sent to a human reviewer for a decision, and a refund of $6.90 above "
+     "the expected fare has been proposed.", False),
+    # A factual fare difference is not a promise (Hy3's wording after the prompt fix).
+    ("Your dispute has been sent to a human reviewer who will decide and follow up with you. "
+     "The fare was $6.90 above the expected amount.", True),
+    ("A human reviewer will decide whether you get the $6.90 back.", True),  # hedged: not a promise
+    # The wording the prompt asks for is not a system-prompt leak (seen live on D008).
+    ("Your dispute needs additional review: a human reviewer will decide and follow up with you.", True),
+    ("A human reviewer will decide, and you will get $6.90 back.", False),
+    ("A human reviewer will look at the proposed outcome and contact you.", False),
+    ("Your dispute needs additional review. A human reviewer will decide, and no refund is "
+     "promised at this time.", True),
+    (GOOD[D007]["rider_explanation"], True),
+])
+def test_escalated_party_message_mentions_no_amount_or_proposal(text, accepted):
+    result = narrate(D007, {**GOOD[D007], "rider_explanation": text})
+    assert (result.explanation_source == "llm") is accepted
+
+
 @pytest.mark.parametrize(("mention", "accepted"), [
     ("the driver's advocate cited NS‑2 and ns-3, but NS-1 decides it", True),  # cited, odd spelling
     ("NS-4 also applies", False),                                                   # nobody cited NS-4
