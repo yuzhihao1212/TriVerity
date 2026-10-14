@@ -25,6 +25,9 @@ from app.services.text_safety import echoes, find_link_or_markup, is_latin_scrip
 
 logger = logging.getLogger(__name__)
 
+# Wording the prompt asks the model to use on escalated cases; copying it is not a prompt leak.
+_ESCALATION_WORDING = "a human reviewer will decide and follow up"
+
 SYSTEM = (
     "You are the impartial Judge in a ride-hailing dispute resolution system. "
     "The ruling you are given is FINAL: it was decided by company policy rules from "
@@ -45,14 +48,18 @@ SYSTEM = (
     "\"a partial refund\"), never internal codes such as no_action or needs_review. Write money exactly as given, with $ and two decimals. "
     "Only mention rule IDs listed in the ruling, or rules an advocate cited when explaining why "
     "they did not decide the case. Do not state consequences the ruling "
-    "does not give, such as who pays, penalties or account actions. If the decision is needs_review, say a human "
-    "reviewer will decide and do not promise any refund or outcome.\n"
+    "does not give, such as who pays, penalties or account actions. If the decision is needs_review, "
+    "rider_explanation and driver_explanation must not mention any refund, amount or proposed action, "
+    f"and no dollar amounts at all: say only that {_ESCALATION_WORDING}. The "
+    "explanation (case record) may state the proposed action.\n"
     "Never mention bad-faith or fraud risk, or either party's account or dispute history, in the "
     "rider_explanation or driver_explanation. These are internal signals only. "
     "Write plain text only: no links, email addresses, phone numbers, HTML or markdown. "
     "Write all three texts in English.\n"
     "Respond with the JSON object only."
 )
+# The prompt-echo check compares against the prompt minus the wording it asks for.
+_ECHO_SOURCE = SYSTEM.replace(_ESCALATION_WORDING, " ")
 
 # Rules whose text describes internal signals; the narration sees only a neutral line.
 _INTERNAL_RULES = {"FRAUD-1": "the dispute is escalated to a human reviewer."}
@@ -74,6 +81,7 @@ _LEAK_RE = re.compile(
 )
 _REFUND_RE = re.compile(
     r"\b(refund\w*|reimburs\w*|compensat\w*|money back|credit(?:ed)?"
+    r"|(?:get|gets|getting|receive|receives|receiving|paid)\s+(?:\S+\s+){0,3}back"
     r"|bayaran balik|pulangan wang|wang dikembalikan|ganti rugi|pampasan)\b",
     re.IGNORECASE,
 )
@@ -82,6 +90,7 @@ _NEGATION_RE = re.compile(r"\b(no|not|never|without|nor|cannot|tidak|tiada|bukan
 _HEDGE_RE = re.compile(r"\b(whether|if|request\w*|ask\w*|seek\w*|sought|claim\w*)\b", re.IGNORECASE)
 _UPHELD_RE = re.compile(r"\bupheld\b", re.IGNORECASE)
 _CHARGE_RE = re.compile(r"\b(fare|charge|fee)s?\b", re.IGNORECASE)
+_PROPOSAL_RE = re.compile(r"\bpropos\w*", re.IGNORECASE)
 _STANDS_RE = re.compile(r"\b(charge|fare|fee)\s+(?:still\s+)?stands\b", re.IGNORECASE)
 _CONTEXT_WORDS = 5
 _REFUND_DECISIONS = ("partial_refund", "full_refund", "compensation")
@@ -123,6 +132,9 @@ def _user_prompt(case: DisputeCase, ruling: Ruling, rider_case: AgentCase, drive
         f"{ref.split(':')[0]}: {_INTERNAL_RULES[ref.split(':')[0]]}" if ref.split(":")[0] in _INTERNAL_RULES else ref
         for ref in ruling.policy_refs
     ]
+    # On an escalated case the refund is only a proposal for the reviewer; labelling it so
+    # stops the model repeating it to the parties (seen live on D007 and D008).
+    refund_key = "proposed_refund_for_the_reviewer_only" if ruling.decision == "needs_review" else "refund_amount"
     return json.dumps({
         "dispute_type": case.type,
         "rider_claim": sanitise(case.rider_claim),
@@ -131,7 +143,7 @@ def _user_prompt(case: DisputeCase, ruling: Ruling, rider_case: AgentCase, drive
         "ruling": {
             "decision": ruling.decision,
             "recommended_action": ruling.recommended_action,
-            "refund_amount": ruling.refund_amount,
+            refund_key: ruling.refund_amount,
             "confidence": ruling.confidence,
             "rule_based_reasoning": _FRAUD_SENTENCE_RE.sub("", ruling.explanation).strip(),
             "policy_applied": policy,
@@ -170,7 +182,7 @@ def _check(texts: dict, case: DisputeCase, ruling: Ruling, rider_case: AgentCase
         unsafe = find_link_or_markup(text)
         if unsafe:
             return f"{unsafe.split()[0]}: {key} contains a {unsafe}"
-        if echoes(text, SYSTEM):
+        if echoes(text, _ECHO_SOURCE):
             return f"prompt-echo: {key} repeats the system prompt"
 
     if _MONEY_FORMAT_RE.search(joined):
@@ -204,6 +216,10 @@ def _check(texts: dict, case: DisputeCase, ruling: Ruling, rider_case: AgentCase
         problem = _wording_problem(text, ruling.decision)
         if problem:
             return f"{problem} ({key})"
+        if ruling.decision == "needs_review" and _PROPOSAL_RE.search(text):
+            # The proposed refund is for the reviewer; the parties hear only that a human decides.
+            # (A factual amount, e.g. the fare difference, is allowed: refund wording is checked above.)
+            return f"promise: mentions the proposal on an escalated case ({key})"
         if _LEAK_RE.search(text):
             return f"leak: {key} mentions fraud, risk or party history"
     return None
