@@ -2,10 +2,15 @@ import { useId } from "react";
 import { focusSection } from "./routes";
 
 import { EvidenceList, EvidenceText, type FactLinks } from "./EvidenceList";
+import { Icon } from "./Icon";
+import { FALLBACK_TOOLTIP } from "./stepVisuals";
 import type { AgentCase, Resolution } from "./types";
 
-export function SourceBadge({ source }: { source: "llm" | "fallback" }) {
-  return <span className={`source-badge ${source}`}>{source === "llm" ? "AI" : "Fallback"}</span>;
+/** AI (accent, sparkle), Fallback (amber, explained in its tooltip) or Code (neutral). */
+export function SourceBadge({ source, explain = false }: { source: "llm" | "fallback" | "code"; explain?: boolean }) {
+  if (source === "llm") return <span className="source-badge llm"><Icon name="sparkle" />AI</span>;
+  if (source === "code") return <span className="source-badge code">Code</span>;
+  return <span className="source-badge fallback" title={FALLBACK_TOOLTIP}>Fallback{explain && <span className="sr-only">: {FALLBACK_TOOLTIP}</span>}</span>;
 }
 
 export function Debate({ resolution, availableIds, onSelectFact }: { resolution: Resolution } & FactLinks) {
