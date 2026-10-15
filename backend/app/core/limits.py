@@ -59,6 +59,7 @@ DAILY_RESOLVE_BUDGET = 75
 ADVOCATE_MAX_TOKENS = 600
 JUDGE_MAX_TOKENS = 800
 DEFAULT_MAX_TOKENS = 800
+REBUTTAL_MAX_TOKENS = 300      # one short reply per advocate in the rebuttal round
 LLM_TIMEOUT_S = 25
 
 # -- LLM output checks (judge_narration, _advocate) ---------------------------
@@ -68,6 +69,7 @@ NARRATION_MAX_RECORD_CHARS = 1_200  # explanation (case record)
 ADVOCATE_MAX_SUMMARY_CHARS = 1_200  # live Hy3 summaries ran 391-973 chars; 800 rejected 21 of 102
 ADVOCATE_MAX_EVIDENCE_ITEMS = 8
 ADVOCATE_MAX_EVIDENCE_CHARS = 300
+REBUTTAL_MAX_CHARS = 600           # a rebuttal is 1-3 sentences
 
 # -- Concurrency (503 with Retry-After when full) -----------------------------
 MAX_CONCURRENT_RESOLVES = 3

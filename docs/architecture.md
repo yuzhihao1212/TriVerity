@@ -25,8 +25,12 @@
    untyped fare lines cannot establish which charges are surge-exempt. Missing inputs remain
    unknown; neither fare check changes policy rules or rulings.
 3. **Rider and Driver advocates** (`backend/app/agents/rider_agent.py`, `driver_agent.py`,
-   shared logic in `_advocate.py`). Each receives the facts, its own party's account and the policy
-   rules for the dispute type, and asks Hy3 to argue for its party only. They run in parallel.
+   shared logic in `_advocate.py`). Each receives its own party's account, the policy rules for the
+   dispute type, and the evidence grouped by source (trip, GPS, fare, chat, history) with an ID per
+   fact. Hy3 argues for its party only and cites evidence by ID; the server replaces each ID with the
+   computed fact, so an advocate can only cite evidence that exists. They run in parallel.
+   **Rebuttal round:** each advocate then answers the other side's case once, citing evidence the same
+   way, so the agents exchange arguments before the Judge decides.
    The **Fraud & Bad-Faith Detection agent** (`backend/app/agents/fraud_agent.py`) runs alongside
    them. It scores each party's risk deterministically from `PartyHistory` and the facts — signals
    include 3+ disputes in the last 90 days, a new account with disputes, a rating below 4.3, and
@@ -39,7 +43,7 @@
       (`SAFE-1`), a high bad-faith risk for either party (`FRAUD-1`) or confidence below 60%
       (`ESC-1`) sends the dispute to a human reviewer.
    2. *Hy3 explains the ruling* (`judge_narration.py`). The model writes the case-record explanation,
-      answering both advocates' arguments, plus a message to each party.
+      answering both advocates' arguments and rebuttals, plus a message to each party.
 5. **Resolution** (`backend/app/models/resolution.py`). The ruling, both advocates' cases, the
    fraud risk assessment and an agent log recording each step and whether the AI or the fallback
    produced it. It is served by `POST /api/disputes/resolve` (see

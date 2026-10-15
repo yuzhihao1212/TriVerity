@@ -22,7 +22,17 @@ const AGENT_LABELS: Record<string, string> = {
   rider_advocate: "Rider advocate",
   driver_advocate: "Driver advocate",
   fraud_detector: "Fraud detector",
+  rider_rebuttal: "Rider rebuttal",
+  driver_rebuttal: "Driver rebuttal",
   judge: "Judge",
+};
+
+const SOURCE_LABELS: Record<string, string> = {
+  trip: "Trip",
+  gps: "GPS",
+  fare: "Fare",
+  chat: "Chat",
+  history: "History",
 };
 
 // The judge types their access code; it is kept for this browser tab only and is
@@ -350,11 +360,37 @@ function AdvocateCard({ title, side, agentCase }: { title: string; side: string;
       </h3>
       <p>{agentCase.summary}</p>
       <h4 className="section-label">Evidence</h4>
+      {agentCase.sources.length > 0 && (
+        <p className="evidence-sources small" aria-label="Evidence sources used">
+          {agentCase.sources.map((src) => (
+            <span key={src} className="source-chip">{SOURCE_LABELS[src] ?? src}</span>
+          ))}
+        </p>
+      )}
       <ul className="small">
         {agentCase.evidence.map((e, i) => (
-          <li key={i}>{e}</li>
+          <li key={i}>
+            {agentCase.evidence_ids[i] && agentCase.evidence_ids.length === agentCase.evidence.length && (
+              <span className="evidence-id">{agentCase.evidence_ids[i]}</span>
+            )}
+            {e}
+          </li>
         ))}
       </ul>
+      {agentCase.rebuttal?.text && (
+        <div className="rebuttal">
+          <h4 className="section-label">
+            Rebuttal to the {side === "rider" ? "driver" : "rider"}
+            <span className={`source-badge ${agentCase.rebuttal.source}`}>
+              {agentCase.rebuttal.source === "llm" ? "AI" : "Fallback"}
+            </span>
+          </h4>
+          <p className="small">{agentCase.rebuttal.text}</p>
+          {agentCase.rebuttal.evidence_ids.length > 0 && (
+            <p className="small muted">Cites {agentCase.rebuttal.evidence_ids.join(", ")}</p>
+          )}
+        </div>
+      )}
       <h4 className="section-label">Policy cited</h4>
       {agentCase.policy_refs.length ? (
         <ul className="small">

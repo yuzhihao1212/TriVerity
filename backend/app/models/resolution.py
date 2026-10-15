@@ -5,12 +5,25 @@ Decision = Literal["partial_refund", "full_refund", "compensation", "no_action",
 CaseSource = Literal["llm", "fallback"]
 RiskLevel = Literal["low", "medium", "high"]
 
+class Rebuttal(BaseModel):
+    """An advocate's reply to the other side's case (second round)."""
+    text: str = ""
+    # Verified fact texts and their IDs (e.g. "GPS-2"), resolved by the server.
+    evidence: list[str] = Field(default_factory=list)
+    evidence_ids: list[str] = Field(default_factory=list)
+    source: CaseSource = "fallback"
+
 class AgentCase(BaseModel):
     agent: str
     summary: str
     evidence: list[str] = Field(default_factory=list)
+    # IDs of the cited facts (e.g. "TRIP-1", "GPS-2") and the evidence sources they come
+    # from ("trip", "gps", "fare", "chat", "history"), when the advocate cited by ID.
+    evidence_ids: list[str] = Field(default_factory=list)
+    sources: list[str] = Field(default_factory=list)
     policy_refs: list[str] = Field(default_factory=list)
     source: CaseSource = "fallback"
+    rebuttal: Rebuttal | None = None
 
 class RiskAssessment(BaseModel):
     rider_risk: RiskLevel = "low"

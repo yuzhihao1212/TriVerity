@@ -3,7 +3,7 @@ import json
 from app.models.dispute import DisputeCase
 from app.models.resolution import AgentCase
 from app.services.evidence import CaseFacts
-from app.agents._advocate import _policy_section, advocate_system_prompt, build_advocate_case
+from app.agents._advocate import _policy_section, advocate_system_prompt, build_advocate_case, evidence_payload
 from app.services.text_safety import sanitise
 
 _SYSTEM = advocate_system_prompt("rider", own_account="claim")
@@ -21,7 +21,7 @@ def build_rider_case(case: DisputeCase, facts: CaseFacts) -> AgentCase:
     user = json.dumps({
         "rider_claim": claim,
         "dispute_type": case.type,
-        "facts": facts.describe(),
+        "evidence": evidence_payload(facts),
         "policy_rules": section.get("rules", {}),
     })
     return build_advocate_case(
