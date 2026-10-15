@@ -1,0 +1,9 @@
+# Local checks before each commit. Set up once:
+#   pip install pre-commit && pre-commit install
+# gitleaks then scans the staged changes with .gitleaks.toml and blocks a commit
+# that contains a secret.
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.2
+    hooks:
+      - id: gitleaks

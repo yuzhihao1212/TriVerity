@@ -16,6 +16,7 @@ import re
 from functools import lru_cache
 
 from app.core import limits
+from app.core.safe_log import safe_reason
 from app.models.dispute import DisputeCase
 from app.models.resolution import AgentCase, Ruling
 from app.services.llm_client import OFFLINE_PLACEHOLDER, _strip_fences, complete
@@ -108,7 +109,7 @@ def narrate(case: DisputeCase, ruling: Ruling, rider_case: AgentCase, driver_cas
     try:
         raw = complete(SYSTEM, _user_prompt(case, ruling, rider_case, driver_case), max_tokens=limits.JUDGE_MAX_TOKENS)
     except Exception as exc:
-        return _keep_templates(ruling, f"complete() raised {type(exc).__name__}: {exc}")
+        return _keep_templates(ruling, f"complete() raised {safe_reason(exc)}")
     if raw == OFFLINE_PLACEHOLDER:
         return ruling
 
@@ -116,7 +117,7 @@ def narrate(case: DisputeCase, ruling: Ruling, rider_case: AgentCase, driver_cas
         parsed = json.loads(_strip_fences(raw))
         texts = {k: parsed[k] for k in ("explanation", "rider_explanation", "driver_explanation")}
     except (json.JSONDecodeError, KeyError, TypeError) as exc:
-        return _keep_templates(ruling, f"unparseable reply: {type(exc).__name__}")
+        return _keep_templates(ruling, f"unparseable reply: {safe_reason(exc)}")
 
     problem = _check(texts, case, ruling, rider_case, driver_case)
     if problem:
@@ -193,7 +194,7 @@ def _check(texts: dict, case: DisputeCase, ruling: Ruling, rider_case: AgentCase
     allowed = {round(a, 2) for a in known if a is not None}
     for amount in _AMOUNT_RE.findall(joined):
         if round(float(amount.replace(",", "")), 2) not in allowed:
-            return f"amount: mentions ${amount}, not in the case"
+            return "amount: mentions an amount not in the case"  # the value itself is not logged
 
     # The Judge may name rules the advocates cited (to explain why they didn't
     # decide the case), but never a rule that no one in the case cited (PR #7).

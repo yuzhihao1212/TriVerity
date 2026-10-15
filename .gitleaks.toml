@@ -1,0 +1,40 @@
+# gitleaks configuration: the default rules plus checks for this project's secrets.
+# Used by the pre-commit hook (.pre-commit-config.yaml) and CI (.github/workflows/security.yml).
+# Run locally: gitleaks git --config .gitleaks.toml --redact -v .
+
+title = "TriVerity gitleaks config"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "llm-api-key-assignment"
+description = "LLM_API_KEY set to a real-looking value"
+regex = '''(?i)LLM_API_KEY\s*[=:]\s*['"]?([A-Za-z0-9_\-\.]{20,})'''
+secretGroup = 1
+keywords = ["llm_api_key"]
+
+[[rules]]
+id = "demo-access-codes-assignment"
+description = "DEMO_ACCESS_CODES set to real-looking judge codes"
+regex = '''(?i)DEMO_ACCESS_CODES\s*[=:]\s*['"]?([A-Za-z0-9_\-]{16,}[A-Za-z0-9_,\-]*)'''
+secretGroup = 1
+keywords = ["demo_access_codes"]
+
+[[rules]]
+id = "tencent-cloud-secret-id"
+description = "Tencent Cloud API SecretId"
+regex = '''\b(AKID[A-Za-z0-9]{32})\b'''
+secretGroup = 1
+keywords = ["akid"]
+
+[allowlist]
+description = "Placeholders and the fake values used in tests"
+paths = ['''(^|/)\.env\.example$''']
+regexes = [
+  '''fake-key-must-never-be-written-0123456789''',
+  '''test-key-not-logged-0123456789''',
+  '''keep-me-untouched''',
+  '''judge-[ab]-[0-9a-f]{16}''',
+  '''smoke-0123456789abcdef''',
+]
