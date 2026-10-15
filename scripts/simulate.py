@@ -25,7 +25,7 @@ os.environ["LLM_API_KEY"] = ""   # offline: never spend tokens, whatever backend
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
-from app.models.dispute import DisputeCase  # noqa: E402
+from app.models.dispute import DisputeCase, PartyHistory  # noqa: E402
 from app.services.orchestrator import resolve_dispute  # noqa: E402
 
 # Live measurements (docs/evaluation.md, README) and Hy3 prices from the TokenHub console.
@@ -121,8 +121,16 @@ def run(n: int, seed: int) -> dict:
     # A ruling may change with wording only through FRAUD-1: a claim the facts contradict ("the driver
     # never came" when the GPS shows them at the pickup) is a bad-faith signal by design.
     fraud_only = sum(key(a) != key(r) and without_fraud(a) == without_fraud(r) for a, r in zip(again, results))
+    # Fairness: who the parties are (history) may only ever escalate, through FRAUD-1; the policy
+    # decision itself must come from the trip facts alone.
+    blank = [resolve_dispute(c.model_copy(update={"rider_history": PartyHistory(), "driver_history": PartyHistory()}))
+             for c in cases]
+    swapped = [resolve_dispute(c.model_copy(update={"rider_history": c.driver_history, "driver_history": c.rider_history}))
+               for c in cases]
     return {"cases": cases, "results": results, "elapsed": elapsed, "checked": len(sample),
-            "repeat_same": repeat_same, "wording_same": wording_same, "fraud_only": fraud_only}
+            "repeat_same": repeat_same, "wording_same": wording_same, "fraud_only": fraud_only,
+            "history_blind_same": sum(without_fraud(b) == without_fraud(r) for b, r in zip(blank, results)),
+            "history_swap_same": sum(without_fraud(s) == without_fraud(r) for s, r in zip(swapped, results))}
 
 
 def report(data: dict, seed: int) -> str:
@@ -175,6 +183,24 @@ def report(data: dict, seed: int) -> str:
     for t, counts in by_type.items():
         lines.append(f"| {t} ({sum(counts.values())}) | "
                      + " | ".join(str(counts[d]) for d in ("partial_refund", "full_refund", "no_action", "needs_review")) + " |")
+    lines += ["", "**Fairness: does who the parties are change the decision?**", "",
+              "Party history (account age, rating, past disputes) feeds only the fraud detector, which can escalate a",
+              "dispute to a human (FRAUD-1) but never decide it. The policy decision should depend on the trip facts alone:",
+              "", "| Check | Policy decision unchanged |", "|---|---|",
+              f"| Both parties' history removed | {data['history_blind_same']} / {n} |",
+              f"| Rider's and driver's history swapped | {data['history_swap_same']} / {n} |", ""]
+    groups = {"Rider account under 90 days": lambda c: (c.rider_history.account_age_days or 0) < 90,
+              "Rider account 90 days or more": lambda c: (c.rider_history.account_age_days or 0) >= 90,
+              "Rider rating below 4.5": lambda c: (c.rider_history.rating or 5) < 4.5,
+              "Rider rating 4.5 or above": lambda c: (c.rider_history.rating or 5) >= 4.5}
+    lines += ["Refund rate by rider group, counting only disputes the rules decided (escalations aside). Differences",
+              "come from the trip facts each group happened to get, since history never enters the decision; small groups",
+              "are noisy (new accounts are mostly risky in this mix, so most were escalated):", "",
+              "| Rider group | Decided automatically | Refunded |", "|---|---|---|"]
+    for name, member in groups.items():
+        decided = [r for c, r in zip(cases, results) if member(c) and r.decision != "needs_review"]
+        refunded = sum(r.decision in ("partial_refund", "full_refund") for r in decided)
+        lines.append(f"| {name} | {len(decided)} | {refunded / max(len(decided), 1):.0%} |")
     lines += ["", "**Why disputes were escalated** (a dispute can have several reasons)", "",
               "| Reason | Disputes |", "|---|---|"]
     names = {"SAFE-1": "Threat in chat (SAFE-1)", "FRAUD-1": "High bad-faith risk (FRAUD-1)",

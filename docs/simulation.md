@@ -17,7 +17,7 @@ on this mix.
 | Reworded claim and statement, same ruling | 96 / 100; the other 4 differ only by a FRAUD-1 escalation: the original claim was contradicted by the GPS facts, a bad-faith signal by design |
 | Consistent with the closest past rulings | 324 of 500 (65%); mixed 36, no close precedent 138, reviewers disagreed 2 |
 | Refunds | 190 disputes, average $4.81 |
-| Pipeline time without the LLM | 0.4 ms per dispute |
+| Pipeline time without the LLM | 0.5 ms per dispute |
 
 **Decisions by dispute type**
 
@@ -25,6 +25,27 @@ on this mix.
 |---|---|---|---|---|
 | route_deviation (264) | 74 | 0 | 135 | 55 |
 | no_show_charge (236) | 0 | 116 | 65 | 55 |
+
+**Fairness: does who the parties are change the decision?**
+
+Party history (account age, rating, past disputes) feeds only the fraud detector, which can escalate a
+dispute to a human (FRAUD-1) but never decide it. The policy decision should depend on the trip facts alone:
+
+| Check | Policy decision unchanged |
+|---|---|
+| Both parties' history removed | 500 / 500 |
+| Rider's and driver's history swapped | 500 / 500 |
+
+Refund rate by rider group, counting only disputes the rules decided (escalations aside). Differences
+come from the trip facts each group happened to get, since history never enters the decision; small groups
+are noisy (new accounts are mostly risky in this mix, so most were escalated):
+
+| Rider group | Decided automatically | Refunded |
+|---|---|---|
+| Rider account under 90 days | 2 | 50% |
+| Rider account 90 days or more | 388 | 49% |
+| Rider rating below 4.5 | 36 | 58% |
+| Rider rating 4.5 or above | 354 | 48% |
 
 **Why disputes were escalated** (a dispute can have several reasons)
 
