@@ -24,8 +24,9 @@ Status as of 15 Oct 2026.
 |---|---|---|
 | ✅ | Escalation protocol | `SAFE-1` threats, `FRAUD-1` high bad-faith risk and `ESC-1` confidence below 60% go to human review |
 | ✅ | Fraud and bad-faith detection agent | Deterministic risk from history and contradicted claims; never penalises, only escalates |
-| ⬜ | Policy and precedent agent | Past rulings as precedent for consistency |
-| ⬜ | Evidence collection agent, image analysis, feedback loop, SLA routing | Not planned |
+| ✅ | Policy and precedent agent | Retrieves the closest past rulings (162 synthetic); the Judge cites them; consistency measured in the evaluation |
+| ✅ | Learning feedback loop | Reviewer decisions become precedents; repeated reviewer disagreement escalates similar disputes (`PREC-1`) |
+| ⬜ | Evidence collection agent, image analysis, SLA routing | Not planned |
 
 ## Security and responsible AI
 

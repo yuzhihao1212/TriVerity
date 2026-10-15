@@ -37,13 +37,25 @@
    claims contradicted by computed facts. Two or more signals for a party is `high`, one is
    `medium`. The assessment is passed to the Judge; the fraud agent never changes a refund or
    penalises anyone.
+   **Policy & Precedent agent** (`backend/app/agents/precedent_agent.py`, store in
+   `backend/app/services/precedents.py`). Retrieves the three closest past rulings of the same dispute
+   type from a precedent knowledge base (`data/precedents/precedents.json`: 162 synthetic past rulings
+   built by `scripts/build_precedents.py`, plus reviewer decisions added through the feedback endpoint).
+   Similarity is computed in code from the facts the rules turn on (detour and delay ratios; distance
+   from pickup, waiting time and contact), so retrieval is deterministic and needs no embedding model.
+   The agent reports whether the closest rulings agree with the rules' decision; it never decides.
 4. **Judge** (`backend/app/agents/judge_agent.py`).
    1. *Policy rules decide.* The decision, refund amount, confidence and the rules applied come from
       deterministic checks against `data/policies/ryde_mock_policy.json`. A threat in the chat
-      (`SAFE-1`), a high bad-faith risk for either party (`FRAUD-1`) or confidence below 60%
+      (`SAFE-1`), a high bad-faith risk for either party (`FRAUD-1`), at least two close precedents where
+      human reviewers decided differently from the rules (`PREC-1`) or confidence below 60%
       (`ESC-1`) sends the dispute to a human reviewer.
    2. *Hy3 explains the ruling* (`judge_narration.py`). The model writes the case-record explanation,
-      answering both advocates' arguments and rebuttals, plus a message to each party.
+      answering both advocates' arguments and rebuttals and citing the retrieved precedents (retrieval-
+      augmented generation), plus a message to each party. Precedents appear only in the case record.
+   3. *Learning feedback loop.* `POST /api/precedents/feedback` records a reviewer's final decision as a
+      new precedent. It can only cause escalations (`PREC-1`), never change a decision or an amount.
+      Feedback is kept in memory; production would store it with the dispute queue.
 5. **Resolution** (`backend/app/models/resolution.py`). The ruling, both advocates' cases, the
    fraud risk assessment and an agent log recording each step and whether the AI or the fallback
    produced it. It is served by `POST /api/disputes/resolve` (see

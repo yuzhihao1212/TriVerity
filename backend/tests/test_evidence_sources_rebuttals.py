@@ -138,7 +138,7 @@ def test_pipeline_runs_rebuttals_and_judge_hears_them():
         result = resolve_dispute(D001)
     assert result.rider_case.rebuttal.source == "llm"
     assert result.driver_case.rebuttal.text == "That misses the slower trip time."
-    assert [e.agent for e in result.agent_log][-3:] == ["rider_rebuttal", "driver_rebuttal", "judge"]
+    assert [e.agent for e in result.agent_log][-4:] == ["rider_rebuttal", "driver_rebuttal", "precedent_agent", "judge"]
     assert result.decision == "partial_refund" and result.refund_amount == pytest.approx(6.30)
 
     judge_view = json.loads(_user_prompt(D001, result, result.rider_case, result.driver_case))
@@ -148,6 +148,6 @@ def test_pipeline_runs_rebuttals_and_judge_hears_them():
 def test_offline_pipeline_has_fallback_rebuttals_and_same_ruling():
     result = resolve_dispute(D001)
     assert result.rider_case.rebuttal == Rebuttal() and result.driver_case.rebuttal == Rebuttal()
-    assert [e.agent for e in result.agent_log][-3:] == ["rider_rebuttal", "driver_rebuttal", "judge"]
+    assert [e.agent for e in result.agent_log][-4:] == ["rider_rebuttal", "driver_rebuttal", "precedent_agent", "judge"]
     assert "unverified_rebuttal" not in json.loads(
         _user_prompt(D001, result, result.rider_case, result.driver_case))["rider_advocate"]

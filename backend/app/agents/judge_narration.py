@@ -18,7 +18,7 @@ from functools import lru_cache
 from app.core import limits
 from app.core.safe_log import safe_reason
 from app.models.dispute import DisputeCase
-from app.models.resolution import AgentCase, Ruling
+from app.models.resolution import AgentCase, PrecedentReport, Ruling
 from app.services.llm_client import OFFLINE_PLACEHOLDER, _strip_fences, complete
 from app.services.policy_service import load_policy
 from app.services.text_safety import echoes, find_link_or_markup, is_latin_script, normalise, sanitise
@@ -53,6 +53,10 @@ SYSTEM = (
     "rider_explanation and driver_explanation must not mention any refund, amount or proposed action, "
     f"and no dollar amounts at all: say only that {_ESCALATION_WORDING}. The "
     "explanation (case record) may state the proposed action.\n"
+    "precedents lists similar past rulings from the precedent knowledge base and how consistent "
+    "this ruling is with them. In the explanation (case record) only, add one sentence on that "
+    "consistency, citing precedent IDs exactly as given (e.g. P-004). Never mention precedents, "
+    "past rulings or other disputes in rider_explanation or driver_explanation.\n"
     "Never mention bad-faith or fraud risk, or either party's account or dispute history, in the "
     "rider_explanation or driver_explanation. These are internal signals only. "
     "Write plain text only: no links, email addresses, phone numbers, HTML or markdown. "
@@ -96,6 +100,8 @@ _UPHELD_RE = re.compile(r"\bupheld\b", re.IGNORECASE)
 _CHARGE_RE = re.compile(r"\b(fare|charge|fee)s?\b", re.IGNORECASE)
 _PROPOSAL_RE = re.compile(r"\bpropos\w*", re.IGNORECASE)
 _STANDS_RE = re.compile(r"\b(charge|fare|fee)\s+(?:still\s+)?stands\b", re.IGNORECASE)
+_PRECEDENT_ID_RE = re.compile(r"\b([PR])\s*-?\s*(\d{3})\b", re.IGNORECASE)
+_PRECEDENT_WORDS_RE = re.compile(r"\b(precedents?|past rulings?|similar (?:past )?(?:cases|disputes))\b", re.IGNORECASE)
 _CONTEXT_WORDS = 5
 _REFUND_DECISIONS = ("partial_refund", "full_refund", "compensation")
 
@@ -108,10 +114,13 @@ def _rule_id_re() -> re.Pattern:
     return re.compile(rf"\b({'|'.join(sorted(prefixes))})\s*-?\s*(\d+)\b", re.IGNORECASE)
 
 
-def narrate(case: DisputeCase, ruling: Ruling, rider_case: AgentCase, driver_case: AgentCase) -> Ruling:
+def narrate(case: DisputeCase, ruling: Ruling, rider_case: AgentCase, driver_case: AgentCase,
+            precedents: PrecedentReport | None = None) -> Ruling:
     """Return ``ruling`` with LLM-written explanations, or unchanged on any failure."""
+    precedents = precedents or PrecedentReport()
     try:
-        raw = complete(SYSTEM, _user_prompt(case, ruling, rider_case, driver_case), max_tokens=limits.JUDGE_MAX_TOKENS)
+        raw = complete(SYSTEM, _user_prompt(case, ruling, rider_case, driver_case, precedents),
+                       max_tokens=limits.JUDGE_MAX_TOKENS)
     except Exception as exc:
         return _keep_templates(ruling, f"complete() raised {safe_reason(exc)}")
     if raw == OFFLINE_PLACEHOLDER:
@@ -123,13 +132,14 @@ def narrate(case: DisputeCase, ruling: Ruling, rider_case: AgentCase, driver_cas
     except (json.JSONDecodeError, KeyError, TypeError) as exc:
         return _keep_templates(ruling, f"unparseable reply: {safe_reason(exc)}")
 
-    problem = _check(texts, case, ruling, rider_case, driver_case)
+    problem = _check(texts, case, ruling, rider_case, driver_case, precedents)
     if problem:
         return _keep_templates(ruling, problem)
     return ruling.model_copy(update={**{k: sanitise(v) for k, v in texts.items()}, "explanation_source": "llm"})
 
 
-def _user_prompt(case: DisputeCase, ruling: Ruling, rider_case: AgentCase, driver_case: AgentCase) -> str:
+def _user_prompt(case: DisputeCase, ruling: Ruling, rider_case: AgentCase, driver_case: AgentCase,
+                 precedents: PrecedentReport | None = None) -> str:
     # H1: no party history and no fraud reasoning; the rules have already used them.
     facts = [line for line in ruling.judge_evidence if not line.startswith(_HISTORY_PREFIXES)]
     policy = [
@@ -155,7 +165,21 @@ def _user_prompt(case: DisputeCase, ruling: Ruling, rider_case: AgentCase, drive
         # H7: advocate text is labelled as an argument, not a fact or an instruction.
         "rider_advocate": _advocate_view(rider_case),
         "driver_advocate": _advocate_view(driver_case),
+        "precedents": _precedent_view(precedents or PrecedentReport()),
     })
+
+
+def _precedent_view(report: PrecedentReport) -> dict:
+    """Retrieved precedents for the Judge: computed summaries only, never reviewer notes."""
+    return {
+        "consistency": report.consistency,
+        "summary": report.summary,
+        "similar_past_rulings": [
+            {"id": m.id, "similarity": m.similarity, "decision": m.decision,
+             "decided_by": m.decided_by, "rules": m.policy_refs, "case": m.summary}
+            for m in report.matches
+        ],
+    }
 
 
 def _advocate_view(agent_case: AgentCase) -> dict:
@@ -172,7 +196,8 @@ def _context(text: str, start: int) -> str:
     return " ".join(clause.split()[-_CONTEXT_WORDS:])
 
 
-def _check(texts: dict, case: DisputeCase, ruling: Ruling, rider_case: AgentCase, driver_case: AgentCase) -> str | None:
+def _check(texts: dict, case: DisputeCase, ruling: Ruling, rider_case: AgentCase, driver_case: AgentCase,
+           precedents: PrecedentReport | None = None) -> str | None:
     """Return why the narration is unsafe or contradicts the ruling, or None if it is fine.
 
     The reason starts with a short category (e.g. ``amount:``) for logs and the red-team script.
@@ -216,6 +241,14 @@ def _check(texts: dict, case: DisputeCase, ruling: Ruling, rider_case: AgentCase
     mentioned = {f"{p.upper()}-{n}" for p, n in _rule_id_re().findall(joined)}
     if mentioned - cited:
         return f"rule: mentions rules nobody cited: {sorted(mentioned - cited)}"
+
+    # Precedent IDs must be ones retrieved for this case, and only in the case record.
+    retrieved = {m.id for m in (precedents or PrecedentReport()).matches}
+    if {f"{p.upper()}-{n}" for p, n in _PRECEDENT_ID_RE.findall(norm["explanation"])} - retrieved:
+        return "precedent: mentions a precedent that was not retrieved"
+    for key, text in party.items():
+        if _PRECEDENT_ID_RE.search(text) or _PRECEDENT_WORDS_RE.search(text):
+            return f"leak: {key} mentions precedents or other disputes"
 
     if ruling.decision in _REFUND_DECISIONS and ruling.refund_amount is not None:
         if f"${ruling.refund_amount:.2f}" not in norm["rider_explanation"]:

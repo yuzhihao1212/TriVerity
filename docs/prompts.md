@@ -132,6 +132,10 @@ they did not decide the case. Do not state consequences the ruling does not give
 penalties or account actions. If the decision is needs_review, rider_explanation and driver_explanation
 must not mention any refund, amount or proposed action, and no dollar amounts at all: say only that a
 human reviewer will decide and follow up. The explanation (case record) may state the proposed action.
+precedents lists similar past rulings from the precedent knowledge base and how consistent this ruling is
+with them. In the explanation (case record) only, add one sentence on that consistency, citing precedent
+IDs exactly as given (e.g. P-004). Never mention precedents, past rulings or other disputes in
+rider_explanation or driver_explanation.
 Never mention bad-faith or fraud risk, or either party's account or dispute history, in the
 rider_explanation or driver_explanation. These are internal signals only. Write plain text only: no links,
 email addresses, phone numbers, HTML or markdown. Write all three texts in English.
@@ -173,6 +177,7 @@ after each change.
 | The check rejected good explanations that named an advocate's cited rules to say why they lost (e.g. "the driver's advocate cited NS-2 and NS-3, but…"), so the Judge's badge flipped between AI and Fallback on re-runs | The check allows rules the ruling applied **or an advocate cited**, and the prompt allows naming advocate-cited rules only to explain why they didn't decide the case |
 | On escalated cases with a proposed refund (D007, D008) the Judge told the rider "a refund of $6.30 … has been proposed", which the promise check rejected, so the badge was Fallback in most runs (D007 4 of 5, D008 1 of 1) | The party messages must not mention any refund, amount or proposal, only that a human reviewer will decide and follow up; the refund is labelled as for the reviewer only. Live after the fix: D007 5/5 and D008 5/5 AI |
 | After evidence moved to IDs grouped by source, rider advocates cited rules that favour the driver when no rule helped them (D006: 5 of 8 cases even before the change; D003: 3 of 4 after it, measured 4 runs per side) | Rule 4 now says a rule satisfied in the other party's favour stays out of policy_refs, with a symmetric example for each side. Remeasured: 2 of 8 on the same cases; supporting rules still cited (driver side 24/24, D001 rider RD-3) |
+| Adding precedents to the Judge (retrieval-augmented generation) | The Judge cites retrieved precedent IDs in the case record only; a check rejects IDs that were not retrieved and any mention of precedents or other disputes in the party messages. Reviewer notes are never sent to the model. Live: Judge 9/9 AI, e.g. D001 "consistent with past rulings P-063, P-056, and P-070" |
 | Messages said "decided as no_action" | "Describe decisions in plain words… never internal codes" |
 | The driver was told "your dispute" about the rider's dispute | Explicit instruction in the `driver_explanation` field |
 | After the Fraud detector was added, the rider was told "your account's dispute history triggered a review" and the driver "the rider's history led to review" | "Never mention bad-faith or fraud risk, or either party's account or dispute history" in party messages, plus a check that rejects them |

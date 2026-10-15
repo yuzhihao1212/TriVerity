@@ -56,5 +56,14 @@
     "rules": {
       "REF-1": "A refund never exceeds the fare actually charged; a larger computed refund is reduced to the charged fare."
     }
+  },
+  "precedent": {
+    "thresholds": {
+      "min_similarity": 0.6,
+      "min_human_overrides": 2
+    },
+    "rules": {
+      "PREC-1": "If human reviewers decided at least two closely similar past disputes differently from the policy rules, the dispute is escalated to human review with those precedents."
+    }
   }
 }

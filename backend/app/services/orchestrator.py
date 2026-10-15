@@ -5,7 +5,8 @@ from app.agents._advocate import build_rebuttal
 from app.agents.fraud_agent import assess_risk
 from app.agents.rider_agent import build_rider_case
 from app.agents.driver_agent import build_driver_case
-from app.agents.judge_agent import judge
+from app.agents.judge_agent import judge_with_precedents
+from app.agents.precedent_agent import consult_precedents
 from app.models.dispute import DisputeCase
 from app.models.resolution import AgentLogEntry, Resolution
 from app.core import limits
@@ -57,9 +58,12 @@ def resolve_dispute(case: DisputeCase) -> Resolution:
             reply = agent_case.rebuttal
             log(name, f"[{reply.source}] {reply.text}" if reply.text else "[fallback] no rebuttal")
 
-        ruling = judge(case, facts, rider_case, driver_case, risk)
+        precedents = consult_precedents(case, facts)
+        ruling, precedents = judge_with_precedents(case, facts, rider_case, driver_case, risk, precedents)
     finally:
         resolve_slots.release()
+    found = ", ".join(f"{m.id} ({m.similarity:.2f}, {m.decision})" for m in precedents.matches)
+    log("precedent_agent", f"{precedents.summary} Retrieved: {found or 'none'}.")
     log("judge", f"[{ruling.explanation_source}] {ruling.decision} ({ruling.confidence:.0%} confidence)")
 
     return Resolution(
@@ -67,5 +71,6 @@ def resolve_dispute(case: DisputeCase) -> Resolution:
         rider_case=rider_case,
         driver_case=driver_case,
         risk=risk,
+        precedents=precedents,
         agent_log=agent_log,
     )
