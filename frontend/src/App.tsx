@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { LiveProgress, ProgressAnnouncements } from "./LiveProgress";
 import { CollectorCalls } from "./CollectorCalls";
@@ -21,11 +21,13 @@ import { readAiMode, writeAiMode, type AiMode } from "./aiMode";
 import { NewDisputeIcon, SidebarToggle } from "./SidebarToggle";
 import { readSidebarOpen, writeSidebarOpen } from "./sidebar";
 import { Term } from "./Term";
-import { ThemeToggle } from "./ThemeToggle";
+import { PresentationToggle, ThemeToggle } from "./ThemeToggle";
 import type { Theme } from "./theme";
 import { PartyPreview } from "./PartyPreview";
 import { DisputeForm } from "./DisputeForm";
-import { getSamples, resolveDisputeLive } from "./services/api";
+import { ApiError, getSamples, resolveDisputeLive } from "./services/api";
+import { AccessCodeField } from "./AccessCodeField";
+import { ACCESS_CODE_FIELD_ID, accessCodeMessage, accessCodeProblem, needsAccessCode } from "./consoleHeader";
 import { decisionTone, disputeItemName, filterLabel, filterShortLabel, STATUS_LABELS, TYPE_LABELS, type DisputeFilter } from "./disputeList";
 import { FilterMenu } from "./FilterMenu";
 import { Icon } from "./Icon";
@@ -49,6 +51,8 @@ function reviews() {
   }
   return reviewStore;
 }
+
+const REVIEWER_CONSOLE_NOTE = "Internal reviewer view: it shows fraud signals and both parties' data, which riders and drivers never see.";
 
 // The judge types their access code; it is kept for this browser tab only and is
 // never part of the built bundle.
@@ -107,6 +111,8 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
   const [own, setOwn] = useState<DisputeCase[]>([]);
   const [form, setForm] = useState<{ template?: DisputeCase } | null>(null);
   const [accessCode, setAccessCode] = useState(loadAccessCode);
+  const accessCodeInput = useRef<HTMLInputElement>(null);
+  const [focusAccessCode, setFocusAccessCode] = useState(false);
   const [selected, setSelected] = useState<DisputeCase | null>(null);
   // Results are kept per dispute so revisiting a case doesn't call the LLM again.
   const [results, setResults] = useState<Record<string, Resolution>>({});
@@ -174,7 +180,13 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
         setActiveTabs(prev => ({ ...prev, [dispute.dispute_id]: "evidence" }));
         setCompletedId(dispute.dispute_id);
       })
-      .catch((e: Error) => setError(`${dispute.dispute_id}: ${e.message}`))
+      .catch((e: Error) => {
+        if (accessCodeProblem(e, isOwn)) {
+          // Point at the field (shown above Run agents for own disputes) and move focus to it.
+          setError(`${dispute.dispute_id}: ${accessCodeMessage((e as ApiError).status)}`);
+          setFocusAccessCode(true);
+        } else setError(`${dispute.dispute_id}: ${e.message}`);
+      })
       .finally(() => setResolving(null));
   }
 
@@ -242,6 +254,14 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
     setCompletedId(null);
   }, [active, completedId, selected, form]);
 
+  // A run refused for its access code: once the run panel is back, focus the field.
+  useEffect(() => {
+    if (!focusAccessCode || resolving) return;
+    setFocusAccessCode(false);
+    accessCodeInput.current?.focus();
+    accessCodeInput.current?.scrollIntoView({ block: "center" });
+  }, [focusAccessCode, resolving]);
+
   const disputeButton = (d: DisputeCase) => {
     const current = !form && selected?.dispute_id === d.dispute_id;
     const summary = disputeLabel(d);
@@ -265,29 +285,21 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
     <div className={`app${presentation ? " presentation-mode" : ""}`}>
       <a className="skip-link" href="#main-content" onClick={event => { event.preventDefault(); focusSection("main-content"); }}>Skip to dispute</a>
       <header className="topbar">
-        <h1 className="brand"><a className="console-home" href="#/">TriVerity<span className="sr-only"> home</span></a></h1>
-        <span className="muted byline">By OeroAI</span>
+        <div className="topbar-brand">
+          <h1 className="brand"><a className="console-home" href="#/">TriVerity<span className="sr-only"> home</span></a></h1>
+          <span className="topbar-context">
+            <span className="byline">By OeroAI</span>
+            {/* A context label, not a control: plain text, explained on hover and to screen readers. */}
+            <span className="console-label" title={REVIEWER_CONSOLE_NOTE}>
+              <span aria-hidden="true">{"\u00a0·\u00a0"}</span>Reviewer console<span className="sr-only">. {REVIEWER_CONSOLE_NOTE}</span>
+            </span>
+          </span>
+        </div>
         <div className="topbar-right">
           <AiToggle mode={aiMode} onToggle={toggleAi} />
+          <span className="topbar-divider" aria-hidden="true" />
           <ThemeToggle theme={theme} onToggle={onToggleTheme} />
-          <button type="button" className="secondary-button presentation-toggle" aria-pressed={presentation} onClick={onTogglePresentation}>Presentation mode</button>
-          <label className="access-code">
-            <span className="small muted">Judge access code</span>
-            <input
-              type="password"
-              autoComplete="off"
-              spellCheck={false}
-              value={accessCode}
-              onChange={(e) => changeAccessCode(e.target.value)}
-              placeholder="Needed for your own disputes"
-            />
-          </label>
-          <span
-            className="pill"
-            title="Internal reviewer view: it shows fraud signals and both parties' data, which riders and drivers never see."
-          >
-            Reviewer console
-          </span>
+          <PresentationToggle presentation={presentation} onToggle={onTogglePresentation} />
         </div>
       </header>
 
@@ -331,7 +343,8 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
           {!form && loadingSamples && <section className="card empty-state"><h2>Loading disputes…</h2><p className="muted">The sample list is loading. No agents have run.</p></section>}
           {!form && !loadingSamples && !selected && <section className="card empty-state"><h2>No dispute selected</h2><p className="muted">Choose a sample or add a new dispute to begin.</p></section>}
           {!form && resolving && resolving !== selected?.dispute_id && <p className="small muted">Agents are working on {resolving}. This case remains available.</p>}
-          {form && <DisputeForm key={form.template?.dispute_id ?? "blank"} template={form.template} onSubmit={addOwn} onCancel={() => setForm(null)} />}
+          {form && <DisputeForm key={form.template?.dispute_id ?? "blank"} template={form.template} onSubmit={addOwn} onCancel={() => setForm(null)}
+            accessCode={accessCode} onAccessCodeChange={changeAccessCode} />}
           {!form && selected && <section className="case-file" aria-labelledby="case-title">
             <CaseHeader dispute={selected} resolution={resolution} busy={resolving === selected.dispute_id} streaming={streaming} progress={progress} />
             <WorkflowTabs active={activeTab} resolution={resolution} busy={resolving === selected.dispute_id}
@@ -340,6 +353,8 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
                 <AgentsStrip tab={tab} resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
                 {tab === "intake" && <>
                   <CasePanel dispute={selected} availableIds={factIds} onSelectFact={selectFact} />
+                  {needsAccessCode(selected.dispute_id, own) && <AccessCodeField ref={accessCodeInput} id={ACCESS_CODE_FIELD_ID}
+                    value={accessCode} onChange={changeAccessCode} />}
                   <div className="run-bar">
                     <button className="run-button" onClick={() => resolve(selected)} disabled={resolving !== null}>
                       {resolution ? "Re-run agents" : "Run agents"}

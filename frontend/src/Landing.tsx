@@ -1,6 +1,6 @@
 import type { MouseEvent } from "react";
 import { focusSection } from "./routes";
-import { ThemeToggle } from "./ThemeToggle";
+import { PresentationToggle, ThemeToggle } from "./ThemeToggle";
 import type { Theme } from "./theme";
 
 const GITHUB = "https://github.com/yuzhihao1212/TriVerity";
@@ -50,7 +50,7 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
         <span className="brand">TriVerity</span>
         <nav aria-label="Project"><a href={`${GITHUB}#readme`}>Project docs</a>
           <ThemeToggle theme={theme} onToggle={onToggleTheme} />
-          <button className="secondary-button presentation-toggle" type="button" aria-pressed={presentation} onClick={onTogglePresentation}>Presentation mode</button>
+          <PresentationToggle presentation={presentation} onToggle={onTogglePresentation} />
         </nav>
       </div>
     </header>

@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 
+import { AccessCodeField } from "./AccessCodeField";
 import type { ChatMessage, DisputeCase, DisputeType } from "./types";
 
 // Mirrors backend/app/core/limits.py, so judges see the limits before the API rejects a field.
@@ -123,10 +124,15 @@ export function DisputeForm({
   template,
   onSubmit,
   onCancel,
+  accessCode,
+  onAccessCodeChange,
 }: {
   template?: DisputeCase;
   onSubmit: (dispute: DisputeCase) => void;
   onCancel: () => void;
+  /** The judge access code, shared with the run panel (optional here). */
+  accessCode?: string;
+  onAccessCodeChange?: (value: string) => void;
 }) {
   const [fields, setFields] = useState<Fields>(() => fromCase(template));
   const [error, setError] = useState<string | null>(null);
@@ -205,6 +211,8 @@ export function DisputeForm({
         </span>
         <textarea rows={5} value={fields.chat} onChange={set("chat")} />
       </label>
+
+      {onAccessCodeChange && <AccessCodeField value={accessCode ?? ""} onChange={onAccessCodeChange} optional />}
 
       <div className="run-bar">
         <button type="submit" className="run-button">
