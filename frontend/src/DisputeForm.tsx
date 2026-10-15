@@ -159,7 +159,7 @@ export function DisputeForm({
       <p className="small muted">
         Describe a dispute and the agents will resolve it. Facts you leave blank count as missing data.
       </p>
-      {error && <div className="error">{error}</div>}
+      <div role="alert" aria-atomic="true">{error && <p className="error">{error}</p>}</div>
 
       <label>
         <span>Dispute type</span>

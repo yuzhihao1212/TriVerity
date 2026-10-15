@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { PartyPreview } from "./PartyPreview";
 import { DisputeForm } from "./DisputeForm";
 import { getSamples, resolveDispute } from "./services/api";
 import type { AgentCase, Decision, DisputeCase, PartyHistory, Resolution, RiskLevel } from "./types";
@@ -112,6 +113,7 @@ export default function App() {
     <button
       key={d.dispute_id}
       className={`dispute-item ${!form && selected?.dispute_id === d.dispute_id ? "active" : ""}`}
+      aria-current={!form && selected?.dispute_id === d.dispute_id ? "true" : undefined}
       onClick={() => select(d)}
     >
       <span className="dispute-meta">
@@ -126,6 +128,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <a className="skip-link" href="#main-content">Skip to dispute</a>
       <header className="topbar">
         <h1 className="brand">TriVerity</h1>
         <span className="muted">Multi-agent dispute resolution for Ryde</span>
@@ -165,8 +168,11 @@ export default function App() {
           {samples.map(disputeButton)}
         </nav>
 
-        <main className="content">
-          {error && <div className="error">{error}</div>}
+        <main className="content" id="main-content" tabIndex={-1}>
+          <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+            {resolving ? `Agents working on ${resolving}…` : resolution ? "Saved ruling ready." : ""}
+          </p>
+          <div role="alert" aria-atomic="true">{error && <p className="error">{error}</p>}</div>
           {form && (
             <DisputeForm
               key={form.template?.dispute_id ?? "blank"}
@@ -190,7 +196,7 @@ export default function App() {
                   <path d="M8 1.5 15 14H1L8 1.5Z" fill="currentColor" />
                   <path d="M8 6v3.5M8 11.4v.1" stroke="var(--warn-soft)" strokeWidth="1.6" strokeLinecap="round" />
                 </svg>
-                Uses real AI tokens (~3–4k per run)
+                Uses real AI tokens (~5,400 per run)
               </span>
               {resolution && <span className="small muted">Showing the saved result.</span>}
               <button className="secondary-button" onClick={() => { setForm({ template: selected }); setError(null); }}>
@@ -202,6 +208,7 @@ export default function App() {
             <>
               <Workflow resolution={resolution} />
               <RulingPanel resolution={resolution} />
+              <PartyPreview key={selected?.dispute_id} resolution={resolution} />
               <details className="card raw">
                 <summary>Raw API response</summary>
                 <pre>{JSON.stringify(resolution, null, 2)}</pre>
@@ -421,7 +428,7 @@ function RulingPanel({ resolution }: { resolution: Resolution }) {
 
       <div className="confidence">
         <span className="small muted">Confidence</span>
-        <div className="meter" role="meter" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+        <div className="meter" role="meter" aria-label="Ruling confidence" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
           <div style={{ width: `${pct}%` }} />
         </div>
         <strong>{pct}%</strong>
@@ -430,25 +437,14 @@ function RulingPanel({ resolution }: { resolution: Resolution }) {
       <p className="action">{resolution.recommended_action}</p>
       <p>{resolution.explanation}</p>
 
-      <div className="party-messages">
-        <div>
-          <h4 className="section-label">To the rider</h4>
-          <p className="small">{resolution.rider_explanation}</p>
-        </div>
-        <div>
-          <h4 className="section-label">To the driver</h4>
-          <p className="small">{resolution.driver_explanation}</p>
-        </div>
-      </div>
-
-      <h4 className="section-label">Policy applied</h4>
+      <h3 className="section-label">Policy applied</h3>
       <ul className="small">
         {resolution.policy_refs.map((p) => (
           <li key={p}>{p}</li>
         ))}
       </ul>
 
-      <h4 className="section-label">Evidence considered</h4>
+      <h3 className="section-label">Evidence considered</h3>
       <ul className="small">
         {resolution.judge_evidence.map((e, i) => (
           <li key={i}>{e}</li>
