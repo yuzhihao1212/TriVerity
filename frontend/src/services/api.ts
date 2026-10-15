@@ -85,3 +85,10 @@ export function decideAppeal(id: string, body: { decision: Exclude<Decision, "ne
     method: "POST", headers: JSON_HEADERS, body: JSON.stringify(body),
   });
 }
+
+/** A reviewer's final decision on a dispute; it becomes a precedent (off in the public demo). */
+export function recordReviewerDecision(body: { case: DisputeCase; decision: Exclude<Decision, "needs_review">; note: string }) {
+  return request<{ id: string; summary: string; decision: string }>("/precedents/feedback", {
+    method: "POST", headers: JSON_HEADERS, body: JSON.stringify(body),
+  });
+}

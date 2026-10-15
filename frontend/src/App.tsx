@@ -13,6 +13,8 @@ import { VerdictSummary } from "./VerdictSummary";
 import { computedFacts, disputeLabel, filterDisputes, money } from "./presentation";
 import { focusSection, selectSample } from "./routes";
 import { AppealsPanel } from "./Appeals";
+import { ReviewerDecision } from "./ReviewerDecision";
+import { Term } from "./Term";
 import { ThemeToggle } from "./ThemeToggle";
 import type { Theme } from "./theme";
 import { PartyPreview } from "./PartyPreview";
@@ -280,13 +282,22 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
                 {tab === "hearing" && resolution && <Debate resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />}
                 {tab === "ruling" && resolution && <>
                   <VerdictSummary resolution={resolution} disputeId={selected.dispute_id} />
-                  <RulingPanel resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
-                  {resolution.argument_review && resolution.argument_review.length > 0 && <section className="card"><ArgumentReviewPanel reviews={resolution.argument_review} /></section>}
-                  {resolution.counterfactuals && resolution.counterfactuals.length > 0 && <section className="card"><CounterfactualPanel items={resolution.counterfactuals} /></section>}
-                  {resolution.precedents && <section className="card"><PrecedentPanel report={resolution.precedents} /></section>}
-                  {resolution.triage && <section className="card"><TriagePanel triage={resolution.triage} /></section>}
+                  <ReviewerDecision key={`${selected.dispute_id}-${resolution.agent_log[0]?.started_at ?? ""}`} dispute={selected} resolution={resolution} />
                   <AppealsPanel disputeId={selected.dispute_id} version={appealsVersion} onChanged={() => setAppealsVersion(v => v + 1)} />
-                  <section className="card"><RiskPanel risk={resolution.risk} /></section>
+                  <RulingSection title="Reasoning" hint="The Judge's explanation, policy and evidence" open>
+                    <RulingPanel resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
+                  </RulingSection>
+                  {(resolution.argument_review?.length || resolution.counterfactuals?.length) ? <RulingSection title="How the Judge weighed each side" hint="Cited rules checked against the facts, and what would change the ruling">
+                    {resolution.argument_review && resolution.argument_review.length > 0 && <section className="card"><ArgumentReviewPanel reviews={resolution.argument_review} /></section>}
+                    {resolution.counterfactuals && resolution.counterfactuals.length > 0 && <section className="card"><CounterfactualPanel items={resolution.counterfactuals} /></section>}
+                  </RulingSection> : null}
+                  {(resolution.precedents || resolution.triage) && <RulingSection title="Precedents and review priority" hint="Similar past rulings, and where this sits in the review queue">
+                    {resolution.precedents && <section className="card"><PrecedentPanel report={resolution.precedents} /></section>}
+                    {resolution.triage && <section className="card"><TriagePanel triage={resolution.triage} /></section>}
+                  </RulingSection>}
+                  <RulingSection title="Internal risk" hint="Bad-faith signals; never shown to the rider or driver">
+                    <section className="card"><RiskPanel risk={resolution.risk} /></section>
+                  </RulingSection>
                   <details className="raw"><summary>Raw API response · internal record</summary><pre>{JSON.stringify(resolution, null, 2)}</pre></details>
                 </>}
                 {tab === "notify" && resolution && <PartyPreview resolution={resolution} dispute={selected} onAppealed={() => setAppealsVersion(v => v + 1)} />}
@@ -400,7 +411,7 @@ const TRIAGE_LABEL: Record<TriageTier, string> = {
 function TriagePanel({ triage }: { triage: Triage }) {
   return (
     <div className="risk-panel">
-      <div><p className="eyebrow">Internal review only</p><h2>Review priority</h2></div>
+      <div><p className="eyebrow">Internal review only</p><h2><Term term="triage">Review priority</Term></h2></div>
       {triage.tier ? (
         <>
           <div className="risk-badges">
@@ -438,7 +449,7 @@ function ArgumentReviewPanel({ reviews }: { reviews: ArgumentReview[] }) {
               <ul className="small argument-checks">
                 {review.rules.map((check) => (
                   <li key={check.rule}>
-                    <strong>{check.rule}</strong>{" "}
+                    <strong><Term rule={check.rule} /></strong>{" "}
                     <span className={`risk-badge ${VERDICT[check.verdict].level}`}>{VERDICT[check.verdict].label}</span>
                     {check.decisive && <span className="tag"> Decided the case</span>}
                   </li>
@@ -453,6 +464,14 @@ function ArgumentReviewPanel({ reviews }: { reviews: ArgumentReview[] }) {
   );
 }
 
+/** A collapsible group in the Ruling tab: essentials first, detail on demand. */
+function RulingSection({ title, hint, open = false, children }: { title: string; hint: string; open?: boolean; children: React.ReactNode }) {
+  return <details className="ruling-section" open={open}>
+    <summary><span className="ruling-section-title">{title}</span><span className="small muted">{hint}</span></summary>
+    <div className="ruling-section-body">{children}</div>
+  </details>;
+}
+
 function CounterfactualPanel({ items }: { items: Counterfactual[] }) {
   return (
     <div className="risk-panel">
@@ -461,7 +480,7 @@ function CounterfactualPanel({ items }: { items: Counterfactual[] }) {
         {items.map((cf, i) => (
           <li key={i}>
             If {cf.change}, the outcome would be <strong>{cf.outcome}</strong>
-            {cf.rules.length > 0 && <span className="muted"> ({cf.rules.join(", ")})</span>}.
+            {cf.rules.length > 0 && <span className="muted"> ({cf.rules.map((r, j) => <span key={r}>{j > 0 && ", "}<Term rule={r} /></span>)})</span>}.
           </li>
         ))}
       </ul>
@@ -477,7 +496,7 @@ const CONSISTENCY_LABEL: Record<PrecedentReport["consistency"], string> = {
 function PrecedentPanel({ report }: { report: PrecedentReport }) {
   return (
     <div className="risk-panel">
-      <div><p className="eyebrow">Internal review only · Policy &amp; Precedent agent</p><h2>Similar past rulings</h2></div>
+      <div><p className="eyebrow">Internal review only · Policy &amp; Precedent agent</p><h2>Similar past rulings <Term term="precedent">(precedents)</Term></h2></div>
       <div className="risk-row">
         <span className={`risk-badge ${report.consistency === "overridden" ? "high" : report.consistency === "mixed" ? "medium" : "low"}`}>
           {CONSISTENCY_LABEL[report.consistency]}
