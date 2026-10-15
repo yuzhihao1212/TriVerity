@@ -126,7 +126,6 @@ export interface ToolCallRecord {
   source: string;
   results: string[];
   party?: "rider" | "driver" | null;
-
 }
 
 export interface Appeal {

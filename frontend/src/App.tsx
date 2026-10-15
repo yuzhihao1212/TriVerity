@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { LiveProgress } from "./LiveProgress";
+import { LiveProgress, ProgressAnnouncements } from "./LiveProgress";
 import { CollectorCalls } from "./CollectorCalls";
 import { AgentsStrip } from "./AgentsStrip";
 import { WorkflowTabs } from "./WorkflowTabs";
@@ -248,8 +248,9 @@ export default function App() {
 
         <main className="content" id="main-content" tabIndex={-1}>
           <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-            {loadingSamples ? "Loading sample disputes…" : resolving ? `Agents working on ${resolving}. Completed steps appear in the live timeline.` : resolution ? "Saved ruling ready." : ""}
+            {loadingSamples ? "Loading sample disputes…" : resolving ? `Agents working on ${resolving}.` : resolution ? "Saved ruling ready." : ""}
           </p>
+          <ProgressAnnouncements steps={liveSteps} />
           <div role="alert" aria-atomic="true">{error && <p className="error">{error}</p>}</div>
           {!form && loadingSamples && <section className="card empty-state"><h2>Loading disputes…</h2><p className="muted">The sample list is loading. No agents have run.</p></section>}
           {!form && !loadingSamples && !selected && <section className="card empty-state"><h2>No dispute selected</h2><p className="muted">Choose a sample or add a new dispute to begin.</p></section>}
@@ -269,7 +270,7 @@ export default function App() {
                     <button className="run-button" onClick={() => resolve(selected)} disabled={resolving !== null}>
                       {resolution ? "Re-run agents" : "Run agents"}
                     </button>
-                    <span className="token-warning" role="note">Uses real AI tokens when enabled · one run per click</span>
+                    <span className="token-warning" role="note">Uses real AI tokens when enabled · retries once if streaming fails</span>
                     <button className="secondary-button" onClick={() => { setForm({ template: selected }); setError(null); }}>Edit as new dispute</button>
                   </div>
                   {resolution && <p className="small muted">This case has a saved result. Re-running uses tokens again.</p>}
