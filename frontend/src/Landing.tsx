@@ -4,6 +4,8 @@ import { PresentationToggle, ThemeToggle } from "./ThemeToggle";
 import type { Theme } from "./theme";
 import heroLarge from "./assets/hero-ride-1536.webp";
 import heroSmall from "./assets/hero-ride-768.webp";
+import problemLarge from "./assets/problem-rider-1400.webp";
+import problemSmall from "./assets/problem-rider-760.webp";
 import { HERO_ROTATE_MS, HERO_RULINGS, nextHeroIndex } from "./heroRulings";
 
 const GITHUB = "https://github.com/yuzhihao1212/TriVerity";
@@ -78,6 +80,7 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
           <div><p className="eyebrow">The problem</p><h2 id="problem-title">A disputed ride shouldn’t take days to review.</h2></div>
           <div><p>Ryde’s challenge brief describes <strong>24–72 hour resolutions</strong>, inconsistent rulings and costly manual review of GPS, chat, fares and history.</p>
             <p className="muted">TriVerity brings that evidence into one reviewable case, with clear rules and an explanation for each party.</p></div>
+          <ProblemVisual />
         </section>
         <section aria-labelledby="flow-title">
           <div className="landing-section-head"><p className="eyebrow">How it works</p><h2 id="flow-title">Two sides heard. One accountable decision.</h2><p className="muted">AI handles language. Code verifies facts and applies policy.</p></div>
@@ -175,4 +178,20 @@ function HeroRulingCard() {
       </span>
     </div>
   </section>;
+}
+
+/** The pain before TriVerity: a no-show fee the rider disputes, then days of waiting (the brief's 24–72 h). */
+function ProblemVisual() {
+  return <figure className="landing-problem-visual">
+    <img src={problemLarge} srcSet={`${problemSmall} 760w, ${problemLarge} 1400w`} sizes="(max-width: 760px) 100vw, 1200px"
+      width={1400} height={741} loading="lazy" decoding="async"
+      alt="A rider frowns at a phone while adjusting their glasses, confused by what they are reading." />
+    <div className="problem-notice" role="img"
+      aria-label="Illustration: a ride-app notification. No-show fee charged, $4.00: your driver marked you as a no-show. Dispute filed; typical wait 24 to 72 hours.">
+      <div className="problem-notice-head" aria-hidden="true"><span className="problem-notice-app">Ryde</span><span>now</span></div>
+      <p className="problem-notice-title" aria-hidden="true">No-show fee charged: <strong>$4.00</strong></p>
+      <p className="problem-notice-body" aria-hidden="true">“Your driver marked you as a no-show.”</p>
+      <p className="problem-notice-foot" aria-hidden="true"><span className="problem-wait">⏱</span> Dispute filed · typical wait <strong>24–72 h</strong></p>
+    </div>
+  </figure>;
 }
