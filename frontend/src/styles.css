@@ -862,3 +862,23 @@ main[tabindex="-1"]:focus { outline: none; }
 .hero-pick:focus-visible, .hero-pause:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .hero-ruling-id { white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .hero-ruling-slide, .hero-ruling-slide.active { transition: none; transform: none; } }
+
+/* Landing problem photo with a no-show notification (Landing.tsx, ProblemVisual). */
+.landing-problem-visual { grid-column: 1 / -1; position: relative; margin: var(--space-4) 0 0; }
+/* Close to the photo's own 1.89:1 shape, so the hands and phone stay in frame. */
+.landing-problem-visual img { display: block; width: 100%; height: auto; aspect-ratio: 2 / 1; object-fit: cover; object-position: 50% 45%; border-radius: 24px; }
+.problem-notice { position: absolute; top: 9%; right: 4%; width: min(320px, 30%); display: grid; gap: 6px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 18px; background: var(--bg); color: var(--text); box-shadow: 0 18px 44px rgb(43 47 54 / .2); }
+.problem-notice p { margin: 0; }
+.problem-notice-head { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+.problem-notice-app { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: var(--accent-text); letter-spacing: .02em; }
+.problem-notice-app::before { content: ""; width: 14px; height: 14px; border-radius: 4px; background: var(--accent-text); }
+.problem-notice-title { font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+.problem-notice-title strong { color: var(--error); }
+.problem-notice-body { font-size: 13px; color: var(--muted); }
+.problem-notice-foot { margin-top: 4px !important; padding-top: 8px; border-top: 1px solid var(--border); font-size: 12px; color: var(--warn-text); }
+[data-theme="dark"] .problem-notice { box-shadow: 0 18px 44px rgb(0 0 0 / .45); }
+@media (max-width: 760px) {
+  .landing-problem-visual img { height: auto; aspect-ratio: 4 / 3; object-position: 30% 30%; border-radius: 18px; }
+  /* Below the photo on phones, overlapping only its bottom edge. */
+  .problem-notice { position: relative; top: auto; right: auto; transform: none; width: calc(100% - 32px); margin: -40px auto 0; }
+}
