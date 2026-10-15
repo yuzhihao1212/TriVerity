@@ -15,24 +15,25 @@ same facts always give the same ruling, and every ruling is explained.
 
 ## Results
 
-Live evaluation against Tencent Hy3 on 16 Oct 2026, on the full pipeline (advocates, rebuttal round,
-fraud detector, Policy & Precedent agent, Judge, triage) over the 9 sample disputes, including the
+Live evaluation against Tencent Hy3 on 16 Oct 2026, on the full pipeline (evidence collector, advocates,
+rebuttal round, fraud detector, Policy & Precedent agent, Judge, triage) over the 9 sample disputes, including the
 organisers' case:
 
 | Measure | Result |
 |---|---|
 | Rulings matching the expected outcome (decision, refund, rules, review tier) | **9 / 9** (`scripts/evaluate.py`) |
-| Agent outputs written by the AI (advocates, rebuttals, Judge) | **45 / 45** |
-| Advocates citing a rule that favours the other side | **1 of 18** advocate cases (2 of 32 in an earlier 4-run check) |
+| Agent outputs written by the AI (advocates, rebuttals, Judge) | **42 / 45** (45/45 before the evidence collector; the misses were one timeout, which also skipped that case's rebuttals, and one over-long rebuttal, both caught by the checks) |
+| Advocates citing a rule that favours the other side | **0 of 18** advocate cases (2 of 32 in an earlier 4-run check) |
 | Rulings consistent with the closest past rulings | **8 / 9** (D002 has no close precedent: its waiting time is missing) |
-| Time and cost per dispute | about 11.5 s and 5,400 tokens (5 LLM calls, about $0.001) |
+| Time and cost per dispute | about 16 s and 8,000 tokens (6–7 LLM calls, about $0.002) |
 
 The sample disputes are synthetic; these are measurements on them, not production data.
 
 ## What it does
 
-- **Five agents**: Rider Advocate, Driver Advocate and Judge, powered by Tencent **Hy3** via Tencent Cloud
-  TokenHub, plus a deterministic **Fraud & Bad-Faith detector** and a **Policy & Precedent agent**
+- **Six agents**: an **Evidence Collection agent**, Rider Advocate, Driver Advocate and Judge, powered by
+  Tencent **Hy3** via Tencent Cloud TokenHub, plus a deterministic **Fraud & Bad-Faith detector** and a
+  **Policy & Precedent agent**
 - **Two dispute types** end to end: route deviation and no-show charge
 - **Evidence** from trip data, GPS telemetry (path length, unexpected stops, data gaps), fare breakdowns
   (surge and promo checks), chat logs and rider/driver history, grouped by source with an ID per fact
@@ -142,8 +143,8 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`, pick a sample dispute and press **Resolve dispute**. Each run makes five
-LLM calls (about 5,400 tokens).
+Open `http://localhost:5173`, pick a sample dispute and press **Resolve dispute**. Each run makes six or seven
+LLM calls (about 8,000 tokens).
 
 ### Tests and evaluation
 

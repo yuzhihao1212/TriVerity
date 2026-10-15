@@ -135,8 +135,9 @@ LLM_MODEL=hy3
 LLM_DISABLE_THINKING=true
 ```
 
-- Each dispute makes up to five LLM calls (two advocates in parallel, their two rebuttals in parallel,
-  then the Judge), about 5,400 tokens and 11 seconds with Hy3's reasoning turned off. The rebuttals
+- Each dispute makes up to seven LLM calls (one or two Evidence Collection plans, two advocates in
+  parallel, their two rebuttals in parallel, then the Judge), about 8,000 tokens and 16 seconds with
+  Hy3's reasoning turned off. The rebuttals
   are skipped if either advocate fell back. With reasoning on, the earlier three-call pipeline took
   about 22 seconds with no quality gain in testing.
 - Without an API key the whole pipeline still runs, using the deterministic fallbacks, and the tests
