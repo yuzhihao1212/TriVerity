@@ -8,8 +8,8 @@ token budget. The controls behind it are described in `docs/api-contract.md`
 
 | Visitor | Can | Cost |
 | --- | --- | --- |
-| Anyone with the link | Resolve the 9 sample disputes. The server uses its own copy of each sample and caches the result for 6 hours. | At most 9 resolves per 6 hours |
-| Invited judge with an access code | Also type in their own dispute ("+ New dispute", or "Edit as new dispute" on a sample). | At most 3 per minute and 20 per day per code |
+| Anyone with the link | Resolve the 9 sample disputes. The server uses its own copy and caches all-AI results for 7 days; any fallback or skipped rebuttal gets only 5 minutes. | Normally one resolve per sample per week after prewarming, plus fallback retries; restarts/sleep reset the cache |
+| Invited judge with an access code | Also type in their own dispute ("+ New dispute", or "Edit as new dispute" on a sample). These resolves are never cached. | At most 3 per minute and 20 per day per code |
 | Everyone together | At most 10 resolves per minute. After 300,000 tokens or 75 resolves in a day, rulings continue with Fallback badges instead of the LLM. | Capped |
 
 All numbers are in `backend/app/core/limits.py`. They can be overridden in `backend/.env`
@@ -65,8 +65,15 @@ Blueprint with the public-demo settings and the Preset 2 limits). Render provide
      each judge their own code.
 4. **Apply.** Render builds the image (about 5 minutes) and gives the link, e.g.
    `https://triverity-demo.onrender.com`. Open it: the samples should load.
-5. **Warm the cache** so the first judges don't wait for the AI (spends about 50,000
-   tokens for the 9 samples): `python scripts/prewarm_demo.py --base-url https://<your-link> --yes`.
+5. **Warm the cache after every deploy** so the first judges don't wait for the AI
+   (about 8,000 tokens per fresh sample, roughly 72,000 for all 9):
+   `python scripts/prewarm_demo.py --base-url https://<your-link> --yes`.
+   Check every sample in the UI: the evidence collector, both advocates, both replies
+   and Judge explanation must show **AI** for the seven-day cache. Fraud and precedent
+   checks remain **Code**. The script currently prints only the advocate/Judge sources,
+   so check the collector and replies in the UI too. If any step shows **Fallback**,
+   fix the cause and rerun the prewarm after that entry's five-minute cache expires;
+   an immediate retry will return the same cached fallback.
 6. **Keep it awake.** The free plan sleeps after 15 minutes without visits, and the first
    visit then takes about a minute to wake it (and empties the cache). Add a free monitor
    at uptimerobot.com: **New monitor → HTTP(s)**, URL `https://<your-link>/health`,
@@ -151,9 +158,11 @@ Before judging:
 
 - [ ] `python scripts/setup_demo_access.py list` shows `PUBLIC_DEMO=true` and the judges' names.
 - [ ] Backend restarted after the last `.env` change.
-- [ ] Warm the cache so the samples answer instantly (spends about 75,000 tokens):
+- [ ] Prewarm after each deploy, restart or wake from sleep (roughly 72,000 tokens for 9 fresh samples):
       `python scripts/prewarm_demo.py --base-url https://demo.example.com --yes`.
-      Every line should show `llm` sources; `fallback` means the key or budget is not working.
+      Check every sample's collector, advocates, replies and Judge explanation show AI.
+      If any shows Fallback, check the provider/key, budget or output checks, wait for its
+      five-minute cache to expire, then rerun the prewarm. Fraud/precedent Code badges are expected.
 - [ ] Open the link in a private window: a sample resolves, and "+ New dispute" without a code shows
       "Enter your access code".
 - [ ] For screenshots and the demo video: close `backend/.env`, hide terminals that show

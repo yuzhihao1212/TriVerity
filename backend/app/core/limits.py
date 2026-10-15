@@ -22,6 +22,7 @@ MAX_BODY_BYTES = 512 * 1024
 DISPUTE_ID_PATTERN = r"^[A-Za-z0-9_-]{1,64}$"
 PROMO_CODE_PATTERN = r"^[A-Za-z0-9_-]{1,32}$"   # stored upper-cased
 MAX_STATEMENT_CHARS = 2_000        # rider_claim, driver_statement
+MAX_CASE_LABEL_CHARS = 60         # display-only sidebar label; never prompt evidence
 MAX_CHAT_MESSAGES = 50
 MAX_CHAT_MESSAGE_CHARS = 500
 MAX_TIMESTAMP_CHARS = 64
@@ -92,10 +93,8 @@ MAX_CONCURRENT_RESOLVES = 3
 BUSY_RETRY_AFTER_S = 5
 
 # -- Public demo mode (PUBLIC_DEMO=true) --------------------------------------
-# Each sample's result is reused for this long, so LLM cost is bounded by
-# (number of samples) per window. Long enough that one pre-warm
-# (scripts/prewarm_demo.py) covers a whole judging session.
-PUBLIC_DEMO_CACHE_S = 6 * 3600
+PUBLIC_DEMO_CACHE_S = 7 * 24 * 3600  # All-AI samples survive a week after prewarming.
+PUBLIC_DEMO_FALLBACK_CACHE_S = 300   # Retry partial/fallback runs after five minutes.
 
 # -- Demo access codes (X-Demo-Key) -------------------------------------------
 # Code holders are limited per code instead of per IP, since judges may share

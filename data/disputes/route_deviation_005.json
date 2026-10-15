@@ -1,5 +1,6 @@
 {
   "dispute_id": "D008",
+  "label": "Detour, high bad-faith risk",
   "type": "route_deviation",
   "rider_claim": "The driver took a much longer route and I was overcharged.",
   "driver_statement": "I diverted because the normal road was congested.",

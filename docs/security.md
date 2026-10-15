@@ -177,7 +177,7 @@ and a separate demo key with a small provider quota is the hard backstop.
 | Tier | Use | Status |
 | --- | --- | --- |
 | T0 | Local only, no public link | default |
-| T1 | Public demo: `PUBLIC_DEMO=true` resolves only the server's own samples, ignores client facts, caches results for 6 hours, hides `/docs` and `/openapi.json` | built (`test_public_demo.py`) |
+| T1 | Public demo: `PUBLIC_DEMO=true` resolves only the server's own samples, ignores client facts, caches all-AI results for 7 days and any fallback/skipped-rebuttal result for 5 minutes, hides `/docs` and `/openapi.json` | built (`test_public_demo.py`, `test_public_demo_cache.py`) |
 | T2 | Invited judges: personal access code in `X-Demo-Key`, constant-time check, per-code limits, issued and revoked with `scripts/setup_demo_access.py` | built (`test_demo_access.py`) |
 | T3 | Production: OIDC/JWT from Ryde's identity provider with scopes such as `disputes:resolve` and `disputes:review`; **the server loads the case by `dispute_id` from Ryde's own data, so the client never supplies facts**; the internal view requires the reviewer role; secrets in a vault; TLS between services | roadmap |
 
@@ -204,6 +204,7 @@ and results live only in the response (and, in public demo mode, the in-memory s
 
 | Field | Sent to the LLM? | Stored? | Logged? | Internal view | Party view |
 | --- | --- | --- | --- | --- | --- |
+| Case `label` | **never**; display-only, max 60 characters, sanitised, links/email/markup rejected | bundled sample labels only; submitted labels are not persisted | no | yes (sample list/sidebar) | no |
 | `rider_claim` | yes, cleaned: rider advocate and narration | no | no | yes (advocate evidence) | no |
 | `driver_statement` | yes, cleaned: driver advocate and narration | no | no | yes | no |
 | Chat messages | lines matching a keyword, quoted in the facts; plus, when the Evidence Collection agent calls `chat_window`, up to 8 rider/driver messages (200 characters each, clock time only) from a window of at most 60 minutes. Both go to the advocates, rebuttals and Judge. **Phone numbers (any common separator: space, dash, dot, brackets), emails and links (including bare `host.tld/path`) are replaced with placeholders** before quoting on both chat paths (`text_safety.redact_contacts`); names and street addresses can't be detected reliably and stay | no | no | yes (`judge_evidence`, `evidence_collection`) | no |

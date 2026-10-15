@@ -1,5 +1,6 @@
 {
   "dispute_id": "D005",
+  "label": "Driver stopped 378 m away",
   "type": "no_show_charge",
   "rider_claim": "I waited at the pickup point but the driver never came, and I was charged a no-show fee.",
   "driver_statement": "I was at the pickup point and the rider didn't show up.",

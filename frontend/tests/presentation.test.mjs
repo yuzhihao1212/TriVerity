@@ -95,3 +95,13 @@ test('computed evidence preserves unlabelled facts and matches only exact unique
   assert.equal(computedFacts({...result,rider_case:{...argument,evidence_ids:[]},driver_case:{...argument,evidence_ids:[]}}).filter(f=>f.id).length,0);
   assert.ok(computedFacts({...result,judge_evidence:[]}).some(f=>f.id==='GPS-1'));
 });
+
+test('sidebar uses a curated label or the original claim when no label is supplied', async () => {
+  const { disputeLabel } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`);
+  const claim = 'The driver took a longer route.';
+  assert.equal(disputeLabel({ label: '6-min stop, long detour', rider_claim: claim }), '6-min stop, long detour');
+  assert.equal(disputeLabel({ label: '  Short label  ', rider_claim: claim }), 'Short label');
+  for (const label of [undefined, null, '', '   ']) {
+    assert.equal(disputeLabel({ label, rider_claim: claim }), claim);
+  }
+});

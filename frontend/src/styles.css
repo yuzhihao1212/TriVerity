@@ -100,13 +100,14 @@ textarea { width: 100%; resize: vertical; }
 .sidebar-select { position: relative; display: block; }
 .sidebar-filter select { appearance: none; -webkit-appearance: none; width: 100%; min-height: 44px; padding-inline-end: var(--space-10); font-size: 12px; }
 .select-chevron { position: absolute; inset-inline-end: var(--space-3); top: 50%; width: 16px; height: 16px; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
-.dispute-item { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: var(--space-1); min-height: 44px; padding: var(--space-3); border: 0; border-left: 2px solid var(--transparent); border-radius: 0 8px 8px 0; background: var(--bg); color: var(--text); text-align: left; font-size: 12px; }
+.dispute-item { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; min-height: 44px; padding: var(--space-1) var(--space-3); border: 0; border-left: 2px solid var(--transparent); border-radius: 0 8px 8px 0; background: var(--bg); color: var(--text); text-align: left; font-size: 12px; }
 .dispute-item:hover { background: var(--surface); }
 .dispute-item.active { background: var(--accent-soft); border-left-color: var(--accent); }
 .dispute-meta { display: flex; align-items: center; gap: var(--space-1); color: var(--muted); font-size: 11px; font-weight: 500; }
 .dispute-item.active .dispute-meta { color: var(--accent-text); }
 .type-icon { flex: none; }
-.dispute-done { font-size: 10px; color: var(--muted); border-radius: 999px; padding: 1px 7px; background: var(--bg); }
+.dispute-label { width: 100%; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--muted); font-size: 12px; line-height: 1.4; }
+.dispute-done { margin-top: var(--space-1); font-size: 10px; color: var(--muted); border-radius: 999px; padding: 1px 7px; background: var(--bg); }
 .content { padding: var(--space-8); min-width: 0; max-width: 1280px; }
 .content > [role="alert"]:has(> *) { margin-bottom: var(--space-5); }
 .case-file { min-width: 0; }
@@ -226,7 +227,7 @@ textarea { width: 100%; resize: vertical; }
 .presentation-mode { font-size: 17px; }
 .presentation-mode .card h2 { font-size: 26px; }
 .presentation-mode .small, .presentation-mode .comparison-row, .presentation-mode .round-title span, .presentation-mode .advocate > p, .presentation-mode .fact-library-list li { font-size: 15px; }
-.presentation-mode .section-label, .presentation-mode .eyebrow, .presentation-mode .tag, .presentation-mode .source-badge, .presentation-mode .source-chip, .presentation-mode .dispute-meta, .presentation-mode .dispute-done, .presentation-mode .agent-entries p, .presentation-mode .evidence-id, .presentation-mode .evidence-link { font-size: 13px; }
+.presentation-mode .section-label, .presentation-mode .eyebrow, .presentation-mode .tag, .presentation-mode .source-badge, .presentation-mode .source-chip, .presentation-mode .dispute-meta, .presentation-mode .dispute-label, .presentation-mode .dispute-done, .presentation-mode .agent-entries p, .presentation-mode .evidence-id, .presentation-mode .evidence-link { font-size: 13px; }
 .presentation-mode .agent-entry-head, .presentation-mode .run-button, .presentation-mode .secondary-button, .presentation-mode .party-tabs button { font-size: 15px; }
 .presentation-mode .tab-label { font-size: 15px; }
 .presentation-mode .tab-progress { font-size: 12px; }
