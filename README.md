@@ -30,8 +30,8 @@ organisers' case:
 The sample disputes are synthetic; these are measurements on them, not production data.
 
 **At scale** ([simulation.md](docs/simulation.md), 500 generated disputes run offline): 78% resolved without a
-human, the same facts always gave the same ruling (100/100), and the escalated 22% went to the review queue
-with a triage tier. At an illustrative 5,000 disputes a day, AI costs about $7.70 a day.
+human, the same facts always gave the same ruling (100/100), the escalated 22% went to the review queue
+with a triage tier, and party history never changed a policy decision (500/500 with histories removed or swapped). At an illustrative 5,000 disputes a day, AI costs about $7.70 a day.
 
 ## What it does
 
@@ -91,6 +91,8 @@ The full threat model is in [docs/security.md](docs/security.md).
 
 - [Architecture](docs/architecture.md): flow, design principles, checks on LLM output
 - [Prompts](docs/prompts.md): how the prompts drive each agent, and what testing changed
+- [Responsible AI scorecard](docs/responsible-ai.md): mapped to AI Verify and IMDA's Model AI Governance Framework
+- [System card](docs/system-card.md): intended use, data, evaluation and known limits
 - [Scale test](docs/simulation.md): 500 synthetic disputes through the full pipeline, offline
 - [Submission](docs/submission.md): title, blurb and project description for the hackathon form
 - [Security](docs/security.md): threat model, red-team results, API hardening, residual risks
