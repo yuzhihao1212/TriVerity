@@ -1,3 +1,4 @@
+import type { MouseEvent } from "react";
 import { focusSection } from "./routes";
 import { ThemeToggle } from "./ThemeToggle";
 import type { Theme } from "./theme";
@@ -37,8 +38,10 @@ const CASES = [
   { id: "DISP-002", title: "The organisers’ own case", detail: "A lobby no-show dispute in the organisers’ dataset format. Examine arrival, waiting and contact evidence.", action: "Try the organisers’ case" },
 ];
 
-export function Landing({ presentation, onTogglePresentation, theme, onToggleTheme }: {
+export function Landing({ presentation, onTogglePresentation, theme, onToggleTheme, onOpenConsole }: {
   presentation: boolean; onTogglePresentation: () => void; theme: Theme; onToggleTheme: () => void;
+  /** CTA click handler: plays the console intro on a plain left-click, otherwise leaves the link alone. */
+  onOpenConsole?: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
   return <div className={`landing${presentation ? " presentation-mode" : ""}`}>
     <a className="skip-link" href="#landing-main" onClick={event => { event.preventDefault(); focusSection("landing-main"); }}>Skip to content</a>
@@ -59,7 +62,7 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
           <p className="landing-byline">By OeroAI</p>
           <p className="landing-lead">AI agents argue both sides;<br className="landing-desktop-break" /> policy rules decide fairly.</p>
           <p className="landing-intro muted">From disputed trip to an explained ruling. Follow the evidence, hear both sides and see why the decision holds.</p>
-          <div className="landing-actions"><a className="landing-primary" href="#/console">Open the reviewer console <span aria-hidden="true">↗</span></a>
+          <div className="landing-actions"><a className="landing-primary" href="#/console" onClick={onOpenConsole}>Open the reviewer console <span aria-hidden="true">↗</span></a>
             <a href={GITHUB}>View the source on GitHub <span aria-hidden="true">↗</span></a></div>
           <p className="landing-provider muted">Built on Tencent Hy3 via Tencent Cloud TokenHub.</p>
         </div>
