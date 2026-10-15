@@ -171,7 +171,6 @@ export default function App() {
       <span className="dispute-meta">
         <TypeIcon type={d.type} />{d.dispute_id} · {TYPE_LABELS[d.type]}
       </span>
-      <span className="dispute-claim">{d.rider_claim}</span>
       {results[d.dispute_id] && (
         <span className="dispute-done">{DECISION_LABELS[results[d.dispute_id].decision]}</span>
       )}
@@ -212,9 +211,14 @@ export default function App() {
             + New dispute
           </button>
           <label className="sidebar-filter"><span className="section-label">Filter disputes</span>
-            <select value={filter} onChange={event => setFilter(event.target.value)}>
-              <option value="all">All dispute types</option><option value="route_deviation">Route deviation</option><option value="no_show_charge">No-show charge</option>
-            </select>
+            <span className="sidebar-select">
+              <select value={filter} onChange={event => setFilter(event.target.value)}>
+                <option value="all">All dispute types</option><option value="route_deviation">Route deviation</option><option value="no_show_charge">No-show charge</option>
+              </select>
+              <svg className="select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </span>
           </label>
           {selected && filter !== "all" && selected.type !== filter && <p className="small muted">The selected case is outside this filter.</p>}
           {!loadingSamples && !filterDisputes([...own, ...samples], filter).length && <p className="small muted">No disputes match this filter.</p>}

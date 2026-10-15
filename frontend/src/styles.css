@@ -97,14 +97,15 @@ textarea { width: 100%; resize: vertical; }
 .layout { display: grid; grid-template-columns: 236px minmax(0, 1fr); min-height: calc(100vh - 100px); }
 .sidebar { display: flex; flex-direction: column; gap: var(--space-2); border-right: 1px solid var(--border); padding: var(--space-5) var(--space-3); align-self: start; position: sticky; top: 0; max-height: 100vh; overflow-y: auto; }
 .sidebar-filter { display: grid; gap: var(--space-1); margin-block: var(--space-2); }
-.sidebar-filter select { width: 100%; font-size: 12px; }
-.dispute-item { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); padding: var(--space-3); border: 0; border-left: 2px solid var(--transparent); border-radius: 0 8px 8px 0; background: var(--bg); color: var(--text); text-align: left; font-size: 12px; }
+.sidebar-select { position: relative; display: block; }
+.sidebar-filter select { appearance: none; -webkit-appearance: none; width: 100%; min-height: 44px; padding-inline-end: var(--space-10); font-size: 12px; }
+.select-chevron { position: absolute; inset-inline-end: var(--space-3); top: 50%; width: 16px; height: 16px; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.dispute-item { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: var(--space-1); min-height: 44px; padding: var(--space-3); border: 0; border-left: 2px solid var(--transparent); border-radius: 0 8px 8px 0; background: var(--bg); color: var(--text); text-align: left; font-size: 12px; }
 .dispute-item:hover { background: var(--surface); }
 .dispute-item.active { background: var(--accent-soft); border-left-color: var(--accent); }
 .dispute-meta { display: flex; align-items: center; gap: var(--space-1); color: var(--muted); font-size: 11px; font-weight: 500; }
 .dispute-item.active .dispute-meta { color: var(--accent-text); }
 .type-icon { flex: none; }
-.dispute-claim { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .dispute-done { font-size: 10px; color: var(--muted); border-radius: 999px; padding: 1px 7px; background: var(--bg); }
 .content { padding: var(--space-8); min-width: 0; max-width: 1280px; }
 .content > [role="alert"]:has(> *) { margin-bottom: var(--space-5); }
@@ -227,7 +228,6 @@ textarea { width: 100%; resize: vertical; }
 .presentation-mode .small, .presentation-mode .comparison-row, .presentation-mode .round-title span, .presentation-mode .advocate > p, .presentation-mode .fact-library-list li { font-size: 15px; }
 .presentation-mode .section-label, .presentation-mode .eyebrow, .presentation-mode .tag, .presentation-mode .source-badge, .presentation-mode .source-chip, .presentation-mode .dispute-meta, .presentation-mode .dispute-done, .presentation-mode .agent-entries p, .presentation-mode .evidence-id, .presentation-mode .evidence-link { font-size: 13px; }
 .presentation-mode .agent-entry-head, .presentation-mode .run-button, .presentation-mode .secondary-button, .presentation-mode .party-tabs button { font-size: 15px; }
-.presentation-mode .dispute-claim { font-size: 14px; }
 .presentation-mode .tab-label { font-size: 15px; }
 .presentation-mode .tab-progress { font-size: 12px; }
 .presentation-mode .verdict-value { font-size: 34px; }
@@ -247,7 +247,7 @@ textarea { width: 100%; resize: vertical; }
   .topbar-right { width: 100%; margin-left: 0; gap: var(--space-2); }
   .access-code { flex: 1; min-width: 160px; }
   .access-code input { width: 100%; max-width: 100%; }
-  .sidebar { position: static; max-height: 180px; border-right: 0; border-bottom: 1px solid var(--border); padding: var(--space-3) var(--space-4); }
+  .sidebar { position: static; max-height: min(320px, 45vh); border-right: 0; border-bottom: 1px solid var(--border); padding: var(--space-3) var(--space-4); }
   .sidebar > * { flex: none; }
   .content { padding: var(--space-5) var(--space-4); }
   .case-file-head { margin-bottom: var(--space-3); gap: var(--space-2); }
@@ -273,6 +273,11 @@ textarea { width: 100%; resize: vertical; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
+@media (forced-colors: active) {
+  .sidebar-filter select { appearance: auto; -webkit-appearance: auto; }
+  .select-chevron { display: none; }
 }
 
 .precedent-list { display: grid; gap: var(--space-2); }
