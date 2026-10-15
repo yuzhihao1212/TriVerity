@@ -24,10 +24,11 @@ charges ("the driver never came but I was charged a fee"). Its users are Ryde's 
 today read GPS logs, chats and fare records by hand, and Ryde's riders and drivers, who get a fast,
 explained outcome instead of a 24–72 hour wait.
 
-A Rider Advocate and a Driver Advocate (Tencent Hy3) each build their side's case from verified evidence
+An Evidence Collection agent (Tencent Hy3) first decides which trip, GPS, fare and chat records to pull
+through mock Ryde data APIs. A Rider Advocate and a Driver Advocate (Hy3) each build their side's case from verified evidence
 and answer each other in a rebuttal round. A Fraud & Bad-Faith detector, a Policy & Precedent agent and a
 rule-based Judge then decide, and Hy3 explains the ruling to the case record and separately to each party.
-Standard cases resolve in about 11 seconds; risky or unclear ones go to a human reviewer, ordered by
+Standard cases resolve in about 16 seconds; risky or unclear ones go to a human reviewer, ordered by
 priority.
 
 ### Real-world insights: pain points, audience and the problems solved
@@ -38,7 +39,7 @@ rulings between agents on similar cases, and churn when customers feel unfairly 
 
 TriVerity targets each of these:
 
-- **Speed**: about 11.5 seconds per dispute, end to end.
+- **Speed**: about 16 seconds per dispute, end to end.
 - **Consistency**: facts are computed in code and the decision comes from Ryde's policy rules, so the same
   facts always give the same ruling. The Policy & Precedent agent checks each ruling against the closest
   past rulings.
@@ -52,6 +53,9 @@ TriVerity targets each of these:
 
 **Pipeline** (diagram: [architecture.svg](architecture.svg)):
 
+1. The **Evidence Collection agent** (Hy3) plans calls to deterministic data-source tools over mock Ryde
+   APIs (trip record, GPS windows and stops, fare lines, chat windows, app events), in up to two rounds;
+   contact details are removed from chat quotes before they reach the AI.
 1. The **evidence loader** turns the raw case (trip data, GPS points, fare breakdown, chat, both parties'
    history) into facts with an ID per fact (`TRIP-1`, `GPS-2`, …): route detour and delay, stops, distance
    from pickup, waiting time, surge and promo checks, threats and agreements in chat. No LLM, so facts are
@@ -94,10 +98,10 @@ Measured on the 9 sample disputes, including the organisers' case:
 
 | Metric | Today (brief) | TriVerity |
 |---|---|---|
-| Time to a ruling | 24–72 hours | about 11.5 seconds |
+| Time to a ruling | 24–72 hours | about 16 seconds |
 | Rulings matching the expected outcome | inconsistent between agents | 9 / 9 (rule-based: same facts, same ruling) |
 | Disputes resolved without a human | 0% | 6 of 9; the other 3 (missing data, threat, fraud risk) escalated with a priority tier |
-| AI cost per dispute | — | about 5,400 tokens, roughly $0.001 with Hy3 |
+| AI cost per dispute | — | about 8,000 tokens, roughly $0.002 with Hy3 |
 | Explanation | varies by agent | always: a case record plus a message to each party |
 
 For Ryde, that means reviewers spend their time on the cases that need judgement (safety first), riders and
