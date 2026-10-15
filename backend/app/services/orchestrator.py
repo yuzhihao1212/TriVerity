@@ -1,6 +1,7 @@
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
+from app.agents._advocate import build_rebuttal
 from app.agents.fraud_agent import assess_risk
 from app.agents.rider_agent import build_rider_case
 from app.agents.driver_agent import build_driver_case
@@ -43,6 +44,18 @@ def resolve_dispute(case: DisputeCase) -> Resolution:
         log("rider_advocate", f"[{rider_case.source}] {rider_case.summary}")
         log("driver_advocate", f"[{driver_case.source}] {driver_case.summary}")
         log("fraud_detector", risk.summary)
+
+        # Rebuttal round: each advocate answers the other side's case once, concurrently.
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            rider_reply = pool.submit(build_rebuttal, party="rider", own_case=rider_case,
+                                      other_case=driver_case, facts=facts, dispute_type=case.type)
+            driver_reply = pool.submit(build_rebuttal, party="driver", own_case=driver_case,
+                                       other_case=rider_case, facts=facts, dispute_type=case.type)
+            rider_case = rider_case.model_copy(update={"rebuttal": rider_reply.result()})
+            driver_case = driver_case.model_copy(update={"rebuttal": driver_reply.result()})
+        for name, agent_case in (("rider_rebuttal", rider_case), ("driver_rebuttal", driver_case)):
+            reply = agent_case.rebuttal
+            log(name, f"[{reply.source}] {reply.text}" if reply.text else "[fallback] no rebuttal")
 
         ruling = judge(case, facts, rider_case, driver_case, risk)
     finally:

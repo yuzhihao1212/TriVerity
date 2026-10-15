@@ -106,8 +106,12 @@ See `backend/app/models/resolution.py`.
   "explanation_source": "llm | fallback",
   "judge_evidence": ["string"],
   "policy_refs": ["RD-3: A route more than 15% longer ..."],
-  "rider_case": {"agent": "rider_advocate", "summary": "string", "evidence": [], "policy_refs": [], "source": "llm | fallback"},
-  "driver_case": {"agent": "driver_advocate", "summary": "string", "evidence": [], "policy_refs": [], "source": "llm | fallback"},
+  "rider_case": {"agent": "rider_advocate", "summary": "string", "evidence": [], "evidence_ids": ["TRIP-1", "GPS-2"],
+                "sources": ["trip", "gps"], "policy_refs": [], "source": "llm | fallback",
+                "rebuttal": {"text": "string", "evidence": [], "evidence_ids": [], "source": "llm | fallback"}},
+  "driver_case": {"agent": "driver_advocate", "summary": "string", "evidence": [], "evidence_ids": ["TRIP-1", "GPS-2"],
+                "sources": ["trip", "gps"], "policy_refs": [], "source": "llm | fallback",
+                "rebuttal": {"text": "string", "evidence": [], "evidence_ids": [], "source": "llm | fallback"}},
   "risk": {
     "rider_risk": "low | medium | high",
     "driver_risk": "low | medium | high",
@@ -133,6 +137,11 @@ See `backend/app/models/resolution.py`.
   bad-faith indicators (e.g. 3+ disputes in 90 days, low rating, claims contradicted
   by trip data). The fraud agent never changes a refund or penalises anyone; a
   `high` risk for either party triggers `FRAUD-1` escalation to human review.
+- An advocate's `evidence_ids` are the IDs of the computed facts it cited (prefixes `TRIP`, `GPS`, `FARE`,
+  `CHAT`, `HIST`), `evidence` their exact text, and `sources` the evidence sources used. `rebuttal` is its
+  reply to the other side; an empty `text` with `source: "fallback"` means no rebuttal was made.
+- `agent_log` steps: `evidence_loader`, `rider_advocate`, `driver_advocate`, `fraud_detector`,
+  `rider_rebuttal`, `driver_rebuttal`, `judge`.
 - `compensation` is reserved for payouts beyond a refund; no rule produces it yet.
 
 Keep this contract stable so frontend and backend development can proceed independently.

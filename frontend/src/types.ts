@@ -36,12 +36,22 @@ export interface DisputeCase {
   driver_history: PartyHistory;
 }
 
+export interface Rebuttal {
+  text: string;
+  evidence: string[];
+  evidence_ids: string[];
+  source: "llm" | "fallback";
+}
+
 export interface AgentCase {
   agent: string;
   summary: string;
   evidence: string[];
+  evidence_ids: string[];
+  sources: string[];
   policy_refs: string[];
   source: "llm" | "fallback";
+  rebuttal: Rebuttal | null;
 }
 
 export type RiskLevel = "low" | "medium" | "high";
