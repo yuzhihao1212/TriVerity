@@ -8,7 +8,8 @@ import { CaseComparison } from "./CaseComparison";
 import { Debate } from "./Debate";
 import { EvidenceList, EvidenceText, type FactLinks } from "./EvidenceList";
 import { VerdictSummary } from "./VerdictSummary";
-import { computedFacts, disputeLabel, filterDisputes, money, readPresentationPreference, writePresentationPreference } from "./presentation";
+import { computedFacts, disputeLabel, filterDisputes, money } from "./presentation";
+import { focusSection, selectSample } from "./routes";
 import { AppealsPanel } from "./Appeals";
 import { PartyPreview } from "./PartyPreview";
 import { DisputeForm } from "./DisputeForm";
@@ -49,12 +50,9 @@ function saveAccessCode(code: string) {
   }
 }
 
-function loadPresentationMode() {
-  try { return readPresentationPreference(localStorage); } catch { return false; }
-}
-
-export default function App() {
-  const [presentation, setPresentation] = useState(loadPresentationMode);
+export default function App({ active, sampleId, presentation, onTogglePresentation }: {
+  active: boolean; sampleId?: string; presentation: boolean; onTogglePresentation: () => void;
+}) {
   const [filter, setFilter] = useState("all");
   const [activeTabs, setActiveTabs] = useState<Record<string, WorkflowTab>>({});
   const [activeFact, setActiveFact] = useState<string | null>(null);
@@ -77,13 +75,18 @@ export default function App() {
   // Loading the samples is free; the agents (and LLM tokens) only run on "Resolve".
   useEffect(() => {
     getSamples()
-      .then((cases) => {
-        setSamples(cases);
-        if (cases.length) setSelected(cases[0]);
-      })
+      .then(setSamples)
       .catch(() => setError("Can’t load disputes. Check your connection and reload the page."))
       .finally(() => setLoadingSamples(false));
   }, []);
+
+  useEffect(() => {
+    if (active && samples.length) {
+      setSelected(selectSample(samples, sampleId));
+      setForm(null);
+      setActiveFact(null);
+    }
+  }, [active, samples, sampleId]);
 
   function select(dispute: DisputeCase) {
     setActiveFact(null);
@@ -140,29 +143,23 @@ export default function App() {
     setFactRequest(value => value + 1);
   }
 
-  function togglePresentation() {
-    const next = !presentation;
-    setPresentation(next);
-    try { writePresentationPreference(localStorage, next); } catch { /* Storage itself may be blocked. */ }
-  }
-
   useEffect(() => {
-    if (!form && resolving === selected?.dispute_id) {
+    if (active && !form && resolving === selected?.dispute_id) {
       const heading = document.getElementById("loading-title");
       heading?.scrollIntoView({ block: "start" });
       heading?.focus({ preventScroll: true });
     }
-  }, [resolving, selected?.dispute_id, form]);
+  }, [active, resolving, selected?.dispute_id, form]);
 
   useEffect(() => {
     if (!completedId) return;
-    if (!form && completedId === selected?.dispute_id) {
+    if (active && !form && completedId === selected?.dispute_id) {
       const summary = document.querySelector<HTMLButtonElement>('[data-workflow-tab="evidence"]');
       summary?.scrollIntoView({ block: "nearest" });
       summary?.focus({ preventScroll: true });
     }
     setCompletedId(null);
-  }, [completedId, selected, form]);
+  }, [active, completedId, selected, form]);
 
   const disputeButton = (d: DisputeCase) => (
     <button
@@ -183,12 +180,12 @@ export default function App() {
 
   return (
     <div className={`app${presentation ? " presentation-mode" : ""}`}>
-      <a className="skip-link" href="#main-content">Skip to dispute</a>
+      <a className="skip-link" href="#main-content" onClick={event => { event.preventDefault(); focusSection("main-content"); }}>Skip to dispute</a>
       <header className="topbar">
-        <h1 className="brand">TriVerity</h1>
+        <h1 className="brand"><a className="console-home" href="#/">TriVerity<span className="sr-only"> home</span></a></h1>
         <span className="muted">Multi-agent dispute resolution for Ryde</span>
         <div className="topbar-right">
-          <button type="button" className="secondary-button presentation-toggle" aria-pressed={presentation} onClick={togglePresentation}>Presentation mode</button>
+          <button type="button" className="secondary-button presentation-toggle" aria-pressed={presentation} onClick={onTogglePresentation}>Presentation mode</button>
           <label className="access-code">
             <span className="small muted">Judge access code</span>
             <input
