@@ -8,21 +8,21 @@ export const LANDING_RESULTS = [
   { value: "9/9", label: "Sample rulings correct", detail: "Live Hy3 evaluation, including the organisers’ case." },
   { value: "78%", label: "Resolved without a human", detail: "390 of 500 generated disputes, evaluated offline." },
   { value: "100/100", label: "Same facts, same ruling", detail: "Repeated rulings in the offline simulation." },
-  { value: "~16 s", label: "About $0.002 per dispute", detail: "Live Hy3 measurements; about 8,000 tokens per dispute." },
+  { value: "16–18 s", label: "About $0.002 per dispute", detail: "Live Hy3 measurements; about 10,000 tokens per dispute." },
 ] as const;
 
 const STEPS = [
-  { title: "Evidence collection", detail: "Code verifies GPS, chat, fares and history; AI gathers the relevant facts.", ai: true, code: true },
+  { title: "Evidence collection", detail: "Code verifies GPS, chat, fares and history; each advocate’s AI requests the records it needs.", ai: true, code: true },
   { title: "Rider & Driver advocates", detail: "Each side builds its case from the same verified evidence.", ai: true },
   { title: "Rebuttal round", detail: "Each advocate answers the other side once.", ai: true },
   { title: "Fraud & precedent checks", detail: "Code checks bad-faith signals and retrieves similar past rulings.", code: true },
-  { title: "Policy rules decide", detail: "Rules set the decision, refund and confidence, with human escalation.", code: true },
+  { title: "Policy rules decide", detail: "A refund, compensation or no action, with confidence; uncertain or risky cases go to a human.", code: true },
   { title: "Judge explains & parties notified", detail: "AI explains the ruling and prepares a separate message for each party.", ai: true },
 ] as const;
 
 const TRUST = [
   ["Rules decide. AI explains.", "Decisions and amounts come from code. The same facts produce the same ruling, whoever argues the case."],
-  ["Arguments you can trace", "Every argument cites evidence IDs and policy rules. The console lets a reviewer inspect the underlying facts."],
+  ["Arguments checked, not just heard", "Every argument cites evidence IDs and policy rules, and the Judge checks each cited rule against the facts: it holds for that side, favours the other, or doesn’t apply."],
   ["What would change this ruling?", "Every decision includes the facts it turns on and the outcome a different fact would give."],
   ["Safety first, humans in control", "Uncertain or high-risk cases go to a human with a priority tier. Safety cases come first."],
   ["Appeals become precedents", "A human reviewer’s appeal decision becomes a precedent for future cases. This feedback loop is disabled in the public demo."],
