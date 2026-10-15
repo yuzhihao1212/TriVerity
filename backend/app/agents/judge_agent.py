@@ -1,6 +1,7 @@
 from app.agents.judge_narration import narrate
+from app.agents.precedent_agent import check_consistency
 from app.models.dispute import DisputeCase
-from app.models.resolution import AgentCase, RiskAssessment, Ruling
+from app.models.resolution import AgentCase, PrecedentReport, RiskAssessment, Ruling
 from app.services.evidence import CaseFacts
 from app.services.policy_service import cite, load_policy
 
@@ -10,23 +11,42 @@ def judge(
     rider_case: AgentCase,
     driver_case: AgentCase,
     risk: RiskAssessment,
+    precedents: PrecedentReport | None = None,
 ) -> Ruling:
-    """Policy-grounded judge that decides from computed facts only.
+    """Policy-grounded judge that decides from computed facts only (see judge_with_precedents)."""
+    return judge_with_precedents(case, facts, rider_case, driver_case, risk, precedents)[0]
+
+def judge_with_precedents(
+    case: DisputeCase,
+    facts: CaseFacts,
+    rider_case: AgentCase,
+    driver_case: AgentCase,
+    risk: RiskAssessment,
+    precedents: PrecedentReport | None = None,
+) -> tuple[Ruling, PrecedentReport]:
+    """The ruling, and the precedent report with its consistency verdict.
 
     The advocates' cases do not change the decision: narratives can't be
-    verified, facts can. The LLM then explains the ruling and answers both
-    advocates (see judge_narration); the decision itself stays rule-based.
+    verified, facts can. Precedents can only escalate (PREC-1), never decide.
+    The LLM then explains the ruling and answers both advocates (see
+    judge_narration); the decision itself stays rule-based.
     """
     policy = load_policy()
-    if case.type == "route_deviation":
-        ruling = _judge_route_deviation(case, facts, policy["route_deviation"])
-    else:
-        ruling = _judge_no_show(case, facts, policy["no_show_charge"])
+    ruling = base_ruling(case, facts)
+    report, overrides = check_consistency(precedents or PrecedentReport(), ruling.decision)
     ruling = _apply_safety(ruling, facts, policy["safety"])
     ruling = _apply_fraud(ruling, risk, policy["fraud"])
+    ruling = _apply_precedent(ruling, overrides, policy["precedent"])
     ruling = _apply_escalation(ruling, policy["escalation"])
     ruling = _cap_refund(ruling, case, policy["refund"])
-    return narrate(case, _explain_to_parties(ruling), rider_case, driver_case)
+    return narrate(case, _explain_to_parties(ruling), rider_case, driver_case, report), report
+
+def base_ruling(case: DisputeCase, facts: CaseFacts) -> Ruling:
+    """The dispute-type rules alone, before any escalation (also builds the precedent set)."""
+    policy = load_policy()
+    if case.type == "route_deviation":
+        return _judge_route_deviation(case, facts, policy["route_deviation"])
+    return _judge_no_show(case, facts, policy["no_show_charge"])
 
 def _cap_refund(ruling: Ruling, case: DisputeCase, section: dict | None = None) -> Ruling:
     """REF-1: a refund can never exceed the fare actually charged.
@@ -195,6 +215,15 @@ def _apply_fraud(ruling: Ruling, risk: RiskAssessment, section: dict) -> Ruling:
         f"The {' and '.join(high)} {'show' if len(high) > 1 else 'shows'} a high bad-faith risk.",
     )
 
+def _apply_precedent(ruling: Ruling, overrides: list[str], section: dict) -> Ruling:
+    if not overrides:
+        return ruling
+    return _escalate(
+        ruling,
+        cite(section, "PREC-1"),
+        f"Human reviewers decided similar past disputes differently ({', '.join(overrides)}).",
+    )
+
 def _apply_escalation(ruling: Ruling, section: dict) -> Ruling:
     if ruling.decision == "needs_review" or ruling.confidence >= section["thresholds"]["min_confidence"]:
         return ruling
@@ -208,8 +237,9 @@ def _explain_to_parties(ruling: Ruling) -> Ruling:
     the dispute needs additional review.
     """
     amount = f" ${ruling.refund_amount:.2f}" if ruling.refund_amount is not None else ""
-    is_fraud_escalation = any("FRAUD-1" in ref for ref in ruling.policy_refs)
-    if is_fraud_escalation:
+    # FRAUD-1 and PREC-1 reasons are internal (signals; other parties' disputes).
+    is_internal_escalation = any(ref.startswith(("FRAUD-1", "PREC-1")) for ref in ruling.policy_refs)
+    if is_internal_escalation:
         rider = (
             "Your dispute needs additional review. A human reviewer will "
             "look into it and follow up with you."

@@ -71,6 +71,12 @@ ADVOCATE_MAX_EVIDENCE_ITEMS = 8
 ADVOCATE_MAX_EVIDENCE_CHARS = 300
 REBUTTAL_MAX_CHARS = 600           # a rebuttal is 1-3 sentences
 
+# -- Policy & Precedent agent ------------------------------------------------
+PRECEDENT_TOP_K = 3                 # similar past rulings returned per dispute
+PRECEDENT_SHOW_MIN_SIMILARITY = 0.4 # weaker matches are not shown at all
+PRECEDENT_MAX_FEEDBACK = 200        # reviewer decisions kept in memory (feedback loop)
+PRECEDENT_NOTE_MAX_CHARS = 300      # reviewer note on a feedback entry
+
 # -- Concurrency (503 with Retry-After when full) -----------------------------
 MAX_CONCURRENT_RESOLVES = 3
 BUSY_RETRY_AFTER_S = 5

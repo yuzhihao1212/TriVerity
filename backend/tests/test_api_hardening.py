@@ -452,7 +452,7 @@ def test_slot_released_after_an_error():
 
     case = DisputeCase(**load("route_deviation_001.json"))
     for _ in range(limits.MAX_CONCURRENT_RESOLVES + 1):
-        with patch("app.services.orchestrator.judge", side_effect=RuntimeError("boom")):
+        with patch("app.services.orchestrator.judge_with_precedents", side_effect=RuntimeError("boom")):
             with pytest.raises(RuntimeError):
                 orchestrator.resolve_dispute(case)
     orchestrator.resolve_dispute(case)  # would raise ServiceBusy if slots leaked

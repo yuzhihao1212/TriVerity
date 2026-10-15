@@ -29,8 +29,8 @@ The sample disputes are synthetic; these are measurements on them, not productio
 
 ## What it does
 
-- **Four agents**: Rider Advocate, Driver Advocate and Judge, powered by Tencent **Hy3** via Tencent Cloud
-  TokenHub, plus a deterministic **Fraud & Bad-Faith detector**
+- **Five agents**: Rider Advocate, Driver Advocate and Judge, powered by Tencent **Hy3** via Tencent Cloud
+  TokenHub, plus a deterministic **Fraud & Bad-Faith detector** and a **Policy & Precedent agent**
 - **Two dispute types** end to end: route deviation and no-show charge
 - **Evidence** from trip data, GPS telemetry (path length, unexpected stops, data gaps), fare breakdowns
   (surge and promo checks), chat logs and rider/driver history, grouped by source with an ID per fact
@@ -40,8 +40,12 @@ The sample disputes are synthetic; these are measurements on them, not productio
   in the demo as extra samples
 - **Output**: ruling, recommended action (e.g. refund $6.30), confidence, cited policy, a neutral
   explanation and separate messages to the rider and the driver
-- **Escalation** to a human reviewer for threats in chat, a high bad-faith risk, missing data or low
-  confidence, with the proposed action attached for the reviewer
+- **Precedents (RAG)**: the Policy & Precedent agent retrieves the closest past rulings; the Judge cites them
+  in the case record, and the evaluation checks each ruling's consistency with them
+- **Learning feedback loop**: a reviewer's decision becomes a precedent; when reviewers keep deciding
+  similar cases differently from the rules, those disputes go to a human (`PREC-1`)
+- **Escalation** to a human reviewer for threats in chat, a high bad-faith risk, missing data, low
+  confidence or reviewer precedents against the rules, with the proposed action attached for the reviewer
 - **Observable**: the demo UI shows the evidence, each agent's argument and citations, the fraud risk, and
   whether the AI or the fallback produced each step
 

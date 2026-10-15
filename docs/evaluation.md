@@ -11,6 +11,7 @@
 | AI rate per agent | Separate columns for the rider advocate, driver advocate, rider rebuttal, driver rebuttal and Judge explanation. An output counts as AI only when its source is `"llm"`; absent or fallback rebuttals count as non-AI. The denominator is all requested runs, including failed runs, not just runs eligible for rebuttals. Across repeated runs this also shows badges flipping between AI and Fallback |
 | Wrong-side citations | An advocate cited a rule whose condition, applied to the facts, favours the other party |
 | Other off-target citations | An advocate cited a rule that supports neither side here (e.g. an escalation rule) |
+| Precedents | The Policy & Precedent agent's verdict: `consistent` (every close past ruling reached the same decision), `mixed`, `overridden` (reviewers decided close cases differently; `PREC-1` escalates) or `no_precedent` |
 
 Rulings come from policy rules, never from the LLM, so "ruling correct" tests the rules and
 should always be 100%; the script exits non-zero if it isn't. The LLM's contribution is

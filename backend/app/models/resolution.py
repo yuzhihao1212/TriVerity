@@ -41,6 +41,27 @@ class Triage(BaseModel):
     tier: TriageTier | None = None
     score: int = Field(default=0, ge=0, le=100)
     reasons: list[str] = Field(default_factory=list)
+class PrecedentMatch(BaseModel):
+    """A similar past ruling from the precedent knowledge base."""
+    id: str
+    similarity: float = Field(ge=0.0, le=1.0)
+    decision: Decision
+    policy_refs: list[str] = Field(default_factory=list)   # rule IDs only
+    # "policy": the rules' decision, accepted; "human_review": a reviewer's decision.
+    decided_by: Literal["policy", "human_review"] = "policy"
+    summary: str = ""
+    note: str = ""   # reviewer note (internal only; never sent to the LLM)
+
+class PrecedentReport(BaseModel):
+    """The Policy & Precedent agent's findings for one dispute (internal only)."""
+    matches: list[PrecedentMatch] = Field(default_factory=list)
+    # Majority decision among close matches, None when there are none or no majority.
+    recommended_decision: Decision | None = None
+    # "consistent": every close match agrees with the rules; "mixed": some don't;
+    # "overridden": reviewers decided close cases differently (PREC-1 escalates);
+    # "no_precedent": nothing close enough.
+    consistency: Literal["consistent", "mixed", "overridden", "no_precedent"] = "no_precedent"
+    summary: str = ""
 
 class AgentLogEntry(BaseModel):
     step: int
@@ -67,6 +88,7 @@ class Resolution(Ruling):
     driver_case: AgentCase
     risk: RiskAssessment = Field(default_factory=RiskAssessment)
     triage: Triage = Field(default_factory=Triage)
+    precedents: PrecedentReport = Field(default_factory=PrecedentReport)
     agent_log: list[AgentLogEntry] = Field(default_factory=list)
 
 class PartyResolution(BaseModel):

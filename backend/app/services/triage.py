@@ -14,6 +14,7 @@ REASONS = {
     "RD-4": "Route evidence missing (RD-4)",
     "NS-4": "Arrival or waiting evidence missing (NS-4)",
     "ESC-1": "Confidence below the review threshold (ESC-1)",
+    "PREC-1": "Reviewers decided similar past disputes differently (PREC-1)",
 }
 
 
