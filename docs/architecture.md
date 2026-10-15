@@ -15,7 +15,10 @@
    (3 of 4 messages)"); no policy rule reads it, and the Judge's party messages never see or mention it.
    No LLM is involved, so facts are never generated. GPS telemetry is validated, capped at 5,000 points,
    ordered in linear time and deduplicated before computing the observed path, sustained stops
-   and data gaps. Stops near pickup, marked as arrived/completed, or near a route's final observed
+   and data gaps. When the trip carries the platform's planned (optimal) route (`trip.planned_route`,
+   up to 200 points), every GPS point's distance to that route is measured: points more than 150 m
+   away are off the route, and each off-route run is reported with its times, the distance driven
+   and the furthest offset (the D001 and D004 samples carry mock planned routes). Stops near pickup, marked as arrived/completed, or near a route's final observed
    position are excluded; `TripData` has no drop-off coordinates, so that final position is an
    inferred endpoint, not a verified destination. Stop durations exclude gaps over three minutes;
    path distance still connects observed samples and is not a map-matched route. Naive timestamps

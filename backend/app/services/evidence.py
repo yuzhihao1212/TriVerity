@@ -110,6 +110,16 @@ class CaseFacts(BaseModel):
                 lines.append(f"GPS path {gps.path_distance_km:.1f} km over {gps.points_used} points{comparison}")
             else:
                 lines.append(f"GPS path unavailable ({gps.points_used} usable {'point' if gps.points_used == 1 else 'points'})")
+            route = gps.route_comparison
+            if route is not None:
+                lines.append(f"GPS within {limits.GPS_OFF_ROUTE_M} m of the planned route for "
+                             f"{route.points_on_route} of {route.points_checked} points")
+                for episode in route.episodes[:limits.GPS_MAX_OFF_ROUTE_EPISODES]:
+                    lines.append(f"Off the planned route {episode.start_time:%H:%M}-{episode.end_time:%H:%M}: "
+                                 f"{episode.distance_km:.1f} km driven, up to {episode.max_offset_m:,.0f} m away")
+                if len(route.episodes) > limits.GPS_MAX_OFF_ROUTE_EPISODES:
+                    lines.append(f"Off the planned route {len(route.episodes)} times in total, "
+                                 f"{route.off_route_km:.1f} km driven off it")
             for index, stop in enumerate(gps.unexpected_stops or []):
                 if self.dispute_type == "no_show_charge":
                     distance = (self.gps_stop_distances_from_pickup_m[index]

@@ -17,7 +17,8 @@ See `backend/app/models/dispute.py` and the samples in `data/disputes/`.
     "expected_duration_min": 22, "actual_duration_min": 35,
     "pickup_lat": 1.3521, "pickup_lng": 103.8198,
     "driver_arrival_lat": 1.3526, "driver_arrival_lng": 103.8204,
-    "driver_wait_min": 6
+    "driver_wait_min": 6,
+    "planned_route": [{"lat": 1.3006, "lng": 103.8352}, {"lat": 1.3247, "lng": 103.8426}]
   },
   "fare": {
     "expected": 18.5, "actual": 24.8, "cancellation_fee": null,
@@ -34,6 +35,10 @@ See `backend/app/models/dispute.py` and the samples in `data/disputes/`.
 All evidence fields are optional. `breakdown` lists charges before `promo_discount`.
 Chat messages and history accept extra fields, so external datasets can pass through,
 but unknown fields are dropped (not kept or returned).
+
+`trip.planned_route` (optional, up to 200 `{lat, lng}` points) is the platform's planned route; the
+evidence loader compares the GPS path with it point by point. Coordinates never reach the LLM, only the
+computed summary (time span, distance driven off the route, furthest offset).
 
 ### Views: `?view=internal | rider | driver`
 
