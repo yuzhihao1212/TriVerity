@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { focusSection } from "./routes";
 
 import { EvidenceList, EvidenceText, type FactLinks } from "./EvidenceList";
 import type { AgentCase, Resolution } from "./types";
@@ -24,7 +25,7 @@ export function Debate({ resolution, availableIds, onSelectFact }: { resolution:
     const other = side === "rider" ? "driver" : "rider";
     return (
       <article className={`advocate reply ${side}`}>
-        <a className="reply-to small" href={`#${id}-${other}-argument`}>↑ Answers the {other}'s argument</a>
+        <a className="reply-to small" href={`#${id}-${other}-argument`} onClick={event => { event.preventDefault(); focusSection(`${id}-${other}-argument`); }}>↑ Answers the {other}'s argument</a>
         <h4>{side === "rider" ? "Rider reply" : "Driver reply"} <SourceBadge source={item.rebuttal?.source ?? "fallback"} /></h4>
         {item.rebuttal?.text ? <>
           <p><EvidenceText text={item.rebuttal.text} availableIds={availableIds} onSelectFact={onSelectFact} /></p>
