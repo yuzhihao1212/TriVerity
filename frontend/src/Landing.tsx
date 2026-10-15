@@ -1,4 +1,5 @@
 import { useEffect, useState, type MouseEvent } from "react";
+import { Chip } from "./Chip";
 import { focusSection } from "./routes";
 import { PresentationToggle, ThemeToggle } from "./ThemeToggle";
 import type { Theme } from "./theme";
@@ -86,7 +87,7 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
           <div className="landing-section-head"><p className="eyebrow">How it works</p><h2 id="flow-title">Two sides heard. One accountable decision.</h2><p className="muted">AI handles language. Code verifies facts and applies policy.</p></div>
           <ol className="landing-flow">{STEPS.map((step, index) => <li key={step.title}>
             <span className="landing-step" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
-            <div className="landing-step-badges">{"ai" in step && <span className="source-badge llm">AI</span>}{"code" in step && <span className="tag">Code</span>}</div>
+            <div className="chip-row">{"ai" in step && <Chip size="sm" tone="brand" icon="sparkle">AI</Chip>}{"code" in step && <Chip size="sm" tone="outline">Code</Chip>}</div>
             <h3>{step.title}</h3><p className="muted">{step.detail}</p>
           </li>)}</ol>
         </section>

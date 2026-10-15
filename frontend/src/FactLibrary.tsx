@@ -4,6 +4,8 @@ import {
   centsToMoney, factParts, factTone, fareReceipt, groupFacts, parseChat, parseRouteCoverage, parseStop, parseTile, parseTripRecord,
   SOURCE_ORDER, type FactGroup, type Tone,
 } from "./factVisuals";
+import { Chip, InternalBadge } from "./Chip";
+import { valueChipTone } from "./chipStyle";
 import { SOURCE_LABELS, type EvidenceItem } from "./presentation";
 import { reveal } from "./routes";
 
@@ -34,7 +36,7 @@ export function FactLibrary({ facts, activeId, request, expanded = false, groupe
     : <ul className="fact-library-list">{facts.map((fact, index) => <FactRow key={fact.id ?? `${fact.source}-${index}`} fact={fact} context={context} />)}</ul>;
 
   return <section className="card fact-library" aria-labelledby={`${id}-title`}>
-    <div><p className="eyebrow">Computed facts · internal record</p><h2 id={`${id}-title`}>{grouped ? "Evidence" : "Facts behind the citations"}</h2></div>
+    <div className="panel-head"><h2 id={`${id}-title`}>{grouped ? "Evidence" : "Facts behind the citations"}</h2><InternalBadge detail="Computed facts · internal record" /></div>
     <p className="small muted">{grouped
       ? "Facts are grouped by source. An ID is shown only when this response supplies an unambiguous ID/text pair. Facts that repeat the same value are shown once; open “related” to read each original sentence."
       : "Select an evidence ID in either round to find its exact fact here."}</p>
@@ -111,7 +113,7 @@ function GpsBody({ groups, context }: { groups: FactGroup[]; context: RowContext
       const stop = parseStop(group.primary.text)!;
       return <FactShell key={key(group.primary)} fact={group.primary} related={group.related} context={context} className="fact-stop">
         <span className="fact-stop-dot" aria-hidden="true" />
-        <span><strong className="fact-chip neutral">{stop.time}</strong> · <strong className={`fact-chip ${factTone(group.primary.text) === "warn" ? "warn" : "neutral"}`}>{stop.minutes} min</strong> stop{stop.where && <span className="muted"> · {stop.where}</span>}</span>
+        <span><Chip as="strong" size="sm" className="value-chip" tone={valueChipTone("neutral")}>{stop.time}</Chip> · <Chip as="strong" size="sm" className="value-chip" tone={valueChipTone(factTone(group.primary.text) === "warn" ? "warn" : "neutral")}>{stop.minutes} min</Chip> stop{stop.where && <span className="muted"> · {stop.where}</span>}</span>
       </FactShell>;
     })}</ul>}
     {!!rest.length && <Rows groups={rest} context={context} />}
@@ -206,7 +208,7 @@ function FactRow({ fact, related, context }: { fact: EvidenceItem; related?: Evi
 
 function FactText({ parts }: { parts: ReturnType<typeof factParts>["parts"] }) {
   return <span>{parts.map((part, index) => part.kind === "text" ? <span key={index}>{part.text}</span>
-    : <strong key={index} className={`fact-chip ${part.tone satisfies Tone}`}>{part.text}</strong>)}</span>;
+    : <Chip as="strong" key={index} size="sm" className="value-chip" tone={valueChipTone(part.tone satisfies Tone)}>{part.text}</Chip>)}</span>;
 }
 
 function IdBadge({ id, onSelectFact }: { id: string; onSelectFact: Select }) {

@@ -3,6 +3,8 @@ import { Fragment, useId, useState } from "react";
 import { humanizeAgentMessage } from "./agentText";
 
 import { EvidenceText, type FactLinks } from "./EvidenceList";
+import { Chip } from "./Chip";
+import { chipClass, chipTone } from "./chipStyle";
 import { SourceBadge } from "./Debate";
 import { Icon } from "./Icon";
 import { reveal } from "./routes";
@@ -53,7 +55,7 @@ export function AgentsStrip({ tab, resolution, availableIds, onSelectFact }: { t
         {card(entry, index)}
         {index < flow.edges.length && <FlowEdge label={flow.edges[index]} />}
       </Fragment>)}
-      {flow.result && <li className="agent-flow-result"><strong>{flow.result}</strong></li>}
+      {flow.result && <li className="agent-flow-result"><Chip tone="brand"><strong>{flow.result}</strong></Chip></li>}
     </ol>
     : <ul className="agent-entries">{entries.map(card)}</ul>}
     </div>
@@ -69,7 +71,7 @@ function AgentLine({ entry, resolution }: { entry: AgentLogEntry; resolution?: R
     <span className="agent-line-avatar" aria-hidden="true"><Icon name={agentIcon(entry.agent)} /></span>
     <strong>{agentLabel(entry.agent)}</strong>
     <span className={`agent-line-status ${status.tone}`}>{status.icon ? <Icon name={status.icon} /> : null}<span className={status.icon ? "sr-only" : ""}>{status.label}</span></span>
-    {badge ? <SourceBadge source={badge} explain /> : <span className="tag">Source not supplied</span>}
+    {badge ? <SourceBadge source={badge} explain /> : <Chip size="sm" tone="outline">Source not supplied</Chip>}
     {time && <span className="agent-line-time"><span className="sr-only">took </span>{time}</span>}
   </li>;
 }
@@ -95,9 +97,9 @@ function AgentCard({ entry, all, resolution, availableIds, onSelectFact }: {
       <span className="agent-avatar"><Icon name={agentIcon(entry.agent)} /></span>
       <div className="agent-card-title"><strong>{agentLabel(entry.agent)}</strong>{role && <span className="agent-role">{role}</span>}</div>
     </div>
-    <div className="agent-badges">
-      <span className={`status-badge ${status.tone}`}>{status.icon && <Icon name={status.icon} />}{status.label}</span>
-      {badge ? <SourceBadge source={badge} explain /> : <span className="tag">Source not supplied</span>}
+    <div className="chip-row">
+      <Chip size="sm" tone={chipTone(status.tone)} icon={status.icon ?? undefined}>{status.label}</Chip>
+      {badge ? <SourceBadge source={badge} explain /> : <Chip size="sm" tone="outline">Source not supplied</Chip>}
     </div>
     {time && <div className="agent-duration">
       <span className="agent-duration-track" aria-hidden="true"><span style={{ width: `${Math.max(share * 100, share > 0 ? 3 : 0)}%` }} /></span>
@@ -115,9 +117,9 @@ function ToolCalls({ calls }: { calls: NonNullable<NonNullable<Resolution["evide
   return <div className="tool-calls">
     <div className={`tool-columns${columns.length > 1 ? " two" : ""}`}>{columns.map(column => <div key={column.key}>
       <h4 className="tool-column-title">{column.title}</h4>
-      <ul className="tool-chips">{column.calls.map((call, index) => <li key={`${call.round}-${call.tool}-${index}`}>
-        <details className="tool-chip" title={toolTooltip(call)}>
-          <summary><Icon name={toolIcon(call.tool)} />{toolName(call.tool)}{rounds > 1 && <span className="muted"> · round {call.round}</span>}</summary>
+      <ul className="tool-list">{column.calls.map((call, index) => <li key={`${call.round}-${call.tool}-${index}`}>
+        <details className="tool-detail" title={toolTooltip(call)}>
+          <summary className={chipClass({ tone: "outline" })}><Icon name={toolIcon(call.tool)} />{toolName(call.tool)}{rounds > 1 && <span className="muted"> · round {call.round}</span>}</summary>
           <p>{toolTooltip(call)}</p>
         </details>
       </li>)}</ul>

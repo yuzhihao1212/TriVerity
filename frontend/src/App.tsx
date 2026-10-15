@@ -16,7 +16,9 @@ import { computedFacts, disputeLabel, filterDisputes, money } from "./presentati
 import { focusSection, reveal, selectSample } from "./routes";
 import { AppealsPanel } from "./Appeals";
 import { DecisionBar, ReviewerDecision, useReviewerDecision } from "./ReviewerDecision";
-import { DECISION_LABELS, decisionTone } from "./outcomeTone";
+import { DECISION_LABELS, decisionTone, riskTone } from "./outcomeTone";
+import { Chip, InternalBadge } from "./Chip";
+import { chipClass, chipTone, sourceTone } from "./chipStyle";
 import { savedText } from "./decisionState";
 import { AiToggle } from "./AiToggle";
 import { readAiMode, writeAiMode, type AiMode } from "./aiMode";
@@ -266,7 +268,7 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
         <span className="dispute-line"><TypeIcon type={d.type} /><span className="dispute-label">{summary}</span></span>
         <span className="dispute-sub">
           <span className="dispute-id">{d.dispute_id}</span>
-          {decision && <span className={`dispute-status ${decisionTone(decision)}`}><span className="status-dot" aria-hidden="true" />{STATUS_LABELS[decision]}</span>}
+          {decision && <Chip size="sm" dot tone={decisionTone(decision)}>{STATUS_LABELS[decision]}</Chip>}
         </span>
       </button>
     </li>;
@@ -314,7 +316,7 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
           </div>
           {!sidebarOpen && selected && <span className="sidebar-current" title={`Open: ${selected.dispute_id}`}>{selected.dispute_id}</span>}
           <div className="sidebar-body" id="dispute-list" hidden={!sidebarOpen}>
-          {filter !== "all" && <button type="button" className="filter-chip" aria-label={`Clear filter: ${filterLabel(filter)}`} onClick={() => setFilter("all")}>
+          {filter !== "all" && <button type="button" className={chipClass({ tone: "brand", className: "chip-button" })} aria-label={`Clear filter: ${filterLabel(filter)}`} onClick={() => setFilter("all")}>
             {filterShortLabel(filter)}
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7 7 17" /></svg>
           </button>}
@@ -402,21 +404,20 @@ function CaseHeader({ dispute, resolution, busy, streaming, progress }: {
   const status = statusPill({ busy, streaming, hasResult: !!resolution });
   return <header className="case-file-head">
     <div className="case-file-title">
-      <p className="eyebrow">Dispute file</p>
-      <h2 id="case-title">{dispute.dispute_id} <span className="tag">{TYPE_LABELS[dispute.type]}</span></h2>
-      {chips.length > 0 && <ul className="case-chips" aria-label="Case summary">
-        {chips.map(chip => <li key={chip.key} className={`case-chip ${chip.tone}`}>{chip.label}</li>)}
+      <h2 id="case-title">{dispute.dispute_id} <Chip>{TYPE_LABELS[dispute.type]}</Chip></h2>
+      {chips.length > 0 && <ul className="chip-row" aria-label="Case summary">
+        {chips.map(chip => <Chip as="li" key={chip.key} tone={chipTone(chip.tone)}>{chip.label}</Chip>)}
       </ul>}
     </div>
     <div className="case-status">
-      <span className={`case-save-status status-pill ${status.tone}${status.pulse ? " pulse" : ""}`} title={status.detail}>
-        <span className="status-dot" aria-hidden="true" />{status.label}
+      <Chip dot pulse={status.pulse} tone={chipTone(status.tone)} className="case-save-status" title={status.detail}>
+        {status.label}
         {status.detail !== status.label && <span className="sr-only"> ({status.detail})</span>}
-      </span>
+      </Chip>
       {/* Announced through the page's polite status region, not a second live region. */}
-      {progress && <span className={`review-progress${progress.complete ? " complete" : ""}`}>
-        {progress.text}{progress.complete && <Icon name="check" />}
-      </span>}
+      {progress && (progress.complete
+        ? <Chip tone="ok">{progress.text}<Icon name="check" /></Chip>
+        : <span className="review-progress">{progress.text}</span>)}
     </div>
   </header>;
 }
@@ -432,7 +433,7 @@ function CasePanel({ dispute, availableIds, onSelectFact }: { dispute: DisputeCa
 
   return (
     <section className="card case-overview">
-      <div><p className="eyebrow">Step 1</p><h2>Intake</h2></div>
+      <h2>Intake</h2>
       <div className="statements">
         <blockquote className="rider"><span className="who">Rider’s claim</span><EvidenceText text={dispute.rider_claim} availableIds={availableIds} onSelectFact={onSelectFact} /></blockquote>
         <blockquote className="driver"><span className="who">Driver’s statement</span>{dispute.driver_statement
@@ -456,7 +457,7 @@ function CasePanel({ dispute, availableIds, onSelectFact }: { dispute: DisputeCa
           <div className="chat">
             {dispute.chat_logs.map((m, i) => (
               <div key={i} className={`bubble ${m.sender}`}>
-                <span className="who">{m.sender}</span>
+                <span className="who">{m.sender === "rider" ? "Rider" : m.sender === "driver" ? "Driver" : m.sender}</span>
                 {m.message}
               </div>
             ))}
@@ -493,7 +494,7 @@ function History({ label, history }: { label: string; history: PartyHistory }) {
 function RiskPanel({ risk }: { risk: Resolution["risk"] }) {
   return (
     <div className="risk-panel">
-      <div><p className="eyebrow">Internal review only</p><h2>Fraud &amp; bad-faith risk</h2></div>
+      <div className="panel-head"><h2>Fraud &amp; bad-faith risk</h2><InternalBadge detail="Internal review only" /></div>
       <div className="risk-badges">
         <div className="risk-row">
           <span className="risk-party">Rider</span>
@@ -525,12 +526,12 @@ const TRIAGE_LABEL: Record<TriageTier, string> = {
 function TriagePanel({ triage }: { triage: Triage }) {
   return (
     <div className="risk-panel">
-      <div><p className="eyebrow">Internal review only</p><h2><Term term="triage">Review priority</Term></h2></div>
+      <div className="panel-head"><h2><Term term="triage">Review priority</Term></h2><InternalBadge detail="Internal review only" /></div>
       {triage.tier ? (
         <>
           <div className="risk-badges">
             <div className="risk-row">
-              <span className={`risk-badge ${TRIAGE_BADGE[triage.tier]}`}>{TRIAGE_LABEL[triage.tier]}</span>
+              <Chip tone={riskTone(TRIAGE_BADGE[triage.tier])}>{TRIAGE_LABEL[triage.tier]}</Chip>
               <span className="risk-party">Score {triage.score} / 100</span>
             </div>
           </div>
@@ -555,7 +556,7 @@ const VERDICT: Record<ArgumentReview["rules"][number]["verdict"], { label: strin
 function ArgumentReviewPanel({ reviews }: { reviews: ArgumentReview[] }) {
   return (
     <div className="risk-panel">
-      <div><p className="eyebrow">Internal review only · computed from the policy</p><h2>How the Judge weighed each side</h2></div>
+      <div className="panel-head"><h2>How the Judge weighed each side</h2><InternalBadge detail="Internal review only · computed from the policy" /></div>
       <div className="debate-grid">
         {reviews.map((review) => (
           <div key={review.party} className={`advocate ${review.party}`}>
@@ -565,8 +566,8 @@ function ArgumentReviewPanel({ reviews }: { reviews: ArgumentReview[] }) {
                 {review.rules.map((check) => (
                   <li key={check.rule}>
                     <strong><Term rule={check.rule} /></strong>{" "}
-                    <span className={`risk-badge ${VERDICT[check.verdict].level}`}>{VERDICT[check.verdict].label}</span>
-                    {check.decisive && <span className="tag"> Decided the case</span>}
+                    <Chip size="sm" tone={riskTone(VERDICT[check.verdict].level)}>{VERDICT[check.verdict].label}</Chip>
+                    {check.decisive && <>{" "}<Chip size="sm" tone="outline">Decided the case</Chip></>}
                   </li>
                 ))}
               </ul>
@@ -590,7 +591,7 @@ function RulingSection({ title, hint, open = false, children }: { title: string;
 function CounterfactualPanel({ items }: { items: Counterfactual[] }) {
   return (
     <div className="risk-panel">
-      <div><p className="eyebrow">Internal review only · computed from the policy</p><h2>What would change this ruling</h2></div>
+      <div className="panel-head"><h2>What would change this ruling</h2><InternalBadge detail="Internal review only · computed from the policy" /></div>
       <ul className="small counterfactual-list">
         {items.map((cf, i) => (
           <li key={i}>
@@ -611,11 +612,11 @@ const CONSISTENCY_LABEL: Record<PrecedentReport["consistency"], string> = {
 function PrecedentPanel({ report }: { report: PrecedentReport }) {
   return (
     <div className="risk-panel">
-      <div><p className="eyebrow">Internal review only · Policy &amp; Precedent agent</p><h2>Similar past rulings <Term term="precedent">(precedents)</Term></h2></div>
+      <div className="panel-head"><h2>Similar past rulings <Term term="precedent">(precedents)</Term></h2><InternalBadge detail="Internal review only · Policy & Precedent agent" /></div>
       <div className="risk-row">
-        <span className={`risk-badge ${report.consistency === "overridden" ? "high" : report.consistency === "mixed" ? "medium" : "low"}`}>
+        <Chip tone={riskTone(report.consistency === "overridden" ? "high" : report.consistency === "mixed" ? "medium" : "low")}>
           {CONSISTENCY_LABEL[report.consistency]}
-        </span>
+        </Chip>
       </div>
       {report.summary && <p className="small">{report.summary}</p>}
       {report.matches.length > 0 ? (
@@ -638,25 +639,22 @@ function PrecedentPanel({ report }: { report: PrecedentReport }) {
 }
 
 function RiskBadge({ level }: { level: RiskLevel }) {
-  return (
-    <span className={`risk-badge ${level}`}>
-      {level.charAt(0).toUpperCase() + level.slice(1)}
-    </span>
-  );
+  return <Chip tone={riskTone(level)}>{level.charAt(0).toUpperCase() + level.slice(1)}</Chip>;
 }
 
 function RulingPanel({ resolution, availableIds, onSelectFact }: { resolution: Resolution } & FactLinks) {
   const pct = Math.round(resolution.confidence * 100);
+  const source = resolution.explanation_source === "llm" ? "llm" : "fallback";
   return (
     <section className="card ruling-detail">
       <div className="card-head">
         <h2>
           Why the Judge ruled this way
-          <span className={`source-badge ${resolution.explanation_source}`}>
-            {resolution.explanation_source === "llm" ? "AI" : "Fallback"}
-          </span>
+          <Chip size="sm" tone={sourceTone(source)} icon={source === "llm" ? "sparkle" : undefined}>
+            {source === "llm" ? "AI" : "Fallback"}
+          </Chip>
         </h2>
-        <span className={`decision tone-${decisionTone(resolution.decision)}`}>{DECISION_LABELS[resolution.decision]}</span>
+        <Chip tone={decisionTone(resolution.decision)}>{DECISION_LABELS[resolution.decision]}</Chip>
       </div>
 
       <div className="confidence">

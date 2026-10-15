@@ -80,7 +80,7 @@ export function ReviewerDecision({ resolution, controller }: { resolution: Resol
 
   return (
     <section className="card reviewer-decision" id="reviewer-decision" aria-labelledby={`${id}-title`}>
-      <div><p className="eyebrow">Human in the loop</p><h2 id={`${id}-title`}>Your decision</h2></div>
+      <h2 id={`${id}-title`}>Your decision</h2>
       {saved ? <p className="reviewer-done">{savedText(saved)}. Similar disputes are now checked against it.</p> : <>
         <p className="small muted">
           {escalated

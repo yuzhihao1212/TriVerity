@@ -1,5 +1,6 @@
 import { useId } from "react";
 
+import { Chip } from "./Chip";
 import { SourceBadge } from "./Debate";
 import { partyView, PARTY_DECISION_LABELS } from "./partyView";
 import { money, outputSources, policyIds } from "./presentation";
@@ -16,8 +17,8 @@ export function VerdictSummary({ resolution, disputeId }: { resolution: Resoluti
   return (
     <section id="ruling-summary" tabIndex={-1} className={`card verdict ruling ${resolution.decision}`} aria-labelledby={`${id}-title`}>
       <div className="card-head">
-        <div><p className="eyebrow">Policy decides · {disputeId}</p><h2 id={`${id}-title`}>The ruling</h2></div>
-        <span className={`decision tone-${tone}`}>{PARTY_DECISION_LABELS[view.decision]}</span>
+        <h2 id={`${id}-title`}>The ruling</h2>
+        <Chip tone={tone}>{PARTY_DECISION_LABELS[view.decision]}</Chip>
       </div>
       <WhySummary resolution={resolution} />
       <div className="verdict-metrics">
@@ -26,8 +27,8 @@ export function VerdictSummary({ resolution, disputeId }: { resolution: Resoluti
         </div>
         <div><span className="section-label"><Term term="confidence">Confidence</Term></span><p className="verdict-value">{percent}%</p>
           <p className="small muted">{percent >= 60 ? "Clear enough to decide automatically" : "Below 60%: a human decides"}</p></div>
-        <div><span className="section-label">Policy applied</span><div className="policy-chips">
-          {policyIds(resolution.policy_refs).map(ref => <span className="source-chip" key={ref}><Term rule={ref} /></span>)}
+        <div><span className="section-label">Policy applied</span><div className="chip-row">
+          {policyIds(resolution.policy_refs).map(ref => <Chip key={ref}><Term rule={ref} /></Chip>)}
           {!resolution.policy_refs.length && <span className="small muted">None returned</span>}
         </div></div>
       </div>
@@ -35,7 +36,7 @@ export function VerdictSummary({ resolution, disputeId }: { resolution: Resoluti
         <Term term="fallback">fallback</Term> text is used when needed.</p>
       <div className="output-sources" aria-label="AI and fallback status">
         {outputSources(resolution).map(item => <span className="output-source small" key={item.label}>
-          {item.label} {item.source ? <SourceBadge source={item.source} /> : <span className="tag">Not run</span>}
+          {item.label} {item.source ? <SourceBadge source={item.source} /> : <Chip size="sm" tone="outline">Not run</Chip>}
         </span>)}
       </div>
     </section>

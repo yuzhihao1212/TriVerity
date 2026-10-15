@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from "react";
 
+import { Chip, InternalBadge } from "./Chip";
 import { ApiError, decideAppeal, fileAppeal, listAppeals } from "./services/api";
 import type { Appeal, Decision, DisputeCase } from "./types";
 
@@ -63,7 +64,7 @@ export function AppealsPanel({ disputeId, version, onChanged }: { disputeId: str
   if (!appeals.length && !error) return null;
   return (
     <section className="card"><div className="risk-panel">
-      <div><p className="eyebrow">Internal review only · learning feedback loop</p><h2>Appeals</h2></div>
+      <div className="panel-head"><h2>Appeals</h2><InternalBadge detail="Internal review only · learning feedback loop" /></div>
       <div role="alert">{error && <p className="error small">{error}</p>}</div>
       <ul className="appeal-list">
         {appeals.map((appeal) => <AppealItem key={appeal.id} appeal={appeal} onDecided={onChanged} />)}
@@ -85,8 +86,8 @@ function AppealItem({ appeal, onDecided }: { appeal: Appeal; onDecided: () => vo
   return (
     <li>
       <p><strong>{appeal.id}</strong> · {appeal.party === "rider" ? "Rider" : "Driver"} appeal
-        {appeal.priority === "safety" && <span className="risk-badge high"> Safety · review first</span>}
-        {appeal.status === "queued" && <span className="risk-badge medium">Pending review</span>}</p>
+        {appeal.priority === "safety" && <>{" "}<Chip size="sm" tone="danger">Safety · review first</Chip></>}
+        {appeal.status === "queued" && <>{" "}<Chip size="sm" tone="warn">Pending review</Chip></>}</p>
       <p className="small muted">“{appeal.reason}”</p>
       {appeal.status === "decided" ? (
         <p className="small">Decided: <strong>{FINAL[appeal.reviewer_decision!]}</strong>. Added to the precedent knowledge base as {appeal.precedent_id}.</p>

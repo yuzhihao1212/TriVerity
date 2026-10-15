@@ -6,7 +6,7 @@ import { decisionTone } from "./outcomeTone";
 import { WORKFLOW_TABS, type WorkflowTab } from "./workflow";
 import type { AgentLogEntry, Decision, DisputeCase, Resolution, ToolCallRecord } from "./types";
 
-export type Tone = "ok" | "warn" | "accent" | "neutral";
+export type Tone = "ok" | "warn" | "danger" | "accent" | "neutral";
 
 // ---- Stepper ------------------------------------------------------------
 // The stepper shows the REVIEWER's progress. "Agents finished" is the status pill's job.
@@ -183,7 +183,7 @@ export const FALLBACK_TOOLTIP = "Template text: AI was off or unavailable. The r
 export function statusBadge(status: string): { label: string; tone: Tone; icon: "check" | "cross" | null } {
   const normal = status.trim().toLowerCase();
   if (normal === "completed" || normal === "complete" || normal === "ok") return { label: "Completed", tone: "ok", icon: "check" };
-  if (["failed", "error", "errored"].includes(normal)) return { label: "Failed", tone: "warn", icon: "cross" };
+  if (["failed", "error", "errored"].includes(normal)) return { label: "Failed", tone: "danger", icon: "cross" };
   return { label: status ? status[0].toUpperCase() + status.slice(1) : "Unknown", tone: "neutral", icon: null };
 }
 
