@@ -56,6 +56,7 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
         <div className="landing-wrap">
           <p className="landing-kicker">Multi-agent dispute resolution for Ryde</p>
           <h1 id="landing-title" tabIndex={-1}>TriVerity<span className="landing-dot" aria-hidden="true">.</span></h1>
+          <p className="landing-byline">By OeroAI</p>
           <p className="landing-lead">AI agents argue both sides;<br className="landing-desktop-break" /> policy rules decide fairly.</p>
           <p className="landing-intro muted">From disputed trip to an explained ruling. Follow the evidence, hear both sides and see why the decision holds.</p>
           <div className="landing-actions"><a className="landing-primary" href="#/console">Open the reviewer console <span aria-hidden="true">↗</span></a>
@@ -94,7 +95,7 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
         </section>
       </div>
     </main>
-    <footer className="landing-footer"><div className="landing-wrap"><div><strong>TriVerity</strong><p className="muted">Synthetic data; a hackathon prototype.</p></div>
+    <footer className="landing-footer"><div className="landing-wrap"><div><strong>TriVerity</strong> <span className="byline">By OeroAI</span><p className="muted">Synthetic data; a hackathon prototype.</p></div>
       <nav aria-label="Documentation"><a href={`${GITHUB}/blob/main/docs/architecture.md`}>Architecture</a><a href={`${GITHUB}/blob/main/docs/security.md`}>Security</a><a href={`${GITHUB}/blob/main/docs/evaluation.md`}>Evaluation</a></nav>
     </div></footer>
   </div>;

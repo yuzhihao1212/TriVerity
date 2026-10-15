@@ -225,7 +225,7 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
       <a className="skip-link" href="#main-content" onClick={event => { event.preventDefault(); focusSection("main-content"); }}>Skip to dispute</a>
       <header className="topbar">
         <h1 className="brand"><a className="console-home" href="#/">TriVerity<span className="sr-only"> home</span></a></h1>
-        <span className="muted">Multi-agent dispute resolution for Ryde</span>
+        <span className="muted byline">By OeroAI</span>
         <div className="topbar-right">
           <AiToggle mode={aiMode} onToggle={toggleAi} />
           <ThemeToggle theme={theme} onToggle={onToggleTheme} />

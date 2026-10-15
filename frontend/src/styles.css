@@ -514,3 +514,7 @@ textarea { width: 100%; resize: vertical; }
   .sidebar-current { writing-mode: horizontal-tb; margin: 0 0 0 auto; }
 }
 @media (prefers-reduced-motion: reduce) { .layout { transition: none; } }
+
+/* Team byline */
+.byline { font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.landing-byline { margin: calc(-1 * var(--space-2)) 0 var(--space-4); font-size: 15px; font-weight: 600; color: var(--muted); }
