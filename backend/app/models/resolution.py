@@ -74,6 +74,8 @@ class ToolCallRecord(BaseModel):
     reason: str = ""
     source: str                     # evidence group: trip, gps, fare or chat
     results: list[str] = Field(default_factory=list)
+    # The advocate whose evidence request made this call (each side gathers its own).
+    party: Literal["rider", "driver"] | None = None
 
 class EvidenceCollection(BaseModel):
     """What the Evidence Collection agent gathered, and whether the LLM planned it."""

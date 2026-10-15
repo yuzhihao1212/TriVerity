@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from datetime import time
 
 from app.core import limits
@@ -48,14 +49,37 @@ SYSTEM = (
 )
 
 
-def collect_evidence(case: DisputeCase, facts: CaseFacts) -> tuple[EvidenceCollection, dict[str, list[str]]]:
-    """Run the agent and return its record plus the collected lines grouped by source."""
+def collect_for_both(case: DisputeCase, facts: CaseFacts) -> tuple[EvidenceCollection, dict[str, list[str]]]:
+    """Each advocate gathers its own evidence: one collection per side, run in parallel.
+
+    The rider's request looks for records that support the rider (and the ones the driver relies
+    on); the driver's does the same the other way round. Every call is tagged with the side that
+    asked for it; the lines both found join the shared evidence once.
+    """
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        rider_run = pool.submit(collect_evidence, case, facts, "rider")
+        driver_run = pool.submit(collect_evidence, case, facts, "driver")
+        (rider, rider_lines), (driver, driver_lines) = rider_run.result(), driver_run.result()
+    collected: dict[str, list[str]] = {}
+    for lines in (rider_lines, driver_lines):
+        for source, found in lines.items():
+            bucket = collected.setdefault(source, [])
+            bucket += [line for line in found if line not in bucket]
+    both_llm = rider.source == driver.source == "llm"
+    return EvidenceCollection(source="llm" if both_llm else "fallback", rounds=max(rider.rounds, driver.rounds),
+                              calls=[*rider.calls, *driver.calls]), collected
+
+
+def collect_evidence(case: DisputeCase, facts: CaseFacts,
+                     party: str | None = None) -> tuple[EvidenceCollection, dict[str, list[str]]]:
+    """Run the agent (for one advocate when ``party`` is given) and return its record plus the
+    collected lines grouped by source."""
     sources = DataSources.for_case(case)
     calls: list[ToolCallRecord] = []
     rounds = 0
     agent_source = "llm"
     for round_no in range(1, limits.EVIDENCE_AGENT_MAX_ROUNDS + 1):
-        plan = _plan(case, facts, sources, calls)
+        plan = _plan(case, facts, sources, calls, party)
         if plan is None:
             if round_no == 1:
                 agent_source = "fallback"
@@ -68,6 +92,8 @@ def collect_evidence(case: DisputeCase, facts: CaseFacts) -> tuple[EvidenceColle
         rounds = round_no
         if done or not new or len(calls) >= limits.EVIDENCE_AGENT_MAX_CALLS:
             break
+    if party is not None:
+        calls = [c.model_copy(update={"party": party}) for c in calls]
     collected: dict[str, list[str]] = {}
     for call in calls:
         bucket = collected.setdefault(call.source, [])
@@ -76,7 +102,7 @@ def collect_evidence(case: DisputeCase, facts: CaseFacts) -> tuple[EvidenceColle
 
 
 def _plan(case: DisputeCase, facts: CaseFacts, sources: DataSources,
-          done_calls: list[ToolCallRecord]) -> tuple[list[dict], bool] | None:
+          done_calls: list[ToolCallRecord], party: str | None = None) -> tuple[list[dict], bool] | None:
     user = {
         "dispute_type": case.type,
         "rider_claim": sanitise(case.rider_claim),
@@ -86,6 +112,12 @@ def _plan(case: DisputeCase, facts: CaseFacts, sources: DataSources,
         "tools": [{"name": t.name, "description": t.description,
                    "args": {"start": "HH:MM", "end": "HH:MM"} if t.window else {}} for t in TOOLS.values()],
     }
+    if party is not None:
+        other = "driver" if party == "rider" else "rider"
+        user["gathering_for"] = party
+        user["focus"] = (f"You gather evidence for the {party} advocate: records that could support the {party}'s "
+                         f"account, and the records the {other} relies on, so the {party} advocate can answer them. "
+                         "Collect facts only; never decide the outcome.")
     if done_calls:
         user["results_so_far"] = [{"tool": c.tool, "args": c.args, "results": c.results} for c in done_calls]
         user["round"] = "follow-up: call more tools only if a gap remains, otherwise set done to true"

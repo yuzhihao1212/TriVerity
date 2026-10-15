@@ -15,7 +15,9 @@ The prompts below are copied from the code; the code is the source of truth.
 
 ## Evidence Collection agent
 
-Runs first. Hy3 plans which data-source tools to call; the tools are deterministic code over mock Ryde
+Runs first, once per advocate in parallel: each request carries `gathering_for` (rider or driver) and a
+focus line asking for records that could support that side and the records the other side relies on, so each
+advocate gathers its own evidence. Hy3 plans which data-source tools to call; the tools are deterministic code over mock Ryde
 APIs (`backend/app/services/data_sources.py`), so the agent chooses what to look at but never writes
 evidence. Up to two rounds: the second sees the first round's results and may dig deeper or stop.
 
