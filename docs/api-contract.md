@@ -197,6 +197,46 @@ See `backend/app/models/resolution.py`.
 - `compensation` (rule RD-5): an unjustified detour (RD-3) that also included an unexpected stop of 10 minutes or
   more. `refund_amount` is the total: the fare charged above the expected fare plus a $5.00 credit for the lost time.
 
+## POST `/api/disputes/resolve/stream`
+
+Internal reviewer transport for the same `DisputeCase` body, `X-Demo-Key`, rate limits,
+public-sample lookup, result cache, budget and resolve slots as `/resolve`. Only
+`view=internal` (the default) is supported; rider/driver views get 422 and never start a run.
+The existing JSON endpoint and party views are unchanged.
+
+The response is `text/event-stream`, with `Cache-Control: no-cache` and
+`X-Accel-Buffering: no`. Each event has an `event:` line, one JSON `data:` line and
+an empty line. Connection/keepalive comments can be ignored:
+
+```text
+event: step
+data: {"step":1,"agent":"evidence_loader","status":"completed","message":"Computed facts from case data.","started_at":"2026-10-16T00:00:00Z","duration_ms":1}
+
+event: result
+data: <full Resolution JSON>
+
+```
+
+Completed steps arrive in the orchestrator hook's order, followed by exactly one
+`result` on success. Step fields match the final `agent_log`, including optional
+`started_at` and `duration_ms`. This is delivery of finished steps, not a prediction
+of which parallel step is running. A cached public sample replays its saved log and
+result immediately, without a new resolve; a fresh successful run fills the same cache.
+
+On failure the terminal event is `error`, with `{"status":503,"detail":"Busy; try again shortly."}`
+(or another status), and no result. Validation/access/rate-limit failures before streaming
+retain their HTTP status (422/401/429) and have an SSE error body; `Retry-After` is preserved.
+After headers are sent, HTTP remains 200 and the event carries the error status.
+Body-size middleware can still return its ordinary 413 response. Validation error text
+is generic and never echoes submitted values; unexpected worker errors use a generic 500.
+
+The worker continues if a client disconnects, releasing its normal slot and caching any
+successful public sample. Clients must read with POST `fetch()` rather than `EventSource`.
+The console retries the ordinary POST **once** if streaming fails or ends without a result,
+then uses the existing error UI if that fails too. Both attempts follow normal quota rules;
+for a custom dispute, a lost stream can mean a second run while the first finishes. There is
+no request deduplication beyond the existing completed public-sample cache.
+
 ## POST `/api/precedents/feedback`
 
 The learning feedback loop: a human reviewer's final decision on a case becomes a precedent.
