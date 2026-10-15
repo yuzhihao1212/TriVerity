@@ -119,6 +119,13 @@ See `backend/app/models/resolution.py`.
     "summary": "Rider: medium risk (1 signal); Driver: low risk"
   },
   "triage": {"tier": "safety | high | standard | low | null", "score": 0, "reasons": ["Threatening message in chat (SAFE-1)"]},
+  "precedents": {
+    "matches": [{"id": "P-063", "similarity": 0.89, "decision": "partial_refund", "policy_refs": ["RD-3"],
+                 "decided_by": "policy | human_review", "summary": "string", "note": "string"}],
+    "recommended_decision": "partial_refund",
+    "consistency": "consistent | mixed | overridden | no_precedent",
+    "summary": "Consistent with 3 similar past rulings (P-063, P-056, P-070)."
+  },
   "agent_log": [{"step": 1, "agent": "evidence_loader", "status": "completed", "message": "string"}]
 }
 ```
@@ -146,8 +153,27 @@ See `backend/app/models/resolution.py`.
 - An advocate's `evidence_ids` are the IDs of the computed facts it cited (prefixes `TRIP`, `GPS`, `FARE`,
   `CHAT`, `HIST`), `evidence` their exact text, and `sources` the evidence sources used. `rebuttal` is its
   reply to the other side; an empty `text` with `source: "fallback"` means no rebuttal was made.
+- `precedents` is the Policy & Precedent agent's report: the closest past rulings (`P-…` from the seed set,
+  `R-…` from reviewer feedback), the majority decision among close ones, and whether the rules' decision
+  agrees with them. `overridden` means reviewers decided close cases differently and `PREC-1` escalated
+  the dispute. Internal only: never in the rider or driver view.
 - `agent_log` steps: `evidence_loader`, `rider_advocate`, `driver_advocate`, `fraud_detector`,
-  `rider_rebuttal`, `driver_rebuttal`, `judge`.
+  `rider_rebuttal`, `driver_rebuttal`, `precedent_agent`, `judge`.
 - `compensation` is reserved for payouts beyond a refund; no rule produces it yet.
+
+## POST `/api/precedents/feedback`
+
+The learning feedback loop: a human reviewer's final decision on a case becomes a precedent.
+
+```json
+{"case": {"...": "a DisputeCase"}, "decision": "partial_refund | full_refund | compensation | no_action",
+ "note": "plain text, up to 300 characters"}
+```
+
+Returns `201` with `{"id": "R-001", "summary": "string", "decision": "no_action"}`. Shares the resolve
+rate limits; in the public demo it needs an access code (`401` without). `422` for `needs_review` (not a
+final decision), a note with links or markup, or a note over 300 characters; `409` when the in-memory
+store is full (200 entries). Notes are shown to reviewers in `precedents.matches[].note` and never sent
+to the LLM.
 
 Keep this contract stable so frontend and backend development can proceed independently.

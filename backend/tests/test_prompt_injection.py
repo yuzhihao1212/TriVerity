@@ -133,7 +133,8 @@ SYSTEMS = {"rider": RIDER_SYSTEM, "driver": DRIVER_SYSTEM, "judge": judge_narrat
 PROMPT_KEYS = {
     "rider": {"rider_claim", "dispute_type", "evidence", "policy_rules"},
     "driver": {"driver_statement", "dispute_type", "evidence", "policy_rules"},
-    "judge": {"dispute_type", "rider_claim", "driver_statement", "facts", "ruling", "rider_advocate", "driver_advocate"},
+    "judge": {"dispute_type", "rider_claim", "driver_statement", "facts", "ruling", "rider_advocate", "driver_advocate",
+              "precedents"},
 }
 # Which prompts each attack's canary should reach.
 EXPECTED_REACH = {

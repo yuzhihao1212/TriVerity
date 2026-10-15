@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.routes.health import router as health_router
 from app.api.routes.disputes import router as disputes_router
+from app.api.routes.precedents import router as precedents_router
 from app.core import limits
 from app.core.body_limit import BodySizeLimitMiddleware
 from app.core.config import settings
@@ -22,6 +23,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(disputes_router, prefix="/api")
+    app.include_router(precedents_router, prefix="/api")
 
     # Hosted demo: serve the React build from the same origin (no CORS needed).
     # Mounted last, so /health and /api/* always reach the API first.

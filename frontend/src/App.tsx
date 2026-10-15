@@ -12,7 +12,7 @@ import { computedFacts, filterDisputes, money, readPresentationPreference, write
 import { PartyPreview } from "./PartyPreview";
 import { DisputeForm } from "./DisputeForm";
 import { getSamples, resolveDispute } from "./services/api";
-import type { Decision, DisputeCase, PartyHistory, Resolution, RiskLevel, Triage, TriageTier } from "./types";
+import type { Decision, DisputeCase, PartyHistory, PrecedentReport, Resolution, RiskLevel, Triage, TriageTier } from "./types";
 
 const TYPE_LABELS: Record<DisputeCase["type"], string> = {
   route_deviation: "Route deviation",
@@ -261,6 +261,7 @@ export default function App() {
                 {tab === "ruling" && resolution && <>
                   <VerdictSummary resolution={resolution} disputeId={selected.dispute_id} />
                   <RulingPanel resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
+                  {resolution.precedents && <section className="card"><PrecedentPanel report={resolution.precedents} /></section>}
                   {resolution.triage && <section className="card"><TriagePanel triage={resolution.triage} /></section>}
                   <section className="card"><RiskPanel risk={resolution.risk} /></section>
                   <details className="raw"><summary>Raw API response · internal record</summary><pre>{JSON.stringify(resolution, null, 2)}</pre></details>
@@ -396,6 +397,40 @@ function TriagePanel({ triage }: { triage: Triage }) {
   );
 }
 
+const CONSISTENCY_LABEL: Record<PrecedentReport["consistency"], string> = {
+  consistent: "Consistent with precedent", mixed: "Mixed precedent",
+  overridden: "Reviewers decided differently", no_precedent: "No close precedent",
+};
+
+function PrecedentPanel({ report }: { report: PrecedentReport }) {
+  return (
+    <div className="risk-panel">
+      <div><p className="eyebrow">Internal review only · Policy &amp; Precedent agent</p><h2>Similar past rulings</h2></div>
+      <div className="risk-row">
+        <span className={`risk-badge ${report.consistency === "overridden" ? "high" : report.consistency === "mixed" ? "medium" : "low"}`}>
+          {CONSISTENCY_LABEL[report.consistency]}
+        </span>
+      </div>
+      {report.summary && <p className="small">{report.summary}</p>}
+      {report.matches.length > 0 ? (
+        <ul className="small precedent-list">
+          {report.matches.map((m) => (
+            <li key={m.id}>
+              <strong className="evidence-id">{m.id}</strong>{" "}
+              {DECISION_LABELS[m.decision]} · {Math.round(m.similarity * 100)}% similar ·{" "}
+              {m.decided_by === "human_review" ? "decided by a reviewer" : "decided by the policy rules"}
+              <span className="muted"> — {m.summary}</span>
+              {m.note && <span className="muted"> ({m.note})</span>}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="small muted">No past ruling was similar enough to compare.</p>
+      )}
+    </div>
+  );
+}
+
 function RiskBadge({ level }: { level: RiskLevel }) {
   return (
     <span className={`risk-badge ${level}`}>
@@ -446,7 +481,7 @@ function LoadingPanel({ disputeId }: { disputeId: string }) {
   return <section className="card loading-state" aria-labelledby="loading-title">
     <div className="card-head"><h2 id="loading-title" tabIndex={-1}>Agents working · {disputeId}</h2><span className="spinner" role="progressbar" aria-label="Waiting for the complete agent result" /></div>
     <p>About 10–15 seconds. The server returns one complete result; individual step progress is not available.</p>
-    <ol className="pending-steps"><li>Evidence loader</li><li>Rider &amp; Driver advocates</li><li>Fraud detector</li><li>Rebuttal round</li><li>Judge: policy ruling &amp; explanation</li></ol>
+    <ol className="pending-steps"><li>Evidence loader</li><li>Rider &amp; Driver advocates</li><li>Fraud detector</li><li>Rebuttal round</li><li>Policy &amp; Precedent agent</li><li>Judge: policy ruling &amp; explanation</li></ol>
     <p className="small muted">These are the stages of a resolve, not live progress. Previous saved results are retained until a new run succeeds.</p>
   </section>;
 }

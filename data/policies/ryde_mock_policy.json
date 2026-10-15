@@ -62,7 +62,7 @@
     "tiers": {
       "safety": "A threat in chat (SAFE-1). Always reviewed first, whatever the score.",
       "high": "A high bad-faith risk (FRAUD-1).",
-      "standard": "Missing evidence (RD-4, NS-4) or low confidence (ESC-1).",
+      "standard": "Missing evidence (RD-4, NS-4), low confidence (ESC-1) or reviewer precedents against the rules (PREC-1).",
       "low": "Missing evidence or low confidence, with a proposed refund below low_value_max."
     },
     "thresholds": {
@@ -74,9 +74,19 @@
       "RD-4": 10,
       "NS-4": 10,
       "ESC-1": 10,
+      "PREC-1": 15,
       "points_per_dollar_at_stake": 2,
       "max_value_points": 20,
       "points_per_confidence_point_below_threshold": 1
+    }
+  },
+  "precedent": {
+    "thresholds": {
+      "min_similarity": 0.6,
+      "min_human_overrides": 2
+    },
+    "rules": {
+      "PREC-1": "If human reviewers decided at least two closely similar past disputes differently from the policy rules, the dispute is escalated to human review with those precedents."
     }
   }
 }

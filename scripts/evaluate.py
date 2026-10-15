@@ -4,6 +4,7 @@ Measures, per sample and overall:
 - ruling: decision, refund, policy rules and triage tier match the expected label
 - citations: advocate rules that support the other side ("wrong side") or neither side
 - AI rate: how often each agent's output came from the LLM rather than the fallback
+- precedents: whether the ruling agreed with the closest past rulings (Policy & Precedent agent)
 
 Resolves in-process, so the API rate limits don't apply, but every run spends real
 LLM tokens (about 5,400 per resolve when both rebuttals run) against DAILY_TOKEN_BUDGET. Use preset 1 in
@@ -63,6 +64,7 @@ def score(result: Resolution, expected: dict) -> dict:
         },
         "wrong_side": [],
         "neither_side": [],
+        "precedents": result.precedents.consistency,
     }
     row["ruling_ok"] = row["decision_ok"] and row["refund_ok"] and row["rules_ok"] and row["tier_ok"]
     supports = expected["supports"]
@@ -107,8 +109,8 @@ def report(results: dict[str, list[dict]], runs: int) -> str:
     lines = [
         f"# Evaluation: {len(results)} samples x {runs} run(s)",
         "",
-        "| Sample | Ruling correct | Rider AI | Driver AI | Rider rebuttal AI | Driver rebuttal AI | Judge AI | Wrong-side citations | Other off-target citations |",
-        "|---|---|---|---|---|---|---|---|---|",
+        "| Sample | Ruling correct | Rider AI | Driver AI | Rider rebuttal AI | Driver rebuttal AI | Judge AI | Wrong-side citations | Other off-target citations | Precedents |",
+        "|---|---|---|---|---|---|---|---|---|---|",
     ]
     totals = Counter()
     for dispute_id, rows in results.items():
@@ -118,13 +120,15 @@ def report(results: dict[str, list[dict]], runs: int) -> str:
         wrong = [c for r in ok for c in r["wrong_side"]]
         neither = [c for r in ok for c in r["neither_side"]]
         correct = sum(r["ruling_ok"] for r in ok)
+        totals.update(consistent=sum(r.get("precedents") == "consistent" for r in ok))
         totals.update(runs=len(rows), errors=errors, correct=correct, wrong=len(wrong),
                       neither=len(neither), **{f"ai_{a}": ai[a] for a in AGENTS})
         ruling_cell = f"{correct}/{len(rows)}" + (f" ({errors} errored)" if errors else "")
         lines.append(
             f"| {dispute_id} | {ruling_cell} | "
             + " | ".join(f"{ai[a]}/{len(rows)}" for a in AGENTS)
-            + f" | {', '.join(sorted(set(wrong))) or 0} | {', '.join(sorted(set(neither))) or 0} |"
+            + f" | {', '.join(sorted(set(wrong))) or 0} | {', '.join(sorted(set(neither))) or 0}"
+            + f" | {', '.join(sorted({r.get('precedents') or '-' for r in ok})) or '-'} |"
         )
     n = totals["runs"] or 1
     lines += [
@@ -136,6 +140,7 @@ def report(results: dict[str, list[dict]], runs: int) -> str:
         f"judge {totals['ai_judge'] / n:.0%}",
         f"- Wrong-side citations: {totals['wrong']} across {2 * totals['runs']} advocate cases",
         f"- Other off-target citations (rule supports neither side): {totals['neither']}",
+        f"- Consistent with the closest precedents: {totals['consistent']}/{totals['runs']}",
     ]
     if totals["errors"]:
         lines.append(f"- Errored runs: {totals['errors']}")
