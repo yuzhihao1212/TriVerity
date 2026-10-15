@@ -184,6 +184,9 @@ See `backend/app/models/resolution.py`.
 - `evidence_collection` is the Evidence Collection agent's record: each tool call with its round, arguments,
   reason and result lines. `source: "fallback"` means the default plan ran. The result lines also join the
   evidence the advocates cite by ID.
+- `argument_review` is how the Judge weighed each side: for every rule an advocate cited, whether its
+  condition on these facts `supports` that advocate, `favours_other_side` or `does_not_apply`, and whether it
+  `decisive`ly decided the case; plus how many verified facts the advocate cited. Computed in code; internal only.
 - `counterfactuals` says what would have changed the ruling: "if `change`, the outcome would be `outcome`".
   Computed from the policy thresholds in code, never by the LLM; each one is checked in the tests by changing
   the fact and re-running the rules. `decision` is `null` when the change would let the rules decide

@@ -70,6 +70,10 @@
       new precedent. It can only cause escalations (`PREC-1`), never change a decision or an amount.
       Feedback is kept in memory; production would store it with the dispute queue. It is turned off
       in the public demo, and reviewer notes are never returned by the API.
+   **How the Judge weighed each side** (`backend/app/services/argument_review.py`). Every rule an advocate
+   cited is checked against the facts: it holds in that advocate's favour, favours the other side, or doesn't
+   apply, and the rules that decided the case are marked. The rule-to-side mapping matches the hand-written
+   labels in `data/expected_rulings.json` on every sample (tested).
    **What would change the ruling** (`backend/app/services/counterfactuals.py`). From the policy
    thresholds, the code states the facts the ruling turned on and the outcome a different fact would give,
    e.g. "if the route had been at most 15% longer than expected (it was 44% longer), there would be no

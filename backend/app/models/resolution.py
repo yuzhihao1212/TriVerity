@@ -88,6 +88,19 @@ class Counterfactual(BaseModel):
     decision: Decision | None = None  # None: the case would be decided automatically instead of escalated
     rules: list[str] = Field(default_factory=list)
 
+class RuleCheck(BaseModel):
+    rule: str
+    # Whether the rule's condition, on these facts, favours the advocate who cited it.
+    verdict: Literal["supports", "favours_other_side", "does_not_apply"]
+    decisive: bool = False   # applied by the ruling, in this advocate's favour
+
+class ArgumentReview(BaseModel):
+    """How the Judge weighed one advocate's case (computed in code, internal only)."""
+    party: Literal["rider", "driver"]
+    rules: list[RuleCheck] = Field(default_factory=list)
+    evidence_cited: int = 0
+    summary: str = ""
+
 class AgentLogEntry(BaseModel):
     step: int
     agent: str
@@ -119,6 +132,8 @@ class Resolution(Ruling):
     precedents: PrecedentReport = Field(default_factory=PrecedentReport)
     # What would have changed the ruling; internal only, like the rest of the reasoning.
     counterfactuals: list[Counterfactual] = Field(default_factory=list)
+    # How the Judge weighed each advocate's cited rules against the facts; internal only.
+    argument_review: list[ArgumentReview] = Field(default_factory=list)
     evidence_collection: EvidenceCollection = Field(default_factory=EvidenceCollection)
     agent_log: list[AgentLogEntry] = Field(default_factory=list)
 
