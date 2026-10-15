@@ -1,7 +1,7 @@
 """Resolve every sample once so the public demo answers instantly from its cache.
 
 Run against your own demo server after starting it with PUBLIC_DEMO=true.
-Spends real LLM tokens: about 4,000 per sample, ~32,000 for the 8 samples.
+Spends real LLM tokens: about 5,400 per sample, ~50,000 for the 9 samples.
 Respects the server's rate limits (waits on 429/503), so it takes a few minutes.
 
     python scripts/prewarm_demo.py --yes
@@ -32,7 +32,7 @@ def main() -> None:
     parser.add_argument("--yes", action="store_true", help="confirm spending real LLM tokens")
     args = parser.parse_args()
     if not args.yes:
-        sys.exit("This spends real LLM tokens (~32,000). Re-run with --yes to continue.")
+        sys.exit("This spends real LLM tokens (~50,000). Re-run with --yes to continue.")
 
     base = args.base_url.rstrip("/")
     status, _, samples = call(f"{base}/api/disputes/samples")

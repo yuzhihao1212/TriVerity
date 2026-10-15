@@ -1,4 +1,7 @@
+from pathlib import Path
+
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from app.api.routes.health import router as health_router
 from app.api.routes.disputes import router as disputes_router
@@ -19,6 +22,12 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(disputes_router, prefix="/api")
+
+    # Hosted demo: serve the React build from the same origin (no CORS needed).
+    # Mounted last, so /health and /api/* always reach the API first.
+    dist = Path(settings.frontend_dist) if settings.frontend_dist else None
+    if dist and (dist / "index.html").is_file():
+        app.mount("/", StaticFiles(directory=dist, html=True), name="frontend")
     return app
 
 app = create_app()

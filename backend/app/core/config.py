@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     # Access codes (auth tier T2), comma-separated, one per invited judge. A valid
     # X-Demo-Key header lets the caller resolve their own dispute. Keep them in .env only.
     demo_access_codes: str = ""
+    # Hosted demo: folder of the built frontend (frontend/dist) to serve at "/".
+    # Empty in development, where Vite serves the frontend.
+    frontend_dist: str = ""
     # Optional overrides of the defaults in app/core/limits.py, e.g. a bigger budget
     # for a local evaluation run. Bounds are checked there; overrides are logged.
     daily_token_budget: int | None = None
