@@ -1,17 +1,26 @@
 import { useId, useRef, type KeyboardEvent, type ReactNode } from "react";
 
+import { Icon } from "./Icon";
+import { SHORT_TAB_LABELS, stepStates, stepStatusText } from "./stepVisuals";
 import { navigateTab, tabLocked, tabProgress, WORKFLOW_TABS, type WorkflowTab } from "./workflow";
-import type { Resolution } from "./types";
+import type { AgentLogEntry, Resolution } from "./types";
 
-export function WorkflowTabs({ active, resolution, busy, onChange, render }: {
+const STEP_ICONS: Record<WorkflowTab, string> = {
+  intake: "folder", evidence: "magnifier", hearing: "bubbles", ruling: "scales", notify: "phone",
+};
+
+export function WorkflowTabs({ active, resolution, busy, liveSteps, onChange, render }: {
   active: WorkflowTab;
   resolution?: Resolution;
   busy: boolean;
+  /** Steps reported so far by a run in progress; fills the stepper as they arrive. */
+  liveSteps?: AgentLogEntry[];
   onChange: (tab: WorkflowTab) => void;
   render: (tab: WorkflowTab) => ReactNode;
 }) {
   const id = useId();
   const refs = useRef<Partial<Record<WorkflowTab, HTMLButtonElement | null>>>({});
+  const states = stepStates({ active, hasResult: !!resolution, busy, liveSteps });
   function activate(tab: WorkflowTab) {
     if (tabLocked(tab, !!resolution)) return;
     onChange(tab);
@@ -25,10 +34,15 @@ export function WorkflowTabs({ active, resolution, busy, onChange, render }: {
   }
   return <>
     <div className="workflow-bar">
-      <div className="workflow-tabs" role="tablist" aria-label="Case workflow">
+      <div className="workflow-tabs stepper" role="tablist" aria-label="Case workflow">
         {WORKFLOW_TABS.map((tab, index) => {
-          const locked = tabLocked(tab.id, !!resolution);
-          return <button type="button" role="tab" key={tab.id}
+          const state = states[index];
+          const locked = state.locked;
+          // The connector into this step fills once the previous step is complete.
+          const joined = index > 0 && states[index - 1].done;
+          const classes = ["step", state.done && "done", state.current && "current", locked && "locked",
+            state.inProgress && "in-progress", joined && "joined"].filter(Boolean).join(" ");
+          return <button type="button" role="tab" key={tab.id} className={classes}
             id={`${id}-${tab.id}-tab`} aria-controls={`${id}-${tab.id}-panel`}
             aria-selected={active === tab.id} aria-disabled={locked}
             aria-describedby={locked ? `${id}-locked` : undefined}
@@ -36,8 +50,15 @@ export function WorkflowTabs({ active, resolution, busy, onChange, render }: {
             data-workflow-tab={tab.id}
             ref={element => { refs.current[tab.id] = element; }}
             onClick={() => activate(tab.id)} onKeyDown={event => navigate(event, tab.id)}>
-            <span className="tab-step" aria-hidden="true">{index + 1}</span>
-            <span className="tab-label">{tab.label}</span>
+            <span className="step-circle" aria-hidden="true">
+              {state.done ? <Icon name="check" /> : locked && !state.inProgress ? <Icon name="lock" /> : index + 1}
+            </span>
+            <span className="step-name">
+              <Icon name={STEP_ICONS[tab.id]} className="step-icon" />
+              <span className="tab-label"><span className="label-full">{tab.label}</span><span className="label-short" aria-hidden="true">{SHORT_TAB_LABELS[tab.id]}</span></span>
+            </span>
+            {/* A locked step already says "Locked" in its progress text. */}
+            <span className="sr-only">, step {index + 1} of {WORKFLOW_TABS.length}{locked && !state.done && !state.inProgress ? "" : `, ${stepStatusText(state)}`}. </span>
             <span className="tab-progress">{tabProgress(tab.id, resolution)}</span>
           </button>;
         })}

@@ -6,6 +6,7 @@ import { AgentsStrip } from "./AgentsStrip";
 import { WorkflowTabs } from "./WorkflowTabs";
 import { savedTab, type WorkflowTab } from "./workflow";
 import { FactLibrary } from "./FactLibrary";
+import { headerChips, statusPill } from "./stepVisuals";
 import { CaseComparison } from "./CaseComparison";
 import { Debate } from "./Debate";
 import { EvidenceList, EvidenceText, type FactLinks } from "./EvidenceList";
@@ -299,11 +300,9 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
           {!form && resolving && resolving !== selected?.dispute_id && <p className="small muted">Agents are working on {resolving}. This case remains available.</p>}
           {form && <DisputeForm key={form.template?.dispute_id ?? "blank"} template={form.template} onSubmit={addOwn} onCancel={() => setForm(null)} />}
           {!form && selected && <section className="case-file" aria-labelledby="case-title">
-            <header className="case-file-head">
-              <div><p className="eyebrow">Dispute file</p><h2 id="case-title">{selected.dispute_id} <span className="tag">{TYPE_LABELS[selected.type]}</span></h2></div>
-              <span className="case-save-status">{resolving === selected.dispute_id ? (streaming ? "Agents working · live" : "Agents working · standard resolve") : resolution ? "Saved result · no new request" : "Ready for intake"}</span>
-            </header>
-            <WorkflowTabs active={activeTab} resolution={resolution} busy={resolving === selected.dispute_id} onChange={changeTab}
+            <CaseHeader dispute={selected} resolution={resolution} busy={resolving === selected.dispute_id} streaming={streaming} />
+            <WorkflowTabs active={activeTab} resolution={resolution} busy={resolving === selected.dispute_id}
+              liveSteps={resolving === selected.dispute_id ? liveSteps : undefined} onChange={changeTab}
               render={tab => resolving === selected.dispute_id ? <LiveProgress disputeId={selected.dispute_id} steps={liveSteps} startedAt={runStartedAt} streaming={streaming} /> : <>
                 <AgentsStrip tab={tab} resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
                 {tab === "intake" && <>
@@ -349,6 +348,24 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
       </div>
     </div>
   );
+}
+
+function CaseHeader({ dispute, resolution, busy, streaming }: { dispute: DisputeCase; resolution?: Resolution; busy: boolean; streaming: boolean }) {
+  const chips = headerChips(dispute, resolution);
+  const status = statusPill({ busy, streaming, hasResult: !!resolution });
+  return <header className="case-file-head">
+    <div className="case-file-title">
+      <p className="eyebrow">Dispute file</p>
+      <h2 id="case-title">{dispute.dispute_id} <span className="tag">{TYPE_LABELS[dispute.type]}</span></h2>
+      {chips.length > 0 && <ul className="case-chips" aria-label="Case summary">
+        {chips.map(chip => <li key={chip.key} className={`case-chip ${chip.tone}`}>{chip.label}</li>)}
+      </ul>}
+    </div>
+    <span className={`case-save-status status-pill ${status.tone}${status.pulse ? " pulse" : ""}`} title={status.detail}>
+      <span className="status-dot" aria-hidden="true" />{status.label}
+      {status.detail !== status.label && <span className="sr-only"> ({status.detail})</span>}
+    </span>
+  </header>;
 }
 
 function CasePanel({ dispute, availableIds, onSelectFact }: { dispute: DisputeCase } & FactLinks) {

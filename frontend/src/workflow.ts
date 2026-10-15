@@ -21,6 +21,21 @@ export const AGENT_LABELS: Record<string, string> = {
   judge: "Judge",
 };
 
+// One sentence under each agent's name in "Agents in this step".
+export const AGENT_ROLES: Record<string, string> = {
+  evidence_loader: "Computes facts from the case data",
+  evidence_collector: "Requests extra evidence for each side",
+  rider_advocate: "Argues the rider’s case from the evidence",
+  driver_advocate: "Argues the driver’s case from the evidence",
+  rider_rebuttal: "Answers the driver’s argument once",
+  driver_rebuttal: "Answers the rider’s argument once",
+  fraud_detector: "Checks both parties for bad-faith signals",
+  precedent_agent: "Finds similar past rulings",
+  judge: "Applies the policy rules and explains the ruling",
+};
+
+export function agentRole(agent: string): string | null { return Object.hasOwn(AGENT_ROLES, agent) ? AGENT_ROLES[agent] : null; }
+
 export function agentLabel(agent: string): string { return Object.hasOwn(AGENT_LABELS, agent) ? AGENT_LABELS[agent] : agent; }
 
 export function agentTab(agent: string): WorkflowTab {
