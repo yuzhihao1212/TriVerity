@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from app.core import limits
 from app.services.gps_analysis import GpsAnalysis, analyse_gps
 
-from app.models.dispute import ChatMessage, DisputeCase, PartyHistory
+from app.models.dispute import ChatMessage, DisputeCase, FareData, PartyHistory
 from app.services.text_safety import sanitise
 
 EARTH_RADIUS_M = 6_371_000
@@ -50,6 +50,8 @@ class CaseFacts(BaseModel):
     # Charged fare minus (itemised breakdown - promo discount); non-zero means the
     # breakdown doesn't explain the charge.
     fare_breakdown_gap: float | None = None
+    promo_applied_correctly: bool | None = None
+    surge_consistent: bool | None = None
     gps: GpsAnalysis | None = None
     chat: ChatAnalysis = Field(default_factory=ChatAnalysis)
     rider_history: PartyHistory = Field(default_factory=PartyHistory)
@@ -99,6 +101,18 @@ class CaseFacts(BaseModel):
                 "Fare breakdown matches the charged fare"
                 if abs(self.fare_breakdown_gap) < 0.01
                 else f"Charged fare is {self.fare_breakdown_gap:+.2f} vs the itemised breakdown"
+            )
+        if self.promo_applied_correctly is not None:
+            lines.append(
+                f"Promo {self.promo_code} discount reflected in the charge"
+                if self.promo_applied_correctly
+                else f"Promo {self.promo_code} discount not reflected in the charge"
+            )
+        if self.surge_consistent is not None:
+            lines.append(
+                "Surge breakdown consistent with the multiplier"
+                if self.surge_consistent
+                else "Surge breakdown inconsistent with the multiplier"
             )
         lines = groups["chat"]
         lines.append(
@@ -155,6 +169,37 @@ def _haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlng / 2) ** 2
     return 2 * EARTH_RADIUS_M * asin(sqrt(min(1.0, max(0.0, a))))
 
+def _promo_check(fare: FareData) -> bool | None:
+    if not fare.promo_code:
+        return None
+    if fare.promo_discount is None:
+        return False
+    if not fare.breakdown or fare.actual is None:
+        return None
+    expected_charge = sum(line.amount for line in fare.breakdown) - fare.promo_discount
+    # Round the difference to eliminate binary floating point at the cent boundary.
+    return abs(round(fare.actual - expected_charge, 6)) <= limits.FARE_PROMO_TOLERANCE
+
+
+def _surge_check(fare: FareData) -> bool | None:
+    if fare.surge_multiplier is None or fare.surge_multiplier <= 1 or not fare.breakdown:
+        return None
+    surge_lines = [line for line in fare.breakdown if re.search(r"\bsurge\b", line.label, re.IGNORECASE)]
+    if not surge_lines:
+        return False
+    # FareData defines the breakdown as pre-promo charges. Without typed tariff
+    # components, use the non-surge subtotal as the multiplier's base. This checks
+    # arithmetic, not tariff eligibility (e.g. whether a toll is surge-exempt).
+    subtotal = sum(line.amount for line in fare.breakdown if line not in surge_lines)
+    if subtotal <= 0:
+        return None
+    if any(line.amount < 0 for line in surge_lines):
+        return False
+    expected_surge = subtotal * (fare.surge_multiplier - 1)
+    tolerance = max(limits.FARE_SURGE_ABS_TOLERANCE,
+                    expected_surge * limits.FARE_SURGE_REL_TOLERANCE)
+    return abs(round(sum(line.amount for line in surge_lines) - expected_surge, 6)) <= tolerance
+
 def compute_facts(case: DisputeCase) -> CaseFacts:
     trip, fare = case.trip, case.fare
 
@@ -183,6 +228,8 @@ def compute_facts(case: DisputeCase) -> CaseFacts:
         promo_code=fare.promo_code,
         promo_discount=fare.promo_discount,
         fare_breakdown_gap=breakdown_gap,
+        promo_applied_correctly=_promo_check(fare),
+        surge_consistent=_surge_check(fare),
         gps=analyse_gps(case.gps_points, trip, route_trip=case.type == "route_deviation"),
         chat=analyse_chat(case.chat_logs),
         rider_history=case.rider_history,

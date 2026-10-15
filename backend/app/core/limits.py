@@ -128,3 +128,8 @@ GPS_ENDPOINT_RADIUS_M = 100
 # Do not infer stationary time across sparse telemetry; report these gaps instead.
 GPS_STOP_MAX_GAP_MIN = 3
 GPS_REPORT_GAP_MIN = 3
+
+# -- Fare validation (facts only; no policy decisions) --------------------------
+FARE_PROMO_TOLERANCE = 0.01        # a cent of rounding in the final charge
+FARE_SURGE_ABS_TOLERANCE = 0.02    # cent rounding across itemised components
+FARE_SURGE_REL_TOLERANCE = 0.05    # coarse/rounded surge lines in synthetic data

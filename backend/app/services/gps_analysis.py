@@ -19,6 +19,7 @@ class GpsAnalysis(BaseModel):
     path_distance_km: float | None = None
     path_vs_expected_ratio: float | None = None
     unexpected_stops: list[GpsStop] | None = None
+    # Sum of unexpected stops only; endpoint waiting and unknown gaps are excluded.
     total_stopped_min: float | None = None
     points_used: int | None = None
     points_rejected: int | None = None

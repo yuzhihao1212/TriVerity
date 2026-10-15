@@ -19,6 +19,11 @@
    use UTC; aware timestamps retain their supplied offset. Same-time duplicates keep the first
    valid observation and count the rest as rejected. `describe_by_source()` groups every summary
    under trip, GPS, fare, chat or history; `describe()` flattens those groups in that order.
+   Promo checks compare the charge to the pre-promo breakdown minus the recorded discount.
+   Surge checks compare the total of lines labelled “surge” to the non-surge subtotal times
+   `(multiplier - 1)`, allowing cent/coarse rounding. This checks arithmetic, not tariff eligibility:
+   untyped fare lines cannot establish which charges are surge-exempt. Missing inputs remain
+   unknown; neither fare check changes policy rules or rulings.
 3. **Rider and Driver advocates** (`backend/app/agents/rider_agent.py`, `driver_agent.py`,
    shared logic in `_advocate.py`). Each receives the facts, its own party's account and the policy
    rules for the dispute type, and asks Hy3 to argue for its party only. They run in parallel.

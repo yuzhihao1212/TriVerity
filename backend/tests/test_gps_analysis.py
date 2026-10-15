@@ -1,5 +1,4 @@
 """GPS telemetry and the source-grouping contract stay deterministic and bounded."""
-import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -119,7 +118,8 @@ def test_every_description_line_and_source_contract():
                                       total_stopped_min=6, unexpected_stops=[GpsStop(
                                           start_time=point()['timestamp'], duration_min=6, lat=1.32, lng=103.85)]),
                       chat=ChatAnalysis(threats=['t'], agreements=['a'], disagreements=['d']),
-                      rider_history={'rating': 4.8}, driver_history={'completed_trips': 12})
+                      rider_history={'account_age_days': 820, 'rating': 4.8, 'completed_trips': 214, 'disputes_last_90d': 0},
+                      driver_history={'completed_trips': 12})
     groups = facts.describe_by_source()
     assert list(groups) == ['trip', 'gps', 'fare', 'chat', 'history']
     assert groups['trip'] == ['Route was +43% vs expected distance', 'Trip took +20% vs expected duration',
@@ -131,7 +131,8 @@ def test_every_description_line_and_source_contract():
                               'Promo code RYDE10 applied (2.00 off)', 'Fare breakdown matches the charged fare']
     assert groups['chat'] == ['Driver contacted rider via in-app chat', 'Threatening message: t',
                               'Agreement in chat: a', 'Disagreement in chat: d']
-    assert groups['history'] == ['Rider history: rating 4.8', 'Driver history: 12 trips']
+    assert groups['history'] == ['Rider history: account 820 days old, rating 4.8, 214 trips, 0 disputes in last 90 days',
+                                 'Driver history: 12 trips']
     lines = facts.describe()
     assert lines == [line for group in groups.values() for line in group]
     assert len(lines) == len(set(lines))
@@ -158,3 +159,31 @@ def test_synthetic_sample_consistency():
         points = case.gps_points
         duration = (datetime.fromisoformat(points[-1]['timestamp']) - datetime.fromisoformat(points[0]['timestamp'])).total_seconds()/60
         assert duration == case.trip.actual_duration_min
+
+
+def test_stop_runs_end_at_movement_and_exclusions():
+    points = [point(i) for i in range(4)]
+    points += [point(4, lat=1.33, speed=30)]
+    points += [point(i, lat=1.34) for i in range(5, 9)]
+    points += [point(9, lat=1.34, status='arrived')]
+    result = analyse_gps(points, TripData())
+    assert [s.duration_min for s in result.unexpected_stops] == [3, 3]
+    assert result.total_stopped_min == 6
+
+
+def test_long_gap_splits_stationary_runs():
+    result = analyse_gps([point(i) for i in (0, 1, 2, 3, 12, 13, 14, 15)], TripData())
+    assert [s.duration_min for s in result.unexpected_stops] == [3, 3]
+    assert result.max_gap_min == 9
+
+
+def test_pickup_radius_boundary_and_unknown_status():
+    points = [point(i, lat=1.321, status={'untrusted': True}) for i in range(4)]
+    result = analyse_gps(points, TripData(pickup_lat=1.32, pickup_lng=103.85))
+    assert result.total_stopped_min == 3  # 111 m is outside NS-1's tolerance
+
+
+def test_conflicting_duplicate_keeps_first_valid_point():
+    result = analyse_gps([point(0), point(0, lat=20), point(1)], TripData())
+    assert result.path_distance_km == 0
+    assert result.points_rejected == 1
