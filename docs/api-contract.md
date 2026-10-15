@@ -149,7 +149,8 @@ See `backend/app/models/resolution.py`.
                "reason": "string", "source": "gps", "results": ["GPS 08:10-08:18: 9 points, ..."]}]},
   "counterfactuals": [{"change": "the route had been at most 15% longer than expected (it was 44% longer)",
                       "outcome": "no change to the charge", "decision": "no_action", "rules": ["RD-1"]}],
-  "agent_log": [{"step": 1, "agent": "evidence_loader", "status": "completed", "message": "string"}]
+  "agent_log": [{"step": 1, "agent": "evidence_loader", "status": "completed", "message": "string",
+                 "started_at": "2026-10-16T08:00:00.123Z", "duration_ms": 4}]
 }
 ```
 

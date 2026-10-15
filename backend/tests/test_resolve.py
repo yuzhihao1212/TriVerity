@@ -56,7 +56,7 @@ def test_response_includes_both_advocates_and_log():
     assert result["rider_case"]["agent"] == "rider_advocate"
     assert result["driver_case"]["agent"] == "driver_advocate"
     assert [e["agent"] for e in result["agent_log"]] == [
-        "evidence_loader", "evidence_collector", "rider_advocate", "driver_advocate", "fraud_detector",
+        "evidence_loader", "evidence_collector", "fraud_detector", "rider_advocate", "driver_advocate",
         "rider_rebuttal", "driver_rebuttal", "precedent_agent", "judge",
     ]
 

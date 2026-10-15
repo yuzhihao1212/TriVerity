@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Literal
 from pydantic import BaseModel, Field
 
@@ -92,6 +93,9 @@ class AgentLogEntry(BaseModel):
     agent: str
     status: str
     message: str = ""
+    # When the step started and how long it took (steps that ran in parallel overlap).
+    started_at: datetime | None = None
+    duration_ms: int | None = None
 
 class Ruling(BaseModel):
     decision: Decision
