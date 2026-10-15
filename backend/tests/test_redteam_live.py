@@ -52,7 +52,7 @@ def test_campaign_log_records_obeyed_and_blocked_without_secrets(script, tmp_pat
         assert row["ruling_unchanged"] is True
         assert row["explanation_source"] == "fallback"
         assert any(d.startswith("judge:") for d in row["detectors"])
-        assert {r["agent"] for r in row["raw_replies"]} == {"rider", "driver", "judge"}
+        assert {r["agent"] for r in row["raw_replies"]} == {"evidence_collector", "rider", "driver", "judge"}
 
 
 def test_input_rejected_attack_makes_no_llm_call(script, tmp_path):

@@ -27,3 +27,18 @@ def fresh_limits(monkeypatch):
     monkeypatch.setattr(
         orchestrator, "resolve_slots", threading.BoundedSemaphore(limits.MAX_CONCURRENT_RESOLVES)
     )
+
+
+@pytest.fixture(autouse=True)
+def no_real_network(monkeypatch):
+    """Fail loudly if any test reaches a real HTTP endpoint (e.g. an LLM call nobody mocked).
+
+    TestClient uses its own in-process transport, and tests that exercise llm_client mock
+    httpx.Client, so neither is affected.
+    """
+    import httpx
+
+    def refuse(self, request):
+        raise RuntimeError(f"real network call in a test: {request.method} {request.url.host}")
+
+    monkeypatch.setattr(httpx.HTTPTransport, "handle_request", refuse)

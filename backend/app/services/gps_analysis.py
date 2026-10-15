@@ -50,12 +50,11 @@ def _ordered(points: list[tuple]) -> list[tuple]:
     return points
 
 
-def analyse_gps(raw_points: list[dict], trip: TripData, *, route_trip: bool = False) -> GpsAnalysis | None:
-    # Local import reuses the evidence helper without a module-import cycle.
-    from app.services.evidence import _haversine_m
+def parse_points(raw_points: list[dict]) -> tuple[list[tuple], int]:
+    """Validated, time-ordered points as (key, time, lat, lng, speed, status), and the reject count.
 
-    if not raw_points:
-        return None
+    Every point is untrusted: invalid ones are counted, never raised.
+    """
     points = []
     rejected = max(0, len(raw_points) - limits.MAX_GPS_POINTS)
     for raw in raw_points[:limits.MAX_GPS_POINTS]:
@@ -93,6 +92,16 @@ def analyse_gps(raw_points: list[dict], trip: TripData, *, route_trip: bool = Fa
             rejected += 1
         else:
             ordered.append(point)
+    return ordered, rejected
+
+
+def analyse_gps(raw_points: list[dict], trip: TripData, *, route_trip: bool = False) -> GpsAnalysis | None:
+    # Local import reuses the evidence helper without a module-import cycle.
+    from app.services.evidence import _haversine_m
+
+    if not raw_points:
+        return None
+    ordered, rejected = parse_points(raw_points)
     result = GpsAnalysis(points_used=len(ordered), points_rejected=rejected)
     if len(ordered) < 2:
         return result

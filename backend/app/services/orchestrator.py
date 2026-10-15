@@ -2,6 +2,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 
 from app.agents._advocate import build_rebuttal
+from app.agents.evidence_agent import collect_evidence
 from app.agents.fraud_agent import assess_risk
 from app.agents.rider_agent import build_rider_case
 from app.agents.driver_agent import build_driver_case
@@ -30,6 +31,14 @@ def resolve_dispute(case: DisputeCase) -> Resolution:
     if not resolve_slots.acquire(blocking=False):
         raise ServiceBusy
     try:
+        # Evidence Collection agent: plans data-source tool calls and adds what they
+        # return to the facts (core facts unchanged; fallback runs a default plan).
+        collection, collected = collect_evidence(case, facts)
+        facts = facts.model_copy(update={"collected": collected})
+        tools = ", ".join(f"{c.tool}({', '.join(c.args.values())})" if c.args else c.tool for c in collection.calls)
+        log("evidence_collector", f"[{collection.source}] {len(collection.calls)} tool calls in "
+                                  f"{collection.rounds} round(s): {tools or 'none'}")
+
         # The advocates and the fraud assessor are all independent of each other,
         # so run them concurrently.
         with ThreadPoolExecutor(max_workers=3) as pool:
@@ -67,5 +76,6 @@ def resolve_dispute(case: DisputeCase) -> Resolution:
         rider_case=rider_case,
         driver_case=driver_case,
         risk=risk,
+        evidence_collection=collection,
         agent_log=agent_log,
     )

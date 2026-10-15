@@ -58,6 +58,9 @@ class CaseFacts(BaseModel):
     chat: ChatAnalysis = Field(default_factory=ChatAnalysis)
     rider_history: PartyHistory = Field(default_factory=PartyHistory)
     driver_history: PartyHistory = Field(default_factory=PartyHistory)
+    # Lines gathered by the Evidence Collection agent's tools, by source; appended after
+    # the core facts of that source (agents/evidence_agent.py).
+    collected: dict[str, list[str]] = Field(default_factory=dict)
 
     def describe(self) -> list[str]:
         return [line for lines in self.describe_by_source().values() for line in lines]
@@ -137,6 +140,9 @@ class CaseFacts(BaseModel):
             summary = _describe_history(history)
             if summary:
                 lines.append(f"{party} history: {summary}")
+        for source, extra in self.collected.items():
+            bucket = groups.setdefault(source, [])
+            bucket += [line for line in extra if line not in bucket]
         return {source: lines for source, lines in groups.items() if lines}
 
 def _describe_history(history: PartyHistory) -> str:

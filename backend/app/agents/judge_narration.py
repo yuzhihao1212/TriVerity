@@ -46,7 +46,8 @@ SYSTEM = (
     '- "driver_explanation": the same, addressed to the driver. The rider filed this dispute, '
     'so call it "the rider\'s dispute", never "your dispute".\n'
     "Rules: use only the facts given. Describe decisions in plain words (e.g. \"the fare stands\", "
-    "\"a partial refund\"), never internal codes such as no_action or needs_review. Write money exactly as given, with $ and two decimals. "
+    "\"a partial refund\"), never internal codes such as no_action or needs_review, and never "
+    "the word \"upheld\" in the rider or driver message (it is unclear whose claim). Write money exactly as given, with $ and two decimals. "
     "Only mention rule IDs listed in the ruling, or rules an advocate cited when explaining why "
     "they did not decide the case. Do not state consequences the ruling "
     "does not give, such as who pays, penalties or account actions. If the decision is needs_review, "

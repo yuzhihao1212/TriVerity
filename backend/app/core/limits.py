@@ -60,6 +60,7 @@ ADVOCATE_MAX_TOKENS = 600
 JUDGE_MAX_TOKENS = 800
 DEFAULT_MAX_TOKENS = 800
 REBUTTAL_MAX_TOKENS = 300      # one short reply per advocate in the rebuttal round
+EVIDENCE_AGENT_MAX_TOKENS = 400   # one tool plan per round
 LLM_TIMEOUT_S = 25
 
 # -- LLM output checks (judge_narration, _advocate) ---------------------------
@@ -70,6 +71,15 @@ ADVOCATE_MAX_SUMMARY_CHARS = 1_200  # live Hy3 summaries ran 391-973 chars; 800 
 ADVOCATE_MAX_EVIDENCE_ITEMS = 8
 ADVOCATE_MAX_EVIDENCE_CHARS = 300
 REBUTTAL_MAX_CHARS = 600           # a rebuttal is 1-3 sentences
+
+# -- Evidence Collection agent (agents/evidence_agent.py) ----------------------
+EVIDENCE_AGENT_MAX_ROUNDS = 2         # 1 = plan once; 2 = one follow-up round on the results
+EVIDENCE_AGENT_MAX_CALLS_PER_ROUND = 4
+EVIDENCE_AGENT_MAX_CALLS = 6          # across all rounds
+EVIDENCE_WINDOW_MAX_MIN = 60          # longest time window a tool may be asked for
+EVIDENCE_TOOL_MAX_LINES = 8           # lines one tool call may return
+EVIDENCE_QUOTE_MAX_CHARS = 200        # a quoted chat message or app event
+EVIDENCE_REASON_MAX_CHARS = 160       # the agent's reason for a call
 
 # -- Concurrency (503 with Retry-After when full) -----------------------------
 MAX_CONCURRENT_RESOLVES = 3

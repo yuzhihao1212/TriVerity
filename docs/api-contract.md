@@ -118,6 +118,9 @@ See `backend/app/models/resolution.py`.
     "signals": ["Rider has 4 disputes in the last 90 days"],
     "summary": "Rider: medium risk (1 signal); Driver: low risk"
   },
+  "evidence_collection": {"source": "llm | fallback", "rounds": 2,
+    "calls": [{"round": 1, "tool": "gps_window", "args": {"start": "08:10", "end": "08:18"},
+               "reason": "string", "source": "gps", "results": ["GPS 08:10-08:18: 9 points, ..."]}]},
   "agent_log": [{"step": 1, "agent": "evidence_loader", "status": "completed", "message": "string"}]
 }
 ```
@@ -140,7 +143,10 @@ See `backend/app/models/resolution.py`.
 - An advocate's `evidence_ids` are the IDs of the computed facts it cited (prefixes `TRIP`, `GPS`, `FARE`,
   `CHAT`, `HIST`), `evidence` their exact text, and `sources` the evidence sources used. `rebuttal` is its
   reply to the other side; an empty `text` with `source: "fallback"` means no rebuttal was made.
-- `agent_log` steps: `evidence_loader`, `rider_advocate`, `driver_advocate`, `fraud_detector`,
+- `evidence_collection` is the Evidence Collection agent's record: each tool call with its round, arguments,
+  reason and result lines. `source: "fallback"` means the default plan ran. The result lines also join the
+  evidence the advocates cite by ID.
+- `agent_log` steps: `evidence_loader`, `evidence_collector`, `rider_advocate`, `driver_advocate`, `fraud_detector`,
   `rider_rebuttal`, `driver_rebuttal`, `judge`.
 - `compensation` is reserved for payouts beyond a refund; no rule produces it yet.
 
