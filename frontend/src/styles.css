@@ -714,3 +714,24 @@ textarea { width: 100%; resize: vertical; }
 @media (max-width: 480px) {
   .tool-columns.two { grid-template-columns: 1fr; }
 }
+
+/* Console intro: transform/opacity only. Timings come from consoleIntroTiming.ts via custom properties. */
+.console-intro { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; overflow: hidden; background: var(--bg); color: var(--text); cursor: pointer; }
+.console-intro.leaving { animation: console-intro-fade var(--intro-fade-ms) ease-in forwards; }
+/* Matches the landing h1 wordmark. */
+.intro-wordmark { display: flex; align-items: baseline; font-size: clamp(60px, 7.5vw, 100px); font-weight: 600; line-height: 1.15; letter-spacing: -.065em; white-space: nowrap; user-select: none; }
+.intro-orbit, .intro-arm, .intro-letter, .intro-verity, .intro-dot { display: inline-block; }
+/* Each letter orbits its own slot: the wrapper rotates, the arm shrinks the radius to 0, the letter spins about itself. */
+.intro-orbit { animation: intro-orbit var(--intro-letter-ms) cubic-bezier(.22, 1, .36, 1) var(--intro-delay) both; }
+.intro-arm { animation: intro-radius var(--intro-letter-ms) cubic-bezier(.33, 1, .68, 1) var(--intro-delay) both; }
+.intro-letter { animation: intro-spin var(--intro-letter-ms) cubic-bezier(.22, 1, .36, 1) var(--intro-delay) both; }
+.intro-verity { animation: intro-slide var(--intro-verity-ms) cubic-bezier(.22, 1, .36, 1) var(--intro-verity-start) both; }
+.intro-dot { color: var(--accent-text); transform-origin: 50% 75%; animation: intro-dot var(--intro-dot-ms) ease-out var(--intro-dot-start) both; }
+@keyframes intro-orbit { from { transform: rotate(calc(var(--intro-angle) - 360deg)); } to { transform: rotate(0deg); } }
+@keyframes intro-radius { from { transform: translateX(1.2em); } to { transform: translateX(0); } }
+@keyframes intro-spin { from { opacity: 0; transform: rotate(-360deg); } 15% { opacity: 1; } to { opacity: 1; transform: rotate(0deg); } }
+@keyframes intro-slide { from { transform: translateX(100vw); } to { transform: translateX(0); } }
+@keyframes intro-dot { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: scale(1); } }
+@keyframes console-intro-fade { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(1.04); } }
+/* The CTA navigates natively under reduced motion; this is a backstop. */
+@media (prefers-reduced-motion: reduce) { .console-intro { display: none; } }
