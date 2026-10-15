@@ -206,7 +206,7 @@ and results live only in the response (and, in public demo mode, the in-memory s
 | --- | --- | --- | --- | --- | --- |
 | `rider_claim` | yes, cleaned: rider advocate and narration | no | no | yes (advocate evidence) | no |
 | `driver_statement` | yes, cleaned: driver advocate and narration | no | no | yes | no |
-| Chat messages | only those matching a keyword, quoted in the facts, to all three calls | no | no | yes (`judge_evidence`) | no |
+| Chat messages | lines matching a keyword, quoted in the facts; plus, when the Evidence Collection agent calls `chat_window`, up to 8 rider/driver messages (200 characters each, clock time only) from a window of at most 60 minutes. Both go to the advocates, rebuttals and Judge. **Phone numbers, emails and links are replaced with placeholders** before quoting (`text_safety.redact_contacts`); names and street addresses can't be detected reliably and stay | no | no | yes (`judge_evidence`, `evidence_collection`) | no |
 | Trip distances and durations | only as derived percentages | no | no | yes (facts) | no |
 | GPS coordinates | **never**; only the derived distance from pickup in metres | no | no | no | no |
 | `gps_points` | never (not read by the pipeline) | no | no | no | no |
@@ -243,7 +243,8 @@ repository is made public; if they don't allow it, remove the file and git-ignor
 | Rate-limit and budget counters are in memory, per process | one uvicorn worker for the demo | shared store (Redis) |
 | Party messages are English only | the checks read English; non-Latin scripts are rejected | multilingual checks, or translate after checking |
 | Advocate summaries can carry attacker text into the reviewer console (11 of 51 live runs after hardening: a canary, a repeated invented figure, or no rule cited) | internal only, labelled as an unverified argument, checked for links and markup, never decides | reviewer training; a second-opinion check if the console is ever shown to parties |
-| Claims and chat go to a third-party model | needed for the product | data-processing agreement; regional model hosting |
+| Claims and chat go to a third-party model | needed for the product; contact details are removed from chat quotes, and the evidence collector quotes at most 8 messages from one window | data-processing agreement; regional model hosting; name and address redaction |
+| Chat without a keyword can now reach the advocates and the Judge through the evidence collector's `chat_window` (it used to be filtered out, finding F4), so more attacker text reaches the prompts | rulings stay rule-based and the output checks hold even with an obedient model (`test_chat_injection_through_the_collector_cannot_change_the_ruling`) | as for other prompt injection: re-run the live red team after prompt changes |
 | No audit log of decisions | nothing is persisted | append-only audit log |
 | The organisers' sample case (DISP-002) is in the repository, with its sample names, plate and flags | the repository is private and the demo needs the case | confirm the organisers' terms before publishing; otherwise remove and git-ignore it |
 

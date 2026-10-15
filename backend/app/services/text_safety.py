@@ -32,6 +32,13 @@ _LINK_RE = re.compile(
 )
 _MARKUP_RE = re.compile(r"<|\]\(|`|!\[")
 _PHONE_RE = re.compile(r"(?<![\w$.,])\+?\d(?:[\s-]?\d){6,}")
+# For redacting contact details out of quoted text (emails first: their domain looks like a link).
+_EMAIL_REDACT_RE = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
+_LINK_REDACT_RE = re.compile(
+    r"https?://[^\s,;\"']+|www\.[^\s,;\"']+"
+    r"|\b[\w-]+(?:\.[\w-]+)*\.(?:com|net|org|io|sg|co|me|ly|app|dev|info|biz|xyz|link|site|online|example)\b(?:/[^\s,;\"']*)?",
+    re.IGNORECASE,
+)
 _WORD_RE = re.compile(r"[a-z0-9'-]+")
 _ECHO_WORDS = 8
 
@@ -47,6 +54,17 @@ def normalise(text: str) -> str:
     text = unicodedata.normalize("NFKC", text)
     text = _INVISIBLE_RE.sub("", text)
     return text.translate(_DASHES).translate(_QUOTES).translate(_CONFUSABLES)
+
+
+def redact_contacts(text: str) -> str:
+    """Replace phone numbers, emails and links with placeholders (data minimisation).
+
+    For party text quoted to the AI provider. Names and street addresses can't be
+    detected reliably and are kept; see docs/security.md.
+    """
+    text = _EMAIL_REDACT_RE.sub("[email removed]", text)
+    text = _LINK_REDACT_RE.sub("[link removed]", text)
+    return _PHONE_RE.sub("[phone removed]", text)
 
 
 def find_link_or_markup(text: str) -> str | None:
