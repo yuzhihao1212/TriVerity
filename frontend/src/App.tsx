@@ -1,9 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { FactLibrary } from "./FactLibrary";
+import { CaseComparison } from "./CaseComparison";
+import { Debate } from "./Debate";
+import { EvidenceList } from "./EvidenceList";
+import { VerdictSummary } from "./VerdictSummary";
+import { factIndex, filterDisputes, money, readPresentationPreference, writePresentationPreference } from "./presentation";
 import { PartyPreview } from "./PartyPreview";
 import { DisputeForm } from "./DisputeForm";
 import { getSamples, resolveDispute } from "./services/api";
-import type { AgentCase, Decision, DisputeCase, PartyHistory, Resolution, RiskLevel } from "./types";
+import type { Decision, DisputeCase, PartyHistory, Resolution, RiskLevel } from "./types";
 
 const TYPE_LABELS: Record<DisputeCase["type"], string> = {
   route_deviation: "Route deviation",
@@ -28,14 +34,6 @@ const AGENT_LABELS: Record<string, string> = {
   judge: "Judge",
 };
 
-const SOURCE_LABELS: Record<string, string> = {
-  trip: "Trip",
-  gps: "GPS",
-  fare: "Fare",
-  chat: "Chat",
-  history: "History",
-};
-
 // The judge types their access code; it is kept for this browser tab only and is
 // never part of the built bundle.
 const ACCESS_CODE_KEY = "triverity.accessCode";
@@ -57,7 +55,15 @@ function saveAccessCode(code: string) {
   }
 }
 
+function loadPresentationMode() {
+  try { return readPresentationPreference(localStorage); } catch { return false; }
+}
+
 export default function App() {
+  const [presentation, setPresentation] = useState(loadPresentationMode);
+  const [filter, setFilter] = useState("all");
+  const [activeFact, setActiveFact] = useState<string | null>(null);
+  const [factRequest, setFactRequest] = useState(0);
   const [samples, setSamples] = useState<DisputeCase[]>([]);
   // Disputes the judge typed in; resolved with their access code.
   const [own, setOwn] = useState<DisputeCase[]>([]);
@@ -67,6 +73,8 @@ export default function App() {
   // Results are kept per dispute so revisiting a case doesn't call the LLM again.
   const [results, setResults] = useState<Record<string, Resolution>>({});
   const [resolving, setResolving] = useState<string | null>(null);
+  const [completedId, setCompletedId] = useState<string | null>(null);
+  const [loadingSamples, setLoadingSamples] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Loading the samples is free; the agents (and LLM tokens) only run on "Resolve".
@@ -76,16 +84,19 @@ export default function App() {
         setSamples(cases);
         if (cases.length) setSelected(cases[0]);
       })
-      .catch(() => setError("Can't reach the backend. Start it with: cd backend && uvicorn app.main:app --reload"));
+      .catch(() => setError("Can’t load disputes. Check your connection and reload the page."))
+      .finally(() => setLoadingSamples(false));
   }, []);
 
   function select(dispute: DisputeCase) {
+    setActiveFact(null);
     setSelected(dispute);
     setForm(null);
     setError(null);
   }
 
   function addOwn(dispute: DisputeCase) {
+    setFilter("all");
     setOwn((prev) => [dispute, ...prev]);
     select(dispute);
   }
@@ -96,18 +107,55 @@ export default function App() {
   }
 
   function resolve(dispute: DisputeCase) {
+    if (resolving !== null) return;
     setError(null);
     setResolving(dispute.dispute_id);
     // Samples never send the code: they are served from the server's cache and
     // don't use up the judge's quota.
     const isOwn = own.some((d) => d.dispute_id === dispute.dispute_id);
     resolveDispute(dispute, isOwn ? accessCode.trim() || undefined : undefined)
-      .then((r) => setResults((prev) => ({ ...prev, [dispute.dispute_id]: r })))
+      .then((r) => {
+        setActiveFact(null);
+        setResults((prev) => ({ ...prev, [dispute.dispute_id]: r }));
+        setCompletedId(dispute.dispute_id);
+      })
       .catch((e: Error) => setError(e.message))
       .finally(() => setResolving(null));
   }
 
   const resolution = selected ? results[selected.dispute_id] : undefined;
+  const facts = useMemo(() => resolution ? factIndex(resolution) : [], [resolution]);
+  const factIds = useMemo(() => new Set(facts.map(fact => fact.id!)), [facts]);
+
+  function selectFact(id: string) {
+    if (!factIds.has(id)) return;
+    setActiveFact(id);
+    setFactRequest(value => value + 1);
+  }
+
+  function togglePresentation() {
+    const next = !presentation;
+    setPresentation(next);
+    try { writePresentationPreference(localStorage, next); } catch { /* Storage itself may be blocked. */ }
+  }
+
+  useEffect(() => {
+    if (!form && resolving === selected?.dispute_id) {
+      const heading = document.getElementById("loading-title");
+      heading?.scrollIntoView({ block: "start" });
+      heading?.focus({ preventScroll: true });
+    }
+  }, [resolving, selected?.dispute_id, form]);
+
+  useEffect(() => {
+    if (!completedId) return;
+    if (!form && completedId === selected?.dispute_id) {
+      const summary = document.getElementById("ruling-summary");
+      summary?.scrollIntoView({ block: "start" });
+      summary?.focus({ preventScroll: true });
+    }
+    setCompletedId(null);
+  }, [completedId, selected, form]);
 
   const disputeButton = (d: DisputeCase) => (
     <button
@@ -117,7 +165,7 @@ export default function App() {
       onClick={() => select(d)}
     >
       <span className="dispute-meta">
-        {d.dispute_id} · {TYPE_LABELS[d.type]}
+        <TypeIcon type={d.type} />{d.dispute_id} · {TYPE_LABELS[d.type]}
       </span>
       <span className="dispute-claim">{d.rider_claim}</span>
       {results[d.dispute_id] && (
@@ -127,12 +175,13 @@ export default function App() {
   );
 
   return (
-    <div className="app">
+    <div className={`app${presentation ? " presentation-mode" : ""}`}>
       <a className="skip-link" href="#main-content">Skip to dispute</a>
       <header className="topbar">
         <h1 className="brand">TriVerity</h1>
         <span className="muted">Multi-agent dispute resolution for Ryde</span>
         <div className="topbar-right">
+          <button type="button" className="secondary-button presentation-toggle" aria-pressed={presentation} onClick={togglePresentation}>Presentation mode</button>
           <label className="access-code">
             <span className="small muted">Judge access code</span>
             <input
@@ -158,21 +207,32 @@ export default function App() {
           <button className="secondary-button" onClick={() => { setForm({}); setError(null); }}>
             + New dispute
           </button>
+          <label className="sidebar-filter"><span className="section-label">Filter disputes</span>
+            <select value={filter} onChange={event => setFilter(event.target.value)}>
+              <option value="all">All dispute types</option><option value="route_deviation">Route deviation</option><option value="no_show_charge">No-show charge</option>
+            </select>
+          </label>
+          {selected && filter !== "all" && selected.type !== filter && <p className="small muted">The selected case is outside this filter.</p>}
+          {!loadingSamples && !filterDisputes([...own, ...samples], filter).length && <p className="small muted">No disputes match this filter.</p>}
           {own.length > 0 && (
             <>
               <h2 className="section-label">Your disputes</h2>
-              {own.map(disputeButton)}
+              {filterDisputes(own, filter).map(disputeButton)}
             </>
           )}
           <h2 className="section-label">Sample disputes</h2>
-          {samples.map(disputeButton)}
+          {filterDisputes(samples, filter).map(disputeButton)}
         </nav>
 
         <main className="content" id="main-content" tabIndex={-1}>
           <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-            {resolving ? `Agents working on ${resolving}…` : resolution ? "Saved ruling ready." : ""}
+            {loadingSamples ? "Loading sample disputes…" : resolving ? `Agents working on ${resolving} (about 10–15 seconds). Waiting for the complete result.` : resolution ? "Saved ruling ready." : ""}
           </p>
           <div role="alert" aria-atomic="true">{error && <p className="error">{error}</p>}</div>
+          {!form && loadingSamples && <section className="card empty-state"><h2>Loading disputes…</h2><p className="muted">The sample list is loading. No agents have run.</p></section>}
+          {!form && !loadingSamples && !selected && <section className="card empty-state"><h2>No dispute selected</h2><p className="muted">Choose a sample or add a new dispute to begin.</p></section>}
+          {!form && resolving && <LoadingPanel disputeId={resolving} />}
+          {!form && resolution && selected && <VerdictSummary resolution={resolution} disputeId={selected.dispute_id} />}
           {form && (
             <DisputeForm
               key={form.template?.dispute_id ?? "blank"}
@@ -198,16 +258,20 @@ export default function App() {
                 </svg>
                 Uses real AI tokens (~5,400 per run)
               </span>
-              {resolution && <span className="small muted">Showing the saved result.</span>}
+              {resolution && <span className="small muted">Showing the saved result. Re-running uses tokens again.</span>}
               <button className="secondary-button" onClick={() => { setForm({ template: selected }); setError(null); }}>
                 Edit as new dispute
               </button>
             </div>
           )}
+          {!form && selected && !resolution && !resolving && <section className="card empty-state"><h2>Ready when you are</h2><p className="muted">Resolve this dispute to hear both sides and see the policy ruling. Selecting a case does not run the agents.</p></section>}
           {!form && resolution && (
             <>
               <Workflow resolution={resolution} />
+              <Debate key={selected?.dispute_id} resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
+              <section className="card"><RiskPanel risk={resolution.risk} /></section>
               <RulingPanel resolution={resolution} />
+              <FactLibrary key={selected?.dispute_id} facts={facts} activeId={activeFact} request={factRequest} />
               <PartyPreview key={selected?.dispute_id} resolution={resolution} />
               <details className="card raw">
                 <summary>Raw API response</summary>
@@ -224,23 +288,32 @@ export default function App() {
 function CasePanel({ dispute }: { dispute: DisputeCase }) {
   const { trip, fare } = dispute;
   const facts: [string, string][] = [];
-  if (trip.expected_distance_km != null)
-    facts.push(["Distance", `${trip.expected_distance_km} km expected → ${trip.actual_distance_km ?? "?"} km actual`]);
-  if (trip.expected_duration_min != null)
-    facts.push(["Duration", `${trip.expected_duration_min} min expected → ${trip.actual_duration_min ?? "?"} min actual`]);
-  if (fare.expected != null) facts.push(["Fare", `${money(fare.expected)} expected → ${money(fare.actual)} charged`]);
   if (fare.cancellation_fee != null) facts.push(["No-show fee", money(fare.cancellation_fee)]);
   if (trip.driver_wait_min != null) facts.push(["Driver waited", `${trip.driver_wait_min} min`]);
   if (fare.surge_multiplier != null && fare.surge_multiplier > 1) facts.push(["Surge", `x${fare.surge_multiplier}`]);
-  if (fare.promo_code) facts.push(["Promo", `${fare.promo_code} (${money(fare.promo_discount)} off)`]);
+  if (fare.promo_code) facts.push(["Promo", fare.promo_discount != null
+    ? `${fare.promo_code} (${money(fare.promo_discount)} off)` : `${fare.promo_code} (discount not recorded)`]);
 
   return (
-    <section className="card">
+    <section className="card case-overview">
       <div className="card-head">
         <h2>
           {dispute.dispute_id} <span className="tag">{TYPE_LABELS[dispute.type]}</span>
         </h2>
       </div>
+      <p className="eyebrow">Case at a glance</p>
+      <CaseComparison dispute={dispute} />
+      {facts.length > 0 && (
+        <dl className="facts">
+          {facts.map(([k, v]) => (
+            <div key={k}>
+              <dt>{k}</dt>
+              <dd>{v}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      <details className="case-details"><summary>Statements, chat and history</summary>
       <div className="statements">
         <blockquote className="rider">
           <span className="who">Rider</span>
@@ -252,16 +325,6 @@ function CasePanel({ dispute }: { dispute: DisputeCase }) {
         </blockquote>
       </div>
 
-      {facts.length > 0 && (
-        <dl className="facts">
-          {facts.map(([k, v]) => (
-            <div key={k}>
-              <dt>{k}</dt>
-              <dd>{v}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
 
       {dispute.chat_logs.length > 0 && (
         <>
@@ -281,6 +344,7 @@ function CasePanel({ dispute }: { dispute: DisputeCase }) {
         <History label="Rider history" history={dispute.rider_history} />
         <History label="Driver history" history={dispute.driver_history} />
       </div>
+      </details>
     </section>
   );
 }
@@ -302,7 +366,9 @@ function History({ label, history }: { label: string; history: PartyHistory }) {
 function Workflow({ resolution }: { resolution: Resolution }) {
   return (
     <section className="card">
-      <h2 className="section-label">Agent workflow</h2>
+      <h2>How this ruling was reached</h2>
+      <p className="small muted">Facts computed → advocates argue → fraud check → replies when available → policy rules decide → Hy3 explains.</p>
+      <details className="disclosure"><summary>View all {resolution.agent_log.length} agent log entries</summary>
       <ol className="steps">
         {resolution.agent_log.map((entry) => (
           <li key={entry.step} className={`step ${entry.agent}`}>
@@ -314,11 +380,7 @@ function Workflow({ resolution }: { resolution: Resolution }) {
           </li>
         ))}
       </ol>
-      {resolution.risk.signals.length > 0 && <RiskPanel risk={resolution.risk} />}
-      <div className="advocates">
-        <AdvocateCard title="Rider advocate" side="rider" agentCase={resolution.rider_case} />
-        <AdvocateCard title="Driver advocate" side="driver" agentCase={resolution.driver_case} />
-      </div>
+      </details>
     </section>
   );
 }
@@ -326,7 +388,7 @@ function Workflow({ resolution }: { resolution: Resolution }) {
 function RiskPanel({ risk }: { risk: Resolution["risk"] }) {
   return (
     <div className="risk-panel">
-      <h3 className="section-label">Fraud & bad-faith risk</h3>
+      <div><p className="eyebrow">Internal review only</p><h2>Fraud &amp; bad-faith risk</h2></div>
       <div className="risk-badges">
         <div className="risk-row">
           <span className="risk-party">Rider</span>
@@ -337,6 +399,7 @@ function RiskPanel({ risk }: { risk: Resolution["risk"] }) {
           <RiskBadge level={risk.driver_risk} />
         </div>
       </div>
+      {risk.signals.length === 0 && <p className="small muted">No bad-faith signals detected.</p>}
       {risk.signals.length > 0 && (
         <ul className="small risk-signals">
           {risk.signals.map((s, i) => (
@@ -356,69 +419,13 @@ function RiskBadge({ level }: { level: RiskLevel }) {
   );
 }
 
-function AdvocateCard({ title, side, agentCase }: { title: string; side: string; agentCase: AgentCase }) {
-  return (
-    <div className={`advocate ${side}`}>
-      <h3>
-        {title}
-        <span className={`source-badge ${agentCase.source}`}>
-          {agentCase.source === "llm" ? "AI" : "Fallback"}
-        </span>
-      </h3>
-      <p>{agentCase.summary}</p>
-      <h4 className="section-label">Evidence</h4>
-      {agentCase.sources.length > 0 && (
-        <p className="evidence-sources small" aria-label="Evidence sources used">
-          {agentCase.sources.map((src) => (
-            <span key={src} className="source-chip">{SOURCE_LABELS[src] ?? src}</span>
-          ))}
-        </p>
-      )}
-      <ul className="small">
-        {agentCase.evidence.map((e, i) => (
-          <li key={i}>
-            {agentCase.evidence_ids[i] && agentCase.evidence_ids.length === agentCase.evidence.length && (
-              <span className="evidence-id">{agentCase.evidence_ids[i]}</span>
-            )}
-            {e}
-          </li>
-        ))}
-      </ul>
-      {agentCase.rebuttal?.text && (
-        <div className="rebuttal">
-          <h4 className="section-label">
-            Rebuttal to the {side === "rider" ? "driver" : "rider"}
-            <span className={`source-badge ${agentCase.rebuttal.source}`}>
-              {agentCase.rebuttal.source === "llm" ? "AI" : "Fallback"}
-            </span>
-          </h4>
-          <p className="small">{agentCase.rebuttal.text}</p>
-          {agentCase.rebuttal.evidence_ids.length > 0 && (
-            <p className="small muted">Cites {agentCase.rebuttal.evidence_ids.join(", ")}</p>
-          )}
-        </div>
-      )}
-      <h4 className="section-label">Policy cited</h4>
-      {agentCase.policy_refs.length ? (
-        <ul className="small">
-          {agentCase.policy_refs.map((p) => (
-            <li key={p}>{p}</li>
-          ))}
-        </ul>
-      ) : (
-        <p className="small muted">None yet</p>
-      )}
-    </div>
-  );
-}
-
 function RulingPanel({ resolution }: { resolution: Resolution }) {
   const pct = Math.round(resolution.confidence * 100);
   return (
-    <section className={`card ruling ${resolution.decision}`}>
+    <section className="card ruling-detail">
       <div className="card-head">
         <h2>
-          Judge's ruling
+          Why the Judge ruled this way
           <span className={`source-badge ${resolution.explanation_source}`}>
             {resolution.explanation_source === "llm" ? "AI" : "Fallback"}
           </span>
@@ -445,15 +452,24 @@ function RulingPanel({ resolution }: { resolution: Resolution }) {
       </ul>
 
       <h3 className="section-label">Evidence considered</h3>
-      <ul className="small">
-        {resolution.judge_evidence.map((e, i) => (
-          <li key={i}>{e}</li>
-        ))}
-      </ul>
+      <EvidenceList texts={resolution.judge_evidence} />
     </section>
   );
 }
 
-function money(value: number | null | undefined) {
-  return value == null ? "?" : `$${value.toFixed(2)}`;
+function LoadingPanel({ disputeId }: { disputeId: string }) {
+  return <section className="card loading-state" aria-labelledby="loading-title">
+    <div className="card-head"><h2 id="loading-title" tabIndex={-1}>Agents working · {disputeId}</h2><span className="spinner" role="progressbar" aria-label="Waiting for the complete agent result" /></div>
+    <p>About 10–15 seconds. The server returns one complete result; individual step progress is not available.</p>
+    <ol className="pending-steps"><li>Evidence loader</li><li>Rider &amp; Driver advocates</li><li>Fraud detector</li><li>Rebuttal round</li><li>Judge: policy ruling &amp; explanation</li></ol>
+    <p className="small muted">These are the stages of a resolve, not live progress. Any previous saved result remains below.</p>
+  </section>;
+}
+
+function TypeIcon({ type }: { type: DisputeCase["type"] }) {
+  return <svg className="type-icon" viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true" focusable="false">
+    {type === "route_deviation"
+      ? <><circle cx="4" cy="4" r="2" /><circle cx="16" cy="16" r="2" /><path d="M6 4h6a4 4 0 0 1 0 8H8a4 4 0 0 0-4 4h10" /></>
+      : <><circle cx="10" cy="10" r="7" /><path d="M10 5v5l3 2" /></>}
+  </svg>;
 }
