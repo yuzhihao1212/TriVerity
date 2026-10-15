@@ -81,6 +81,13 @@ export interface PrecedentMatch {
   note?: string;   // never sent by the API (reviewer notes stay on the server)
 }
 
+export interface Counterfactual {
+  change: string;
+  outcome: string;
+  decision: Decision | null;
+  rules: string[];
+}
+
 export interface PrecedentReport {
   matches: PrecedentMatch[];
   recommended_decision: Decision | null;
@@ -115,5 +122,7 @@ export interface Resolution {
   triage?: Triage;
   // Absent from backends without the Policy & Precedent agent (before PR #31).
   precedents?: PrecedentReport;
+  // What would have changed the ruling (computed from the policy, never by the AI).
+  counterfactuals?: Counterfactual[];
   agent_log: AgentLogEntry[];
 }

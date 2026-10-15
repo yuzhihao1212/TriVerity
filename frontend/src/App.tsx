@@ -12,7 +12,7 @@ import { computedFacts, filterDisputes, money, readPresentationPreference, write
 import { PartyPreview } from "./PartyPreview";
 import { DisputeForm } from "./DisputeForm";
 import { getSamples, resolveDispute } from "./services/api";
-import type { Decision, DisputeCase, PartyHistory, PrecedentReport, Resolution, RiskLevel, Triage, TriageTier } from "./types";
+import type { Counterfactual, Decision, DisputeCase, PartyHistory, PrecedentReport, Resolution, RiskLevel, Triage, TriageTier } from "./types";
 
 const TYPE_LABELS: Record<DisputeCase["type"], string> = {
   route_deviation: "Route deviation",
@@ -265,6 +265,7 @@ export default function App() {
                 {tab === "ruling" && resolution && <>
                   <VerdictSummary resolution={resolution} disputeId={selected.dispute_id} />
                   <RulingPanel resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
+                  {resolution.counterfactuals && resolution.counterfactuals.length > 0 && <section className="card"><CounterfactualPanel items={resolution.counterfactuals} /></section>}
                   {resolution.precedents && <section className="card"><PrecedentPanel report={resolution.precedents} /></section>}
                   {resolution.triage && <section className="card"><TriagePanel triage={resolution.triage} /></section>}
                   <section className="card"><RiskPanel risk={resolution.risk} /></section>
@@ -397,6 +398,22 @@ function TriagePanel({ triage }: { triage: Triage }) {
       ) : (
         <p className="small muted">Resolved automatically; no human review needed.</p>
       )}
+    </div>
+  );
+}
+
+function CounterfactualPanel({ items }: { items: Counterfactual[] }) {
+  return (
+    <div className="risk-panel">
+      <div><p className="eyebrow">Internal review only · computed from the policy</p><h2>What would change this ruling</h2></div>
+      <ul className="small counterfactual-list">
+        {items.map((cf, i) => (
+          <li key={i}>
+            If {cf.change}, the outcome would be <strong>{cf.outcome}</strong>
+            {cf.rules.length > 0 && <span className="muted"> ({cf.rules.join(", ")})</span>}.
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

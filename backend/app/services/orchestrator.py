@@ -11,6 +11,7 @@ from app.agents.precedent_agent import consult_precedents
 from app.models.dispute import DisputeCase
 from app.models.resolution import AgentLogEntry, Resolution
 from app.core import limits
+from app.services.counterfactuals import what_would_change
 from app.services.evidence import compute_facts
 from app.services.triage import triage
 
@@ -82,6 +83,7 @@ def resolve_dispute(case: DisputeCase) -> Resolution:
         driver_case=driver_case,
         risk=risk,
         triage=triage(ruling),
+        counterfactuals=what_would_change(case, facts, ruling),
         precedents=precedents,
         evidence_collection=collection,
         agent_log=agent_log,
