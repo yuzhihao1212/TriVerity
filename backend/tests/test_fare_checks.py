@@ -16,7 +16,7 @@ def line(label, amount):
 @pytest.mark.parametrize('fare, expected', [
     ({}, None),
     ({'actual': 10, 'promo_discount': 2, 'breakdown': [line('Base', 12)]}, None),
-    ({'promo_code': 'RYDE10'}, False),
+    ({'promo_code': 'RYDE10'}, None),  # no recorded discount: unknown, not "not reflected"
     ({'promo_code': 'RYDE10', 'promo_discount': 2}, None),
     ({'promo_code': 'RYDE10', 'promo_discount': 2, 'actual': 8}, None),
     ({'promo_code': 'RYDE10', 'promo_discount': 2, 'breakdown': [line('Base', 10)]}, None),
@@ -33,7 +33,7 @@ def test_promo(fare, expected):
 
 @pytest.mark.parametrize('multiplier, breakdown, expected', [
     (None, [], None), (1, [line('Base', 10)], None), (1.5, [], None),
-    (1.5, [line('Base', 10)], False),
+    (1.5, [line('Base', 10)], None),  # surge may be inside the base line: can't check
     (1.5, [line('Base', 10), line('Surge x1.5', 5)], True),
     (1.5, [line('Base', 10), line('Surge', 7)], False),
     (1.5, [line('Base', 10), line('SURGE', 2), line('Surge adjustment', 3)], True),
@@ -45,7 +45,7 @@ def test_promo(fare, expected):
     (1.5, [line('Base', 10), line('Surge', 5.26)], False),
     (1.1, [line('Base', 1), line('Surge', .12)], True),
     (1.1, [line('Base', 1), line('Surge', .13)], False),
-    (1.5, [line('Base', 10), line('NotSurge', 5)], False),
+    (1.5, [line('Base', 10), line('NotSurge', 5)], None),  # no surge line to check
 ])
 def test_surge(multiplier, breakdown, expected):
     assert facts(surge_multiplier=multiplier, breakdown=breakdown).surge_consistent is expected

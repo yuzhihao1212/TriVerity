@@ -187,3 +187,39 @@ def test_conflicting_duplicate_keeps_first_valid_point():
     result = analyse_gps([point(0), point(0, lat=20), point(1)], TripData())
     assert result.path_distance_km == 0
     assert result.points_rejected == 1
+
+
+METRES_PER_DEGREE_LAT = 111_195
+
+
+def test_slow_traffic_is_not_an_unexpected_stop():
+    # 25 minutes crawling at 2 km/h (about 33 m a minute, 830 m in total): traffic, not a stop.
+    step = 2000 / 60 / METRES_PER_DEGREE_LAT
+    points = [point(i, lat=1.30 + i * step, speed=2) for i in range(26)]
+    result = analyse_gps(points, TripData())
+    assert result.unexpected_stops == []
+    assert result.total_stopped_min == 0
+
+
+def test_stationary_stop_with_gps_drift_is_still_one_stop():
+    # A parked car whose GPS wanders up to ~20 m stays one stop.
+    jitter = [0, 15, -10, 20, -18, 5, 0]
+    points = [point(i, lat=1.32 + j / METRES_PER_DEGREE_LAT, speed=0) for i, j in enumerate(jitter)]
+    result = analyse_gps(points, TripData())
+    assert len(result.unexpected_stops) == 1
+    assert result.unexpected_stops[0].duration_min == 6
+
+
+def test_stop_ends_when_the_vehicle_crawls_away():
+    # Parked for 5 minutes, then crawling slowly away: only the parked part is a stop.
+    step = 2000 / 60 / METRES_PER_DEGREE_LAT
+    parked = [point(i, speed=0) for i in range(6)]
+    crawl = [point(6 + i, lat=1.32 + (i + 1) * 2 * step, speed=2) for i in range(10)]
+    result = analyse_gps(parked + crawl, TripData())
+    assert len(result.unexpected_stops) == 1
+    assert 5 <= result.unexpected_stops[0].duration_min <= 6
+
+
+def test_one_usable_point_wording():
+    facts = CaseFacts(gps=analyse_gps([point()], TripData()), chat=ChatAnalysis())
+    assert "GPS path unavailable (1 usable point)" in facts.describe()

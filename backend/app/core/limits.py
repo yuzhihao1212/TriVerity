@@ -122,6 +122,9 @@ GPS_MAX_LONGITUDE = 180
 # Allow idling/creep and GPS jitter, but require a sustained stop rather than a light.
 GPS_STOP_SPEED_KMH = 3
 GPS_STOP_RADIUS_M = 25
+# How far a stopped vehicle's GPS position may drift and still count as the same stop.
+# Crawling further than this (e.g. 2 km/h for 3 min = 100 m) is traffic, not a stop.
+GPS_STOP_DRIFT_M = 50
 GPS_STOP_MIN_DURATION_MIN = 3
 # Match NS-1's 100 m pickup tolerance; use the same tolerance at drop-off.
 GPS_ENDPOINT_RADIUS_M = 100

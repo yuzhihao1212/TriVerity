@@ -135,7 +135,9 @@ def analyse_gps(raw_points: list[dict], trip: TripData, *, route_trip: bool = Fa
         if not excluded(point):
             slow = point[4] is not None and point[4] <= limits.GPS_STOP_SPEED_KMH
             if anchor is not None:
-                if slow or distance(anchor, point) < limits.GPS_STOP_RADIUS_M:
+                # A stop lasts while the vehicle stays near where it stopped (allowing for GPS
+                # drift). Slow movement beyond that is traffic, not a stop.
+                if distance(anchor, point) <= limits.GPS_STOP_DRIFT_M:
                     end = point
                 else:
                     finish()

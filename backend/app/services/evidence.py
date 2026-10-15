@@ -79,7 +79,7 @@ class CaseFacts(BaseModel):
                               if gps.path_vs_expected_ratio is not None else "")
                 lines.append(f"GPS path {gps.path_distance_km:.1f} km over {gps.points_used} points{comparison}")
             else:
-                lines.append(f"GPS path unavailable ({gps.points_used} usable points)")
+                lines.append(f"GPS path unavailable ({gps.points_used} usable {'point' if gps.points_used == 1 else 'points'})")
             for stop in gps.unexpected_stops or []:
                 lines.append(f"Unexpected stop: {stop.duration_min:g} min at {stop.start_time:%H:%M}")
             if gps.total_stopped_min is not None:
@@ -173,7 +173,7 @@ def _promo_check(fare: FareData) -> bool | None:
     if not fare.promo_code:
         return None
     if fare.promo_discount is None:
-        return False
+        return None  # no recorded discount: the data is missing, not proof the promo was ignored
     if not fare.breakdown or fare.actual is None:
         return None
     expected_charge = sum(line.amount for line in fare.breakdown) - fare.promo_discount
@@ -186,7 +186,7 @@ def _surge_check(fare: FareData) -> bool | None:
         return None
     surge_lines = [line for line in fare.breakdown if re.search(r"\bsurge\b", line.label, re.IGNORECASE)]
     if not surge_lines:
-        return False
+        return None  # surge may be built into the base or distance lines, so it can't be checked
     # FareData defines the breakdown as pre-promo charges. Without typed tariff
     # components, use the non-surge subtotal as the multiplier's base. This checks
     # arithmetic, not tariff eligibility (e.g. whether a toll is surge-exempt).
