@@ -14,6 +14,8 @@ import { computedFacts, disputeLabel, filterDisputes, money } from "./presentati
 import { focusSection, selectSample } from "./routes";
 import { AppealsPanel } from "./Appeals";
 import { ReviewerDecision } from "./ReviewerDecision";
+import { AiToggle } from "./AiToggle";
+import { readAiMode, writeAiMode, type AiMode } from "./aiMode";
 import { Term } from "./Term";
 import { ThemeToggle } from "./ThemeToggle";
 import type { Theme } from "./theme";
@@ -61,6 +63,12 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
   theme: Theme; onToggleTheme: () => void;
 }) {
   const [filter, setFilter] = useState("all");
+  const [aiMode, setAiMode] = useState<AiMode>(() => readAiMode(localStorage));
+  function toggleAi() {
+    const next: AiMode = aiMode === "live" ? "offline" : "live";
+    setAiMode(next);
+    writeAiMode(localStorage, next);
+  }
   const [activeTabs, setActiveTabs] = useState<Record<string, WorkflowTab>>({});
   const [activeFact, setActiveFact] = useState<string | null>(null);
   const [factRequest, setFactRequest] = useState(0);
@@ -128,7 +136,7 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
     const isOwn = own.some((d) => d.dispute_id === dispute.dispute_id);
     resolveDisputeLive(dispute, entry => {
       setLiveSteps(previous => previous.some(item => item.step === entry.step) ? previous : [...previous, entry]);
-    }, () => setStreaming(false), isOwn ? accessCode.trim() || undefined : undefined)
+    }, () => setStreaming(false), isOwn ? accessCode.trim() || undefined : undefined, aiMode)
       .then((r) => {
         setActiveFact(null);
         setResults((prev) => ({ ...prev, [dispute.dispute_id]: r }));
@@ -200,6 +208,7 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
         <h1 className="brand"><a className="console-home" href="#/">TriVerity<span className="sr-only"> home</span></a></h1>
         <span className="muted">Multi-agent dispute resolution for Ryde</span>
         <div className="topbar-right">
+          <AiToggle mode={aiMode} onToggle={toggleAi} />
           <ThemeToggle theme={theme} onToggle={onToggleTheme} />
           <button type="button" className="secondary-button presentation-toggle" aria-pressed={presentation} onClick={onTogglePresentation}>Presentation mode</button>
           <label className="access-code">
@@ -273,7 +282,9 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
                     <button className="run-button" onClick={() => resolve(selected)} disabled={resolving !== null}>
                       {resolution ? "Re-run agents" : "Run agents"}
                     </button>
-                    <span className="token-warning" role="note">Uses real AI tokens when enabled · retries once if streaming fails</span>
+                    <span className={`token-warning${aiMode === "offline" ? " offline" : ""}`} role="note">{aiMode === "live"
+                      ? "AI live: uses real tokens (about $0.002 per run)"
+                      : "AI offline: free, same ruling; arguments and explanations use template text"}</span>
                     <button className="secondary-button" onClick={() => { setForm({ template: selected }); setError(null); }}>Edit as new dispute</button>
                   </div>
                   {resolution && <p className="small muted">This case has a saved result. Re-running uses tokens again.</p>}

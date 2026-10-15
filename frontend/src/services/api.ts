@@ -1,3 +1,4 @@
+import { aiQuery, type AiMode } from "../aiMode";
 import { readResolveStream, withResolveFallback } from "./sse";
 import type { AgentLogEntry, Appeal, Decision, DisputeCase, Resolution } from "../types";
 
@@ -45,10 +46,10 @@ export function getSamples() {
 }
 
 /** Resolve a dispute. Pass the judge's access code only for their own disputes. */
-export function resolveDispute(payload: DisputeCase, accessCode?: string) {
+export function resolveDispute(payload: DisputeCase, accessCode?: string, mode: AiMode = "live") {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (accessCode) headers["X-Demo-Key"] = accessCode;
-  return request<Resolution>("/disputes/resolve", {
+  return request<Resolution>(`/disputes/resolve${aiQuery(mode)}`, {
     method: "POST",
     headers,
     body: JSON.stringify(payload),
@@ -56,15 +57,16 @@ export function resolveDispute(payload: DisputeCase, accessCode?: string) {
 }
 
 /** Stream internal progress; retry the existing JSON transport at most once. */
-export function resolveDisputeLive(payload: DisputeCase, onStep: (entry: AgentLogEntry) => void, onFallback: () => void, accessCode?: string) {
+export function resolveDisputeLive(payload: DisputeCase, onStep: (entry: AgentLogEntry) => void, onFallback: () => void,
+                                   accessCode?: string, mode: AiMode = "live") {
   const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "text/event-stream" };
   if (accessCode) headers["X-Demo-Key"] = accessCode;
   return withResolveFallback(async () => {
-    const response = await fetch(`${API_BASE}/disputes/resolve/stream`, {
+    const response = await fetch(`${API_BASE}/disputes/resolve/stream${aiQuery(mode)}`, {
       method: "POST", headers, body: JSON.stringify(payload),
     });
     return readResolveStream(response, onStep);
-  }, () => resolveDispute(payload, accessCode), onFallback);
+  }, () => resolveDispute(payload, accessCode, mode), onFallback);
 }
 
 const JSON_HEADERS = { "Content-Type": "application/json" };

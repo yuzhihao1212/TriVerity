@@ -14,6 +14,9 @@ from __future__ import annotations
 import logging
 import re
 
+from contextlib import contextmanager
+from contextvars import ContextVar, copy_context
+
 import httpx
 
 from app.core import limits
@@ -44,6 +47,28 @@ def _tokens_used(data: dict, system: str, user: str, reply: str) -> int:
     return (len(system) + len(user) + len(reply)) // 4
 
 
+# Per-request "AI off" switch (the console's offline mode): every call made while it is set
+# returns OFFLINE_PLACEHOLDER, so each agent uses its deterministic fallback and no tokens are
+# spent. It's a context variable, so it follows the request into threads started with
+# carry_context(); it never leaks into other requests.
+_ai_off: ContextVar[bool] = ContextVar("ai_off", default=False)
+
+
+@contextmanager
+def ai_disabled(off: bool = True):
+    token = _ai_off.set(off)
+    try:
+        yield
+    finally:
+        _ai_off.reset(token)
+
+
+def carry_context(fn):
+    """Wrap fn to run in a copy of the caller's context (for thread pools)."""
+    ctx = copy_context()
+    return lambda *args, **kwargs: ctx.run(fn, *args, **kwargs)
+
+
 def complete(system: str, user: str, *, max_tokens: int = limits.DEFAULT_MAX_TOKENS) -> str:
     """Send a chat-completions request and return the assistant's text.
 
@@ -56,7 +81,7 @@ def complete(system: str, user: str, *, max_tokens: int = limits.DEFAULT_MAX_TOK
     parseable JSON, and strips ``\\`\\`\\`json`` code fences from the response.
     ``max_tokens`` bounds the reply. Errors are raised, never retried.
     """
-    if not settings.llm_api_key:
+    if _ai_off.get() or not settings.llm_api_key:
         return OFFLINE_PLACEHOLDER
     if budget.exhausted():
         logger.warning("Daily LLM budget spent; using deterministic fallbacks.")

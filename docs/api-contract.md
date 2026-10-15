@@ -87,6 +87,15 @@ When the daily LLM budget (300,000 tokens or 75 resolves) is spent, `/resolve` s
 returns 200 with the full rule-based ruling, but every `source` and `explanation_source`
 is `"fallback"`. A refund never exceeds `fare.actual` (policy rule REF-1, cited in `policy_refs` when it applies).
 
+### Offline runs (`?ai=off`)
+
+`ai=on` (default) or `ai=off`; anything else gets 422. With `ai=off` the run makes no LLM
+call at all: the ruling is identical (rules decide), and every `source` and
+`explanation_source` is `"fallback"`, so arguments and explanations use template text.
+Offline runs cost nothing, so they don't count against the daily LLM budget and, in public demo
+mode, bypass the result cache (they never read or fill it). Rate limits and resolve slots
+still apply. The console's **AI Live / Offline** switch sets this. `/resolve/stream` accepts it too.
+
 ### Public demo mode (`PUBLIC_DEMO=true`)
 
 For a public link. The request shape is unchanged, but the server reads only

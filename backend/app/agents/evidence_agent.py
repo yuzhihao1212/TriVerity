@@ -23,7 +23,7 @@ from app.models.dispute import DisputeCase
 from app.models.resolution import EvidenceCollection, ToolCallRecord
 from app.services.data_sources import TOOLS, DataSources, data_available, parse_hhmm
 from app.services.evidence import CaseFacts
-from app.services.llm_client import OFFLINE_PLACEHOLDER, _strip_fences, complete
+from app.services.llm_client import OFFLINE_PLACEHOLDER, _strip_fences, carry_context, complete
 from app.services.text_safety import echoes, find_link_or_markup, normalise, sanitise
 
 logger = logging.getLogger(__name__)
@@ -57,8 +57,8 @@ def collect_for_both(case: DisputeCase, facts: CaseFacts) -> tuple[EvidenceColle
     asked for it; the lines both found join the shared evidence once.
     """
     with ThreadPoolExecutor(max_workers=2) as pool:
-        rider_run = pool.submit(collect_evidence, case, facts, "rider")
-        driver_run = pool.submit(collect_evidence, case, facts, "driver")
+        rider_run = pool.submit(carry_context(collect_evidence), case, facts, "rider")
+        driver_run = pool.submit(carry_context(collect_evidence), case, facts, "driver")
         (rider, rider_lines), (driver, driver_lines) = rider_run.result(), driver_run.result()
     collected: dict[str, list[str]] = {}
     for lines in (rider_lines, driver_lines):

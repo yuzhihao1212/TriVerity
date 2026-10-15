@@ -484,3 +484,13 @@ textarea { width: 100%; resize: vertical; }
 .phone-text { font-size: 13px; line-height: 1.5; color: var(--text); }
 .phone-screen .secondary-button, .phone-screen .run-button { width: 100%; }
 @media (prefers-reduced-motion: reduce) { .ruling-section > summary::before { transition: none; } }
+
+/* AI live/offline switch */
+.ai-toggle { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border: 1px solid var(--accent-text); border-radius: 999px; background: var(--bg); color: var(--accent-text); font-size: 12px; white-space: nowrap; }
+.ai-toggle-track { position: relative; width: 28px; height: 16px; border-radius: 999px; background: var(--control-border); transition: background .15s; }
+.ai-toggle-thumb { position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--bg); transition: transform .15s; }
+.ai-toggle.live .ai-toggle-track { background: var(--accent-control); }
+.ai-toggle.live .ai-toggle-thumb { transform: translateX(12px); }
+.ai-toggle.offline { color: var(--muted); border-color: var(--control-border); }
+.token-warning.offline { color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .ai-toggle-track, .ai-toggle-thumb { transition: none; } }
