@@ -71,6 +71,23 @@ export interface Triage {
   reasons: string[];
 }
 
+export interface PrecedentMatch {
+  id: string;
+  similarity: number;
+  decision: Decision;
+  policy_refs: string[];
+  decided_by: "policy" | "human_review";
+  summary: string;
+  note: string;
+}
+
+export interface PrecedentReport {
+  matches: PrecedentMatch[];
+  recommended_decision: Decision | null;
+  consistency: "consistent" | "mixed" | "overridden" | "no_precedent";
+  summary: string;
+}
+
 export interface AgentLogEntry {
   step: number;
   agent: string;
@@ -96,5 +113,7 @@ export interface Resolution {
   risk: RiskAssessment;
   // Absent from backends without triage (before PR #27).
   triage?: Triage;
+  // Absent from backends without the Policy & Precedent agent (before PR #31).
+  precedents?: PrecedentReport;
   agent_log: AgentLogEntry[];
 }

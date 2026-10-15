@@ -76,3 +76,8 @@ test('progress labels describe saved data, not fabricated execution progress', (
   assert.equal(tabProgress('notify',result),'2 messages');
   assert.equal(tabProgress('ruling',result),'Decision ready');
 });
+
+test('the Policy & Precedent agent belongs to the Ruling step', () => {
+  assert.equal(agentTab('precedent_agent'), 'ruling');
+  assert.equal(agentLabel('precedent_agent'), 'Policy & Precedent agent');
+});

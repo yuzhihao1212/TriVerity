@@ -274,3 +274,7 @@ textarea { width: 100%; resize: vertical; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+.precedent-list { display: grid; gap: var(--space-2); }
+/* The full arguments sit right below in the debate; the strip shows the start. */
+.agent-entries p { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }

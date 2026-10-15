@@ -14,7 +14,7 @@ export function AgentsStrip({ tab, resolution, availableIds, onSelectFact }: { t
           <div className="agent-entry-head"><strong>{agentLabel(entry.agent)}</strong>
             <span className="agent-status">{entry.status}</span>
             {source ? <SourceBadge source={source} />
-              : <span className="tag">{["evidence_loader", "fraud_detector"].includes(entry.agent) ? "Code" : "Source not supplied"}</span>}
+              : <span className="tag">{["evidence_loader", "fraud_detector", "precedent_agent"].includes(entry.agent) ? "Code" : "Source not supplied"}</span>}
           </div>
           <p><EvidenceText text={entry.message || "No additional message recorded."} availableIds={availableIds} onSelectFact={onSelectFact} /></p>
         </li>;

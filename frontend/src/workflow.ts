@@ -17,6 +17,7 @@ export const AGENT_LABELS: Record<string, string> = {
   rider_rebuttal: "Rider rebuttal",
   driver_rebuttal: "Driver rebuttal",
   fraud_detector: "Fraud detector",
+  precedent_agent: "Policy & Precedent agent",
   judge: "Judge",
 };
 
@@ -24,7 +25,7 @@ export function agentLabel(agent: string): string { return Object.hasOwn(AGENT_L
 
 export function agentTab(agent: string): WorkflowTab {
   if (["rider_advocate", "driver_advocate", "rider_rebuttal", "driver_rebuttal"].includes(agent)) return "hearing";
-  if (["fraud_detector", "judge"].includes(agent)) return "ruling";
+  if (["fraud_detector", "precedent_agent", "judge"].includes(agent)) return "ruling";
   // Preserve new/unmapped log entries in Evidence, rather than silently losing them.
   return "evidence";
 }
