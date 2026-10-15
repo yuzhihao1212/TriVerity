@@ -29,6 +29,10 @@ organisers' case:
 
 The sample disputes are synthetic; these are measurements on them, not production data.
 
+**At scale** ([simulation.md](docs/simulation.md), 500 generated disputes run offline): 78% resolved without a
+human, the same facts always gave the same ruling (100/100), and the escalated 22% went to the review queue
+with a triage tier. At an illustrative 5,000 disputes a day, AI costs about $7.70 a day.
+
 ## What it does
 
 - **Six agents**: an **Evidence Collection agent**, Rider Advocate, Driver Advocate and Judge, powered by
@@ -85,6 +89,7 @@ The full threat model is in [docs/security.md](docs/security.md).
 
 - [Architecture](docs/architecture.md): flow, design principles, checks on LLM output
 - [Prompts](docs/prompts.md): how the prompts drive each agent, and what testing changed
+- [Scale test](docs/simulation.md): 500 synthetic disputes through the full pipeline, offline
 - [Submission](docs/submission.md): title, blurb and project description for the hackathon form
 - [Security](docs/security.md): threat model, red-team results, API hardening, residual risks
 - [Evaluation](docs/evaluation.md): how rulings, AI rate and citations are measured

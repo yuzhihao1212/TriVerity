@@ -100,7 +100,9 @@ Measured on the 9 sample disputes, including the organisers' case:
 |---|---|---|
 | Time to a ruling | 24–72 hours | about 16 seconds |
 | Rulings matching the expected outcome | inconsistent between agents | 9 / 9 (rule-based: same facts, same ruling) |
-| Disputes resolved without a human | 0% | 6 of 9; the other 3 (missing data, threat, fraud risk) escalated with a priority tier |
+| Disputes resolved without a human | 0% | 6 of 9 samples; 78% of 500 generated disputes ([scale test](simulation.md)); the rest escalated with a priority tier |
+| Consistency | varies by agent | same facts, same ruling: 100 of 100 re-runs |
+| At 5,000 disputes a day (illustrative) | thousands of review hours | about 1,100 to human review, ~$7.70 a day in AI cost |
 | AI cost per dispute | — | about 8,000 tokens, roughly $0.002 with Hy3 |
 | Explanation | varies by agent | always: a case record plus a message to each party |
 
