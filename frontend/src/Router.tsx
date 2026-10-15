@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import App from "./App";
 import { Landing } from "./Landing";
 import { readPresentationPreference, writePresentationPreference } from "./presentation";
+import { applyTheme, readTheme, resolveTheme, writeTheme, type Theme } from "./theme";
 import { focusSection, parseRoute, type Route } from "./routes";
 
 export default function Router() {
@@ -31,16 +32,32 @@ export default function Router() {
     focusSection(route.page === "landing" ? "landing-title" : "main-content");
     window.scrollTo(0, 0);
   }, [route]);
+  const [theme, setTheme] = useState<Theme>(() => resolveTheme(readTheme(localStorage),
+    window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false));
+  useEffect(() => { applyTheme(theme); }, [theme]);
+  useEffect(() => {
+    // Until the viewer chooses, follow the system setting as it changes.
+    const query = window.matchMedia?.("(prefers-color-scheme: dark)");
+    if (!query) return;
+    const follow = (event: MediaQueryListEvent) => { if (!readTheme(localStorage)) setTheme(event.matches ? "dark" : "light"); };
+    query.addEventListener("change", follow);
+    return () => query.removeEventListener("change", follow);
+  }, []);
+  function toggleTheme() {
+    const next: Theme = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    writeTheme(localStorage, next);
+  }
   function togglePresentation() {
     const next = !presentation;
     setPresentation(next);
     try { writePresentationPreference(localStorage, next); } catch { /* Storage may be blocked. */ }
   }
   return <>
-    {route.page === "landing" && <Landing presentation={presentation} onTogglePresentation={togglePresentation} />}
+    {route.page === "landing" && <Landing presentation={presentation} onTogglePresentation={togglePresentation} theme={theme} onToggleTheme={toggleTheme} />}
     {consoleRoute && <div hidden={route.page !== "console"}>
       <App active={route.page === "console"} sampleId={consoleRoute.sampleId}
-        presentation={presentation} onTogglePresentation={togglePresentation} />
+        presentation={presentation} onTogglePresentation={togglePresentation} theme={theme} onToggleTheme={toggleTheme} />
     </div>}
   </>;
 }

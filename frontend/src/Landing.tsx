@@ -1,4 +1,6 @@
 import { focusSection } from "./routes";
+import { ThemeToggle } from "./ThemeToggle";
+import type { Theme } from "./theme";
 
 const GITHUB = "https://github.com/yuzhihao1212/TriVerity";
 
@@ -35,13 +37,16 @@ const CASES = [
   { id: "DISP-002", title: "The organisers’ own case", detail: "A lobby no-show dispute in the organisers’ dataset format. Examine arrival, waiting and contact evidence.", action: "Try the organisers’ case" },
 ];
 
-export function Landing({ presentation, onTogglePresentation }: { presentation: boolean; onTogglePresentation: () => void }) {
+export function Landing({ presentation, onTogglePresentation, theme, onToggleTheme }: {
+  presentation: boolean; onTogglePresentation: () => void; theme: Theme; onToggleTheme: () => void;
+}) {
   return <div className={`landing${presentation ? " presentation-mode" : ""}`}>
     <a className="skip-link" href="#landing-main" onClick={event => { event.preventDefault(); focusSection("landing-main"); }}>Skip to content</a>
     <header className="landing-header">
       <div className="landing-wrap landing-nav">
         <span className="brand">TriVerity</span>
         <nav aria-label="Project"><a href={`${GITHUB}#readme`}>Project docs</a>
+          <ThemeToggle theme={theme} onToggle={onToggleTheme} />
           <button className="secondary-button presentation-toggle" type="button" aria-pressed={presentation} onClick={onTogglePresentation}>Presentation mode</button>
         </nav>
       </div>
