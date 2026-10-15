@@ -95,7 +95,7 @@ tier, a score and the reasons, computed from the ruling alone with no LLM:
 |---|---|
 | `safety` | A threat in the chat (`SAFE-1`). Always reviewed first, whatever the score |
 | `high` | A high bad-faith risk (`FRAUD-1`) |
-| `standard` | Missing evidence (`RD-4`, `NS-4`) or low confidence (`ESC-1`) |
+| `standard` | Missing evidence (`RD-4`, `NS-4`), low confidence (`ESC-1`) or reviewer precedents against the rules (`PREC-1`) |
 | `low` | The same as standard, with a proposed refund under $5 |
 
 The score (0–100) only orders cases within a tier: escalation-rule weights, the amount at stake, and how
