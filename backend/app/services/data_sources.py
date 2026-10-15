@@ -17,7 +17,7 @@ from typing import Callable
 from app.core import limits
 from app.models.dispute import ChatMessage, DisputeCase
 from app.services.gps_analysis import analyse_gps, parse_points
-from app.services.text_safety import sanitise
+from app.services.text_safety import redact_contacts, sanitise
 
 _HHMM_RE = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")
 
@@ -84,7 +84,8 @@ def _message_time(message: ChatMessage) -> datetime | None:
 
 
 def _quote(text: str) -> str:
-    text = sanitise(text)
+    # Quotes are sent to the AI provider: drop contact details before they leave the tool.
+    text = redact_contacts(sanitise(text))
     if len(text) > limits.EVIDENCE_QUOTE_MAX_CHARS:
         text = text[: limits.EVIDENCE_QUOTE_MAX_CHARS - 1].rstrip() + "…"
     return text

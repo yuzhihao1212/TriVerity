@@ -7,7 +7,7 @@ from app.core import limits
 from app.services.gps_analysis import GpsAnalysis, analyse_gps
 
 from app.models.dispute import ChatMessage, DisputeCase, DisputeType, FareData, PartyHistory
-from app.services.text_safety import sanitise
+from app.services.text_safety import redact_contacts, sanitise
 
 EARTH_RADIUS_M = 6_371_000
 
@@ -163,8 +163,8 @@ def _matches(text: str, patterns: list[str]) -> bool:
 def analyse_chat(messages: list[ChatMessage]) -> ChatAnalysis:
     analysis = ChatAnalysis()
     for m in messages:
-        # Quoted chat reaches the prompts, so strip control characters first (H8).
-        quoted = f'{m.sender}: "{sanitise(m.message)}"'
+        # Quoted chat reaches the prompts, so strip control characters (H8) and contact details.
+        quoted = f'{m.sender}: "{redact_contacts(sanitise(m.message))}"'
         if _matches(m.message, THREAT_PATTERNS):
             analysis.threats.append(quoted)
         elif _matches(m.message, DISAGREEMENT_PATTERNS):
