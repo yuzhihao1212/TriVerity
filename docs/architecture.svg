@@ -43,12 +43,12 @@
   <text x="60" y="194" class="t">Chat log · rider &amp; driver history</text>
   <text x="60" y="216" class="mono">DisputeCase</text>
 
-  <rect x="360" y="100" width="340" height="130" rx="14" class="det"/>
+  <rect x="360" y="100" width="440" height="130" rx="14" class="det"/>
   <text x="380" y="128" class="h">Evidence loader</text>
-  <text x="380" y="154" class="t">Computes facts from the raw case data:</text>
-  <text x="380" y="174" class="t">route &amp; time excess · fare checks · pickup</text>
-  <text x="380" y="194" class="t">distance · wait · chat threats &amp; agreements</text>
-  <text x="380" y="216" class="note">No LLM here: facts are never generated</text>
+  <text x="380" y="151" class="t">Trip &amp; duration · pickup distance &amp; waiting</text>
+  <text x="380" y="171" class="t">GPS telemetry: path · stops · data gaps</text>
+  <text x="380" y="191" class="t">Fare: surge &amp; promo checks · chat · history</text>
+  <text x="380" y="216" class="note">Computed facts by source and ID · no LLM</text>
 
   <rect x="1080" y="100" width="280" height="130" rx="14" class="det"/>
   <text x="1100" y="128" class="h">Company policy</text>
@@ -62,7 +62,7 @@
   <!-- Facts and policy into row 2 -->
   <path d="M400,230 V286" class="flow"/>
   <path d="M660,230 V286" class="flow"/>
-  <path d="M700,200 H960 V286" class="flow"/>
+  <path d="M800,200 H960 V286" class="flow"/>
   <text x="408" y="250" class="lbl">facts</text>
   <text x="668" y="250" class="lbl">facts</text>
   <text x="968" y="250" class="lbl">facts + history</text>
@@ -71,7 +71,7 @@
   <text x="1228" y="256" class="lbl">rules to cite</text>
 
   <!-- Facts bus to the judge -->
-  <path d="M375,230 V272 H110 V600 H176" class="flow"/>
+  <path d="M375,230 V272 H110 V630 H176" class="flow"/>
   <text x="102" y="440" class="lbl" transform="rotate(-90 102 440)" text-anchor="middle">facts</text>
   <text x="160" y="286" class="lbl">run in parallel ↓</text>
 
@@ -79,14 +79,14 @@
   <rect x="160" y="290" width="300" height="130" rx="14" class="llm"/>
   <text x="180" y="318" class="h">Rider advocate</text>
   <text x="180" y="344" class="t">Argues only for the rider</text>
-  <text x="180" y="364" class="t">Cites only rules that favour the rider</text>
+  <text x="180" y="364" class="t">Cites evidence IDs and supporting rules</text>
   <text x="180" y="384" class="t">Checked: real rule IDs, valid JSON</text>
   <text x="180" y="406" class="note">Any failure → deterministic fallback</text>
 
   <rect x="500" y="290" width="300" height="130" rx="14" class="llm"/>
   <text x="520" y="318" class="h">Driver advocate</text>
   <text x="520" y="344" class="t">Argues only for the driver</text>
-  <text x="520" y="364" class="t">Cites only rules that favour the driver</text>
+  <text x="520" y="364" class="t">Cites evidence IDs and supporting rules</text>
   <text x="520" y="384" class="t">Checked: real rule IDs, valid JSON</text>
   <text x="520" y="406" class="note">Any failure → deterministic fallback</text>
 
@@ -100,49 +100,48 @@
   <rect x="1140" y="290" width="220" height="150" rx="14" class="llm"/>
   <text x="1160" y="318" class="h">LLM gateway</text>
   <text x="1160" y="342" class="t">Tencent Cloud TokenHub</text>
-  <text x="1160" y="362" class="t">Model: Hy3 (OpenAI-compatible)</text>
+  <text x="1160" y="362" class="t">Model: Hy3</text>
   <text x="1160" y="382" class="mono">llm_client.py</text>
-  <text x="1160" y="402" class="t">Thinking off · ~7 s per dispute</text>
+  <text x="1160" y="402" class="t">5 calls including both replies</text>
   <text x="1160" y="426" class="note">Used by every pink box</text>
 
-  <!-- Row 2 into the judge -->
-  <path d="M310,420 V476" class="flow"/>
-  <path d="M650,420 V476" class="flow"/>
-  <path d="M970,420 V476" class="flow"/>
-  <text x="318" y="456" class="lbl">rider's case</text>
-  <text x="658" y="456" class="lbl">driver's case</text>
-  <text x="978" y="456" class="lbl">risk levels + signals</text>
-  <path d="M1360,200 H1380 V500 H1104" class="rules"/>
-  <text x="1372" y="520" class="lbl" text-anchor="end">rules applied</text>
+  <!-- Each advocate receives the opposing case and replies once. -->
+  <path d="M310,420 V446" class="flow"/>
+  <path d="M650,420 V446" class="flow"/>
+  <rect x="160" y="450" width="640" height="70" rx="14" class="llm"/>
+  <text x="180" y="475" class="h">Rebuttal round: rider ↔ driver</text>
+  <text x="180" y="495" class="t">Each advocate answers the other case once, citing computed evidence IDs</text>
+  <text x="180" y="512" class="note">Checked replies · fallback on failure · skipped unless both initial cases use Hy3</text>
+  <path d="M480,520 V546" class="flow"/>
+  <text x="490" y="539" class="lbl">both cases + replies</text>
+  <path d="M970,420 V546" class="flow"/>
+  <text x="978" y="490" class="lbl">risk + signals</text>
+  <path d="M1360,200 H1380 V570 H1104" class="rules"/>
+  <text x="1372" y="590" class="lbl" text-anchor="end">rules applied</text>
 
-  <!-- Row 3: judge -->
-  <rect x="160" y="480" width="940" height="190" rx="16" class="frame"/>
-  <text x="180" y="507" class="h">Judge agent</text>
+  <!-- Judge: deterministic ruling followed by checked narration. -->
+  <rect x="160" y="550" width="940" height="170" rx="16" class="frame"/>
+  <text x="180" y="577" class="h">Judge agent</text>
+  <rect x="180" y="590" width="380" height="115" rx="12" class="det"/>
+  <text x="198" y="613" class="h">① Policy rules decide</text>
+  <text x="198" y="635" class="t">Decision · refund · confidence · rules cited</text>
+  <text x="198" y="655" class="t">Decides from facts, not narratives</text>
+  <text x="198" y="675" class="t">Threats or high fraud risk → human review</text>
+  <text x="198" y="695" class="t">ESC-1: confidence &lt; 60% → human review</text>
+  <path d="M560,647 H596" class="flow"/>
+  <rect x="600" y="590" width="480" height="115" rx="12" class="llm"/>
+  <text x="618" y="613" class="h">② Hy3 explains the ruling</text>
+  <text x="618" y="635" class="t">Answers both arguments and replies for the case record</text>
+  <text x="618" y="655" class="t">Separate party messages: no fraud risk or history</text>
+  <text x="618" y="675" class="t">Checks: amounts · cited rules · no refund promise on review</text>
+  <text x="618" y="695" class="note">Invalid output → deterministic explanation</text>
 
-  <rect x="180" y="520" width="380" height="135" rx="12" class="det"/>
-  <text x="198" y="545" class="h" font-size="15">① Policy rules decide</text>
-  <text x="198" y="569" class="t">Decision · refund · confidence · rules cited</text>
-  <text x="198" y="589" class="t">Decides from facts, not narratives</text>
-  <text x="198" y="609" class="t">SAFE-1 threat · FRAUD-1 high risk → review</text>
-  <text x="198" y="629" class="t">ESC-1: confidence &lt; 60% → human review</text>
-
-  <path d="M560,587 H596" class="flow"/>
-
-  <rect x="600" y="520" width="480" height="135" rx="12" class="llm"/>
-  <text x="618" y="545" class="h" font-size="15">② Hy3 explains the ruling</text>
-  <text x="618" y="569" class="t">Answers both advocates' arguments for the case record</text>
-  <text x="618" y="589" class="t">Writes a message to the rider and to the driver</text>
-  <text x="618" y="609" class="t">Party messages never mention fraud risk or history</text>
-  <text x="618" y="629" class="t">Rejected if it changes an amount, cites an unapplied</text>
-  <text x="618" y="647" class="t">rule or promises a refund on an escalated case</text>
-
-  <!-- Row 4: output -->
-  <path d="M630,670 V716" class="flow"/>
-  <rect x="160" y="720" width="940" height="100" rx="14" class="det"/>
-  <text x="180" y="747" class="h">Resolution</text>
-  <text x="180" y="772" class="t">Ruling · recommended action (e.g. refund $6.30) · confidence · cited policy · fraud risk assessment</text>
-  <text x="180" y="792" class="t">Neutral explanation for the record + separate messages to the rider and the driver</text>
-  <text x="180" y="810" class="t">Agent log showing each step and whether the AI or the fallback produced it</text>
+  <!-- Output and downstream views. -->
+  <path d="M630,720 V746" class="flow"/>
+  <rect x="160" y="750" width="940" height="80" rx="14" class="det"/>
+  <text x="180" y="774" class="h">Resolution</text>
+  <text x="180" y="795" class="t">Ruling · recommended action · confidence · cited policy · internal fraud risk assessment</text>
+  <text x="180" y="815" class="t">Neutral record + party messages · agent log · AI / Fallback source for each step</text>
 
   <rect x="1140" y="700" width="220" height="56" rx="12" class="det"/>
   <text x="1158" y="724" class="h" font-size="15">Demo UI</text>
@@ -151,6 +150,6 @@
   <text x="1158" y="794" class="h" font-size="15">Human reviewer</text>
   <text x="1158" y="814" class="t">Escalated disputes</text>
 
-  <path d="M1100,740 H1136" class="flow"/>
+  <path d="M1100,770 H1120 V728 H1136" class="flow"/>
   <path d="M1100,798 H1136" class="flow"/>
 </svg>

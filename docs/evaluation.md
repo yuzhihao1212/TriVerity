@@ -8,13 +8,13 @@
 | Metric | Meaning |
 |---|---|
 | Ruling correct | Decision, refund amount and applied policy rules all match the label |
-| AI rate per agent | How often the rider advocate, driver advocate and Judge explanation came from the LLM rather than the deterministic fallback. Across repeated runs this also shows badges flipping between AI and Fallback |
+| AI rate per agent | Separate columns for the rider advocate, driver advocate, rider rebuttal, driver rebuttal and Judge explanation. An output counts as AI only when its source is `"llm"`; absent or fallback rebuttals count as non-AI. The denominator is all requested runs, including failed runs, not just runs eligible for rebuttals. Across repeated runs this also shows badges flipping between AI and Fallback |
 | Wrong-side citations | An advocate cited a rule whose condition, applied to the facts, favours the other party |
 | Other off-target citations | An advocate cited a rule that supports neither side here (e.g. an escalation rule) |
 
 Rulings come from policy rules, never from the LLM, so "ruling correct" tests the rules and
 should always be 100%; the script exits non-zero if it isn't. The LLM's contribution is
-measured by the other three metrics: whether it produced the arguments and explanations,
+measured by the other metrics: whether it produced the arguments, rebuttals and explanations,
 and whether the advocates cited the right rules.
 
 ## Labels
@@ -32,6 +32,11 @@ python scripts/evaluate.py --runs 5 --ids D007,D008
 ```
 
 It resolves in-process, so the API rate limits don't apply, but each resolve spends about
-4,000 tokens of `DAILY_TOKEN_BUDGET`. If the budget runs out mid-run, the report says so,
+5,400 tokens when both rebuttals run of `DAILY_TOKEN_BUDGET`. If the budget runs out mid-run, the report says so,
 because later results would silently be Fallback. With no key everything is Fallback and
-only the ruling column is meaningful.
+the AI-rate columns should all be 0%. Rebuttals are skipped unless both initial advocates used the LLM.
+
+`--ids` accepts comma-separated sample IDs (surrounding whitespace is ignored). Any unknown
+ID, including one mixed with valid IDs, exits non-zero with a clear message before any
+resolve or LLM call. `--runs` must be at least one. For a guaranteed offline check even
+when a local dotenv file contains a key, use `LLM_API_KEY='' python scripts/evaluate.py`.
