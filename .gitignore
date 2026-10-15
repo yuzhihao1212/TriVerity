@@ -2,8 +2,9 @@
 __pycache__/
 *.py[cod]
 *.egg-info/
-.venv/
-venv/
+# No trailing slash: also matches a symlinked environment, not only a folder.
+.venv
+venv
 .pytest_cache/
 
 # Node
