@@ -512,6 +512,22 @@ textarea { width: 100%; resize: vertical; }
 .fare-extra { font-size: 11px; color: var(--accent-text); font-weight: 600; text-align: right; }
 .fare-legend { font-size: 10px; color: var(--muted); overflow-wrap: anywhere; }
 
+/* Chart intro (CaseComparison.tsx; timings in chartIntro.ts). Plays once per case per session.
+   Every hidden starting state lives only under .chart-intro, so without the class (JS off,
+   a replay, reduced motion) the charts are simply final. transform/opacity only. */
+.chart-intro .intro-reveal, .chart-intro .intro-grow { transform-box: fill-box; transform-origin: left center; animation: chart-intro-reveal var(--intro-dur, 400ms) cubic-bezier(.33, 1, .68, 1) var(--intro-delay, 0ms) both; }
+.chart-intro .intro-reveal.linear, .chart-intro .intro-grow.linear { animation-timing-function: linear; }
+.chart-intro .intro-pop { transform-box: fill-box; transform-origin: center; animation: chart-intro-pop var(--intro-dur, 150ms) ease-out var(--intro-delay, 0ms) both; }
+.chart-intro .intro-fade { animation: chart-intro-fade var(--intro-dur, 150ms) ease-out var(--intro-delay, 0ms) both; }
+.chart-intro .intro-rise { animation: chart-intro-rise var(--intro-dur, 150ms) ease-out var(--intro-delay, 0ms) both; }
+@keyframes chart-intro-reveal { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes chart-intro-pop { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: scale(1); } }
+@keyframes chart-intro-fade { from { opacity: 0; } }
+@keyframes chart-intro-rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .chart-intro .intro-reveal, .chart-intro .intro-grow, .chart-intro .intro-pop, .chart-intro .intro-fade, .chart-intro .intro-rise { animation: none; }
+}
+
 /* Ruling tab: essentials first, detail in sections that open on demand. */
 .why-summary { display: grid; gap: var(--space-1); padding: var(--space-3) var(--space-4); border-radius: 12px; background: var(--accent-soft); }
 .why-line { font-size: 15px; line-height: 1.5; }
