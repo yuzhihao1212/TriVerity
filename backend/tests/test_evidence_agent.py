@@ -295,3 +295,16 @@ def test_rulings_identical_with_and_without_the_collector():
         assert result.evidence_collection.calls             # the collector really ran
         assert (result.decision, result.refund_amount, result.policy_refs) == \
             (baseline.decision, baseline.refund_amount, baseline.policy_refs)
+
+
+@pytest.mark.parametrize("text", [
+    "charged on 2026-09-20", "paid on 20.09.2026", "trip TRIP-2026-09945", "booking ref D-2398",
+])
+def test_dates_and_ids_are_evidence_not_contact_details(text):
+    from app.services.text_safety import redact_contacts
+    assert redact_contacts(text) == text
+
+
+def test_phone_numbers_next_to_dates_are_still_removed():
+    from app.services.text_safety import redact_contacts
+    assert redact_contacts("on 2026-09-20 call 9123 4567") == "on 2026-09-20 call [phone removed]"

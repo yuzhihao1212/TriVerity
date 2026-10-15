@@ -49,7 +49,9 @@ _LINK_REDACT_RE = re.compile(
 )
 # Phone numbers in any common format: 9123 4567, 9123-4567, 9123–4567, 9123.4567, (65) 9123 4567.
 # Seven or more digits, so amounts ($24.80), distances (14.7 km) and times (08:10) are kept.
-_PHONE_REDACT_RE = re.compile(r"(?<![\w$.,])\+?\(?\d(?:[\s\-‐-―−.()]{0,2}\d){6,}\)?")
+_PHONE_REDACT_RE = re.compile(r"(?<![\w$.,\-])\+?\(?\d(?:[\s\-‐-―−.()]{0,2}\d){6,}\)?")
+# Dates look like phone numbers by digit count; they are evidence, not contact details.
+_DATE_RE = re.compile(r"\d{4}[-./]\d{1,2}[-./]\d{1,2}|\d{1,2}[-./]\d{1,2}[-./]\d{4}")
 _WORD_RE = re.compile(r"[a-z0-9'-]+")
 _ECHO_WORDS = 8
 
@@ -75,7 +77,8 @@ def redact_contacts(text: str) -> str:
     """
     text = _EMAIL_REDACT_RE.sub("[email removed]", text)
     text = _LINK_REDACT_RE.sub("[link removed]", text)
-    return _PHONE_REDACT_RE.sub("[phone removed]", text)
+    return _PHONE_REDACT_RE.sub(
+        lambda m: m.group(0) if _DATE_RE.fullmatch(m.group(0).strip()) else "[phone removed]", text)
 
 
 def find_link_or_markup(text: str) -> str | None:
