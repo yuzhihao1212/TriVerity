@@ -124,7 +124,7 @@ function ToolCalls({ calls }: { calls: NonNullable<NonNullable<Resolution["evide
     </div>)}</div>
     <a className="tool-calls-link" href="#collector-calls-title" onClick={event => {
       event.preventDefault();
-      reveal(document.getElementById("collector-calls-title"));
+      reveal(document.getElementById("collector-calls-title"), "start", { flash: true });
     }}>Full lookup details <span aria-hidden="true">↓</span></a>
   </div>;
 }

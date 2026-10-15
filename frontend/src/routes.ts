@@ -29,12 +29,27 @@ function prefersReducedMotion(): boolean {
  * Scroll an element into view and move focus to it without a second jump. Smooth by
  * default; `instant` for page changes, where gliding from the old position looks odd.
  */
-export function reveal(target: HTMLElement | null | undefined, block: ScrollLogicalPosition = "start", { instant = false } = {}): void {
+export function reveal(target: HTMLElement | null | undefined, block: ScrollLogicalPosition = "start",
+  { instant = false, flash = false } = {}): void {
   if (!target) return;
   target.scrollIntoView({ block, behavior: instant ? "auto" : scrollBehavior(prefersReducedMotion()) });
   target.focus({ preventScroll: true });
+  if (flash) flashTarget(target);
 }
 
-export function focusSection(id: string, options?: { instant?: boolean }): void {
+export const FLASH_MS = 1600;
+
+/**
+ * Briefly highlight a jump target, so an in-page link visibly lands even when there is
+ * little or nothing to scroll. A glow that fades; a still outline under reduced motion.
+ */
+function flashTarget(target: HTMLElement): void {
+  target.classList.remove("jump-flash");
+  void target.offsetWidth; // restart the highlight if the same link is used twice
+  target.classList.add("jump-flash");
+  window.setTimeout(() => target.classList.remove("jump-flash"), FLASH_MS);
+}
+
+export function focusSection(id: string, options?: { instant?: boolean; flash?: boolean }): void {
   reveal(document.getElementById(id), "start", options);
 }

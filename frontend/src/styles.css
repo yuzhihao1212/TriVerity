@@ -940,3 +940,13 @@ main[tabindex="-1"]:focus { outline: none; }
 .rating-star { color: var(--star); }
 [data-theme="dark"] { --star: #ffc53d; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --star: #ffc53d; } }
+
+/* Landing spot of an in-page jump (routes.ts reveal({ flash })): a glow that fades. */
+article[tabindex="-1"] { scroll-margin-block: var(--space-4); }
+.jump-flash { outline: 3px solid var(--accent); outline-offset: 4px; border-radius: 12px; animation: jump-flash 1.6s ease-out forwards; }
+@keyframes jump-flash {
+  0% { outline-color: var(--accent); box-shadow: 0 0 0 8px var(--accent-soft); }
+  60% { outline-color: var(--accent); box-shadow: 0 0 0 0 transparent; }
+  100% { outline-color: transparent; box-shadow: none; }
+}
+@media (prefers-reduced-motion: reduce) { .jump-flash { animation: none; } }
