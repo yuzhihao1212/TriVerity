@@ -13,7 +13,7 @@ import { AppealsPanel } from "./Appeals";
 import { PartyPreview } from "./PartyPreview";
 import { DisputeForm } from "./DisputeForm";
 import { getSamples, resolveDispute } from "./services/api";
-import type { Counterfactual, Decision, DisputeCase, PartyHistory, PrecedentReport, Resolution, RiskLevel, Triage, TriageTier } from "./types";
+import type { ArgumentReview, Counterfactual, Decision, DisputeCase, PartyHistory, PrecedentReport, Resolution, RiskLevel, Triage, TriageTier } from "./types";
 
 const TYPE_LABELS: Record<DisputeCase["type"], string> = {
   route_deviation: "Route deviation",
@@ -269,6 +269,7 @@ export default function App() {
                 {tab === "ruling" && resolution && <>
                   <VerdictSummary resolution={resolution} disputeId={selected.dispute_id} />
                   <RulingPanel resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
+                  {resolution.argument_review && resolution.argument_review.length > 0 && <section className="card"><ArgumentReviewPanel reviews={resolution.argument_review} /></section>}
                   {resolution.counterfactuals && resolution.counterfactuals.length > 0 && <section className="card"><CounterfactualPanel items={resolution.counterfactuals} /></section>}
                   {resolution.precedents && <section className="card"><PrecedentPanel report={resolution.precedents} /></section>}
                   {resolution.triage && <section className="card"><TriagePanel triage={resolution.triage} /></section>}
@@ -403,6 +404,39 @@ function TriagePanel({ triage }: { triage: Triage }) {
       ) : (
         <p className="small muted">Resolved automatically; no human review needed.</p>
       )}
+    </div>
+  );
+}
+
+const VERDICT: Record<ArgumentReview["rules"][number]["verdict"], { label: string; level: RiskLevel }> = {
+  supports: { label: "Holds for this side", level: "low" },
+  favours_other_side: { label: "Favours the other side", level: "high" },
+  does_not_apply: { label: "Does not apply", level: "medium" },
+};
+
+function ArgumentReviewPanel({ reviews }: { reviews: ArgumentReview[] }) {
+  return (
+    <div className="risk-panel">
+      <div><p className="eyebrow">Internal review only · computed from the policy</p><h2>How the Judge weighed each side</h2></div>
+      <div className="debate-grid">
+        {reviews.map((review) => (
+          <div key={review.party} className={`advocate ${review.party}`}>
+            <h4>{review.party === "rider" ? "Rider advocate" : "Driver advocate"}</h4>
+            {review.rules.length > 0 ? (
+              <ul className="small argument-checks">
+                {review.rules.map((check) => (
+                  <li key={check.rule}>
+                    <strong>{check.rule}</strong>{" "}
+                    <span className={`risk-badge ${VERDICT[check.verdict].level}`}>{VERDICT[check.verdict].label}</span>
+                    {check.decisive && <span className="tag"> Decided the case</span>}
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="small muted">No policy rule cited.</p>}
+            <p className="small muted">{review.summary}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

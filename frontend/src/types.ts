@@ -82,6 +82,19 @@ export interface PrecedentMatch {
   note?: string;   // never sent by the API (reviewer notes stay on the server)
 }
 
+export interface RuleCheck {
+  rule: string;
+  verdict: "supports" | "favours_other_side" | "does_not_apply";
+  decisive: boolean;
+}
+
+export interface ArgumentReview {
+  party: "rider" | "driver";
+  rules: RuleCheck[];
+  evidence_cited: number;
+  summary: string;
+}
+
 export interface Counterfactual {
   change: string;
   outcome: string;
@@ -140,5 +153,7 @@ export interface Resolution {
   precedents?: PrecedentReport;
   // What would have changed the ruling (computed from the policy, never by the AI).
   counterfactuals?: Counterfactual[];
+  // How the Judge weighed each advocate's cited rules against the facts.
+  argument_review?: ArgumentReview[];
   agent_log: AgentLogEntry[];
 }
