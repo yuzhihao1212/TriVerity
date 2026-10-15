@@ -1,5 +1,6 @@
 import { useEffect, useState, type MouseEvent } from "react";
 import { Chip } from "./Chip";
+import { Icon } from "./Icon";
 import { focusSection } from "./routes";
 import { PresentationToggle, ThemeToggle } from "./ThemeToggle";
 import type { Theme } from "./theme";
@@ -20,13 +21,20 @@ export const LANDING_RESULTS = [
   { value: "16–18 s", label: "About $0.002 per dispute", detail: "Live Hy3 measurements; about 10,000 tokens per dispute." },
 ] as const;
 
-const STEPS = [
-  { title: "Evidence collection", detail: "Code verifies GPS, chat, fares and history; each advocate’s AI requests the records it needs.", ai: true, code: true },
-  { title: "Rider & Driver advocates", detail: "Each side builds its case from the same verified evidence.", ai: true },
-  { title: "Rebuttal round", detail: "Each advocate answers the other side once.", ai: true },
-  { title: "Fraud & precedent checks", detail: "Code checks bad-faith signals and retrieves similar past rulings.", code: true },
-  { title: "Policy rules decide", detail: "A refund, compensation or no action, with confidence; uncertain or risky cases go to a human.", code: true },
-  { title: "Judge explains & parties notified", detail: "AI explains the ruling and prepares a separate message for each party.", ai: true },
+// Three stages people can grasp at a glance; the six real steps sit under them as chips.
+const STAGES = [
+  { icon: "magnifier", verb: "Gather", rest: "the evidence", line: "GPS · chat · fares · history", steps: [
+    { title: "Evidence collection", ai: true, code: true, detail: "Code verifies GPS, chat, fares and history; each advocate’s AI requests the records it needs." },
+  ] },
+  { icon: "bubbles", verb: "Argue", rest: "both sides", line: "Rider AI vs driver AI, one reply each", steps: [
+    { title: "Advocates", ai: true, detail: "Each side builds its case from the same verified evidence." },
+    { title: "Rebuttal", ai: true, detail: "Each advocate answers the other side once." },
+  ] },
+  { icon: "scales", verb: "Decide", rest: "fairly", line: "Rules decide, AI explains", steps: [
+    { title: "Fraud & precedent checks", code: true, detail: "Code checks bad-faith signals and retrieves similar past rulings." },
+    { title: "Policy rules", code: true, detail: "A refund, compensation or no action, with confidence; uncertain or risky cases go to a human." },
+    { title: "Judge explains", ai: true, detail: "AI explains the ruling and prepares a separate message for each party." },
+  ] },
 ] as const;
 
 const TRUST = [
@@ -85,10 +93,19 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
         </section>
         <section aria-labelledby="flow-title">
           <div className="landing-section-head"><p className="eyebrow">How it works</p><h2 id="flow-title">Two sides heard. One accountable decision.</h2><p className="muted">AI handles language. Code verifies facts and applies policy.</p></div>
-          <ol className="landing-flow">{STEPS.map((step, index) => <li key={step.title}>
-            <span className="landing-step" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
-            <div className="chip-row">{"ai" in step && <Chip size="sm" tone="brand" icon="sparkle">AI</Chip>}{"code" in step && <Chip size="sm" tone="outline">Code</Chip>}</div>
-            <h3>{step.title}</h3><p className="muted">{step.detail}</p>
+          <ol className="landing-stages">{STAGES.map((stage, index) => <li key={stage.verb} className="landing-stage">
+            <span className="landing-stage-icon" aria-hidden="true"><Icon name={stage.icon} /></span>
+            <h3><span className="sr-only">Stage {index + 1}: </span><span className="landing-stage-verb">{stage.verb}</span> {stage.rest}</h3>
+            <p className="landing-stage-line">{stage.line}</p>
+            <ul className="chip-row landing-stage-steps" aria-label={`Steps in ${stage.verb}`}>{stage.steps.map(step => <li key={step.title}>
+              <Chip size="sm" tone={"ai" in step ? "brand" : "outline"} icon={"ai" in step ? "sparkle" : undefined} title={step.detail}>
+                {step.title}{"ai" in step && "code" in step && " · AI + code"}<span className="sr-only">{"ai" in step ? ", AI" : ", code"}</span>
+              </Chip>
+            </li>)}</ul>
+            <details className="landing-stage-more">
+              <summary>How</summary>
+              <ul>{stage.steps.map(step => <li key={step.title}><strong>{step.title}.</strong> {step.detail}</li>)}</ul>
+            </details>
           </li>)}</ol>
         </section>
         <section aria-labelledby="trust-title">
