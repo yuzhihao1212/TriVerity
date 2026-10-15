@@ -16,6 +16,8 @@ import { AppealsPanel } from "./Appeals";
 import { ReviewerDecision } from "./ReviewerDecision";
 import { AiToggle } from "./AiToggle";
 import { readAiMode, writeAiMode, type AiMode } from "./aiMode";
+import { NewDisputeIcon, SidebarToggle } from "./SidebarToggle";
+import { readSidebarOpen, writeSidebarOpen } from "./sidebar";
 import { Term } from "./Term";
 import { ThemeToggle } from "./ThemeToggle";
 import type { Theme } from "./theme";
@@ -64,6 +66,23 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
 }) {
   const [filter, setFilter] = useState("all");
   const [aiMode, setAiMode] = useState<AiMode>(() => readAiMode(localStorage));
+  const [sidebarOpen, setSidebarOpen] = useState(() => readSidebarOpen(localStorage));
+  function toggleSidebar() {
+    setSidebarOpen(open => { writeSidebarOpen(localStorage, !open); return !open; });
+  }
+  useEffect(() => {
+    // Ctrl/Cmd+Shift+S, as in chat apps; ignored while typing in a field.
+    function onKey(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        toggleSidebar();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   function toggleAi() {
     const next: AiMode = aiMode === "live" ? "offline" : "live";
     setAiMode(next);
@@ -206,7 +225,7 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
       <a className="skip-link" href="#main-content" onClick={event => { event.preventDefault(); focusSection("main-content"); }}>Skip to dispute</a>
       <header className="topbar">
         <h1 className="brand"><a className="console-home" href="#/">TriVerity<span className="sr-only"> home</span></a></h1>
-        <span className="muted">Multi-agent dispute resolution for Ryde</span>
+        <span className="muted byline">By OeroAI</span>
         <div className="topbar-right">
           <AiToggle mode={aiMode} onToggle={toggleAi} />
           <ThemeToggle theme={theme} onToggle={onToggleTheme} />
@@ -231,8 +250,18 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
         </div>
       </header>
 
-      <div className="layout">
+      <div className={`layout${sidebarOpen ? "" : " sidebar-collapsed"}`}>
         <nav className="sidebar" aria-label="Disputes">
+          <div className="sidebar-head">
+            <SidebarToggle open={sidebarOpen} onToggle={toggleSidebar} />
+            {sidebarOpen
+              ? <span className="section-label">Disputes</span>
+              : <button type="button" className="icon-button" aria-label="New dispute" title="New dispute" onClick={() => { setForm({}); setError(null); }}>
+                  <NewDisputeIcon />
+                </button>}
+          </div>
+          {!sidebarOpen && selected && <span className="sidebar-current" title={`Open: ${selected.dispute_id}`}>{selected.dispute_id}</span>}
+          <div className="sidebar-body" id="dispute-list" hidden={!sidebarOpen}>
           <button className="secondary-button" onClick={() => { setForm({}); setError(null); }}>
             + New dispute
           </button>
@@ -256,6 +285,7 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
           )}
           <h2 className="section-label">Sample disputes</h2>
           {filterDisputes(samples, filter).map(disputeButton)}
+          </div>
         </nav>
 
         <main className="content" id="main-content" tabIndex={-1}>
