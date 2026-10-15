@@ -15,15 +15,17 @@ same facts always give the same ruling, and every ruling is explained.
 
 ## Results
 
-Live evaluation against Tencent Hy3 on 15 Oct 2026, on the current pipeline (advocates, rebuttal round,
-Judge) over the 9 sample disputes, including the organisers' case:
+Live evaluation against Tencent Hy3 on 16 Oct 2026, on the full pipeline (advocates, rebuttal round,
+fraud detector, Policy & Precedent agent, Judge, triage) over the 9 sample disputes, including the
+organisers' case:
 
 | Measure | Result |
 |---|---|
-| Rulings matching the expected outcome (decision, refund, rules) | **9 / 9** (`scripts/evaluate.py`) |
+| Rulings matching the expected outcome (decision, refund, rules, review tier) | **9 / 9** (`scripts/evaluate.py`) |
 | Agent outputs written by the AI (advocates, rebuttals, Judge) | **45 / 45** |
-| Advocates citing a rule that favours the other side | **2 of 32** advocate cases (4 runs per side on 4 disputes) |
-| Time and cost per dispute | about 11 s and 5,400 tokens (5 LLM calls) |
+| Advocates citing a rule that favours the other side | **1 of 18** advocate cases (2 of 32 in an earlier 4-run check) |
+| Rulings consistent with the closest past rulings | **8 / 9** (D002 has no close precedent: its waiting time is missing) |
+| Time and cost per dispute | about 11.5 s and 5,400 tokens (5 LLM calls, about $0.001) |
 
 The sample disputes are synthetic; these are measurements on them, not production data.
 
@@ -42,6 +44,8 @@ The sample disputes are synthetic; these are measurements on them, not productio
   explanation and separate messages to the rider and the driver
 - **Precedents (RAG)**: the Policy & Precedent agent retrieves the closest past rulings; the Judge cites them
   in the case record, and the evaluation checks each ruling's consistency with them
+- **Review triage**: escalated disputes get a priority tier (safety, high, standard, low), a score and
+  the reasons, so safety cases are reviewed first; internal only, like the fraud signals
 - **Learning feedback loop**: a reviewer's decision becomes a precedent; when reviewers keep deciding
   similar cases differently from the rules, those disputes go to a human (`PREC-1`)
 - **Escalation** to a human reviewer for threats in chat, a high bad-faith risk, missing data, low
@@ -78,6 +82,7 @@ The full threat model is in [docs/security.md](docs/security.md).
 
 - [Architecture](docs/architecture.md): flow, design principles, checks on LLM output
 - [Prompts](docs/prompts.md): how the prompts drive each agent, and what testing changed
+- [Submission](docs/submission.md): title, blurb and project description for the hackathon form
 - [Security](docs/security.md): threat model, red-team results, API hardening, residual risks
 - [Evaluation](docs/evaluation.md): how rulings, AI rate and citations are measured
 - [Demo deployment](docs/demo-deployment.md): running the public demo safely
