@@ -17,7 +17,7 @@ on this mix.
 | Reworded claim and statement, same ruling | 96 / 100; the other 4 differ only by a FRAUD-1 escalation: the original claim was contradicted by the GPS facts, a bad-faith signal by design |
 | Consistent with the closest past rulings | 324 of 500 (65%); mixed 36, no close precedent 138, reviewers disagreed 2 |
 | Refunds | 190 disputes, average $4.81 |
-| Pipeline time without the LLM | 0.5 ms per dispute |
+| Pipeline time without the LLM | 0.6 ms per dispute |
 
 **Decisions by dispute type**
 
@@ -84,10 +84,10 @@ are noisy (new accounts are mostly risky in this mix, so most were escalated):
 
 ## At Ryde's scale (illustrative: 5,000 disputes a day)
 
-Live measurements: about 8,000 tokens and 16 s per dispute with Hy3 ($0.132 / $0.528 per million input/output tokens).
+Live measurements: about 10,000 tokens and 18 s per dispute with Hy3 ($0.132 / $0.528 per million input/output tokens).
 
 | | Today (brief) | TriVerity |
 |---|---|---|
-| Time to a ruling | 24–72 hours | about 16 seconds |
+| Time to a ruling | 24–72 hours | about 18 seconds |
 | Disputes needing a human | all 5,000 | about 1,100 (22%), ordered by triage tier |
-| AI cost | — | about $0.0015 per dispute, $7.66 a day |
+| AI cost | — | about $0.0019 per dispute, $9.57 a day |

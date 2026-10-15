@@ -44,7 +44,7 @@ counterfactuals are deterministic code. Architecture: [architecture.md](architec
 | Scale (500 generated disputes, offline) | 78% resolved without a human; same facts, same ruling 100/100 | [simulation.md](simulation.md) |
 | Fairness | Party history never changed a policy decision (removed or swapped: 500/500) | [simulation.md](simulation.md) |
 | Prompt injection | 23 attacks, 68 live runs, no ruling changed | [security.md](security.md) |
-| Cost and speed | about 8,000 tokens (~$0.002) and 16 s per dispute | README |
+| Cost and speed | about 10,000 tokens (~$0.002) and 16–18 s per dispute | README |
 
 ## Known limits
 

@@ -27,7 +27,7 @@ traced to a rule and a fact.
 | **Data governance** | Facts are computed from structured trip, GPS, fare and chat data; GPS coordinates and party history never reach the LLM; phone numbers, emails and links are removed from chat quotes; all sample data is synthetic | Data-flow table in [security.md](security.md); `text_safety.redact_contacts` |
 | **Accountability** | Each ruling cites the policy rules applied; reviewers' decisions on appeals are recorded as precedents; rule changes are versioned in `data/policies/ryde_mock_policy.json` | `backend/app/services/appeals.py`, `precedents.py` |
 | **Human agency and oversight** | Escalations, triage, appeals and the reviewer's final say; reviewer decisions feed back into the precedent check (PREC-1) | See below |
-| **Inclusive growth, societal and environmental well-being** | Faster, explained outcomes for riders and drivers (about 16 s instead of 24–72 h); both sides get an advocate; about $0.002 of AI per dispute | [submission.md](submission.md) |
+| **Inclusive growth, societal and environmental well-being** | Faster, explained outcomes for riders and drivers (about 16–18 s instead of 24–72 h); both sides get an advocate; about $0.002 of AI per dispute | [submission.md](submission.md) |
 
 ## Level of human involvement (Model AI Governance Framework)
 

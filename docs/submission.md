@@ -28,7 +28,7 @@ An Evidence Collection agent (Tencent Hy3) first decides which trip, GPS, fare a
 through mock Ryde data APIs. A Rider Advocate and a Driver Advocate (Hy3) each build their side's case from verified evidence
 and answer each other in a rebuttal round. A Fraud & Bad-Faith detector, a Policy & Precedent agent and a
 rule-based Judge then decide, and Hy3 explains the ruling to the case record and separately to each party.
-Standard cases resolve in about 16 seconds; risky or unclear ones go to a human reviewer, ordered by
+Standard cases resolve in about 16–18 seconds; risky or unclear ones go to a human reviewer, ordered by
 priority.
 
 ### Real-world insights: pain points, audience and the problems solved
@@ -39,7 +39,7 @@ rulings between agents on similar cases, and churn when customers feel unfairly 
 
 TriVerity targets each of these:
 
-- **Speed**: about 16 seconds per dispute, end to end.
+- **Speed**: about 16–18 seconds per dispute, end to end.
 - **Consistency**: facts are computed in code and the decision comes from Ryde's policy rules, so the same
   facts always give the same ruling. The Policy & Precedent agent checks each ruling against the closest
   past rulings.
@@ -98,12 +98,12 @@ Measured on the 9 sample disputes, including the organisers' case:
 
 | Metric | Today (brief) | TriVerity |
 |---|---|---|
-| Time to a ruling | 24–72 hours | about 16 seconds |
+| Time to a ruling | 24–72 hours | about 16–18 seconds |
 | Rulings matching the expected outcome | inconsistent between agents | 9 / 9 (rule-based: same facts, same ruling) |
 | Disputes resolved without a human | 0% | 6 of 9 samples; 78% of 500 generated disputes ([scale test](simulation.md)); the rest escalated with a priority tier |
 | Consistency | varies by agent | same facts, same ruling: 100 of 100 re-runs |
-| At 5,000 disputes a day (illustrative) | thousands of review hours | about 1,100 to human review, ~$7.70 a day in AI cost |
-| AI cost per dispute | — | about 8,000 tokens, roughly $0.002 with Hy3 |
+| At 5,000 disputes a day (illustrative) | thousands of review hours | about 1,100 to human review, ~$10 a day in AI cost; 325–975 reviewer hours freed a day ([business case](business-case.md)) |
+| AI cost per dispute | — | about 10,000 tokens, roughly $0.002 with Hy3 |
 | Explanation | varies by agent | always: a case record plus a message to each party |
 
 For Ryde, that means reviewers spend their time on the cases that need judgement (safety first), riders and
