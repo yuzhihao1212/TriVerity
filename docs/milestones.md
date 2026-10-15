@@ -27,7 +27,7 @@ Status as of 16 Oct 2026.
 | ✅ | Policy and precedent agent | Retrieves the closest past rulings (162 synthetic); the Judge cites them; consistency measured in the evaluation |
 | ✅ | Learning feedback loop | Reviewer decisions become precedents; repeated reviewer disagreement escalates similar disputes (`PREC-1`) |
 | ✅ | SLA and routing manager (triage) | Escalated disputes get a tier (safety first), a score and reasons; the queue and SLA clocks are documented as the production extension ([architecture.md](architecture.md)) |
-| 🟡 | Evidence collection agent | Built in PR #24 (Hy3 plans calls to mock data-source APIs); waiting on a privacy review of chat quotes |
+| ✅ | Evidence collection agent | Hy3 plans tool calls over mock Ryde APIs (trip, telemetry, payments, messaging) in up to two rounds; tools are deterministic, default plan as fallback |
 | ⬜ | Image analysis | Not planned |
 
 ## Security and responsible AI

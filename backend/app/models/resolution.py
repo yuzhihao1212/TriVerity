@@ -65,6 +65,21 @@ class PrecedentReport(BaseModel):
     consistency: Literal["consistent", "mixed", "overridden", "no_precedent"] = "no_precedent"
     summary: str = ""
 
+class ToolCallRecord(BaseModel):
+    """One data-source tool call made by the Evidence Collection agent."""
+    round: int
+    tool: str
+    args: dict[str, str] = Field(default_factory=dict)
+    reason: str = ""
+    source: str                     # evidence group: trip, gps, fare or chat
+    results: list[str] = Field(default_factory=list)
+
+class EvidenceCollection(BaseModel):
+    """What the Evidence Collection agent gathered, and whether the LLM planned it."""
+    source: CaseSource = "fallback"
+    rounds: int = 0
+    calls: list[ToolCallRecord] = Field(default_factory=list)
+
 class AgentLogEntry(BaseModel):
     step: int
     agent: str
@@ -91,6 +106,7 @@ class Resolution(Ruling):
     risk: RiskAssessment = Field(default_factory=RiskAssessment)
     triage: Triage = Field(default_factory=Triage)
     precedents: PrecedentReport = Field(default_factory=PrecedentReport)
+    evidence_collection: EvidenceCollection = Field(default_factory=EvidenceCollection)
     agent_log: list[AgentLogEntry] = Field(default_factory=list)
 
 class PartyResolution(BaseModel):

@@ -126,6 +126,9 @@ See `backend/app/models/resolution.py`.
     "consistency": "consistent | mixed | overridden | no_precedent",
     "summary": "Consistent with 3 similar past rulings (P-063, P-056, P-070)."
   },
+  "evidence_collection": {"source": "llm | fallback", "rounds": 2,
+    "calls": [{"round": 1, "tool": "gps_window", "args": {"start": "08:10", "end": "08:18"},
+               "reason": "string", "source": "gps", "results": ["GPS 08:10-08:18: 9 points, ..."]}]},
   "agent_log": [{"step": 1, "agent": "evidence_loader", "status": "completed", "message": "string"}]
 }
 ```
@@ -157,8 +160,11 @@ See `backend/app/models/resolution.py`.
   `R-…` from reviewer feedback), the majority decision among close ones, and whether the rules' decision
   agrees with them. `overridden` means reviewers decided close cases differently and `PREC-1` escalated
   the dispute. Internal only: never in the rider or driver view.
-- `agent_log` steps: `evidence_loader`, `rider_advocate`, `driver_advocate`, `fraud_detector`,
-  `rider_rebuttal`, `driver_rebuttal`, `precedent_agent`, `judge`.
+- `evidence_collection` is the Evidence Collection agent's record: each tool call with its round, arguments,
+  reason and result lines. `source: "fallback"` means the default plan ran. The result lines also join the
+  evidence the advocates cite by ID.
+- `agent_log` steps: `evidence_loader`, `evidence_collector`, `rider_advocate`, `driver_advocate`,
+  `fraud_detector`, `rider_rebuttal`, `driver_rebuttal`, `precedent_agent`, `judge`.
 - `compensation` is reserved for payouts beyond a refund; no rule produces it yet.
 
 ## POST `/api/precedents/feedback`
