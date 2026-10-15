@@ -15,5 +15,56 @@
   },
   "chat_logs": [
     {"sender": "driver", "message": "I'm here, where are you?"}
+  ],
+  "gps_points": [
+    {
+      "timestamp": "2026-09-20T09:00:00+08:00",
+      "lat": 1.3555,
+      "lng": 103.8198,
+      "speed_kmh": 0,
+      "status": "waiting"
+    },
+    {
+      "timestamp": "2026-09-20T09:01:00+08:00",
+      "lat": 1.3555,
+      "lng": 103.8198,
+      "speed_kmh": 0,
+      "status": "waiting"
+    },
+    {
+      "timestamp": "2026-09-20T09:02:00+08:00",
+      "lat": 1.3555,
+      "lng": 103.8198,
+      "speed_kmh": 0,
+      "status": "waiting"
+    },
+    {
+      "timestamp": "2026-09-20T09:03:00+08:00",
+      "lat": 1.3555,
+      "lng": 103.8198,
+      "speed_kmh": 0,
+      "status": "waiting"
+    },
+    {
+      "timestamp": "2026-09-20T09:04:00+08:00",
+      "lat": 1.3555,
+      "lng": 103.8198,
+      "speed_kmh": 0,
+      "status": "waiting"
+    },
+    {
+      "timestamp": "2026-09-20T09:05:00+08:00",
+      "lat": 1.3555,
+      "lng": 103.8198,
+      "speed_kmh": 0,
+      "status": "waiting"
+    },
+    {
+      "timestamp": "2026-09-20T09:06:00+08:00",
+      "lat": 1.3555,
+      "lng": 103.8198,
+      "speed_kmh": 0,
+      "status": "waiting"
+    }
   ]
 }

@@ -3,6 +3,9 @@ from math import asin, cos, radians, sin, sqrt
 
 from pydantic import BaseModel, Field
 
+from app.core import limits
+from app.services.gps_analysis import GpsAnalysis, analyse_gps
+
 from app.models.dispute import ChatMessage, DisputeCase, PartyHistory
 from app.services.text_safety import sanitise
 
@@ -47,27 +50,45 @@ class CaseFacts(BaseModel):
     # Charged fare minus (itemised breakdown - promo discount); non-zero means the
     # breakdown doesn't explain the charge.
     fare_breakdown_gap: float | None = None
+    gps: GpsAnalysis | None = None
     chat: ChatAnalysis = Field(default_factory=ChatAnalysis)
     rider_history: PartyHistory = Field(default_factory=PartyHistory)
     driver_history: PartyHistory = Field(default_factory=PartyHistory)
 
     def describe(self) -> list[str]:
-        lines = []
+        return [line for lines in self.describe_by_source().values() for line in lines]
+
+    def describe_by_source(self) -> dict[str, list[str]]:
+        groups = {source: [] for source in ("trip", "gps", "fare", "chat", "history")}
+        lines = groups["trip"]
         if self.distance_excess_ratio is not None:
             lines.append(f"Route was {self.distance_excess_ratio:+.0%} vs expected distance")
         if self.duration_excess_ratio is not None:
             lines.append(f"Trip took {self.duration_excess_ratio:+.0%} vs expected duration")
-        if self.fare_difference is not None:
-            lines.append(f"Fare was {self.fare_difference:+.2f} vs expected fare")
         if self.driver_distance_from_pickup_m is not None:
             lines.append(f"Driver arrived {self.driver_distance_from_pickup_m:.0f} m from pickup point")
         if self.driver_wait_min is not None:
             lines.append(f"Driver waited {self.driver_wait_min:g} min at pickup")
-        lines.append(
-            "Driver contacted rider via in-app chat"
-            if self.driver_contact_attempted
-            else "No driver contact attempt in chat log"
-        )
+        lines = groups["gps"]
+        if self.gps is not None:
+            gps = self.gps
+            if gps.path_distance_km is not None:
+                comparison = (f" ({gps.path_vs_expected_ratio - 1:+.0%} vs expected)"
+                              if gps.path_vs_expected_ratio is not None else "")
+                lines.append(f"GPS path {gps.path_distance_km:.1f} km over {gps.points_used} points{comparison}")
+            else:
+                lines.append(f"GPS path unavailable ({gps.points_used} usable points)")
+            for stop in gps.unexpected_stops or []:
+                lines.append(f"Unexpected stop: {stop.duration_min:g} min at {stop.start_time:%H:%M}")
+            if gps.total_stopped_min is not None:
+                lines.append(f"GPS unexpected stops total {gps.total_stopped_min:g} min")
+            if gps.max_gap_min is not None and gps.max_gap_min > limits.GPS_REPORT_GAP_MIN:
+                lines.append(f"GPS data gap of {gps.max_gap_min:g} min")
+            if gps.points_rejected:
+                lines.append(f"GPS points rejected: {gps.points_rejected}")
+        lines = groups["fare"]
+        if self.fare_difference is not None:
+            lines.append(f"Fare was {self.fare_difference:+.2f} vs expected fare")
         if self.surge_multiplier and self.surge_multiplier > 1:
             lines.append(f"Surge pricing applied: x{self.surge_multiplier:g}")
         if self.promo_code:
@@ -79,14 +100,21 @@ class CaseFacts(BaseModel):
                 if abs(self.fare_breakdown_gap) < 0.01
                 else f"Charged fare is {self.fare_breakdown_gap:+.2f} vs the itemised breakdown"
             )
+        lines = groups["chat"]
+        lines.append(
+            "Driver contacted rider via in-app chat"
+            if self.driver_contact_attempted
+            else "No driver contact attempt in chat log"
+        )
         lines += [f"Threatening message: {m}" for m in self.chat.threats]
         lines += [f"Agreement in chat: {m}" for m in self.chat.agreements]
         lines += [f"Disagreement in chat: {m}" for m in self.chat.disagreements]
+        lines = groups["history"]
         for party, history in (("Rider", self.rider_history), ("Driver", self.driver_history)):
             summary = _describe_history(history)
             if summary:
                 lines.append(f"{party} history: {summary}")
-        return lines
+        return {source: lines for source, lines in groups.items() if lines}
 
 def _describe_history(history: PartyHistory) -> str:
     parts = []
@@ -125,7 +153,7 @@ def _haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     dlat = radians(lat2 - lat1)
     dlng = radians(lng2 - lng1)
     a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlng / 2) ** 2
-    return 2 * EARTH_RADIUS_M * asin(sqrt(a))
+    return 2 * EARTH_RADIUS_M * asin(sqrt(min(1.0, max(0.0, a))))
 
 def compute_facts(case: DisputeCase) -> CaseFacts:
     trip, fare = case.trip, case.fare
@@ -155,6 +183,7 @@ def compute_facts(case: DisputeCase) -> CaseFacts:
         promo_code=fare.promo_code,
         promo_discount=fare.promo_discount,
         fare_breakdown_gap=breakdown_gap,
+        gps=analyse_gps(case.gps_points, trip, route_trip=case.type == "route_deviation"),
         chat=analyse_chat(case.chat_logs),
         rider_history=case.rider_history,
         driver_history=case.driver_history,

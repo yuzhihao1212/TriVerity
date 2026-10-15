@@ -114,3 +114,17 @@ def _apply_overrides() -> None:
         globals()[name] = value
 
 _apply_overrides()
+
+# -- GPS analysis -------------------------------------------------------------
+# Geographic validity bounds, including endpoints and the antimeridian.
+GPS_MAX_LATITUDE = 90
+GPS_MAX_LONGITUDE = 180
+# Allow idling/creep and GPS jitter, but require a sustained stop rather than a light.
+GPS_STOP_SPEED_KMH = 3
+GPS_STOP_RADIUS_M = 25
+GPS_STOP_MIN_DURATION_MIN = 3
+# Match NS-1's 100 m pickup tolerance; use the same tolerance at drop-off.
+GPS_ENDPOINT_RADIUS_M = 100
+# Do not infer stationary time across sparse telemetry; report these gaps instead.
+GPS_STOP_MAX_GAP_MIN = 3
+GPS_REPORT_GAP_MIN = 3

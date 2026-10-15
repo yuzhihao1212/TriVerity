@@ -12,5 +12,161 @@
   "fare": {
     "expected": 18.0,
     "actual": 21.0
-  }
+  },
+  "gps_points": [
+    {
+      "timestamp": "2026-09-20T08:00:00+08:00",
+      "lat": 1.3006,
+      "lng": 103.8352,
+      "speed_kmh": 34.0,
+      "status": "in_trip"
+    },
+    {
+      "timestamp": "2026-09-20T08:01:00+08:00",
+      "lat": 1.304844,
+      "lng": 103.838029,
+      "speed_kmh": 34.0,
+      "status": "in_trip"
+    },
+    {
+      "timestamp": "2026-09-20T08:02:00+08:00",
+      "lat": 1.309089,
+      "lng": 103.840857,
+      "speed_kmh": 34.0,
+      "status": "in_trip"
+    },
+    {
+      "timestamp": "2026-09-20T08:03:00+08:00",
+      "lat": 1.313333,
+      "lng": 103.843686,
+      "speed_kmh": 34.0,
+      "status": "in_trip"
+    },
+    {
+      "timestamp": "2026-09-20T08:04:00+08:00",
+      "lat": 1.317578,
+      "lng": 103.846514,
+      "speed_kmh": 34.0,
+      "status": "in_trip"
+    },
+    {
+      "timestamp": "2026-09-20T08:05:00+08:00",
+      "lat": 1.321822,
+      "lng": 103.849343,
+      "speed_kmh": 34.0,
+      "status": "in_trip"
+    },
+    {
+      "timestamp": "2026-09-20T08:06:00+08:00",
+      "lat": 1.326067,
+      "lng": 103.852171,
+      "speed_kmh": 34.0,
+      "status": "in_trip"
+    },
+    {
+      "timestamp": "2026-09-20T08:07:00+08:00",
+      "lat": 1.330311,
+      "lng": 103.855,
+      "speed_kmh": 42.9,
+      "status": "in_trip"
+    },
+    {
+      "timestamp": "2026-09-20T08:08:00+08:00",
+      "lat": 1.330311,
+      "lng": 103.861429,
+      "speed_kmh": 42.9,
+      "status": "in_trip"
+    },
+    {
+      "timestamp": "2026-09-20T08:09:00+08:00",
+      "lat": 1.330311,
+      "lng": 103.867857,
+      "speed_kmh": 42.9,
+      "status": "in_trip"
+    },
+    {
+      "timestamp": "2026-09-20T08:10:00+08:00",
+      "lat": 1.330311,
+      "lng": 103.874286,
+      "speed_kmh": 42.9,
+      "status": "in_trip"
+    },
+    {
+      "timestamp": "2026-09-20T08:11:00+08:00",
+      "lat": 1.330311,
+      "lng": 103.880714,
+      "speed_kmh": 42.9,
+      "status": "in_trip"
+    },
+    {
+      "timestamp": "2026-09-20T08:12:00+08:00",
+      "lat": 1.330311,
+      "lng": 103.887143,
+      "speed_kmh": 42.9,
+      "status": "in_trip"
+    },
+    {
+      "timestamp": "2026-09-20T08:13:00+08:00",
+      "lat": 1.330311,
+      "lng": 103.893571,
+      "speed_kmh": 42.9,
+      "status": "in_trip"
+    },
+    {
+      "timestamp": "2026-09-20T08:14:00+08:00",
+      "lat": 1.330311,
+      "lng": 103.9,
+      "speed_kmh": 34.5,
+      "status": "in_trip"
+    },
+    {
+      "timestamp": "2026-09-20T08:15:00+08:00",
+      "lat": 1.32741,
+      "lng": 103.904286,
+      "speed_kmh": 34.5,
+      "status": "in_trip"
+    },
+    {
+      "timestamp": "2026-09-20T08:16:00+08:00",
+      "lat": 1.324508,
+      "lng": 103.908571,
+      "speed_kmh": 34.5,
+      "status": "in_trip"
+    },
+    {
+      "timestamp": "2026-09-20T08:17:00+08:00",
+      "lat": 1.321606,
+      "lng": 103.912857,
+      "speed_kmh": 34.5,
+      "status": "in_trip"
+    },
+    {
+      "timestamp": "2026-09-20T08:18:00+08:00",
+      "lat": 1.318705,
+      "lng": 103.917143,
+      "speed_kmh": 34.5,
+      "status": "in_trip"
+    },
+    {
+      "timestamp": "2026-09-20T08:19:00+08:00",
+      "lat": 1.315803,
+      "lng": 103.921429,
+      "speed_kmh": 34.5,
+      "status": "in_trip"
+    },
+    {
+      "timestamp": "2026-09-20T08:20:00+08:00",
+      "lat": 1.312902,
+      "lng": 103.925714,
+      "speed_kmh": 34.5,
+      "status": "in_trip"
+    },
+    {
+      "timestamp": "2026-09-20T08:21:00+08:00",
+      "lat": 1.31,
+      "lng": 103.93,
+      "speed_kmh": 0,
+      "status": "completed"
+    }
+  ]
 }
