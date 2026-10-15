@@ -121,7 +121,7 @@ See `backend/app/models/resolution.py`.
   "triage": {"tier": "safety | high | standard | low | null", "score": 0, "reasons": ["Threatening message in chat (SAFE-1)"]},
   "precedents": {
     "matches": [{"id": "P-063", "similarity": 0.89, "decision": "partial_refund", "policy_refs": ["RD-3"],
-                 "decided_by": "policy | human_review", "summary": "string", "note": "string"}],
+                 "decided_by": "policy | human_review", "summary": "string"}],
     "recommended_decision": "partial_refund",
     "consistency": "consistent | mixed | overridden | no_precedent",
     "summary": "Consistent with 3 similar past rulings (P-063, P-056, P-070)."

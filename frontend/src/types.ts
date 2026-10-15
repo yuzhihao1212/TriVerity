@@ -78,7 +78,7 @@ export interface PrecedentMatch {
   policy_refs: string[];
   decided_by: "policy" | "human_review";
   summary: string;
-  note: string;
+  note?: string;   // never sent by the API (reviewer notes stay on the server)
 }
 
 export interface PrecedentReport {
