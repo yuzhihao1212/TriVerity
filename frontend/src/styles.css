@@ -641,11 +641,11 @@ main[tabindex="-1"]:focus { outline: none; }
 .step::after { background: var(--accent); transform: scaleX(0); transform-origin: left center; transition: transform .35s ease; }
 .step.joined::after { transform: scaleX(1); }
 .step:first-child::before, .step:first-child::after { display: none; }
-.step-circle { display: inline-grid; place-items: center; width: var(--circle); height: var(--circle); border-radius: 50%; border: 2px solid var(--control-border); background: var(--bg); color: var(--muted); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; transition: background-color .2s ease, border-color .2s ease, box-shadow .2s ease; }
+.step-circle { position: relative; display: inline-grid; place-items: center; width: var(--circle); height: var(--circle); border-radius: 50%; border: 2px solid var(--control-border); background: var(--bg); color: var(--muted); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; transition: background-color .2s ease, border-color .2s ease; }
 .step-circle .icon { width: 15px; height: 15px; }
-.step.done .step-circle { background: var(--accent-control); border-color: var(--accent-control); color: var(--on-accent); }
-.step.current .step-circle { border-color: var(--accent-text); color: var(--accent-text); box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--accent-text); }
-.step.done.current .step-circle { color: var(--on-accent); }
+/* reviewed: filled with a tick. available: grey ring with the number. */
+.step.reviewed .step-circle { background: var(--accent-control); border-color: var(--accent-control); color: var(--on-accent); }
+.step.current:not(.reviewed) .step-circle { color: var(--accent-text); }
 .step-name { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; margin-top: var(--space-1); font-size: 13px; font-weight: 600; }
 .step-icon { flex: none; width: 15px; height: 15px; }
 .step.current .step-name { color: var(--accent-text); }
@@ -653,11 +653,27 @@ main[tabindex="-1"]:focus { outline: none; }
 .step .tab-progress { color: var(--muted); font-size: 11px; }
 .step.locked { cursor: not-allowed; }
 .step.locked .step-name { color: var(--muted); }
-.step.locked:not(.done):not(.in-progress) .step-circle { opacity: .6; border-style: dashed; }
+.step.locked:not(.working) .step-circle { opacity: .6; border-style: dashed; }
 .step:not(.locked):not([aria-selected="true"]):hover { background: var(--surface); }
-.step:not(.locked):not(.done):hover .step-circle { border-color: var(--accent-text); color: var(--accent-text); }
-.step.in-progress .step-circle { border-color: var(--accent-text); color: var(--accent-text); animation: step-pulse 1.4s ease-in-out infinite; }
-@keyframes step-pulse { 50% { box-shadow: 0 0 0 6px var(--accent-soft); } }
+.step:not(.locked):not(.reviewed):hover .step-circle { border-color: var(--accent-text); color: var(--accent-text); }
+/* The first step still to review: a quiet hint, never on the current step. */
+.step.next .step-circle { border-color: var(--accent-text); color: var(--accent-text); }
+.step-next { color: var(--accent-text); font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+/* Rings just outside the circle (WorkflowTabs StepRing). pathLength=100 keeps the dash maths simple. */
+.step-ring { position: absolute; inset: -6px; width: calc(100% + 12px); height: calc(100% + 12px); overflow: visible; pointer-events: none; }
+.step-ring circle { fill: none; stroke: var(--accent-text); stroke-width: 2; vector-effect: non-scaling-stroke; }
+/* current: a solid ring that draws itself once on arrival, then stays still (no endless motion, WCAG 2.2.2). */
+.step-ring.current circle { stroke-dasharray: 100; stroke-dashoffset: 0; transform: rotate(-90deg); transform-origin: center; transform-box: fill-box; animation: stepper-draw .4s ease-out both; }
+/* working (live runs only): a dashed ring that turns slowly while the agents are on this step. */
+.step-ring.working { animation: stepper-spin 2.5s linear infinite; }
+.step-ring.working circle { stroke-dasharray: 7 5.5; }
+.step.working .step-circle { border-color: var(--accent-text); color: var(--accent-text); }
+@keyframes stepper-draw { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
+@keyframes stepper-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  /* The dashed ring shows still, and the solid ring is already drawn. */
+  .step-ring.working, .step-ring.current circle { animation: none; }
+}
 .workflow-panel:not([hidden]) { animation: panel-in .15s ease-out; }
 @keyframes panel-in { from { opacity: 0; transform: translateY(6px); } }
 
@@ -669,6 +685,12 @@ main[tabindex="-1"]:focus { outline: none; }
 .case-chip.ok { border-color: var(--transparent); background: var(--ok-soft); color: var(--ok-text); }
 .case-chip.warn { border-color: var(--transparent); background: var(--warn-soft); color: var(--warn-text); }
 .status-pill { display: inline-flex; align-items: center; gap: 7px; padding: 4px 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--bg); color: var(--text); font-size: 12px; font-weight: 600; white-space: nowrap; }
+/* The pill says the agents are done; the progress beside it is the reviewer's own. */
+.case-status { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-2); }
+.review-progress { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.review-progress.complete { padding: 4px 10px; border-radius: 999px; background: var(--ok-soft); color: var(--ok-text); }
+.review-progress .icon { width: 14px; height: 14px; }
+.presentation-mode .review-progress { font-size: 14px; }
 .status-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--control-border); }
 .status-pill.ok .status-dot { background: var(--ok-text); }
 .status-pill.accent .status-dot { background: var(--accent); }

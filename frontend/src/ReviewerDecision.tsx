@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
 
 import { Term } from "./Term";
-import { recordReviewerDecision } from "./services/api";
+import { ApiError, recordReviewerDecision } from "./services/api";
 import type { Decision, DisputeCase, Resolution } from "./types";
 
 type Final = Exclude<Decision, "needs_review">;
@@ -9,8 +9,14 @@ const LABELS: Record<Final, string> = {
   partial_refund: "Partial refund", full_refund: "Full refund", compensation: "Compensation", no_action: "No change to the charge",
 };
 
-/** The human in the loop: accept the ruling or override it. Either way it becomes a precedent. */
-export function ReviewerDecision({ dispute, resolution }: { dispute: DisputeCase; resolution: Resolution }) {
+/**
+ * The human in the loop: accept the ruling or override it. Either way it becomes a precedent.
+ * `onDecided` fires once the decision is saved; `onUnavailable` when recording is turned off
+ * (403, as in the public demo), so the stepper can still count the Ruling step as reviewed.
+ */
+export function ReviewerDecision({ dispute, resolution, onDecided, onUnavailable }: {
+  dispute: DisputeCase; resolution: Resolution; onDecided?: () => void; onUnavailable?: () => void;
+}) {
   const id = useId();
   const escalated = resolution.decision === "needs_review";
   const [mode, setMode] = useState<"idle" | "override">(escalated ? "override" : "idle");
@@ -25,8 +31,14 @@ export function ReviewerDecision({ dispute, resolution }: { dispute: DisputeCase
     setBusy(true);
     setError(null);
     recordReviewerDecision({ case: dispute, decision, note })
-      .then(saved => setDone(`${verb}: ${LABELS[decision].toLowerCase()}. Saved as precedent ${saved.id}; similar disputes are now checked against it.`))
-      .catch((e: Error) => setError(e.message))
+      .then(saved => {
+        setDone(`${verb}: ${LABELS[decision].toLowerCase()}. Saved as precedent ${saved.id}; similar disputes are now checked against it.`);
+        onDecided?.();
+      })
+      .catch((e: Error) => {
+        setError(e.message);
+        if (e instanceof ApiError && e.status === 403) onUnavailable?.();
+      })
       .finally(() => setBusy(false));
   }
 
