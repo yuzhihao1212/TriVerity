@@ -5,8 +5,13 @@ export interface LatLng { lat: number; lng: number }
 export interface GpsPoint extends LatLng { timestamp?: string | null }
 export interface Pt { x: number; y: number }
 
+/** A round ruler step (1, 2, 5, 10…) giving about four ticks up to `max`. */
+export function niceStep(max: number): number {
+  const raw = max / 4, power = 10 ** Math.floor(Math.log10(raw));
+  return [1, 2, 5, 10].map(m => m * power).find(step => step >= raw) ?? 10 * power;
+}
+
 const EARTH_M = 6_371_000;
-export const OFF_ROUTE_M = 150;   // same threshold as the backend's planned-route comparison
 
 export function metres(a: LatLng, b: LatLng): number {
   const rad = Math.PI / 180;
@@ -15,61 +20,8 @@ export function metres(a: LatLng, b: LatLng): number {
   return 2 * EARTH_M * Math.asin(Math.sqrt(Math.min(1, h)));
 }
 
-/** Fit lat/lng points into a box, keeping the map's proportions (north up). */
-export function projector(points: LatLng[], width: number, height: number, pad = 10): (p: LatLng) => Pt {
-  const lat0 = points.reduce((s, p) => s + p.lat, 0) / points.length;
-  const k = Math.cos((lat0 * Math.PI) / 180);
-  const xs = points.map(p => p.lng * k), ys = points.map(p => p.lat);
-  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
-  const scale = Math.min((width - 2 * pad) / Math.max(maxX - minX, 1e-9), (height - 2 * pad) / Math.max(maxY - minY, 1e-9));
-  const offX = (width - (maxX - minX) * scale) / 2, offY = (height - (maxY - minY) * scale) / 2;
-  return p => ({ x: offX + (p.lng * k - minX) * scale, y: offY + (maxY - p.lat) * scale });
-}
-
-/** Distance in metres from a point to the nearest segment of a route (flat projection; fine at city scale). */
-export function offsetFromRoute(p: LatLng, route: LatLng[]): number {
-  const mLat = 110_540, mLng = 111_320 * Math.cos((p.lat * Math.PI) / 180);
-  let best = Infinity;
-  for (let i = 1; i < route.length; i++) {
-    const ax = (route[i - 1].lng - p.lng) * mLng, ay = (route[i - 1].lat - p.lat) * mLat;
-    const bx = (route[i].lng - p.lng) * mLng, by = (route[i].lat - p.lat) * mLat;
-    const dx = bx - ax, dy = by - ay, len = dx * dx + dy * dy;
-    const t = len === 0 ? 0 : Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len));
-    best = Math.min(best, Math.hypot(ax + t * dx, ay + t * dy));
-  }
-  return best;
-}
-
-export function offRoute(points: LatLng[], route: LatLng[], threshold = OFF_ROUTE_M): boolean[] {
-  return points.map(p => offsetFromRoute(p, route) > threshold);
-}
-
 export function polyline(points: Pt[]): string {
   return points.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-}
-
-function length(points: Pt[]): number {
-  let total = 0;
-  for (let i = 1; i < points.length; i++) total += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
-  return total;
-}
-
-/**
- * A stylised road from (x0, y) to (x1, y) whose drawn length is `ratio` times the straight line,
- * e.g. 1.44 for a route 44% longer than expected. Found by solving for the wave's height.
- */
-export function wavyRoad(x0: number, x1: number, y: number, ratio: number, waves = 3, samples = 120): Pt[] {
-  const wave = (amp: number) => Array.from({ length: samples + 1 }, (_, i) => {
-    const t = i / samples;
-    return { x: x0 + (x1 - x0) * t, y: y - amp * Math.sin(t * waves * 2 * Math.PI) };
-  });
-  const target = Math.max(ratio, 1) * (x1 - x0);
-  let lo = 0, hi = (x1 - x0);
-  for (let i = 0; i < 40; i++) {
-    const mid = (lo + hi) / 2;
-    if (length(wave(mid)) < target) lo = mid; else hi = mid;
-  }
-  return wave((lo + hi) / 2);
 }
 
 export interface ProgressPoint { minutes: number; km: number }
