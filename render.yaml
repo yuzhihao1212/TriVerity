@@ -30,7 +30,7 @@ services:
         value: "true"
       - key: DEMO_ACCESS_CODES    # comma-separated, one per judge; see the docs
         sync: false
-      # -- Preset 2 limits (.env.example), sized for ~5,400 tokens per resolve --
+      # -- Preset 2 limits (.env.example), sized for ~8,000 tokens per resolve (collector on) --
       - key: PER_IP_PER_MINUTE
         value: "5"
       - key: PER_IP_PER_DAY
@@ -42,6 +42,6 @@ services:
       - key: GLOBAL_PER_MINUTE
         value: "10"
       - key: DAILY_TOKEN_BUDGET   # keep below the demo key's TokenHub quota
-        value: "250000"
+        value: "400000"
       - key: DAILY_RESOLVE_BUDGET
         value: "45"

@@ -20,7 +20,7 @@ on the demo server, use Preset 2 and check the backend's start-up log: it prints
 ## 1. A separate LLM key for the demo
 
 In the TokenHub console, create a **new API key** just for the demo, with a small
-**Total Quota** (for example 150,000 tokens, about 35 resolves). If the link is abused,
+**Total Quota** (for example 400,000 tokens, about 50 resolves at ~8,000 tokens each). If the link is abused,
 only this key runs dry, and you can revoke it without touching your development key.
 Put it in the demo server's `backend/.env` as `LLM_API_KEY`. Never paste it into chat,
 code, screenshots or the frontend.
@@ -151,7 +151,7 @@ Before judging:
 
 - [ ] `python scripts/setup_demo_access.py list` shows `PUBLIC_DEMO=true` and the judges' names.
 - [ ] Backend restarted after the last `.env` change.
-- [ ] Warm the cache so the samples answer instantly (spends about 50,000 tokens):
+- [ ] Warm the cache so the samples answer instantly (spends about 75,000 tokens):
       `python scripts/prewarm_demo.py --base-url https://demo.example.com --yes`.
       Every line should show `llm` sources; `fallback` means the key or budget is not working.
 - [ ] Open the link in a private window: a sample resolves, and "+ New dispute" without a code shows
