@@ -22,6 +22,7 @@ MAX_BODY_BYTES = 512 * 1024
 DISPUTE_ID_PATTERN = r"^[A-Za-z0-9_-]{1,64}$"
 PROMO_CODE_PATTERN = r"^[A-Za-z0-9_-]{1,32}$"   # stored upper-cased
 MAX_STATEMENT_CHARS = 2_000        # rider_claim, driver_statement
+MAX_CASE_LABEL_CHARS = 60         # display-only sidebar label; never prompt evidence
 MAX_CHAT_MESSAGES = 50
 MAX_CHAT_MESSAGE_CHARS = 500
 MAX_TIMESTAMP_CHARS = 64

@@ -2,6 +2,7 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core import limits
+from app.services.text_safety import contains_link_or_markup, normalise, sanitise
 
 DisputeType = Literal["route_deviation", "no_show_charge"]
 
@@ -75,6 +76,8 @@ class PartyHistory(BaseModel):
 class DisputeCase(BaseModel):
     dispute_id: str = Field(pattern=limits.DISPUTE_ID_PATTERN)
     type: DisputeType
+    # Navigation metadata only. Prompt builders select evidence fields explicitly.
+    label: str | None = Field(default=None, max_length=limits.MAX_CASE_LABEL_CHARS)
     rider_claim: Statement
     driver_statement: Statement | None = None
     trip: TripData = Field(default_factory=TripData)
@@ -83,3 +86,13 @@ class DisputeCase(BaseModel):
     gps_points: list[dict[str, Any]] = Field(default_factory=list, max_length=limits.MAX_GPS_POINTS)
     rider_history: PartyHistory = Field(default_factory=PartyHistory)
     driver_history: PartyHistory = Field(default_factory=PartyHistory)
+
+    @field_validator("label")
+    @classmethod
+    def _plain_label(cls, label: str | None) -> str | None:
+        if label is None:
+            return None
+        label = sanitise(label)
+        if contains_link_or_markup(normalise(label)):
+            raise ValueError("The label must be plain text, without links or markup.")
+        return label or None

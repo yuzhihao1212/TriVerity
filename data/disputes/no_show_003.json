@@ -1,5 +1,6 @@
 {
   "dispute_id": "D006",
+  "label": "7-min wait, rider contacted",
   "type": "no_show_charge",
   "rider_claim": "I was only a few minutes late and still got charged.",
   "driver_statement": "I waited at the pickup point and messaged the rider, but they didn't come.",

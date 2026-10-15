@@ -19,6 +19,7 @@ export interface PartyHistory {
 export interface DisputeCase {
   dispute_id: string;
   type: DisputeType;
+  label?: string | null; // Display-only navigation text; not evidence for the agents.
   rider_claim: string;
   driver_statement?: string | null;
   trip: Record<string, number | null>;

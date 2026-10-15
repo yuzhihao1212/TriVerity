@@ -204,6 +204,7 @@ and results live only in the response (and, in public demo mode, the in-memory s
 
 | Field | Sent to the LLM? | Stored? | Logged? | Internal view | Party view |
 | --- | --- | --- | --- | --- | --- |
+| Case `label` | **never**; display-only, max 60 characters, sanitised, links/email/markup rejected | bundled sample labels only; submitted labels are not persisted | no | yes (sample list/sidebar) | no |
 | `rider_claim` | yes, cleaned: rider advocate and narration | no | no | yes (advocate evidence) | no |
 | `driver_statement` | yes, cleaned: driver advocate and narration | no | no | yes | no |
 | Chat messages | lines matching a keyword, quoted in the facts; plus, when the Evidence Collection agent calls `chat_window`, up to 8 rider/driver messages (200 characters each, clock time only) from a window of at most 60 minutes. Both go to the advocates, rebuttals and Judge. **Phone numbers (any common separator: space, dash, dot, brackets), emails and links (including bare `host.tld/path`) are replaced with placeholders** before quoting on both chat paths (`text_safety.redact_contacts`); names and street addresses can't be detected reliably and stay | no | no | yes (`judge_evidence`, `evidence_collection`) | no |

@@ -1,5 +1,6 @@
 {
   "dispute_id": "D002",
+  "label": "Wait time missing",
   "type": "no_show_charge",
   "rider_claim": "The driver did not arrive at the pickup point but I was charged a cancellation fee.",
   "driver_statement": "I arrived near the pickup point and waited for the rider.",

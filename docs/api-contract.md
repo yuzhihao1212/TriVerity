@@ -9,6 +9,7 @@ See `backend/app/models/dispute.py` and the samples in `data/disputes/`.
 ```json
 {
   "dispute_id": "D001",
+  "label": "6-min stop, long detour",
   "type": "route_deviation | no_show_charge",
   "rider_claim": "string",
   "driver_statement": "string | null",
@@ -35,6 +36,13 @@ See `backend/app/models/dispute.py` and the samples in `data/disputes/`.
 All evidence fields are optional. `breakdown` lists charges before `promo_discount`.
 Chat messages and history accept extra fields, so external datasets can pass through,
 but unknown fields are dropped (not kept or returned).
+
+`label` is optional display-only metadata (`string | null`, at most 60 characters).
+Control/invisible characters are removed and whitespace is collapsed; an empty label becomes
+`null`. Links, email addresses and markup are rejected. Labels are returned in the sample list
+for the sidebar, but never enter facts, rulings or any LLM prompt (collector, advocates,
+rebuttals or Judge). The sidebar shows the rider's claim on one truncated line when no label
+is supplied, including disputes created with the form.
 
 `trip.planned_route` (optional, up to 200 `{lat, lng}` points) is the platform's planned route; the
 evidence loader compares the GPS path with it point by point. Coordinates never reach the LLM, only the
@@ -70,6 +78,7 @@ logged at start-up, and an out-of-range value stops the backend from starting.
 | --- | --- |
 | 413 | Request body over 512 KB (checked on `Content-Length` and on the bytes received). |
 | 422 | A field breaks a limit: `dispute_id` not `^[A-Za-z0-9_-]{1,64}$`; `rider_claim` or `driver_statement` over 2,000 characters; more than 50 chat messages or a message over 500 characters; more than 20 `breakdown` lines or a `label` over 80 characters; `promo_code` not `^[A-Za-z0-9_-]{1,32}$`; any number that is `NaN`/`Infinity` or out of range (distances 0-500 km, durations and waits 0-600 min, money 0-1,000, breakdown amounts -1,000 to 1,000, surge 1-10, rating 0-5, latitude ±90, longitude ±180, counts ≥ 0). |
+| 422 | A case `label` over 60 characters, or containing links/email/markup. This is separate from a fare breakdown line's 80-character `label`. |
 | 422 | More than 5,000 `gps_points` (a 35-minute trip logged once a second is about 2,100). |
 | 429 | Rate limit: 3 resolves per minute and 30 per day per client IP, 10 per minute across all callers. `Retry-After` gives the seconds to wait. |
 | 503 | All 3 resolve slots are busy. `Retry-After: 5`. |

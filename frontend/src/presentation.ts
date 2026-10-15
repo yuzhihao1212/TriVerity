@@ -1,4 +1,8 @@
-import type { Resolution } from "./types";
+import type { DisputeCase, Resolution } from "./types";
+
+export function disputeLabel(dispute: Pick<DisputeCase, "label" | "rider_claim">): string {
+  return dispute.label?.trim() || dispute.rider_claim;
+}
 
 export function money(value: number | null | undefined): string {
   return value == null || !Number.isFinite(value) ? "Not provided" : `$${value.toFixed(2)}`;

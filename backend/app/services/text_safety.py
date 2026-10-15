@@ -81,6 +81,11 @@ def redact_contacts(text: str) -> str:
         lambda m: m.group(0) if _DATE_RE.fullmatch(m.group(0).strip()) else "[phone removed]", text)
 
 
+def contains_link_or_markup(text: str) -> bool:
+    """Check display text with the same URL/email coverage as contact redaction."""
+    return bool(_LINK_REDACT_RE.search(text) or _EMAIL_REDACT_RE.search(text) or _MARKUP_RE.search(text))
+
+
 def find_link_or_markup(text: str) -> str | None:
     """Return what kind of unsafe content ``text`` (already normalised) contains, if any."""
     if _LINK_RE.search(text):

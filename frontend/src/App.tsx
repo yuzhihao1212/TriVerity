@@ -8,7 +8,7 @@ import { CaseComparison } from "./CaseComparison";
 import { Debate } from "./Debate";
 import { EvidenceList, EvidenceText, type FactLinks } from "./EvidenceList";
 import { VerdictSummary } from "./VerdictSummary";
-import { computedFacts, filterDisputes, money, readPresentationPreference, writePresentationPreference } from "./presentation";
+import { computedFacts, disputeLabel, filterDisputes, money, readPresentationPreference, writePresentationPreference } from "./presentation";
 import { PartyPreview } from "./PartyPreview";
 import { DisputeForm } from "./DisputeForm";
 import { getSamples, resolveDispute } from "./services/api";
@@ -171,6 +171,7 @@ export default function App() {
       <span className="dispute-meta">
         <TypeIcon type={d.type} />{d.dispute_id} · {TYPE_LABELS[d.type]}
       </span>
+      <span className="dispute-label" title={disputeLabel(d)}>{disputeLabel(d)}</span>
       {results[d.dispute_id] && (
         <span className="dispute-done">{DECISION_LABELS[results[d.dispute_id].decision]}</span>
       )}
