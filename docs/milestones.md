@@ -1,7 +1,7 @@
 # Milestones
 
 Measured against the Ryde challenge brief and the hackathon submission requirements.
-Status as of 15 Oct 2026.
+Status as of 16 Oct 2026.
 
 ## Required by the brief
 
@@ -15,7 +15,7 @@ Status as of 15 Oct 2026.
 | ✅ | Observable inter-agent communication | Agent log and demo UI with AI / Fallback badges |
 | ✅ | Working prototype, architecture diagram, source on GitHub | Diagram in [architecture.md](architecture.md) |
 | ✅ | Handle the organisers' sample dataset | Adapter in `backend/app/services/ryde_adapter.py`; DISP-002 resolves as expected |
-| ✅ | Evaluation | `scripts/evaluate.py` ([evaluation.md](evaluation.md)): 9/9 rulings correct live, 45/45 outputs by the AI |
+| ✅ | Evaluation | `scripts/evaluate.py` ([evaluation.md](evaluation.md)): 9/9 rulings correct live, 45/45 outputs by the AI, 8/9 consistent with precedent |
 | ⬜ | Live demo walkthrough | Rehearse with D001 (refund), D005 (no-show refund), D007 (safety and fraud escalation), DISP-002 (organisers' case) |
 
 ## Stretch goals (bonus points)
@@ -26,7 +26,9 @@ Status as of 15 Oct 2026.
 | ✅ | Fraud and bad-faith detection agent | Deterministic risk from history and contradicted claims; never penalises, only escalates |
 | ✅ | Policy and precedent agent | Retrieves the closest past rulings (162 synthetic); the Judge cites them; consistency measured in the evaluation |
 | ✅ | Learning feedback loop | Reviewer decisions become precedents; repeated reviewer disagreement escalates similar disputes (`PREC-1`) |
-| ⬜ | Evidence collection agent, image analysis, SLA routing | Not planned |
+| ✅ | SLA and routing manager (triage) | Escalated disputes get a tier (safety first), a score and reasons; the queue and SLA clocks are documented as the production extension ([architecture.md](architecture.md)) |
+| 🟡 | Evidence collection agent | Built in PR #24 (Hy3 plans calls to mock data-source APIs); waiting on a privacy review of chat quotes |
+| ⬜ | Image analysis | Not planned |
 
 ## Security and responsible AI
 
@@ -45,6 +47,6 @@ Status as of 15 Oct 2026.
 | ⬜ | Built with CodeBuddy, with proof (at least 3 chat screenshots) | Everyone: screenshots in the shared folder |
 | ⬜ | Project title and blurb under 10 words | Lead |
 | ⬜ | Project description: overview, pain points, solution design incl. how prompts drive generation ([prompts.md](prompts.md)), business value | Lead, from the docs |
-| ⬜ | 16:9 cover image (380×216) | Lead (Miora) |
+| ✅ | 16:9 cover image (380×216) | Lead (Miora) |
 | ⬜ | Demo video, 5–8 minutes (optional) | Team |
-| ⬜ | Live demo link (optional, bonus points) | Needs hosting; see [demo-deployment.md](demo-deployment.md) |
+| 🟡 | Live demo link (optional, bonus points) | Render Blueprint ready; final redeploy when the project is finished ([demo-deployment.md](demo-deployment.md)) |

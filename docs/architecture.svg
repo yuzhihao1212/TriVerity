@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 850" width="1400" height="850" font-family="Poppins, 'Open Sans', Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1000" width="1400" height="1000" font-family="Poppins, 'Open Sans', Helvetica, Arial, sans-serif">
   <title>TriVerity architecture: multi-agent dispute resolution for Ryde</title>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -21,7 +21,7 @@
     </style>
   </defs>
 
-  <rect width="1400" height="850" fill="#FFFFFF"/>
+  <rect width="1400" height="1000" fill="#FFFFFF"/>
 
   <!-- Title and legend -->
   <text x="40" y="44" font-size="22" font-weight="700" fill="#E93864">TriVerity</text>
@@ -55,7 +55,7 @@
   <text x="1100" y="152" class="mono">ryde_mock_policy.json</text>
   <text x="1100" y="174" class="t">Route deviation: RD-1 … RD-4</text>
   <text x="1100" y="194" class="t">No-show charge: NS-1 … NS-4</text>
-  <text x="1100" y="214" class="t">SAFE-1 · FRAUD-1 · ESC-1</text>
+  <text x="1100" y="214" class="t">SAFE-1 · FRAUD-1 · ESC-1 · PREC-1</text>
 
   <path d="M300,165 H356" class="flow"/>
 
@@ -71,8 +71,8 @@
   <text x="1228" y="256" class="lbl">rules to cite</text>
 
   <!-- Facts bus to the judge -->
-  <path d="M375,230 V272 H110 V630 H176" class="flow"/>
-  <text x="102" y="440" class="lbl" transform="rotate(-90 102 440)" text-anchor="middle">facts</text>
+  <path d="M375,230 V272 H110 V775 H176" class="flow"/>
+  <text x="102" y="520" class="lbl" transform="rotate(-90 102 520)" text-anchor="middle">facts</text>
   <text x="160" y="286" class="lbl">run in parallel ↓</text>
 
   <!-- Row 2: advocates, fraud detector, gateway -->
@@ -112,44 +112,61 @@
   <text x="180" y="475" class="h">Rebuttal round: rider ↔ driver</text>
   <text x="180" y="495" class="t">Each advocate answers the other case once, citing computed evidence IDs</text>
   <text x="180" y="512" class="note">Checked replies · fallback on failure · skipped unless both initial cases use Hy3</text>
-  <path d="M480,520 V546" class="flow"/>
+  <path d="M480,520 V676" class="flow"/>
   <text x="490" y="539" class="lbl">both cases + replies</text>
-  <path d="M970,420 V546" class="flow"/>
+  <path d="M970,420 V676" class="flow"/>
   <text x="978" y="490" class="lbl">risk + signals</text>
-  <path d="M1360,200 H1380 V570 H1104" class="rules"/>
-  <text x="1372" y="590" class="lbl" text-anchor="end">rules applied</text>
+  <path d="M1360,200 H1380 V700 H1104" class="rules"/>
+  <text x="1372" y="720" class="lbl" text-anchor="end">rules applied</text>
+
+  <!-- Policy & Precedent agent: retrieval over past rulings, consistency check. -->
+  <path d="M820,200 V556" class="flow"/>
+  <text x="826" y="545" class="lbl">facts</text>
+  <rect x="520" y="560" width="400" height="96" rx="14" class="det"/>
+  <text x="540" y="585" class="h">Policy &amp; Precedent agent</text>
+  <text x="540" y="606" class="t">Retrieves the 3 closest past rulings (162 synthetic)</text>
+  <text x="540" y="625" class="t">Checks the rules' decision against them</text>
+  <text x="540" y="645" class="note">Reviewers overruled close cases → PREC-1 review</text>
+  <path d="M720,656 V676" class="flow"/>
 
   <!-- Judge: deterministic ruling followed by checked narration. -->
-  <rect x="160" y="550" width="940" height="170" rx="16" class="frame"/>
-  <text x="180" y="577" class="h">Judge agent</text>
-  <rect x="180" y="590" width="380" height="115" rx="12" class="det"/>
-  <text x="198" y="613" class="h">① Policy rules decide</text>
-  <text x="198" y="635" class="t">Decision · refund · confidence · rules cited</text>
-  <text x="198" y="655" class="t">Decides from facts, not narratives</text>
-  <text x="198" y="675" class="t">Threats or high fraud risk → human review</text>
-  <text x="198" y="695" class="t">ESC-1: confidence &lt; 60% → human review</text>
-  <path d="M560,647 H596" class="flow"/>
-  <rect x="600" y="590" width="480" height="115" rx="12" class="llm"/>
-  <text x="618" y="613" class="h">② Hy3 explains the ruling</text>
-  <text x="618" y="635" class="t">Answers both arguments and replies for the case record</text>
-  <text x="618" y="655" class="t">Separate party messages: no fraud risk or history</text>
-  <text x="618" y="675" class="t">Checks: amounts · cited rules · no refund promise on review</text>
-  <text x="618" y="695" class="note">Invalid output → deterministic explanation</text>
+  <rect x="160" y="680" width="940" height="190" rx="16" class="frame"/>
+  <text x="180" y="707" class="h">Judge agent</text>
+  <rect x="180" y="720" width="380" height="135" rx="12" class="det"/>
+  <text x="198" y="743" class="h">① Policy rules decide</text>
+  <text x="198" y="765" class="t">Decision · refund · confidence · rules cited</text>
+  <text x="198" y="785" class="t">Decides from facts, not narratives</text>
+  <text x="198" y="805" class="t">Threats or high fraud risk → human review</text>
+  <text x="198" y="825" class="t">ESC-1: confidence &lt; 60% → human review</text>
+  <text x="198" y="845" class="t">PREC-1: reviewers ruled otherwise → review</text>
+  <path d="M560,787 H596" class="flow"/>
+  <rect x="600" y="720" width="480" height="135" rx="12" class="llm"/>
+  <text x="618" y="743" class="h">② Hy3 explains the ruling</text>
+  <text x="618" y="765" class="t">Answers both arguments and replies for the case record</text>
+  <text x="618" y="785" class="t">Cites the retrieved precedents in the record (RAG)</text>
+  <text x="618" y="805" class="t">Party messages: no fraud risk, history or precedents</text>
+  <text x="618" y="825" class="t">Checks: amounts · cited rules · no refund promise on review</text>
+  <text x="618" y="845" class="note">Invalid output → deterministic explanation</text>
 
   <!-- Output and downstream views. -->
-  <path d="M630,720 V746" class="flow"/>
-  <rect x="160" y="750" width="940" height="80" rx="14" class="det"/>
-  <text x="180" y="774" class="h">Resolution</text>
-  <text x="180" y="795" class="t">Ruling · recommended action · confidence · cited policy · internal fraud risk assessment</text>
-  <text x="180" y="815" class="t">Neutral record + party messages · agent log · AI / Fallback source for each step</text>
+  <path d="M630,870 V896" class="flow"/>
+  <rect x="160" y="900" width="940" height="80" rx="14" class="det"/>
+  <text x="180" y="924" class="h">Resolution</text>
+  <text x="180" y="945" class="t">Ruling · action · confidence · cited policy · internal: fraud risk, review triage, precedents</text>
+  <text x="180" y="965" class="t">Neutral record + party messages · agent log · AI / Fallback source for each step</text>
 
-  <rect x="1140" y="700" width="220" height="56" rx="12" class="det"/>
-  <text x="1158" y="724" class="h" font-size="15">Demo UI</text>
-  <text x="1158" y="744" class="t">Evidence · agents · risk · ruling</text>
-  <rect x="1140" y="770" width="220" height="56" rx="12" class="det"/>
-  <text x="1158" y="794" class="h" font-size="15">Human reviewer</text>
-  <text x="1158" y="814" class="t">Escalated disputes</text>
+  <rect x="1140" y="850" width="220" height="56" rx="12" class="det"/>
+  <text x="1158" y="874" class="h" font-size="15">Human reviewer</text>
+  <text x="1158" y="894" class="t">Escalated disputes, by triage</text>
+  <rect x="1140" y="920" width="220" height="56" rx="12" class="det"/>
+  <text x="1158" y="944" class="h" font-size="15">Demo UI</text>
+  <text x="1158" y="964" class="t">Five-step case workflow</text>
 
-  <path d="M1100,770 H1120 V728 H1136" class="flow"/>
-  <path d="M1100,798 H1136" class="flow"/>
+  <path d="M1100,920 H1120 V878 H1136" class="flow"/>
+  <path d="M1100,948 H1136" class="flow"/>
+
+  <!-- Learning feedback loop: reviewer decisions become precedents. -->
+  <path d="M1250,850 V610 H924" class="rules"/>
+  <text x="1258" y="760" class="lbl">feedback: reviewer</text>
+  <text x="1258" y="775" class="lbl">decisions → precedents</text>
 </svg>
