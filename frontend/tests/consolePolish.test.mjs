@@ -103,3 +103,9 @@ test('decision bar: idle, saving, accepted, overridden, escalated, unavailable',
   // A saved decision wins over a later "unavailable" (e.g. a 403 on another case).
   assert.equal(ds.decisionBar({ ...base, unavailable: true, saved: { kind: 'accepted', decision: 'partial_refund', precedentId: 'R-1' } }).state, 'accepted');
 });
+
+test('free-text agent messages keep money and distances as written', () => {
+  for (const text of ['A $0.50 promo was applied.', 'The driver stopped 0.38 km away.', 'Surge x1.25 on a 0.75 km trip.']) {
+    assert.equal(humanizeAgentMessage('rider_advocate', `[llm] ${text}`, null), text);
+  }
+});

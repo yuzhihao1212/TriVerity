@@ -63,9 +63,10 @@ export function humanizeAgentMessage(agent: string, message: string, resolution?
     case "precedent_agent": return precedentText(message, resolution);
     case "evidence_collector": return collectorText(message, resolution);
     default: {
-      const text = plainWords(stripTag(message));
-      // A bare similarity like 0.88 reads as a percentage.
-      return text.replace(/(?<![\d.])0\.(\d{2})(?!\d)/g, (_, digits: string) => `${Number(digits)}%`);
+      // "similarity 0.88" reads as "similarity 88%". Only right after the word: a blanket
+      // "0.xx" rewrite would turn "$0.50" or "0.75 km" into percentages.
+      return plainWords(stripTag(message)).replace(/\b(similarit(?:y|ies)\s+(?:of\s+)?)0\.(\d{2})(?!\d)/gi,
+        (_, lead: string, digits: string) => `${lead}${Number(digits)}%`);
     }
   }
 }
