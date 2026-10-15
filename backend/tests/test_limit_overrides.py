@@ -31,7 +31,10 @@ def test_defaults_without_overrides(reload_limits):
 
 
 def test_env_overrides_raise_the_budget(reload_limits):
-    reloaded = reload_limits(daily_token_budget=2_000_000, daily_resolve_budget=500, per_ip_per_day=200)
+    # Start from no overrides, so the developer's own backend/.env can't change the result.
+    cleared = {name.lower(): None for name in limits._OVERRIDABLE}
+    reloaded = reload_limits(**{**cleared, "daily_token_budget": 2_000_000, "daily_resolve_budget": 500,
+                                "per_ip_per_day": 200})
     assert reloaded.DAILY_TOKEN_BUDGET == 2_000_000
     assert reloaded.DAILY_RESOLVE_BUDGET == 500
     assert reloaded.PER_IP_PER_DAY == 200
