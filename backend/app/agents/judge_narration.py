@@ -82,10 +82,13 @@ _LEAK_RE = re.compile(
 _REFUND_RE = re.compile(
     r"\b(refund\w*|reimburs\w*|compensat\w*|money back|credit(?:ed)?"
     r"|(?:get|gets|getting|receive|receives|receiving|paid)\s+(?:\S+\s+){0,3}back"
+    # "get back to you" means a reply, not money.
+    r"(?!\s+to\s+(?:you|them|him|her|us|the rider|the driver)\b)"
     r"|bayaran balik|pulangan wang|wang dikembalikan|ganti rugi|pampasan)\b",
     re.IGNORECASE,
 )
-_NEGATION_RE = re.compile(r"\b(no|not|never|without|nor|cannot|tidak|tiada|bukan)\b|n't\b", re.IGNORECASE)
+# "no" only as a word: the "no" in "no-show" is not a negation.
+_NEGATION_RE = re.compile(r"\b(not|never|without|nor|cannot|tidak|tiada|bukan)\b|(?<![\w-])no(?![\w-])|n't\b", re.IGNORECASE)
 # "whether a refund is due", "your request for a refund": not promises.
 _HEDGE_RE = re.compile(r"\b(whether|if|request\w*|ask\w*|seek\w*|sought|claim\w*)\b", re.IGNORECASE)
 _UPHELD_RE = re.compile(r"\bupheld\b", re.IGNORECASE)
