@@ -16,6 +16,7 @@ from app.core.rate_limit import enforce_resolve_rate_limit
 from app.models.dispute import DisputeCase
 from app.models.resolution import AgentLogEntry, PartyResolution, Resolution
 from app.services.budget import budget
+from app.services.llm_client import ai_disabled
 from app.services.orchestrator import ServiceBusy, resolve_dispute
 from app.services.sample_service import load_samples
 
@@ -33,6 +34,7 @@ def samples() -> list[DisputeCase]:
 def resolve(
     case: DisputeCase,
     view: Literal["internal", "rider", "driver"] = "internal",
+    ai: Literal["on", "off"] = "on",
     code_id: str | None = Depends(enforce_resolve_rate_limit),
 ) -> Resolution | PartyResolution:
     """Resolve a dispute.
@@ -40,24 +42,29 @@ def resolve(
     ``view=internal`` (default) is the full record for the reviewer console;
     ``view=rider`` / ``view=driver`` is what that party may see (finding F8).
     In production the internal view must require a reviewer login (auth tier T3).
+    ``ai=off`` resolves without calling the LLM (deterministic fallbacks, no tokens).
     """
-    result = _resolve_case(case, code_id)
+    result = _resolve_case(case, code_id, offline=ai == "off")
     return result if view == "internal" else PartyResolution.of(result, case.dispute_id, view)
 
 StepCallback = Callable[[AgentLogEntry], None]
 
 
-def _resolve_case(case: DisputeCase, code_id: str | None, on_step: StepCallback | None = None) -> Resolution:
+def _resolve_case(case: DisputeCase, code_id: str | None, on_step: StepCallback | None = None,
+                  offline: bool = False) -> Resolution:
     # Both transports use the same server-side sample lookup, cache and budget.
     if settings.public_demo and code_id is None:
-        return _resolve_public_sample(case.dispute_id, on_step)
-    return _run(case, on_step)
+        return _resolve_public_sample(case.dispute_id, on_step, offline)
+    return _run(case, on_step, offline)
 
 
-def _run(case: DisputeCase, on_step: StepCallback | None = None) -> Resolution:
-    budget.record_resolve()
+def _run(case: DisputeCase, on_step: StepCallback | None = None, offline: bool = False) -> Resolution:
+    # Offline runs spend no tokens, so they don't count against the daily resolve budget.
+    if not offline:
+        budget.record_resolve()
     try:
-        return resolve_dispute(case) if on_step is None else resolve_dispute(case, on_step=on_step)
+        with ai_disabled(offline):
+            return resolve_dispute(case) if on_step is None else resolve_dispute(case, on_step=on_step)
     except ServiceBusy:
         raise HTTPException(
             status_code=503,
@@ -81,11 +88,14 @@ def _public_demo_cache_ttl(result: Resolution) -> int:
     return limits.PUBLIC_DEMO_CACHE_S if all_ai else limits.PUBLIC_DEMO_FALLBACK_CACHE_S
 
 
-def _resolve_public_sample(dispute_id: str, on_step: StepCallback | None = None) -> Resolution:
+def _resolve_public_sample(dispute_id: str, on_step: StepCallback | None = None, offline: bool = False) -> Resolution:
     """Resolve the server's own copy of a sample; the client's facts and text are ignored."""
     case = next((c for c in load_samples() if c.dispute_id == dispute_id), None)
     if case is None:
         raise HTTPException(status_code=404, detail="The public demo resolves the sample disputes only.")
+    if offline:
+        # Free and instant; kept out of the cache so an AI request never gets an offline result.
+        return _run(case, on_step, offline=True)
     now = time.monotonic()
     with _demo_lock:
         hit = _demo_cache.get(dispute_id)
@@ -108,6 +118,7 @@ async def resolve_stream(
     request: Request,
     case: DisputeCase,
     view: Literal["internal"] = "internal",
+    ai: Literal["on", "off"] = "on",
     code_id: str | None = Depends(enforce_resolve_rate_limit),
 ) -> StreamingResponse:
     """Stream completed internal steps; a disconnect never cancels the resolve.
@@ -122,7 +133,7 @@ async def resolve_stream(
 
     def run() -> None:
         try:
-            result = _resolve_case(case, code_id, on_step=finished)
+            result = _resolve_case(case, code_id, on_step=finished, offline=ai == "off")
             pending.put(("result", result.model_dump(mode="json")))
         except HTTPException as exc:
             detail = exc.detail if isinstance(exc.detail, str) else "Resolve request rejected."

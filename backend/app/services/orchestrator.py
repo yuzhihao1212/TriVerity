@@ -18,6 +18,7 @@ from app.core import limits
 from app.services.argument_review import review_arguments
 from app.services.counterfactuals import what_would_change
 from app.services.evidence import compute_facts
+from app.services.llm_client import carry_context
 from app.services.triage import triage
 
 # Caps how many resolves run their LLM calls at once, so slow model calls can't
@@ -75,9 +76,9 @@ def resolve_dispute(case: DisputeCase, on_step: Callable[[AgentLogEntry], None] 
         # The advocates and the fraud assessor are all independent of each other,
         # so run them concurrently.
         with ThreadPoolExecutor(max_workers=3) as pool:
-            rider_future = pool.submit(_timed, build_rider_case, case, facts)
-            driver_future = pool.submit(_timed, build_driver_case, case, facts)
-            risk_future = pool.submit(_timed, assess_risk, case, facts)
+            rider_future = pool.submit(carry_context(_timed), build_rider_case, case, facts)
+            driver_future = pool.submit(carry_context(_timed), build_driver_case, case, facts)
+            risk_future = pool.submit(carry_context(_timed), assess_risk, case, facts)
             # The fraud check is instant; report it as soon as it's done.
             risk, *timing = risk_future.result()
             log("fraud_detector", risk.summary, *timing)
@@ -88,9 +89,9 @@ def resolve_dispute(case: DisputeCase, on_step: Callable[[AgentLogEntry], None] 
 
         # Rebuttal round: each advocate answers the other side's case once, concurrently.
         with ThreadPoolExecutor(max_workers=2) as pool:
-            rider_reply = pool.submit(_timed, build_rebuttal, party="rider", own_case=rider_case,
+            rider_reply = pool.submit(carry_context(_timed), build_rebuttal, party="rider", own_case=rider_case,
                                       other_case=driver_case, facts=facts, dispute_type=case.type)
-            driver_reply = pool.submit(_timed, build_rebuttal, party="driver", own_case=driver_case,
+            driver_reply = pool.submit(carry_context(_timed), build_rebuttal, party="driver", own_case=driver_case,
                                        other_case=rider_case, facts=facts, dispute_type=case.type)
             (rider_rebuttal, *rider_timing), (driver_rebuttal, *driver_timing) = rider_reply.result(), driver_reply.result()
             rider_case = rider_case.model_copy(update={"rebuttal": rider_rebuttal})
