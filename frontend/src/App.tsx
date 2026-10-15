@@ -13,6 +13,8 @@ import { VerdictSummary } from "./VerdictSummary";
 import { computedFacts, disputeLabel, filterDisputes, money } from "./presentation";
 import { focusSection, selectSample } from "./routes";
 import { AppealsPanel } from "./Appeals";
+import { ThemeToggle } from "./ThemeToggle";
+import type { Theme } from "./theme";
 import { PartyPreview } from "./PartyPreview";
 import { DisputeForm } from "./DisputeForm";
 import { getSamples, resolveDisputeLive } from "./services/api";
@@ -52,8 +54,9 @@ function saveAccessCode(code: string) {
   }
 }
 
-export default function App({ active, sampleId, presentation, onTogglePresentation }: {
+export default function App({ active, sampleId, presentation, onTogglePresentation, theme, onToggleTheme }: {
   active: boolean; sampleId?: string; presentation: boolean; onTogglePresentation: () => void;
+  theme: Theme; onToggleTheme: () => void;
 }) {
   const [filter, setFilter] = useState("all");
   const [activeTabs, setActiveTabs] = useState<Record<string, WorkflowTab>>({});
@@ -195,6 +198,7 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
         <h1 className="brand"><a className="console-home" href="#/">TriVerity<span className="sr-only"> home</span></a></h1>
         <span className="muted">Multi-agent dispute resolution for Ryde</span>
         <div className="topbar-right">
+          <ThemeToggle theme={theme} onToggle={onToggleTheme} />
           <button type="button" className="secondary-button presentation-toggle" aria-pressed={presentation} onClick={onTogglePresentation}>Presentation mode</button>
           <label className="access-code">
             <span className="small muted">Judge access code</span>
