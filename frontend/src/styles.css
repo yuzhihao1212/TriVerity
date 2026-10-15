@@ -419,3 +419,27 @@ textarea { width: 100%; resize: vertical; }
 .presentation-mode .collector-call-list code, .presentation-mode .collector-args, .presentation-mode .elapsed-time { font-size: 15px; }
 .presentation-mode .step-duration { font-size: 13px; }
 .theme-toggle { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); white-space: nowrap; }
+
+/* Trip visuals in "Case at a glance": shapes come from the dispute's own data. */
+.trip-visual { margin-top: var(--space-3); }
+.trip-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.trip-svg .line-expected { fill: none; stroke: var(--muted); stroke-width: 2; stroke-dasharray: 5 4; }
+.trip-svg .line-actual { fill: none; stroke: var(--accent); stroke-width: 2.25; stroke-linejoin: round; stroke-linecap: round; }
+.trip-svg .off-route { stroke-width: 4.5; opacity: .9; }
+.trip-svg .pin-start { fill: var(--bg); stroke: var(--text); stroke-width: 2; }
+.trip-svg .pin-end { fill: var(--text); }
+.trip-svg .svg-label { font-size: 9px; fill: var(--muted); font-family: inherit; }
+.trip-svg .axis { stroke: var(--border); stroke-width: 1; }
+.trip-svg .stop-band { fill: var(--accent-soft); }
+.key { display: inline-block; width: 14px; height: 0; margin-right: var(--space-2); vertical-align: middle; border-top: 2px solid; }
+.key-expected { border-top: 2px dashed var(--muted); }
+.key-actual { border-color: var(--accent); }
+.fare-bars { display: grid; gap: var(--space-2); padding-block: var(--space-2); }
+.fare-track { position: relative; display: flex; height: 8px; background: var(--surface); border-radius: 999px; overflow: visible; }
+.fare-expected { height: 100%; background: var(--muted); border-radius: 999px; }
+.fare-segment { height: 100%; background: var(--accent); }
+.fare-segment:first-child { border-radius: 999px 0 0 999px; }
+.fare-segment:last-of-type { border-radius: 0 999px 999px 0; }
+.fare-marker { position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--text); }
+.fare-extra { font-size: 11px; color: var(--accent-text); font-weight: 600; text-align: right; }
+.fare-legend { font-size: 10px; color: var(--muted); overflow-wrap: anywhere; }

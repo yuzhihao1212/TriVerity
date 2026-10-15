@@ -33,6 +33,8 @@ export interface DisputeCase {
     breakdown: { label: string; amount: number }[];
   };
   chat_logs: ChatMessage[];
+  // Raw telemetry, used only to draw the trip visuals (never shown as raw coordinates).
+  gps_points?: { lat: number; lng: number; timestamp?: string | null; speed_kmh?: number | null; status?: string | null }[];
   rider_history: PartyHistory;
   driver_history: PartyHistory;
 }
