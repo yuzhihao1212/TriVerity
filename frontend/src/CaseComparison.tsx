@@ -1,15 +1,11 @@
 import { comparison, money } from "./presentation";
-import {
-  fareSegments, offRoute, plateaus, polyline, progress, projector, wavyRoad,
-  type GpsPoint, type LatLng, type ProgressPoint,
-} from "./tripVisuals";
+import { fareSegments, niceStep, plateaus, polyline, progress, type GpsPoint, type ProgressPoint } from "./tripVisuals";
 import type { DisputeCase } from "./types";
 
 const W = 240, H = 104;
 
 export function CaseComparison({ dispute }: { dispute: DisputeCase }) {
   const trip = dispute.trip;
-  const route = (trip as unknown as { planned_route?: LatLng[] }).planned_route ?? [];
   const gps = (dispute.gps_points ?? []).filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng));
   const distance = comparison(trip.expected_distance_km, trip.actual_distance_km);
   const duration = comparison(trip.expected_duration_min, trip.actual_duration_min);
@@ -17,9 +13,7 @@ export function CaseComparison({ dispute }: { dispute: DisputeCase }) {
   if (!distance && !duration && !fare) return null;
   return <div className="comparisons">
     {distance && <Card label="Distance" percent={distance.percent} unit="km" expected={distance.expected} actual={distance.actual}>
-      {gps.length >= 2 && route.length >= 2
-        ? <RouteMap gps={gps} route={route} expected={distance.expected} actual={distance.actual} />
-        : <RoadSketch expected={distance.expected} actual={distance.actual} />}
+      <DistanceToScale expected={distance.expected} actual={distance.actual} />
     </Card>}
     {duration && <Card label="Duration" percent={duration.percent} unit="min" expected={duration.expected} actual={duration.actual}>
       <ProgressChart expectedMin={duration.expected} actualMin={duration.actual}
@@ -45,42 +39,37 @@ function Card({ label, percent, unit, expected, actual, children }: {
   </div>;
 }
 
-/** The real GPS track against the planned route; off-route stretches are drawn thicker. */
-function RouteMap({ gps, route, expected, actual }: { gps: GpsPoint[]; route: LatLng[]; expected: number | null; actual: number | null }) {
-  const project = projector([...gps, ...route], W, H, 12);
-  const off = offRoute(gps, route);
-  const track = gps.map(project);
-  const offSegments = track.slice(1).flatMap((p, i) => off[i] || off[i + 1] ? [polyline([track[i], p])] : []);
-  const start = project(gps[0]), end = project(gps[gps.length - 1]);
-  const offCount = off.filter(Boolean).length;
-  const label = `Map of the trip: the actual GPS track${actual != null ? ` (${actual} km)` : ""} against the planned route`
-    + `${expected != null ? ` (${expected} km)` : ""}; ${offCount} of ${gps.length} GPS points are more than 150 m off the planned route.`;
+/** Both routes unrolled into straight lines drawn to scale, with the difference highlighted. */
+function DistanceToScale({ expected, actual }: { expected: number | null; actual: number | null }) {
+  const left = 10, right = W - 10, yExpected = 26, yActual = 54, yRuler = 82;
+  const maxKm = Math.max(expected ?? 0, actual ?? 0, 0.1);
+  const x = (km: number) => left + (km / maxKm) * (right - left);
+  const step = niceStep(maxKm);
+  const ticks = Array.from({ length: Math.floor(maxKm / step) + 1 }, (_, i) => i * step);
+  const shared = Math.min(expected ?? 0, actual ?? 0);
+  const diff = expected != null && actual != null ? actual - expected : null;
+  const longer = diff != null && diff > 0 ? "actual" : diff != null && diff < 0 ? "expected" : null;
+  const diffText = diff != null ? `${diff > 0 ? "+" : "−"}${Math.abs(diff).toFixed(1)} km` : "";
+  const label = `Route lengths drawn to scale: expected ${expected ?? "not provided"} km, actual ${actual ?? "not provided"} km`
+    + `${diff ? `; the actual route was ${Math.abs(diff).toFixed(1)} km ${diff > 0 ? "longer" : "shorter"}` : ""}.`;
   return <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label} className="trip-svg">
-    <path d={polyline(route.map(project))} className="line-expected" />
-    <path d={polyline(track)} className="line-actual" />
-    {offSegments.map((d, i) => <path key={i} d={d} className="line-actual off-route" />)}
-    <circle cx={start.x} cy={start.y} r="4" className="pin-start" />
-    <circle cx={end.x} cy={end.y} r="4" className="pin-end" />
-    <text x={start.x} y={start.y + 15} className="svg-label" textAnchor="middle">Start</text>
-    <text x={end.x} y={end.y + 15} className="svg-label" textAnchor="middle">End</text>
-  </svg>;
-}
-
-/** No GPS: the planned trip as the straight displacement, the actual as a longer winding road. */
-function RoadSketch({ expected, actual }: { expected: number | null; actual: number | null }) {
-  const ratio = expected && actual ? actual / expected : 1;
-  const x0 = 18, x1 = W - 18, yExpected = 30, yActual = 76, maxAmp = 18;
-  let road = wavyRoad(x0, x1, yActual, ratio, 2);
-  for (let waves = 3; waves <= 14 && road.some(p => Math.abs(p.y - yActual) > maxAmp); waves++) {
-    road = wavyRoad(x0, x1, yActual, ratio, waves);
-  }
-  const label = `Sketch: the actual route${actual != null ? `, ${actual} km,` : ""} winds ${ratio > 1 ? `${Math.round((ratio - 1) * 100)}% further than` : "no further than"} the expected${expected != null ? ` ${expected} km` : ""} between the same start and end.`;
-  return <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label} className="trip-svg">
-    <path d={`M${x0},${yExpected} L${x1},${yExpected}`} className="line-expected" />
-    <path d={polyline(road)} className="line-actual" />
-    {[yExpected, yActual].map(y => <g key={y}><circle cx={x0} cy={y} r="3.5" className="pin-start" /><circle cx={x1} cy={y} r="3.5" className="pin-end" /></g>)}
-    <text x={x0} y={yExpected - 9} className="svg-label">Start</text>
-    <text x={x1} y={yExpected - 9} className="svg-label" textAnchor="end">End</text>
+    {expected != null && <>
+      <path d={`M${x(0)},${yExpected} L${x(longer === "expected" ? shared : expected)},${yExpected}`} className="line-expected" />
+      {longer === "expected" && <path d={`M${x(shared)},${yExpected} L${x(expected)},${yExpected}`} className="line-expected extra" />}
+      <circle cx={x(0)} cy={yExpected} r="3.5" className="pin-start" /><circle cx={x(expected)} cy={yExpected} r="3.5" className="pin-end" />
+    </>}
+    {actual != null && <>
+      <path d={`M${x(0)},${yActual} L${x(longer === "actual" ? shared : actual)},${yActual}`} className="line-actual" />
+      {longer === "actual" && <path d={`M${x(shared)},${yActual} L${x(actual)},${yActual}`} className="line-actual extra" />}
+      <circle cx={x(0)} cy={yActual} r="3.5" className="pin-start" /><circle cx={x(actual)} cy={yActual} r="3.5" className="pin-end" />
+    </>}
+    {longer && <text x={(x(shared) + x(longer === "actual" ? actual! : expected!)) / 2} y={(longer === "actual" ? yActual : yExpected) - 9}
+      className="svg-label extra-label" textAnchor="middle">{diffText}</text>}
+    <line x1={left} y1={yRuler} x2={right} y2={yRuler} className="axis" />
+    {ticks.map(km => <g key={km}>
+      <line x1={x(km)} y1={yRuler - 3} x2={x(km)} y2={yRuler + 3} className="axis" />
+      <text x={x(km)} y={yRuler + 14} className="svg-label" textAnchor={km === 0 ? "start" : "middle"}>{km === ticks[ticks.length - 1] ? `${km} km` : km}</text>
+    </g>)}
   </svg>;
 }
 

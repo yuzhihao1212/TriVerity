@@ -425,7 +425,8 @@ textarea { width: 100%; resize: vertical; }
 .trip-svg { display: block; width: 100%; height: auto; overflow: visible; }
 .trip-svg .line-expected { fill: none; stroke: var(--muted); stroke-width: 2; stroke-dasharray: 5 4; }
 .trip-svg .line-actual { fill: none; stroke: var(--accent); stroke-width: 2.25; stroke-linejoin: round; stroke-linecap: round; }
-.trip-svg .off-route { stroke-width: 4.5; opacity: .9; }
+.trip-svg .extra { stroke-width: 5; stroke-dasharray: none; stroke-linecap: round; }
+.trip-svg .extra-label { fill: var(--accent-text); font-weight: 600; }
 .trip-svg .pin-start { fill: var(--bg); stroke: var(--text); stroke-width: 2; }
 .trip-svg .pin-end { fill: var(--text); }
 .trip-svg .svg-label { font-size: 9px; fill: var(--muted); font-family: inherit; }
