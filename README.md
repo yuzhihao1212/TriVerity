@@ -15,15 +15,15 @@ same facts always give the same ruling, and every ruling is explained.
 
 ## Results
 
-Live evaluation against Tencent Hy3 on 15 Oct 2026 (`scripts/evaluate.py`, 27 resolves over the 9 sample
-disputes, including the organisers' case):
+Live evaluation against Tencent Hy3 on 15 Oct 2026, on the current pipeline (advocates, rebuttal round,
+Judge) over the 9 sample disputes, including the organisers' case:
 
 | Measure | Result |
 |---|---|
-| Rulings matching the expected outcome (decision, refund, rules) | **27 / 27** |
-| Advocates citing a rule that favours the other side | **0 of 54** advocate cases |
-| Agent outputs written by the AI (the rest fall back safely) | **95%** |
-| Time and cost per dispute | about 7–12 s and 4,000 tokens (3 LLM calls) |
+| Rulings matching the expected outcome (decision, refund, rules) | **9 / 9** (`scripts/evaluate.py`) |
+| Agent outputs written by the AI (advocates, rebuttals, Judge) | **45 / 45** |
+| Advocates citing a rule that favours the other side | **2 of 32** advocate cases (4 runs per side on 4 disputes) |
+| Time and cost per dispute | about 11 s and 5,400 tokens (5 LLM calls) |
 
 The sample disputes are synthetic; these are measurements on them, not production data.
 
@@ -32,7 +32,10 @@ The sample disputes are synthetic; these are measurements on them, not productio
 - **Four agents**: Rider Advocate, Driver Advocate and Judge, powered by Tencent **Hy3** via Tencent Cloud
   TokenHub, plus a deterministic **Fraud & Bad-Faith detector**
 - **Two dispute types** end to end: route deviation and no-show charge
-- **Evidence** from trip and GPS data, fare breakdowns (surge, promo), chat logs and rider/driver history
+- **Evidence** from trip data, GPS telemetry (path length, unexpected stops, data gaps), fare breakdowns
+  (surge and promo checks), chat logs and rider/driver history, grouped by source with an ID per fact
+- **Advocates gather and cite evidence by ID**, so they can only cite facts that exist, then **answer each
+  other in a rebuttal round** before the Judge rules
 - **The organisers' dataset format** is read directly: files in `data/organiser/` are converted and appear
   in the demo as extra samples
 - **Output**: ruling, recommended action (e.g. refund $6.30), confidence, cited policy, a neutral
@@ -130,8 +133,8 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`, pick a sample dispute and press **Resolve dispute**. Each run makes three
-LLM calls (about 4,000 tokens).
+Open `http://localhost:5173`, pick a sample dispute and press **Resolve dispute**. Each run makes five
+LLM calls (about 5,400 tokens).
 
 ### Tests and evaluation
 
