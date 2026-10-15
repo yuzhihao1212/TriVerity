@@ -29,10 +29,10 @@ from app.models.dispute import DisputeCase, PartyHistory  # noqa: E402
 from app.services.orchestrator import resolve_dispute  # noqa: E402
 
 # Live measurements (docs/evaluation.md, README) and Hy3 prices from the TokenHub console.
-TOKENS_PER_DISPUTE = 8_000
+TOKENS_PER_DISPUTE = 10_000   # ~8,000 measured, plus ~2,000 since each advocate gathers its own evidence
 INPUT_SHARE = 0.85
 PRICE_IN, PRICE_OUT = 0.132 / 1e6, 0.528 / 1e6   # USD per token
-SECONDS_PER_DISPUTE = 16
+SECONDS_PER_DISPUTE = 18
 DAILY_VOLUME = 5_000
 
 ROUTE_CLAIMS = ["The driver took a much longer route and I was overcharged.",

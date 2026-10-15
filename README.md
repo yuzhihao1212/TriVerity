@@ -25,13 +25,14 @@ organisers' case:
 | Agent outputs written by the AI (advocates, rebuttals, Judge) | **42 / 45** (45/45 before the evidence collector; the misses were one timeout, which also skipped that case's rebuttals, and one over-long rebuttal, both caught by the checks) |
 | Advocates citing a rule that favours the other side | **0 of 18** advocate cases (2 of 32 in an earlier 4-run check) |
 | Rulings consistent with the closest past rulings | **8 / 9** (D002 has no close precedent: its waiting time is missing) |
-| Time and cost per dispute | about 16 s and 8,000 tokens (6–7 LLM calls, about $0.002) |
+| Time and cost per dispute | about 16–18 s and 10,000 tokens (7–9 LLM calls, about $0.002) |
 
 The sample disputes are synthetic; these are measurements on them, not production data.
 
 **At scale** ([simulation.md](docs/simulation.md), 500 generated disputes run offline): 78% resolved without a
 human, the same facts always gave the same ruling (100/100), the escalated 22% went to the review queue
-with a triage tier, and party history never changed a policy decision (500/500 with histories removed or swapped). At an illustrative 5,000 disputes a day, AI costs about $7.70 a day.
+with a triage tier, and party history never changed a policy decision (500/500 with histories removed or swapped). At an illustrative 5,000 disputes a day, AI costs about $10 a day while freeing an estimated 325–975 reviewer
+hours ([business case](docs/business-case.md), with its assumptions stated).
 
 ## What it does
 
@@ -95,6 +96,7 @@ The full threat model is in [docs/security.md](docs/security.md).
 - [Prompts](docs/prompts.md): how the prompts drive each agent, and what testing changed
 - [Responsible AI scorecard](docs/responsible-ai.md): mapped to AI Verify and IMDA's Model AI Governance Framework
 - [System card](docs/system-card.md): intended use, data, evaluation and known limits
+- [Business case](docs/business-case.md): ROI model with stated assumptions, and the deployment plan
 - [Scale test](docs/simulation.md): 500 synthetic disputes through the full pipeline, offline
 - [Submission](docs/submission.md): title, blurb and project description for the hackathon form
 - [Security](docs/security.md): threat model, red-team results, API hardening, residual risks
@@ -157,7 +159,7 @@ npm run dev
 ```
 
 Open `http://localhost:5173`, pick a sample dispute and press **Resolve dispute**. Each run makes six or seven
-LLM calls (about 8,000 tokens).
+LLM calls (about 10,000 tokens).
 
 ### Tests and evaluation
 
