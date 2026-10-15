@@ -5,6 +5,7 @@ import {
   SOURCE_ORDER, type FactGroup, type Tone,
 } from "./factVisuals";
 import { SOURCE_LABELS, type EvidenceItem } from "./presentation";
+import { reveal } from "./routes";
 
 type Select = ((id: string) => void) | undefined;
 interface RowContext { activeId: string | null; onSelectFact: Select }
@@ -23,8 +24,7 @@ export function FactLibrary({ facts, activeId, request, expanded = false, groupe
       // A merged fact sits inside its row's "+N related" disclosure: open it first.
       const related = target?.closest<HTMLDetailsElement>("details.fact-related");
       if (related) related.open = true;
-      target?.scrollIntoView({ block: "center" });
-      target?.focus({ preventScroll: true });
+      reveal(target, "center");
     });
     return () => cancelAnimationFrame(frame);
   }, [activeId, request]);

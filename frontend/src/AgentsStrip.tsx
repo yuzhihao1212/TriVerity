@@ -3,6 +3,7 @@ import { Fragment } from "react";
 import { EvidenceText, type FactLinks } from "./EvidenceList";
 import { SourceBadge } from "./Debate";
 import { Icon } from "./Icon";
+import { reveal } from "./routes";
 import {
   agentBadge, agentIcon, callColumns, durationShare, durationText, statusBadge, stepFlow, stripSourceTag, toolIcon, toolName, toolTooltip,
 } from "./stepVisuals";
@@ -81,9 +82,7 @@ function ToolCalls({ calls }: { calls: NonNullable<NonNullable<Resolution["evide
     </div>)}</div>
     <a className="tool-calls-link" href="#collector-calls-title" onClick={event => {
       event.preventDefault();
-      const target = document.getElementById("collector-calls-title");
-      target?.scrollIntoView({ block: "start" });
-      target?.focus({ preventScroll: true });
+      reveal(document.getElementById("collector-calls-title"));
     }}>Full lookup details <span aria-hidden="true">↓</span></a>
   </div>;
 }
