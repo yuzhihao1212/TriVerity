@@ -429,11 +429,6 @@ textarea { width: 100%; resize: vertical; }
 .landing-problem h2 { margin-top: var(--space-2); }
 .landing-problem p + p { margin-top: var(--space-4); }
 .landing-section-head { display: grid; gap: var(--space-2); margin-bottom: var(--space-8); }
-.landing-flow { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); list-style: none; padding: 0; gap: 0; }
-.landing-flow li { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); min-width: 0; border-top: 2px solid var(--border); padding: var(--space-5) var(--space-4) 0 0; }
-.landing-flow li:not(:last-child)::after { content: "→"; position: absolute; top: -15px; right: 12px; color: var(--muted); background: var(--bg); padding-inline: var(--space-1); }
-.landing-step { font-size: 24px; font-weight: 500; color: var(--accent-text); letter-spacing: -.04em; }
-.landing-flow p { font-size: 12px; }
 .landing-trust { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
 .landing-card { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); min-width: 0; padding: var(--space-6); border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
 .landing-card p { font-size: 13px; }
@@ -454,14 +449,12 @@ textarea { width: 100%; resize: vertical; }
 .landing-footer p, .landing-footer nav { font-size: 12px; }
 .landing.presentation-mode .landing-lead { font-size: clamp(28px, 3.5vw, 44px); }
 .landing.presentation-mode .landing-intro, .landing.presentation-mode .landing-card p { font-size: 17px; }
-.landing.presentation-mode .landing-flow p, .landing.presentation-mode .landing-metric-detail, .landing.presentation-mode .landing-metrics dt,
+.landing.presentation-mode .landing-metric-detail, .landing.presentation-mode .landing-metrics dt,
 .landing.presentation-mode .landing-provider, .landing.presentation-mode .landing-footnote, .landing.presentation-mode .landing-footer p,
 .landing.presentation-mode nav, .landing.presentation-mode .landing-cases a, .landing.presentation-mode .landing-actions > a:not(.landing-primary) { font-size: 14px; }
 .landing.presentation-mode h3 { font-size: 18px; }
 @media (max-width: 1100px) {
   .landing-wrap { width: calc(100% - 64px); }
-  .landing-flow { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: var(--space-8); }
-  .landing-flow li:nth-child(3)::after { content: none; }
   .landing-problem { gap: var(--space-8); }
 }
 @media (max-width: 760px) {
@@ -478,13 +471,6 @@ textarea { width: 100%; resize: vertical; }
   .landing-actions > a:not(.landing-primary) { align-self: flex-start; }
   .landing-sections { padding-block: 48px; gap: 48px; }
   .landing-problem, .landing-trust, .landing-cases { grid-template-columns: 1fr; gap: var(--space-4); }
-  .landing-flow { grid-template-columns: 1fr; gap: 0; }
-  .landing-flow li { display: grid; grid-template-columns: 36px 1fr; padding: 0 0 var(--space-6) var(--space-5); border-top: 0; border-left: 2px solid var(--border); column-gap: var(--space-3); row-gap: var(--space-2); }
-  .landing-flow li:last-child { padding-bottom: 0; }
-  .landing-flow li::after { display: none; }
-  .landing-step { grid-row: span 3; }
-  .landing-flow h3, .landing-flow p { grid-column: 2; }
-  .landing-flow p { font-size: 13px; }
   .landing-section-head { margin-bottom: var(--space-6); }
   .landing-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-6); }
   .landing-metric-value { font-size: 36px; }
@@ -935,3 +921,27 @@ article[tabindex="-1"] { scroll-margin-block: var(--space-4); }
   100% { outline-color: transparent; box-shadow: none; }
 }
 @media (prefers-reduced-motion: reduce) { .jump-flash { animation: none; } }
+
+/* Landing "How it works": three stages (Gather → Argue → Decide), the six steps as chips. */
+.landing-stages { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-8); list-style: none; padding: 0; margin: 0; counter-reset: none; }
+.landing-stage { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); }
+.landing-stage:not(:last-child)::after { content: "→"; position: absolute; top: 18px; right: calc(-1 * var(--space-8) / 2 - 8px); font-size: 20px; color: var(--muted); }
+.landing-stage-icon { display: inline-grid; place-items: center; width: 56px; height: 56px; border-radius: 18px; background: var(--accent-soft); color: var(--accent-text); }
+.landing-stage-icon .icon, .landing-stage-icon svg { width: 28px; height: 28px; }
+.landing-stage h3 { margin: var(--space-2) 0 0; font-size: 22px; font-weight: 500; letter-spacing: -.02em; }
+.landing-stage-verb { font-weight: 700; color: var(--heading); }
+.landing-stage-line { margin: 0; color: var(--muted); font-size: 14px; }
+.landing-stage-steps { margin-top: var(--space-1); }
+.landing-stage-more { font-size: 13px; color: var(--muted); }
+.landing-stage-more summary { cursor: pointer; color: var(--link-color); font-weight: 600; width: fit-content; }
+.landing-stage-more ul { margin: var(--space-2) 0 0; padding-left: var(--space-5); display: grid; gap: var(--space-2); }
+.landing.presentation-mode .landing-stage h3 { font-size: 26px; }
+.landing.presentation-mode .landing-stage-line, .landing.presentation-mode .landing-stage-more { font-size: 16px; }
+@media (max-width: 760px) {
+  .landing-stages { grid-template-columns: 1fr; gap: var(--space-8); }
+  .landing-stage { display: grid; grid-template-columns: 56px 1fr; column-gap: var(--space-4); row-gap: var(--space-2); align-items: start; }
+  .landing-stage > :not(.landing-stage-icon) { grid-column: 2; }
+  .landing-stage-icon { grid-row: span 4; }
+  .landing-stage h3 { margin: 0; }
+  .landing-stage:not(:last-child)::after { content: "↓"; top: auto; bottom: calc(-1 * var(--space-8) + 4px); right: auto; left: 18px; }
+}
