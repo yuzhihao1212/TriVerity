@@ -116,5 +116,6 @@ def test_samples_endpoint_lists_every_sample():
     response = client.get("/api/disputes/samples")
     assert response.status_code == 200
     ids = [case["dispute_id"] for case in response.json()]
-    assert len(ids) == len(list(DISPUTES.glob("*.json")))
+    organiser = DISPUTES.parent / "organiser"
+    assert len(ids) == len(list(DISPUTES.glob("*.json"))) + len(list(organiser.glob("*.json")))
     assert ids == sorted(ids)
