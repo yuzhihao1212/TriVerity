@@ -177,7 +177,7 @@ and a separate demo key with a small provider quota is the hard backstop.
 | Tier | Use | Status |
 | --- | --- | --- |
 | T0 | Local only, no public link | default |
-| T1 | Public demo: `PUBLIC_DEMO=true` resolves only the server's own samples, ignores client facts, caches results for 6 hours, hides `/docs` and `/openapi.json` | built (`test_public_demo.py`) |
+| T1 | Public demo: `PUBLIC_DEMO=true` resolves only the server's own samples, ignores client facts, caches all-AI results for 7 days and any fallback/skipped-rebuttal result for 5 minutes, hides `/docs` and `/openapi.json` | built (`test_public_demo.py`, `test_public_demo_cache.py`) |
 | T2 | Invited judges: personal access code in `X-Demo-Key`, constant-time check, per-code limits, issued and revoked with `scripts/setup_demo_access.py` | built (`test_demo_access.py`) |
 | T3 | Production: OIDC/JWT from Ryde's identity provider with scopes such as `disputes:resolve` and `disputes:review`; **the server loads the case by `dispute_id` from Ryde's own data, so the client never supplies facts**; the internal view requires the reviewer role; secrets in a vault; TLS between services | roadmap |
 

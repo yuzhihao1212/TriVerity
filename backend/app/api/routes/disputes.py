@@ -53,6 +53,22 @@ def _run(case: DisputeCase) -> Resolution:
             headers={"Retry-After": str(limits.BUSY_RETRY_AFTER_S)},
         ) from None
 
+def _public_demo_cache_ttl(result: Resolution) -> int:
+    """Keep a sample for a week only when every language step completed with AI."""
+    all_ai = (
+        result.explanation_source == "llm"
+        and result.evidence_collection.source == "llm"
+        and all(
+            case.source == "llm"
+            and case.rebuttal is not None
+            and bool(case.rebuttal.text.strip())
+            and case.rebuttal.source == "llm"
+            for case in (result.rider_case, result.driver_case)
+        )
+    )
+    return limits.PUBLIC_DEMO_CACHE_S if all_ai else limits.PUBLIC_DEMO_FALLBACK_CACHE_S
+
+
 def _resolve_public_sample(dispute_id: str) -> Resolution:
     """Resolve the server's own copy of a sample; the client's facts and text are ignored."""
     case = next((c for c in load_samples() if c.dispute_id == dispute_id), None)
@@ -61,7 +77,7 @@ def _resolve_public_sample(dispute_id: str) -> Resolution:
     now = time.monotonic()
     with _demo_lock:
         hit = _demo_cache.get(dispute_id)
-    if hit and now - hit[0] < limits.PUBLIC_DEMO_CACHE_S:
+    if hit and now - hit[0] < _public_demo_cache_ttl(hit[1]):
         return hit[1]
     result = _run(case)
     with _demo_lock:

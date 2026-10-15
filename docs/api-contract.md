@@ -83,8 +83,11 @@ is `"fallback"`. A refund never exceeds `fare.actual` (policy rule REF-1, cited 
 For a public link. The request shape is unchanged, but the server reads only
 `dispute_id`: it resolves its own copy of that sample from `data/disputes/` and
 ignores every other field the client sent. An unknown `dispute_id` gets 404. Each
-sample's result is cached for 6 hours. `/docs`, `/redoc` and `/openapi.json` are
-switched off. The rate limits above still apply.
+sample's result is cached for **7 days** only when the evidence collector, both advocates,
+both non-empty rebuttals and the Judge explanation all have source `"llm"`. If any step
+uses fallback, or a rebuttal is skipped, the result is cached for **5 minutes** instead.
+The cache is per sample and in memory; a restart or service sleep empties it.
+`/docs`, `/redoc` and `/openapi.json` are switched off. The rate limits above still apply.
 
 ### Access codes (`X-Demo-Key` header)
 
@@ -93,7 +96,8 @@ Invited judges get a personal access code (configured in `backend/.env` as
 `X-Demo-Key: <code>` in public demo mode resolves the caller's own `DisputeCase`
 instead of a sample; all input limits still apply. A wrong code gets 401. Code
 holders are limited per code (3 per minute, 20 per day) instead of per IP; the
-global limit and the daily LLM budget still apply.
+global limit and the daily LLM budget still apply. Access-code resolves are never cached,
+even when the submitted ID is also a bundled sample.
 
 ### Output: `Resolution`
 
