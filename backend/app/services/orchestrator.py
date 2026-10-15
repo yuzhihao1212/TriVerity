@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
 from app.agents._advocate import build_rebuttal
-from app.agents.evidence_agent import collect_evidence
+from app.agents.evidence_agent import collect_for_both
 from app.agents.fraud_agent import assess_risk
 from app.agents.rider_agent import build_rider_case
 from app.agents.driver_agent import build_driver_case
@@ -61,11 +61,16 @@ def resolve_dispute(case: DisputeCase, on_step: Callable[[AgentLogEntry], None] 
     try:
         # Evidence Collection agent: plans data-source tool calls and adds what they
         # return to the facts (core facts unchanged; fallback runs a default plan).
-        (collection, collected), started, ms = _timed(collect_evidence, case, facts)
+        # Each advocate gathers its own evidence (one collection per side, in parallel).
+        (collection, collected), started, ms = _timed(collect_for_both, case, facts)
         facts = facts.model_copy(update={"collected": collected})
-        tools = ", ".join(f"{c.tool}({', '.join(c.args.values())})" if c.args else c.tool for c in collection.calls)
-        log("evidence_collector", f"[{collection.source}] {len(collection.calls)} tool calls in "
-                                  f"{collection.rounds} round(s): {tools or 'none'}", started, ms)
+
+        def tools(party: str) -> str:
+            calls = [c for c in collection.calls if c.party == party]
+            names = ", ".join(f"{c.tool}({', '.join(c.args.values())})" if c.args else c.tool for c in calls)
+            return f"{len(calls)} tool calls ({names or 'none'})"
+        log("evidence_collector", f"[{collection.source}] rider's request: {tools('rider')}; "
+                                  f"driver's request: {tools('driver')}", started, ms)
 
         # The advocates and the fraud assessor are all independent of each other,
         # so run them concurrently.

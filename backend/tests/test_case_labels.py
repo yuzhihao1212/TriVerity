@@ -125,7 +125,7 @@ def test_label_never_enters_any_prompt_including_both_rebuttals_and_collector_ro
          patch("app.agents._advocate.complete", side_effect=fake), \
          patch("app.agents.judge_narration.complete", side_effect=fake):
         result = resolve_dispute(case)
-    assert Counter(stage for stage, _, _ in prompts) == {"collector": 2, "advocate": 2, "rebuttal": 2, "judge": 1}
+    assert Counter(stage for stage, _, _ in prompts) == {"collector": 4, "advocate": 2, "rebuttal": 2, "judge": 1}
     assert result.evidence_collection.source == result.explanation_source == "llm"
     for advocate in (result.rider_case, result.driver_case):
         assert advocate.source == advocate.rebuttal.source == "llm"

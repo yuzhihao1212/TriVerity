@@ -35,7 +35,7 @@ with a triage tier, and party history never changed a policy decision (500/500 w
 
 ## What it does
 
-- **Six agents**: an **Evidence Collection agent**, Rider Advocate, Driver Advocate and Judge, powered by
+- **Six agents**: an **Evidence Collection agent** (each advocate requests its own evidence), Rider Advocate, Driver Advocate and Judge, powered by
   Tencent **Hy3** via Tencent Cloud TokenHub, plus a deterministic **Fraud & Bad-Faith detector** and a
   **Policy & Precedent agent**
 - **Two dispute types** end to end: route deviation and no-show charge

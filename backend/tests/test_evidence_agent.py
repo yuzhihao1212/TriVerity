@@ -279,7 +279,9 @@ def test_collected_lines_join_the_evidence_with_ids_and_core_facts_unchanged():
 def test_pipeline_logs_the_collector_and_returns_the_record():
     result = resolve_dispute(D001)  # offline: default plan
     assert [e.agent for e in result.agent_log][:2] == ["evidence_loader", "evidence_collector"]
-    assert result.agent_log[1].message.startswith("[fallback] 3 tool calls in 1 round(s): trip_record, gps_stops, fare_lines")
+    default = "3 tool calls (trip_record, gps_stops, fare_lines)"
+    assert result.agent_log[1].message == f"[fallback] rider's request: {default}; driver's request: {default}"
+    assert {c.party for c in result.evidence_collection.calls} == {"rider", "driver"}
     assert result.evidence_collection.source == "fallback"
     assert result.decision == "partial_refund" and result.refund_amount == pytest.approx(6.30)
     assert any(line.startswith("GPS stop: 6 min") for line in result.judge_evidence)
@@ -288,7 +290,7 @@ def test_pipeline_logs_the_collector_and_returns_the_record():
 def test_rulings_identical_with_and_without_the_collector():
     no_collector = (evidence_agent.EvidenceCollection(), {})
     for case in SAMPLES.values():
-        with patch("app.services.orchestrator.collect_evidence", return_value=no_collector):
+        with patch("app.services.orchestrator.collect_for_both", return_value=no_collector):
             baseline = resolve_dispute(case)
         assert not baseline.evidence_collection.calls      # the patch really took effect
         result = resolve_dispute(case)
@@ -308,3 +310,41 @@ def test_dates_and_ids_are_evidence_not_contact_details(text):
 def test_phone_numbers_next_to_dates_are_still_removed():
     from app.services.text_safety import redact_contacts
     assert redact_contacts("on 2026-09-20 call 9123 4567") == "on 2026-09-20 call [phone removed]"
+
+
+
+# -- Each advocate gathers its own evidence --------------------------------------
+
+def test_each_advocate_gets_its_own_collection_with_tagged_calls():
+    def plan_for(system, user, **_):
+        party = json.loads(user)["gathering_for"]
+        tool = "chat_window" if party == "rider" else "gps_stops"
+        args = {"start": "08:11", "end": "08:13"} if tool == "chat_window" else {}
+        return plan({"tool": tool, "args": args, "reason": f"for the {party}"})
+
+    with patch("app.agents.evidence_agent.complete", side_effect=plan_for) as mock:
+        collection, collected = evidence_agent.collect_for_both(D001, compute_facts(D001))
+    prompts = [json.loads(call.args[1]) for call in mock.call_args_list]
+    assert sorted(p["gathering_for"] for p in prompts) == ["driver", "rider"]
+    assert all("never decide the outcome" in p["focus"] for p in prompts)
+    assert collection.source == "llm"
+    assert sorted((c.party, c.tool) for c in collection.calls) == [("driver", "gps_stops"), ("rider", "chat_window")]
+    assert collected["gps"] and collected["chat"]
+
+
+def test_one_side_falling_back_marks_the_collection_as_fallback():
+    def one_side(system, user, **_):
+        if json.loads(user)["gathering_for"] == "rider":
+            return plan({"tool": "trip_record"})
+        raise TimeoutError("slow")
+    with patch("app.agents.evidence_agent.complete", side_effect=one_side):
+        collection, _ = evidence_agent.collect_for_both(D001, compute_facts(D001))
+    assert collection.source == "fallback"
+    by_party = {party: [c.reason for c in collection.calls if c.party == party] for party in ("rider", "driver")}
+    assert by_party["rider"] == [""] and set(by_party["driver"]) == {"default plan"}
+
+
+def test_lines_both_sides_found_join_the_evidence_once():
+    with patch("app.agents.evidence_agent.complete", side_effect=lambda *a, **k: plan({"tool": "gps_stops"})):
+        _, collected = evidence_agent.collect_for_both(D001, compute_facts(D001))
+    assert len(collected["gps"]) == len(set(collected["gps"]))

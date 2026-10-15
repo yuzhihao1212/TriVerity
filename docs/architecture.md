@@ -30,7 +30,9 @@
    `(multiplier - 1)`, allowing cent/coarse rounding. This checks arithmetic, not tariff eligibility:
    untyped fare lines cannot establish which charges are surge-exempt. Missing inputs remain
    unknown; neither fare check changes policy rules or rulings.
-   **Evidence Collection agent** (`backend/app/agents/evidence_agent.py`). Hy3 plans calls to
+   **Evidence Collection agent** (`backend/app/agents/evidence_agent.py`). Each advocate gathers its own
+   evidence: the collector runs once for the rider's side and once for the driver's, in parallel, and every
+   call is tagged with the side that asked for it. Hy3 plans calls to
    deterministic data-source tools (trip record, GPS windows and stops, fare lines, chat windows, app
    events) over mock Ryde APIs (`backend/app/services/data_sources.py`), in up to two rounds. Calls are
    validated and capped; a default plan runs when the LLM is unavailable. Results are added to the
