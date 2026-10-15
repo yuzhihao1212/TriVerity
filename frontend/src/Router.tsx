@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import App from "./App";
+import { ConsoleIntro } from "./ConsoleIntro";
+import { shouldPlayIntro } from "./consoleIntroTiming";
 import { Landing } from "./Landing";
 import { readPresentationPreference, writePresentationPreference } from "./presentation";
 import { applyTheme, readTheme, resolveTheme, writeTheme, type Theme } from "./theme";
@@ -53,11 +55,28 @@ export default function Router() {
     setPresentation(next);
     try { writePresentationPreference(localStorage, next); } catch { /* Storage may be blocked. */ }
   }
+  // The intro lives here, not in Landing: Landing unmounts at the hand-off while
+  // the overlay keeps fading over the freshly mounted console.
+  const [intro, setIntro] = useState(false);
+  const introActive = useRef(false);
+  function openConsole(event: MouseEvent<HTMLAnchorElement>) {
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    if (!shouldPlayIntro(event, reducedMotion)) return; // Native link: new tab, reduced motion, etc.
+    event.preventDefault();
+    if (introActive.current) return; // One intro at a time.
+    introActive.current = true;
+    setIntro(true);
+  }
+  function endIntro() {
+    introActive.current = false;
+    setIntro(false);
+  }
   return <>
-    {route.page === "landing" && <Landing presentation={presentation} onTogglePresentation={togglePresentation} theme={theme} onToggleTheme={toggleTheme} />}
+    {route.page === "landing" && <Landing presentation={presentation} onTogglePresentation={togglePresentation} theme={theme} onToggleTheme={toggleTheme} onOpenConsole={openConsole} />}
     {consoleRoute && <div hidden={route.page !== "console"}>
       <App active={route.page === "console"} sampleId={consoleRoute.sampleId}
         presentation={presentation} onTogglePresentation={togglePresentation} theme={theme} onToggleTheme={toggleTheme} />
     </div>}
+    {intro && <ConsoleIntro onNavigate={() => { window.location.hash = "#/console"; }} onDone={endIntro} />}
   </>;
 }
