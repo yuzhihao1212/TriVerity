@@ -1,37 +1,49 @@
 # Milestones
 
 Measured against the Ryde challenge brief and the hackathon submission requirements.
+Status as of 15 Oct 2026.
 
 ## Required by the brief
 
 | | Requirement | Status |
 |---|---|---|
-| ✅ | Rider Advocate, Driver Advocate and Judge agents | LLM-backed (Hy3), with checked output and fallbacks |
+| ✅ | Rider Advocate, Driver Advocate and Judge agents | LLM-backed (Tencent Hy3), with checked output and fallbacks |
 | ✅ | Evidence: GPS/telemetry, chat logs, fare and payment data, history profiles | Computed into facts by the evidence loader |
-| ✅ | Advocates cite company policy | Rule IDs validated against the policy |
+| ✅ | Advocates cite company policy | Rule IDs validated against the policy; 0 wrong-side citations in 54 live advocate cases |
 | ✅ | Ruling with recommended action, confidence and natural-language reasoning | Rule-based ruling, LLM explanation for the record and for each party |
 | ✅ | Two dispute categories end to end | Route deviation and no-show charge |
 | ✅ | Observable inter-agent communication | Agent log and demo UI with AI / Fallback badges |
 | ✅ | Working prototype, architecture diagram, source on GitHub | Diagram in [architecture.md](architecture.md) |
-| ⬜ | Handle the organisers' sample dataset | Waiting for the dataset; add a converter into `DisputeCase` |
-| ⬜ | Live demo walkthrough | Rehearse with D001 (refund), D005 (no-show refund), D007 (escalation) |
+| ✅ | Handle the organisers' sample dataset | Adapter in `backend/app/services/ryde_adapter.py`; DISP-002 resolves as expected |
+| ✅ | Evaluation | `scripts/evaluate.py` ([evaluation.md](evaluation.md)): 27/27 rulings correct in live runs |
+| ⬜ | Live demo walkthrough | Rehearse with D001 (refund), D005 (no-show refund), D007 (safety and fraud escalation), DISP-002 (organisers' case) |
 
 ## Stretch goals (bonus points)
 
 | | Goal | Status |
 |---|---|---|
-| ✅ | Escalation protocol | `SAFE-1` threats and `ESC-1` confidence below 60% go to human review |
-| ✅ | Fraud and bad-faith detection agent | Deterministic risk from history and contradicted claims; high risk escalates via `FRAUD-1` |
+| ✅ | Escalation protocol | `SAFE-1` threats, `FRAUD-1` high bad-faith risk and `ESC-1` confidence below 60% go to human review |
+| ✅ | Fraud and bad-faith detection agent | Deterministic risk from history and contradicted claims; never penalises, only escalates |
 | ⬜ | Policy and precedent agent | Past rulings as precedent for consistency |
 | ⬜ | Evidence collection agent, image analysis, feedback loop, SLA routing | Not planned |
 
-## Submission checklist
+## Security and responsible AI
+
+| | Item | Status |
+|---|---|---|
+| ✅ | Threat model | [security.md](security.md) |
+| ✅ | Prompt-injection red team | 23 attacks catalogued; 68 live runs, no ruling changed ([findings](redteam/findings.md)) |
+| ✅ | API hardening | Input limits, rate limits, daily token budget, public demo mode, judge access codes, party-only views |
+| ✅ | Secrets and dependencies | gitleaks and trufflehog clean; pre-commit hook and CI scans; pinned Python dependencies |
+| ⬜ | Frontend build-tool advisories (Vite, esbuild) | 5 Dependabot alerts, all in dev and build tools; Vite upgrade after the deadline |
+
+## Submission checklist (due 16 Oct 2026)
 
 | | Item | Owner |
 |---|---|---|
-| ⬜ | Built with CodeBuddy, with proof (at least 3 chat screenshots) | Three CodeBuddy rounds done (PR #2); confirm the screenshots are saved in one folder |
-| ⬜ | Project title and blurb under 10 words | Team |
-| ⬜ | Project description: overview, pain points, solution design incl. how prompts drive generation ([prompts.md](prompts.md)), business value | Team, from the docs |
-| ⬜ | 16:9 cover image (380×216) | Team (Miora) |
+| ⬜ | Built with CodeBuddy, with proof (at least 3 chat screenshots) | Everyone: screenshots in the shared folder |
+| ⬜ | Project title and blurb under 10 words | Lead |
+| ⬜ | Project description: overview, pain points, solution design incl. how prompts drive generation ([prompts.md](prompts.md)), business value | Lead, from the docs |
+| ⬜ | 16:9 cover image (380×216) | Lead (Miora) |
 | ⬜ | Demo video, 5–8 minutes (optional) | Team |
-| ⬜ | Live demo link (optional, bonus points) | Needs hosting |
+| ⬜ | Live demo link (optional, bonus points) | Needs hosting; see [demo-deployment.md](demo-deployment.md) |
