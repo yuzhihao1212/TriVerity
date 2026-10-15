@@ -194,19 +194,41 @@ def test_feedback_rules(monkeypatch):
 def test_feedback_is_rate_limited():
     client = TestClient(create_app())
     body = {"case": D001.model_dump(), "decision": "no_action"}
-    codes = [client.post(FEEDBACK, json=body).status_code for _ in range(10)]
+    # One more request than the effective limit, which a developer's backend/.env may raise.
+    attempts = min(store.limits.PER_IP_PER_MINUTE, store.limits.GLOBAL_PER_MINUTE) + 1
+    codes = [client.post(FEEDBACK, json=body).status_code for _ in range(attempts)]
     assert 429 in codes
 
 
-def test_public_demo_needs_an_access_code_for_feedback(monkeypatch):
+def test_public_demo_turns_feedback_off(monkeypatch):
+    """Judge codes let judges submit disputes, not act as reviewers. In the public demo two
+    feedback posts with a judge code would flip a sample (e.g. D001) to PREC-1 for every
+    visitor, so recording reviewer decisions is off there, with or without a code."""
     code = "judge1-" + "a" * 24
     monkeypatch.setattr(settings, "public_demo", True)
     monkeypatch.setattr(settings, "demo_access_codes", code)
     client = TestClient(create_app())
     body = {"case": D001.model_dump(), "decision": "no_action"}
-    assert client.post(FEEDBACK, json=body).status_code == 401
-    assert client.post(FEEDBACK, json=body, headers={"X-Demo-Key": "wrong-code-" + "b" * 20}).status_code == 401
-    assert client.post(FEEDBACK, json=body, headers={"X-Demo-Key": code}).status_code == 201
+    assert client.post(FEEDBACK, json=body).status_code == 403
+    assert client.post(FEEDBACK, json=body, headers={"X-Demo-Key": code}).status_code == 403
+    assert store.all_precedents() == list(store._seed())   # nothing was recorded
+
+
+def test_reviewer_notes_never_appear_in_api_responses():
+    """A note is internal to the store: another user resolving a similar dispute must not see it."""
+    case = detour("NOTE-2", 0.33, 0.40)
+    client = TestClient(create_app())
+    for _ in range(2):
+        limiter.reset()
+        recorded = client.post(FEEDBACK, json={"case": case.model_dump(), "decision": "no_action",
+                                               "note": "Mrs Tan of 12 Example Road complains a lot"})
+        assert recorded.status_code == 201 and "Example Road" not in recorded.text
+    limiter.reset()
+    other_user = client.post("/api/disputes/resolve", json=case.model_dump())
+    assert other_user.status_code == 200
+    assert other_user.json()["precedents"]["matches"]           # the precedents are still shown
+    assert "Example Road" not in other_user.text                 # but not the reviewer's note
+    assert all("note" not in m for m in other_user.json()["precedents"]["matches"])
 
 
 # -- Party views -----------------------------------------------------------------

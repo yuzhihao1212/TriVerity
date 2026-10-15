@@ -36,14 +36,21 @@ class FeedbackRecorded(BaseModel):
     decision: str
 
 
-@router.post("/precedents/feedback", response_model=FeedbackRecorded, status_code=201)
-def record_feedback(
-    body: ReviewerDecision,
-    code_id: str | None = Depends(enforce_resolve_rate_limit),
-) -> FeedbackRecorded:
-    """Record a human reviewer's decision as a precedent (internal reviewer console)."""
-    if settings.public_demo and code_id is None:
-        raise HTTPException(status_code=401, detail="An access code is required to record a reviewer decision.")
+@router.post(
+    "/precedents/feedback",
+    response_model=FeedbackRecorded,
+    status_code=201,
+    dependencies=[Depends(enforce_resolve_rate_limit)],   # shares the resolve rate limits
+)
+def record_feedback(body: ReviewerDecision) -> FeedbackRecorded:
+    """Record a human reviewer's decision as a precedent (internal reviewer console).
+
+    Off in the public demo: judge access codes let judges submit disputes, not act as
+    reviewers, and two posts could otherwise make a sample escalate (PREC-1) for every
+    visitor. A real deployment would require a reviewer login here (auth tier T3).
+    """
+    if settings.public_demo:
+        raise HTTPException(status_code=403, detail="Recording reviewer decisions is turned off in the public demo.")
     note = sanitise(body.note)
     if find_link_or_markup(normalise(note)):
         raise HTTPException(status_code=422, detail="The note must be plain text, without links or markup.")

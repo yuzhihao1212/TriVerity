@@ -165,9 +165,10 @@ The learning feedback loop: a human reviewer's final decision on a case becomes 
 ```
 
 Returns `201` with `{"id": "R-001", "summary": "string", "decision": "no_action"}`. Shares the resolve
-rate limits; in the public demo it needs an access code (`401` without). `422` for `needs_review` (not a
-final decision), a note with links or markup, or a note over 300 characters; `409` when the in-memory
-store is full (200 entries). Notes are shown to reviewers in `precedents.matches[].note` and never sent
-to the LLM.
+rate limits. **Turned off in the public demo** (`403`, with or without an access code): judge codes are for
+submitting disputes, not for acting as a reviewer. `422` for `needs_review` (not a final decision), a note
+with links or markup, or a note over 300 characters; `409` when the in-memory store is full (200
+entries). Notes stay in the store: they are never returned by the API (not in `precedents.matches`) and
+never sent to the LLM.
 
 Keep this contract stable so frontend and backend development can proceed independently.

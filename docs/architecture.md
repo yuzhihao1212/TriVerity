@@ -55,7 +55,8 @@
       augmented generation), plus a message to each party. Precedents appear only in the case record.
    3. *Learning feedback loop.* `POST /api/precedents/feedback` records a reviewer's final decision as a
       new precedent. It can only cause escalations (`PREC-1`), never change a decision or an amount.
-      Feedback is kept in memory; production would store it with the dispute queue.
+      Feedback is kept in memory; production would store it with the dispute queue. It is turned off
+      in the public demo, and reviewer notes are never returned by the API.
 5. **Resolution** (`backend/app/models/resolution.py`). The ruling, both advocates' cases, the
    fraud risk assessment and an agent log recording each step and whether the AI or the fallback
    produced it. It is served by `POST /api/disputes/resolve` (see

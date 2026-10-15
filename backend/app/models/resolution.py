@@ -40,7 +40,9 @@ class PrecedentMatch(BaseModel):
     # "policy": the rules' decision, accepted; "human_review": a reviewer's decision.
     decided_by: Literal["policy", "human_review"] = "policy"
     summary: str = ""
-    note: str = ""   # reviewer note (internal only; never sent to the LLM)
+    # Reviewer note: internal only. Never sent to the LLM, and excluded from every API
+    # response, so one reviewer's free text never reaches another user.
+    note: str = Field(default="", exclude=True)
 
 class PrecedentReport(BaseModel):
     """The Policy & Precedent agent's findings for one dispute (internal only)."""
