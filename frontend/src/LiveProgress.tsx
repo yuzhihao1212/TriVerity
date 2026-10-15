@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Chip } from "./Chip";
 import { SourceBadge } from "./Debate";
 import { humanizeAgentMessage } from "./agentText";
 import { duration, stepMessage, stepSource } from "./progress";
@@ -16,7 +17,7 @@ export function LiveProgress({ disputeId, steps, startedAt, streaming }: {
     return () => window.clearInterval(timer);
   }, [startedAt]);
   return <section className="card loading-state live-progress" aria-labelledby="loading-title">
-    <div className="card-head"><div><p className="eyebrow">{streaming ? "Live agent progress" : "Standard resolve"}</p><h2 id="loading-title" tabIndex={-1}>Agents working · {disputeId}</h2></div>
+    <div className="card-head"><div className="panel-head"><h2 id="loading-title" tabIndex={-1}>Agents working · {disputeId}</h2><Chip size="sm" tone="brand">{streaming ? "Live agent progress" : "Standard resolve"}</Chip></div>
       <p className="elapsed-time muted" aria-live="off">Elapsed <strong>{elapsed} s</strong></p></div>
     <p className="muted small">{streaming ? "Completed steps appear as the server reports them. Parallel agents may finish in a different order." : "Live progress is unavailable. Retrying once with the standard resolve; waiting for the complete result. Steps below belong to the interrupted stream."}</p>
     <p className="sr-only" role="status" aria-live="polite">{!streaming ? "Live progress unavailable. Retrying once with the standard resolve." : ""}</p>
@@ -25,7 +26,7 @@ export function LiveProgress({ disputeId, steps, startedAt, streaming }: {
         const source = stepSource(entry), time = duration(entry.duration_ms);
         return <li key={`${entry.step}-${entry.agent}`}>
           <div className="live-step-head"><span className="live-step-check" aria-hidden="true">✓</span><strong>{agentLabel(entry.agent)}</strong>
-            {source === "llm" || source === "fallback" ? <SourceBadge source={source} /> : <span className="tag">{source === "code" ? "Code" : "Source not supplied"}</span>}
+            {source === "llm" || source === "fallback" ? <SourceBadge source={source} /> : <Chip size="sm" tone="outline">{source === "code" ? "Code" : "Source not supplied"}</Chip>}
             {time && <span className="step-duration muted">{time}</span>}
           </div><p title={humanizeAgentMessage(entry.agent, stepMessage(entry)) || stepMessage(entry)}>{humanizeAgentMessage(entry.agent, stepMessage(entry)) || stepMessage(entry)}</p>
         </li>;

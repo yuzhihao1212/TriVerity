@@ -18,6 +18,11 @@ export function decisionTone(decision: Decision): OutcomeTone {
   return "neutral";
 }
 
+/** Bad-faith risk (and anything shown on the same scale): danger only when high. */
+export function riskTone(level: "low" | "medium" | "high"): Tone {
+  return level === "high" ? "danger" : level === "medium" ? "warn" : "neutral";
+}
+
 /** Short labels, used in the sidebar, the precedent list and agent text. */
 export const DECISION_LABELS: Record<Decision, string> = {
   partial_refund: "Partial refund",

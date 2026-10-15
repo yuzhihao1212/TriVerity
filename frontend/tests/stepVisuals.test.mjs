@@ -169,7 +169,7 @@ test('agent roles, icons and badges', () => {
   assert.equal(sv.agentBadge('judge', 'fallback'), 'fallback');
   assert.equal(sv.agentBadge('mystery', null), null);
   assert.deepEqual(sv.statusBadge('completed'), { label: 'Completed', tone: 'ok', icon: 'check' });
-  assert.deepEqual(sv.statusBadge('failed'), { label: 'Failed', tone: 'warn', icon: 'cross' });
+  assert.deepEqual(sv.statusBadge('failed'), { label: 'Failed', tone: 'danger', icon: 'cross' });
   assert.equal(sv.statusBadge('skipped').label, 'Skipped');
 });
 

@@ -1,5 +1,6 @@
 import { useId } from "react";
 
+import { Chip } from "./Chip";
 import { evidenceItems, SOURCE_LABELS } from "./presentation";
 
 export interface FactLinks { availableIds?: Set<string>; onSelectFact?: (id: string) => void }
@@ -11,7 +12,7 @@ export function EvidenceList({ texts, ids = [], availableIds, onSelectFact }: { 
     <ul className="small evidence-list">
       {items.slice(start, end).map((item, index) => (
         <li key={start + index}>
-          <span className="source-chip">{SOURCE_LABELS[item.source]}</span>{" "}
+          <Chip size="sm" tone="outline">{SOURCE_LABELS[item.source]}</Chip>{" "}
           {item.id && (availableIds?.has(item.id) && onSelectFact
             ? <button type="button" className="evidence-link" aria-label={`Find evidence ${item.id}`} onClick={() => onSelectFact(item.id!)}>{item.id}</button>
             : <span className="evidence-id">{item.id}</span>)}
@@ -23,7 +24,7 @@ export function EvidenceList({ texts, ids = [], availableIds, onSelectFact }: { 
   if (!items.length) return <p className="small muted">No evidence cited.</p>;
   return (
     <div className="evidence-group">
-      <p className="evidence-sources" aria-label="Evidence sources">{[...new Set(items.map(item => item.source))].map(source => <span className="source-chip" key={source}>{SOURCE_LABELS[source]}</span>)}</p>
+      <p className="chip-row" aria-label="Evidence sources">{[...new Set(items.map(item => item.source))].map(source => <Chip size="sm" tone="outline" key={source}>{SOURCE_LABELS[source]}</Chip>)}</p>
       {render(0, 2)}
       {items.length > 2 && (
         <details className="disclosure" id={id}>

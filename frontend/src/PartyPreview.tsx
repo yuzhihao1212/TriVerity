@@ -28,7 +28,7 @@ export function PartyPreview({ resolution, dispute, onAppealed, onSeen }: {
   }, []);
   return (
     <section className="card party-preview" aria-labelledby={`${id}-heading`}>
-      <div><p className="eyebrow">Notify parties</p><h2 id={`${id}-heading`}>What the rider and the driver see</h2></div>
+      <h2 id={`${id}-heading`}>Rider and Driver's POV</h2>
       <p className="small muted">Only the outcome and a plain explanation: never fraud signals, party history or internal evidence.</p>
       <div className="phones">
         {PARTIES.map(name => {

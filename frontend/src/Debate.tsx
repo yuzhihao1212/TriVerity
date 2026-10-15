@@ -1,16 +1,17 @@
 import { useId } from "react";
 import { focusSection } from "./routes";
 
+import { Chip } from "./Chip";
+import { sourceTone } from "./chipStyle";
 import { EvidenceList, EvidenceText, type FactLinks } from "./EvidenceList";
-import { Icon } from "./Icon";
 import { FALLBACK_TOOLTIP } from "./stepVisuals";
 import type { AgentCase, Resolution } from "./types";
 
 /** AI (accent, sparkle), Fallback (amber, explained in its tooltip) or Code (neutral). */
 export function SourceBadge({ source, explain = false }: { source: "llm" | "fallback" | "code"; explain?: boolean }) {
-  if (source === "llm") return <span className="source-badge llm"><Icon name="sparkle" />AI</span>;
-  if (source === "code") return <span className="source-badge code">Code</span>;
-  return <span className="source-badge fallback" title={FALLBACK_TOOLTIP}>Fallback{explain && <span className="sr-only">: {FALLBACK_TOOLTIP}</span>}</span>;
+  if (source === "llm") return <Chip size="sm" tone={sourceTone(source)} icon="sparkle">AI</Chip>;
+  if (source === "code") return <Chip size="sm" tone={sourceTone(source)}>Code</Chip>;
+  return <Chip size="sm" tone={sourceTone(source)} className="has-tooltip" title={FALLBACK_TOOLTIP}>Fallback{explain && <span className="sr-only">: {FALLBACK_TOOLTIP}</span>}</Chip>;
 }
 
 export function Debate({ resolution, availableIds, onSelectFact }: { resolution: Resolution } & FactLinks) {
@@ -42,7 +43,7 @@ export function Debate({ resolution, availableIds, onSelectFact }: { resolution:
   };
   return (
     <section className="card debate" aria-labelledby={`${id}-title`}>
-      <div><p className="eyebrow">The advocates argue</p><h2 id={`${id}-title`}>Two sides. One set of facts.</h2></div>
+      <h2 id={`${id}-title`}>Two sides. One set of facts.</h2>
       <h3 className="round-title">Round 1 <span>Opening arguments</span></h3>
       <div className="debate-grid">{argument("rider", resolution.rider_case)}{argument("driver", resolution.driver_case)}</div>
       <h3 className="round-title">Round 2 <span>Each advocate answers the other</span></h3>
