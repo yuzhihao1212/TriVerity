@@ -9,18 +9,20 @@ const STEP_ICONS: Record<WorkflowTab, string> = {
   intake: "folder", evidence: "magnifier", hearing: "bubbles", ruling: "scales", notify: "phone",
 };
 
-export function WorkflowTabs({ active, resolution, busy, liveSteps, onChange, render }: {
+export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, onChange, render }: {
   active: WorkflowTab;
   resolution?: Resolution;
   busy: boolean;
-  /** Steps reported so far by a run in progress; fills the stepper as they arrive. */
+  /** Steps reported so far by a run in progress; the working ring follows them. */
   liveSteps?: AgentLogEntry[];
+  /** Steps the reviewer has completed for this ruling. */
+  reviewed?: Iterable<WorkflowTab>;
   onChange: (tab: WorkflowTab) => void;
   render: (tab: WorkflowTab) => ReactNode;
 }) {
   const id = useId();
   const refs = useRef<Partial<Record<WorkflowTab, HTMLButtonElement | null>>>({});
-  const states = stepStates({ active, hasResult: !!resolution, busy, liveSteps });
+  const states = stepStates({ active, hasResult: !!resolution, busy, liveSteps, reviewed });
   function activate(tab: WorkflowTab) {
     if (tabLocked(tab, !!resolution)) return;
     onChange(tab);
@@ -38,10 +40,9 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, onChange, re
         {WORKFLOW_TABS.map((tab, index) => {
           const state = states[index];
           const locked = state.locked;
-          // The connector into this step fills once the previous step is complete.
-          const joined = index > 0 && states[index - 1].done;
-          const classes = ["step", state.done && "done", state.current && "current", locked && "locked",
-            state.inProgress && "in-progress", joined && "joined"].filter(Boolean).join(" ");
+          // The connector into this step fills only within the furthest reviewed step.
+          const classes = ["step", state.phase, state.current && "current", locked && "locked",
+            state.next && "next", state.joined && "joined"].filter(Boolean).join(" ");
           return <button type="button" role="tab" key={tab.id} className={classes}
             id={`${id}-${tab.id}-tab`} aria-controls={`${id}-${tab.id}-panel`}
             aria-selected={active === tab.id} aria-disabled={locked}
@@ -51,15 +52,19 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, onChange, re
             ref={element => { refs.current[tab.id] = element; }}
             onClick={() => activate(tab.id)} onKeyDown={event => navigate(event, tab.id)}>
             <span className="step-circle" aria-hidden="true">
-              {state.done ? <Icon name="check" /> : locked && !state.inProgress ? <Icon name="lock" /> : index + 1}
+              {state.reviewed ? <Icon name="check" /> : locked && !state.working ? <Icon name="lock" /> : index + 1}
+              {/* Mounted when the reviewer arrives, so it draws once; a re-render never replays it. */}
+              {state.current && !state.working && <StepRing kind="current" />}
+              {state.working && <StepRing kind="working" />}
             </span>
             <span className="step-name">
               <Icon name={STEP_ICONS[tab.id]} className="step-icon" />
               <span className="tab-label"><span className="label-full">{tab.label}</span><span className="label-short" aria-hidden="true">{SHORT_TAB_LABELS[tab.id]}</span></span>
             </span>
             {/* A locked step already says "Locked" in its progress text. */}
-            <span className="sr-only">, step {index + 1} of {WORKFLOW_TABS.length}{locked && !state.done && !state.inProgress ? "" : `, ${stepStatusText(state)}`}. </span>
+            <span className="sr-only">, step {index + 1} of {WORKFLOW_TABS.length}{locked && !state.working ? "" : `, ${stepStatusText(state)}`}{state.next ? ", next to review" : ""}. </span>
             <span className="tab-progress">{tabProgress(tab.id, resolution)}</span>
+            {state.next && <span className="step-next" aria-hidden="true">Next</span>}
           </button>;
         })}
       </div>
@@ -82,4 +87,14 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, onChange, re
       </>}
     </div>)}
   </>;
+}
+
+/**
+ * A ring just outside a step circle. "current" draws once (stroke-dashoffset) when it
+ * mounts; "working" is dashed and turns slowly while the agents are on that step.
+ */
+function StepRing({ kind }: { kind: "current" | "working" }) {
+  return <svg className={`step-ring ${kind}`} viewBox="0 0 44 44" aria-hidden="true" focusable="false">
+    <circle cx="22" cy="22" r="20" pathLength={100} />
+  </svg>;
 }

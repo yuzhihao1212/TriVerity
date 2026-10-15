@@ -17,47 +17,61 @@ const wf = await import(workflowUrl);
 const log = (agent, message = '', duration_ms = 1) => ({ step: 0, agent, status: 'completed', message, duration_ms });
 const byTab = states => Object.fromEntries(states.map(s => [s.tab, s]));
 
-test('step states with no result: Intake is current, the rest locked and not done', () => {
+const phases = states => states.map(s => `${s.tab}:${s.phase}`).join(' ');
+
+test('step states with no result: Intake is current, the rest locked', () => {
   const states = byTab(sv.stepStates({ active: 'intake', hasResult: false, busy: false }));
-  assert.deepEqual(states.intake, { tab: 'intake', done: false, current: true, locked: false, inProgress: false });
+  assert.deepEqual(states.intake, { tab: 'intake', phase: 'available', reviewed: false, current: true, locked: false, working: false, next: false, joined: false });
+  assert.equal(sv.stepStatusText(states.intake), 'current step');
   for (const tab of ['evidence', 'hearing', 'ruling', 'notify']) {
-    assert.equal(states[tab].locked, true);
-    assert.equal(states[tab].done, false);
+    assert.equal(states[tab].phase, 'locked');
     assert.equal(sv.stepStatusText(states[tab]), 'locked');
+    assert.equal(states[tab].joined, false);
   }
 });
 
-test('step states while busy fill step by step as live steps arrive', () => {
-  let states = byTab(sv.stepStates({ active: 'intake', hasResult: false, busy: true, liveSteps: [] }));
-  assert.equal(states.intake.done, true);
-  assert.equal(states.evidence.inProgress, true);
-  assert.equal(sv.stepStatusText(states.evidence), 'in progress');
-  // The fraud detector logs early but belongs to Ruling: Evidence waits for the collector.
-  states = byTab(sv.stepStates({ active: 'intake', hasResult: false, busy: true, liveSteps: [log('evidence_loader'), log('fraud_detector')] }));
-  assert.equal(states.evidence.done, false);
-  assert.equal(states.ruling.done, false);
-  states = byTab(sv.stepStates({ active: 'intake', hasResult: false, busy: true,
-    liveSteps: ['evidence_loader', 'evidence_collector', 'fraud_detector', 'rider_advocate', 'driver_advocate'].map(a => log(a)) }));
-  assert.equal(states.evidence.done, true);
-  assert.equal(states.hearing.done, false);
-  assert.equal(states.hearing.inProgress, true);
-  assert.equal(states.evidence.inProgress, false);
-  states = byTab(sv.stepStates({ active: 'intake', hasResult: false, busy: true,
-    liveSteps: ['evidence_loader', 'evidence_collector', 'rider_rebuttal', 'driver_rebuttal', 'judge'].map(a => log(a)) }));
-  assert.ok(Object.values(states).every(s => s.done && !s.inProgress));
-  // Busy without a previous result keeps steps 2-5 locked (tab semantics unchanged).
-  assert.equal(states.ruling.locked, true);
+test('during a run the working ring follows the agents along the stepper', () => {
+  let states = sv.stepStates({ active: 'intake', hasResult: false, busy: true, liveSteps: [] });
+  assert.deepEqual(states.filter(s => s.working).map(s => s.tab), ['evidence']);
+  assert.equal(sv.stepStatusText(byTab(states).evidence), 'agents working');
+  // The fraud detector logs early but belongs to Ruling: the agents are still on Evidence.
+  states = sv.stepStates({ active: 'intake', hasResult: false, busy: true, liveSteps: [log('evidence_loader'), log('fraud_detector')] });
+  assert.deepEqual(states.filter(s => s.working).map(s => s.tab), ['evidence']);
+  states = sv.stepStates({ active: 'intake', hasResult: false, busy: true,
+    liveSteps: ['evidence_loader', 'evidence_collector', 'fraud_detector', 'rider_advocate', 'driver_advocate'].map(a => log(a)) });
+  assert.deepEqual(states.filter(s => s.working).map(s => s.tab), ['hearing']);
+  states = sv.stepStates({ active: 'intake', hasResult: false, busy: true,
+    liveSteps: ['evidence_loader', 'evidence_collector', 'rider_rebuttal', 'driver_rebuttal', 'judge'].map(a => log(a)) });
+  assert.ok(states.every(s => !s.working), 'the ring stops once the last step finishes');
+  // Working is not "reviewed": nothing is ticked and the locked steps stay locked (tab semantics unchanged).
+  assert.ok(states.every(s => !s.reviewed && !s.joined && !s.next));
+  assert.equal(byTab(states).ruling.locked, true);
 });
 
-test('step states with a result: all complete and unlocked, the selected one current', () => {
-  const states = sv.stepStates({ active: 'hearing', hasResult: true, busy: false });
-  assert.ok(states.every(s => s.done && !s.locked && !s.inProgress));
-  assert.deepEqual(states.filter(s => s.current).map(s => s.tab), ['hearing']);
-  // A re-run over a saved result: unlocked steps not yet redone are "not started" (available).
-  const rerun = byTab(sv.stepStates({ active: 'evidence', hasResult: true, busy: true, liveSteps: [log('evidence_loader')] }));
-  assert.equal(rerun.hearing.locked, false);
-  assert.equal(rerun.hearing.done, false);
-  assert.equal(sv.stepStatusText(rerun.hearing), 'not started');
+test('with a ruling and nothing reviewed: Intake ticked, the rest available, Next = Evidence', () => {
+  let states = sv.stepStates({ active: 'intake', hasResult: true, busy: false });
+  assert.equal(phases(states), 'intake:reviewed evidence:available hearing:available ruling:available notify:available');
+  assert.deepEqual(states.filter(s => s.next).map(s => s.tab), ['evidence']);
+  assert.ok(states.every(s => !s.joined), 'no connector filled yet');
+  assert.equal(sv.stepStatusText(byTab(states).hearing), 'not reviewed yet');
+  // The Next hint is hidden on the current step.
+  states = sv.stepStates({ active: 'evidence', hasResult: true, busy: false });
+  assert.ok(states.every(s => !s.next));
+});
+
+test('after visiting Evidence: Intake and Evidence ticked, Next = Hearing, line filled to Evidence', () => {
+  const states = sv.stepStates({ active: 'intake', hasResult: true, busy: false, reviewed: ['evidence'] });
+  assert.equal(phases(states), 'intake:reviewed evidence:reviewed hearing:available ruling:available notify:available');
+  assert.deepEqual(states.filter(s => s.next).map(s => s.tab), ['hearing']);
+  assert.deepEqual(states.map(s => s.joined), [false, true, false, false, false]);
+  // The line runs to the FURTHEST reviewed step, even across a gap.
+  const gap = sv.stepStates({ active: 'notify', hasResult: true, busy: false, reviewed: ['ruling'] });
+  assert.deepEqual(gap.map(s => s.joined), [false, true, true, true, false]);
+  assert.deepEqual(gap.filter(s => s.next).map(s => s.tab), ['evidence']);
+  // All reviewed: no Next hint anywhere.
+  const all = sv.stepStates({ active: 'ruling', hasResult: true, busy: false, reviewed: ['evidence', 'hearing', 'ruling', 'notify'] });
+  assert.ok(all.every(s => s.reviewed && !s.next));
+  assert.equal(sv.stepStatusText(byTab(all).ruling), 'reviewed');
 });
 
 test('tool names map to friendly names and fall back to sentence case', () => {
@@ -97,13 +111,30 @@ const D001 = {
 
 test('header chips come from the case, and are skipped when their data is missing', () => {
   assert.deepEqual(sv.headerChips(D001).map(c => c.label), ['+44% distance', '$24.80 charged']);
-  const ruled = sv.headerChips(D001, { decision: 'partial_refund', refund_amount: 6.3 });
+  const ruled = sv.headerChips(D001, { decision: 'partial_refund', refund_amount: 6.3, policy_refs: ['RD-3: A route more than 15% longer…'] });
   assert.deepEqual(ruled.map(c => [c.label, c.tone]), [['+44% distance', 'accent'], ['$24.80 charged', 'neutral'], ['Partial refund $6.30', 'ok']]);
   const noShow = { ...D001, type: 'no_show_charge', trip: { driver_wait_min: 7 }, fare: { cancellation_fee: 4, breakdown: [] } };
   assert.deepEqual(sv.headerChips(noShow).map(c => c.label), ['Driver waited 7 min', '$4.00 no-show fee']);
   assert.deepEqual(sv.headerChips({ ...D001, trip: {}, fare: { breakdown: [] } }), []);
   assert.deepEqual(sv.headerChips({ ...D001, trip: { expected_distance_km: 0, actual_distance_km: 3 } }).map(c => c.key), ['charged'], 'no divide by zero');
   assert.equal(sv.headerChips({ ...D001, trip: { expected_distance_km: 10, actual_distance_km: 9.2 } })[0].label, '-8% distance');
+});
+
+test('the distance chip is a warning only when the deviation counted against the driver', () => {
+  const tone = resolution => sv.headerChips(D001, resolution)[0].tone;
+  // Before a ruling the rules have not decided.
+  assert.equal(tone(undefined), 'neutral');
+  // D001-like: +44%, partial refund under RD-3.
+  assert.equal(tone({ decision: 'partial_refund', refund_amount: 6.3, policy_refs: ['RD-3: A route more than 15% longer than expected that also took longer is treated as an unjustified detour; the fare above the expected fare is refunded.'] }), 'accent');
+  // D003-like: +8%, within tolerance (RD-1), no action.
+  assert.equal(tone({ decision: 'no_action', refund_amount: null, policy_refs: ['RD-1: A route up to 15% longer than expected is within normal tolerance; no refund is due.'] }), 'neutral');
+  // D004-like: no action under RD-2 (congestion): neutral.
+  assert.equal(tone({ decision: 'no_action', refund_amount: null, policy_refs: ['RD-2: A longer route that did not take longer…'] }), 'neutral');
+  // D007-like: escalated, but the route rule RD-3 counted against the driver.
+  assert.equal(tone({ decision: 'needs_review', refund_amount: 6.9, policy_refs: ['RD-3: …', 'SAFE-1: …'] }), 'accent');
+  // RD-1 is matched as a rule ID, not a prefix of RD-10.
+  assert.equal(sv.distanceTone({ decision: 'needs_review', policy_refs: ['RD-10: hypothetical'] }), 'accent');
+  assert.equal(sv.distanceTone({ decision: 'needs_review', policy_refs: ['SAFE-1: threat'] }), 'neutral');
 });
 
 test('the outcome label for each decision', () => {

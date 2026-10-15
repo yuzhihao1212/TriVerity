@@ -7,6 +7,7 @@ import { WorkflowTabs } from "./WorkflowTabs";
 import { savedTab, type WorkflowTab } from "./workflow";
 import { FactLibrary } from "./FactLibrary";
 import { headerChips, statusPill } from "./stepVisuals";
+import { createReviewStore, openCounts, reviewKey, reviewSummary, type ReviewSummary } from "./reviewProgress";
 import { CaseComparison } from "./CaseComparison";
 import { Debate } from "./Debate";
 import { EvidenceList, EvidenceText, type FactLinks } from "./EvidenceList";
@@ -27,6 +28,7 @@ import { DisputeForm } from "./DisputeForm";
 import { getSamples, resolveDisputeLive } from "./services/api";
 import { decisionTone, disputeItemName, filterLabel, filterShortLabel, STATUS_LABELS, TYPE_LABELS, type DisputeFilter } from "./disputeList";
 import { FilterMenu } from "./FilterMenu";
+import { Icon } from "./Icon";
 import type { AgentLogEntry, ArgumentReview, Counterfactual, Decision, DisputeCase, PartyHistory, PrecedentReport, Resolution, RiskLevel, Triage, TriageTier } from "./types";
 
 const DECISION_LABELS: Record<Decision, string> = {
@@ -36,6 +38,17 @@ const DECISION_LABELS: Record<Decision, string> = {
   no_action: "No action",
   needs_review: "Needs human review",
 };
+
+// The reviewer's progress per ruling, for this browser session (shared by every mount).
+let reviewStore: ReturnType<typeof createReviewStore> | null = null;
+function reviews() {
+  if (!reviewStore) {
+    let storage: Storage | null = null;
+    try { storage = window.sessionStorage; } catch { /* Blocked storage: memory only. */ }
+    reviewStore = createReviewStore(storage);
+  }
+  return reviewStore;
+}
 
 // The judge types their access code; it is kept for this browser tab only and is
 // never part of the built bundle.
@@ -124,6 +137,7 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
   }, [active, samples, sampleId]);
 
   function select(dispute: DisputeCase) {
+    if (dispute.dispute_id !== selected?.dispute_id) leaveCase();
     setActiveFact(null);
     setSelected(dispute);
     setForm(null);
@@ -170,14 +184,41 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
 
   const activeTab = savedTab(selected ? activeTabs[selected.dispute_id] : undefined, !!resolution);
 
+  // Reviewer progress. A step counts once the reviewer has been on it: marked when they
+  // navigate to it or move on from it (the automatic switch to Evidence after a run is
+  // not the reviewer's own visit until they move on). Ruling and Notify need real actions.
+  const [reviewVersion, setReviewVersion] = useState(0);
+  const [decisionsUnavailable, setDecisionsUnavailable] = useState(false);
+  const reviewId = selected && resolution ? reviewKey(selected.dispute_id, resolution) : null;
+  const reviewed = useMemo(() => reviewId ? reviews().get(reviewId) : new Set<WorkflowTab>(),
+    [reviewId, reviewVersion]);
+  const progress: ReviewSummary | null = resolution ? reviewSummary(reviewed) : null;
+  function markReviewed(tab: WorkflowTab) {
+    if (reviewId && reviews().add(reviewId, tab)) setReviewVersion(v => v + 1);
+  }
+  function visit(...tabs: WorkflowTab[]) {
+    if (resolving === selected?.dispute_id) return; // Mid-run, the panels show live progress.
+    for (const tab of tabs) if (openCounts(tab, { decisionsUnavailable })) markReviewed(tab);
+  }
+
+  /** Moving to another case counts as moving on from the step being viewed. */
+  function leaveCase() { visit(activeTab); }
+  function onDecisionsUnavailable() {
+    // Recording is off (public demo): opening Ruling is all the reviewer can do, so it counts.
+    setDecisionsUnavailable(true);
+    markReviewed("ruling");
+  }
+
   function changeTab(tab: WorkflowTab) {
     if (!selected) return;
+    visit(activeTab, tab);
     setActiveFact(null);
     setActiveTabs(prev => ({ ...prev, [selected.dispute_id]: tab }));
   }
 
   function selectFact(id: string) {
     if (!factIds.has(id)) return;
+    visit(activeTab, "evidence");
     if (selected) setActiveTabs(prev => ({ ...prev, [selected.dispute_id]: "evidence" }));
     setActiveFact(id);
     setFactRequest(value => value + 1);
@@ -283,7 +324,7 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
 
         <main className="content" id="main-content" tabIndex={-1}>
           <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-            {loadingSamples ? "Loading sample disputes…" : resolving ? `Agents working on ${resolving}.` : resolution ? "Saved ruling ready." : ""}
+            {loadingSamples ? "Loading sample disputes…" : resolving ? `Agents working on ${resolving}.` : resolution ? `Saved ruling ready. ${progress?.text}.` : ""}
           </p>
           <ProgressAnnouncements steps={liveSteps} />
           <div role="alert" aria-atomic="true">{error && <p className="error">{error}</p>}</div>
@@ -292,9 +333,9 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
           {!form && resolving && resolving !== selected?.dispute_id && <p className="small muted">Agents are working on {resolving}. This case remains available.</p>}
           {form && <DisputeForm key={form.template?.dispute_id ?? "blank"} template={form.template} onSubmit={addOwn} onCancel={() => setForm(null)} />}
           {!form && selected && <section className="case-file" aria-labelledby="case-title">
-            <CaseHeader dispute={selected} resolution={resolution} busy={resolving === selected.dispute_id} streaming={streaming} />
+            <CaseHeader dispute={selected} resolution={resolution} busy={resolving === selected.dispute_id} streaming={streaming} progress={progress} />
             <WorkflowTabs active={activeTab} resolution={resolution} busy={resolving === selected.dispute_id}
-              liveSteps={resolving === selected.dispute_id ? liveSteps : undefined} onChange={changeTab}
+              liveSteps={resolving === selected.dispute_id ? liveSteps : undefined} reviewed={reviewed} onChange={changeTab}
               render={tab => resolving === selected.dispute_id ? <LiveProgress disputeId={selected.dispute_id} steps={liveSteps} startedAt={runStartedAt} streaming={streaming} /> : <>
                 <AgentsStrip tab={tab} resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
                 {tab === "intake" && <>
@@ -314,7 +355,8 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
                 {tab === "hearing" && resolution && <Debate resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />}
                 {tab === "ruling" && resolution && <>
                   <VerdictSummary resolution={resolution} disputeId={selected.dispute_id} />
-                  <ReviewerDecision key={`${selected.dispute_id}-${resolution.agent_log[0]?.started_at ?? ""}`} dispute={selected} resolution={resolution} />
+                  <ReviewerDecision key={`${selected.dispute_id}-${resolution.agent_log[0]?.started_at ?? ""}`} dispute={selected} resolution={resolution}
+                    onDecided={() => markReviewed("ruling")} onUnavailable={onDecisionsUnavailable} />
                   <AppealsPanel disputeId={selected.dispute_id} version={appealsVersion} onChanged={() => setAppealsVersion(v => v + 1)} />
                   <RulingSection title="Reasoning" hint="The Judge's explanation, policy and evidence" open>
                     <RulingPanel resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
@@ -332,7 +374,8 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
                   </RulingSection>
                   <details className="raw"><summary>Raw API response · internal record</summary><pre>{JSON.stringify(resolution, null, 2)}</pre></details>
                 </>}
-                {tab === "notify" && resolution && <PartyPreview resolution={resolution} dispute={selected} onAppealed={() => setAppealsVersion(v => v + 1)} />}
+                {tab === "notify" && resolution && <PartyPreview key={reviewId ?? ""} resolution={resolution} dispute={selected} onAppealed={() => setAppealsVersion(v => v + 1)}
+                  onSeen={() => markReviewed("notify")} />}
               </>} />
           </section>}
 
@@ -342,7 +385,9 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
   );
 }
 
-function CaseHeader({ dispute, resolution, busy, streaming }: { dispute: DisputeCase; resolution?: Resolution; busy: boolean; streaming: boolean }) {
+function CaseHeader({ dispute, resolution, busy, streaming, progress }: {
+  dispute: DisputeCase; resolution?: Resolution; busy: boolean; streaming: boolean; progress: ReviewSummary | null;
+}) {
   const chips = headerChips(dispute, resolution);
   const status = statusPill({ busy, streaming, hasResult: !!resolution });
   return <header className="case-file-head">
@@ -353,10 +398,16 @@ function CaseHeader({ dispute, resolution, busy, streaming }: { dispute: Dispute
         {chips.map(chip => <li key={chip.key} className={`case-chip ${chip.tone}`}>{chip.label}</li>)}
       </ul>}
     </div>
-    <span className={`case-save-status status-pill ${status.tone}${status.pulse ? " pulse" : ""}`} title={status.detail}>
-      <span className="status-dot" aria-hidden="true" />{status.label}
-      {status.detail !== status.label && <span className="sr-only"> ({status.detail})</span>}
-    </span>
+    <div className="case-status">
+      <span className={`case-save-status status-pill ${status.tone}${status.pulse ? " pulse" : ""}`} title={status.detail}>
+        <span className="status-dot" aria-hidden="true" />{status.label}
+        {status.detail !== status.label && <span className="sr-only"> ({status.detail})</span>}
+      </span>
+      {/* Announced through the page's polite status region, not a second live region. */}
+      {progress && <span className={`review-progress${progress.complete ? " complete" : ""}`}>
+        {progress.text}{progress.complete && <Icon name="check" />}
+      </span>}
+    </div>
   </header>;
 }
 

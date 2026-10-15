@@ -8,17 +8,25 @@ import type { AgentLogEntry, Decision, DisputeCase, Resolution, ToolCallRecord }
 export type Tone = "ok" | "warn" | "accent" | "neutral";
 
 // ---- Stepper ------------------------------------------------------------
+// The stepper shows the REVIEWER's progress. "Agents finished" is the status pill's job.
+
+export type StepPhase = "reviewed" | "available" | "locked" | "working";
 
 export interface StepState {
   tab: WorkflowTab;
-  /** The step's work is finished (agents done, or the case added for Intake). */
-  done: boolean;
+  phase: StepPhase;
+  /** The reviewer has done this step (Intake: a ruling exists). */
+  reviewed: boolean;
   /** The step the reviewer is looking at. */
   current: boolean;
-  /** Not selectable yet (no result). */
+  /** Not selectable yet (no ruling). */
   locked: boolean;
-  /** Agents are running and this is the next step to finish. */
-  inProgress: boolean;
+  /** A run is in progress and the agents are on this step. */
+  working: boolean;
+  /** The first step still to review: a subtle hint, never on the current step. */
+  next: boolean;
+  /** The connector INTO this step is filled: it lies within the furthest reviewed step. */
+  joined: boolean;
 }
 
 const HEARING_AGENTS = ["rider_advocate", "driver_advocate", "rider_rebuttal", "driver_rebuttal"];
@@ -36,27 +44,42 @@ function liveDone(tab: WorkflowTab, agents: Set<string>): boolean {
   }
 }
 
-export function stepStates({ active, hasResult, busy, liveSteps = [] }: {
+export function stepStates({ active, hasResult, busy, liveSteps = [], reviewed = [] }: {
   active: WorkflowTab; hasResult: boolean; busy: boolean; liveSteps?: AgentLogEntry[];
+  /** Steps this case's reviewer has completed (see reviewProgress.ts). */
+  reviewed?: Iterable<WorkflowTab>;
 }): StepState[] {
   const agents = new Set(liveSteps.map(step => step.agent));
-  const done = WORKFLOW_TABS.map(({ id }) => busy ? liveDone(id, agents) : hasResult);
-  const firstOpen = busy ? done.indexOf(false) : -1;
-  return WORKFLOW_TABS.map(({ id }, index) => ({
-    tab: id,
-    done: done[index],
-    current: id === active,
-    locked: id !== "intake" && !hasResult,
-    inProgress: index === firstOpen,
-  }));
+  const working = busy ? WORKFLOW_TABS.findIndex(({ id }) => !liveDone(id, agents)) : -1;
+  // Without a ruling there is nothing to review; with one, Intake is done by definition.
+  const done = new Set<WorkflowTab>(hasResult ? ["intake", ...reviewed] : []);
+  const isDone = WORKFLOW_TABS.map(({ id }) => done.has(id));
+  const locked = WORKFLOW_TABS.map(({ id }) => id !== "intake" && !hasResult);
+  const furthest = isDone.lastIndexOf(true);
+  const complete = isDone.every(Boolean);
+  const firstOpen = complete ? -1 : WORKFLOW_TABS.findIndex((_, index) => !isDone[index] && !locked[index]);
+  return WORKFLOW_TABS.map(({ id }, index) => {
+    const isWorking = index === working;
+    return {
+      tab: id,
+      phase: isWorking ? "working" : isDone[index] ? "reviewed" : locked[index] ? "locked" : "available",
+      reviewed: isDone[index],
+      current: id === active,
+      locked: locked[index],
+      working: isWorking,
+      next: index === firstOpen && id !== active && !busy,
+      joined: index > 0 && index <= furthest,
+    };
+  });
 }
 
 /** Text for screen readers; the circle's look is never the only signal. */
 export function stepStatusText(state: StepState): string {
-  if (state.inProgress) return "in progress";
-  if (state.done) return "complete";
+  if (state.working) return "agents working";
+  if (state.reviewed) return "reviewed";
+  if (state.current) return "current step";
   if (state.locked) return "locked";
-  return "not started";
+  return "not reviewed yet";
 }
 
 /** Short labels for narrow screens. */
@@ -85,12 +108,27 @@ export function outcomeChip(decision: Decision, refund: number | null): HeaderCh
 const num = (value: unknown): number | null => typeof value === "number" && Number.isFinite(value) ? value : null;
 
 /** 2-4 chips summarising the case; a chip whose data is missing is skipped. */
+/**
+ * Whether the route deviation counted against the driver. Before a ruling the rules
+ * have not decided: neutral. Policy refs arrive as "RD-1: A route up to 15% …", so the
+ * rule ID is matched, not the prose.
+ */
+export function distanceTone(resolution?: Pick<Resolution, "decision" | "policy_refs"> | null): Tone {
+  if (!resolution) return "neutral";
+  const refs = resolution.policy_refs ?? [];
+  const within = refs.some(ref => /^\s*RD-1\b/.test(ref));
+  if (within || resolution.decision === "no_action") return "neutral";
+  const refunded = ["partial_refund", "full_refund", "compensation"].includes(resolution.decision);
+  const routeRule = refs.some(ref => /^\s*RD-(?!1\b)\d+\b/.test(ref));
+  return refunded || routeRule ? "accent" : "neutral";
+}
+
 export function headerChips(dispute: DisputeCase, resolution?: Resolution): HeaderChip[] {
   const chips: HeaderChip[] = [];
   const expected = num(dispute.trip.expected_distance_km), actual = num(dispute.trip.actual_distance_km);
   if (expected && actual != null) {
     const pct = Math.round((actual / expected - 1) * 100);
-    chips.push({ key: "distance", label: `${pct > 0 ? "+" : ""}${pct}% distance`, tone: pct > 0 ? "accent" : "neutral" });
+    chips.push({ key: "distance", label: `${pct > 0 ? "+" : ""}${pct}% distance`, tone: pct > 0 ? distanceTone(resolution) : "neutral" });
   }
   const wait = num(dispute.trip.driver_wait_min);
   if (wait != null) chips.push({ key: "wait", label: `Driver waited ${wait} min`, tone: "neutral" });
