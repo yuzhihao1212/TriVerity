@@ -1,0 +1,47 @@
+# Render Blueprint for the public TriVerity demo (free plan, Singapore).
+# Steps: docs/demo-deployment.md, "Option B: Render". The two secrets
+# (LLM_API_KEY, DEMO_ACCESS_CODES) are typed into the Render dashboard on setup;
+# they are never stored in git.
+services:
+  - type: web
+    name: triverity-demo
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    # Deploy on purpose (Manual Deploy), so a push to main can't restart the
+    # demo while judges are using it.
+    autoDeploy: false
+    envVars:
+      # -- Model --------------------------------------------------------------
+      - key: LLM_PROVIDER
+        value: tencent
+      - key: LLM_MODEL
+        value: hy3
+      - key: LLM_BASE_URL
+        value: https://tokenhub-intl.tencentcloudmaas.com/v1
+      - key: LLM_DISABLE_THINKING
+        value: "true"
+      - key: LLM_API_KEY          # the demo key with a small TokenHub quota
+        sync: false
+      # -- Public demo: samples for everyone, own disputes with a judge code ---
+      - key: PUBLIC_DEMO
+        value: "true"
+      - key: DEMO_ACCESS_CODES    # comma-separated, one per judge; see the docs
+        sync: false
+      # -- Preset 2 limits (.env.example), sized for ~5,400 tokens per resolve --
+      - key: PER_IP_PER_MINUTE
+        value: "5"
+      - key: PER_IP_PER_DAY
+        value: "60"
+      - key: PER_CODE_PER_MINUTE
+        value: "5"
+      - key: PER_CODE_PER_DAY
+        value: "40"
+      - key: GLOBAL_PER_MINUTE
+        value: "10"
+      - key: DAILY_TOKEN_BUDGET   # keep below the demo key's TokenHub quota
+        value: "250000"
+      - key: DAILY_RESOLVE_BUDGET
+        value: "45"

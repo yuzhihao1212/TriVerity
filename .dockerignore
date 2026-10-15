@@ -1,0 +1,19 @@
+# Never put secrets in the image: keys come from the host's environment settings.
+**/.env
+**/.env.*
+!.env.example
+
+# Not needed to run the demo.
+.git
+.github
+.claude
+docs
+scripts
+**/node_modules
+**/dist
+**/__pycache__
+**/.pytest_cache
+**/.venv
+**/venv
+backend/tests
+*.db
