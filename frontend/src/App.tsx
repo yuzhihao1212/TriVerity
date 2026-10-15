@@ -9,6 +9,7 @@ import { Debate } from "./Debate";
 import { EvidenceList, EvidenceText, type FactLinks } from "./EvidenceList";
 import { VerdictSummary } from "./VerdictSummary";
 import { computedFacts, disputeLabel, filterDisputes, money, readPresentationPreference, writePresentationPreference } from "./presentation";
+import { AppealsPanel } from "./Appeals";
 import { PartyPreview } from "./PartyPreview";
 import { DisputeForm } from "./DisputeForm";
 import { getSamples, resolveDispute } from "./services/api";
@@ -70,6 +71,8 @@ export default function App() {
   const [completedId, setCompletedId] = useState<string | null>(null);
   const [loadingSamples, setLoadingSamples] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Bumped when an appeal is filed or decided, so the reviewer's appeal list reloads.
+  const [appealsVersion, setAppealsVersion] = useState(0);
 
   // Loading the samples is free; the agents (and LLM tokens) only run on "Resolve".
   useEffect(() => {
@@ -269,10 +272,11 @@ export default function App() {
                   {resolution.counterfactuals && resolution.counterfactuals.length > 0 && <section className="card"><CounterfactualPanel items={resolution.counterfactuals} /></section>}
                   {resolution.precedents && <section className="card"><PrecedentPanel report={resolution.precedents} /></section>}
                   {resolution.triage && <section className="card"><TriagePanel triage={resolution.triage} /></section>}
+                  <AppealsPanel disputeId={selected.dispute_id} version={appealsVersion} onChanged={() => setAppealsVersion(v => v + 1)} />
                   <section className="card"><RiskPanel risk={resolution.risk} /></section>
                   <details className="raw"><summary>Raw API response · internal record</summary><pre>{JSON.stringify(resolution, null, 2)}</pre></details>
                 </>}
-                {tab === "notify" && resolution && <PartyPreview resolution={resolution} />}
+                {tab === "notify" && resolution && <PartyPreview resolution={resolution} dispute={selected} onAppealed={() => setAppealsVersion(v => v + 1)} />}
               </>} />
           </section>}
 

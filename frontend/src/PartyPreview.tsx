@@ -1,11 +1,14 @@
 import { useId, useRef, useState, type KeyboardEvent } from "react";
 
+import { AppealForm } from "./Appeals";
 import { PARTY_DECISION_LABELS, partyView } from "./partyView";
-import type { Resolution } from "./types";
+import type { DisputeCase, Resolution } from "./types";
 
 const PARTIES = ["rider", "driver"] as const;
 
-export function PartyPreview({ resolution }: { resolution: Resolution }) {
+export function PartyPreview({ resolution, dispute, onAppealed }: {
+  resolution: Resolution; dispute?: DisputeCase; onAppealed?: () => void;
+}) {
   const [party, setParty] = useState<"rider" | "driver">("rider");
   const id = useId();
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -61,6 +64,8 @@ export function PartyPreview({ resolution }: { resolution: Resolution }) {
               <p>{view.decision === "compensation" ? "Amount approved" : "Refund amount"}: ${view.refund_amount.toFixed(2)}</p>
             )}
             <p className="party-message">{view.message}</p>
+            {dispute && <AppealForm key={`${dispute.dispute_id}-${name}`} dispute={dispute} party={name}
+              decision={resolution.decision} onFiled={onAppealed} />}
           </div>
         );
       })}

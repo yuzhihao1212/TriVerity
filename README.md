@@ -53,6 +53,8 @@ with a triage tier. At an illustrative 5,000 disputes a day, AI costs about $7.7
   fact would give (counterfactual explanations), computed from the policy and verified by the tests
 - **Review triage**: escalated disputes get a priority tier (safety, high, standard, low), a score and
   the reasons, so safety cases are reviewed first; internal only, like the fraud signals
+- **Appeals**: a rider or driver can appeal a ruling; a human reviewer decides, and the decision becomes a
+  precedent, which closes the loop (dispute → AI ruling → appeal → human → system learns)
 - **Learning feedback loop**: a reviewer's decision becomes a precedent; when reviewers keep deciding
   similar cases differently from the rules, those disputes go to a human (`PREC-1`)
 - **Escalation** to a human reviewer for threats in chat, a high bad-faith risk, missing data, low
