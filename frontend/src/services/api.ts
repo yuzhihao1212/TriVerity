@@ -1,4 +1,5 @@
-import type { Appeal, Decision, DisputeCase, Resolution } from "../types";
+import { readResolveStream, withResolveFallback } from "./sse";
+import type { AgentLogEntry, Appeal, Decision, DisputeCase, Resolution } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "/api";
 
@@ -52,6 +53,18 @@ export function resolveDispute(payload: DisputeCase, accessCode?: string) {
     headers,
     body: JSON.stringify(payload),
   });
+}
+
+/** Stream internal progress; retry the existing JSON transport at most once. */
+export function resolveDisputeLive(payload: DisputeCase, onStep: (entry: AgentLogEntry) => void, onFallback: () => void, accessCode?: string) {
+  const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "text/event-stream" };
+  if (accessCode) headers["X-Demo-Key"] = accessCode;
+  return withResolveFallback(async () => {
+    const response = await fetch(`${API_BASE}/disputes/resolve/stream`, {
+      method: "POST", headers, body: JSON.stringify(payload),
+    });
+    return readResolveStream(response, onStep);
+  }, () => resolveDispute(payload, accessCode), onFallback);
 }
 
 const JSON_HEADERS = { "Content-Type": "application/json" };

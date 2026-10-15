@@ -1,5 +1,6 @@
 import { EvidenceText, type FactLinks } from "./EvidenceList";
 import { SourceBadge } from "./Debate";
+import { duration } from "./progress";
 import { agentLabel, agentsForTab, agentSource, type WorkflowTab } from "./workflow";
 import type { Resolution } from "./types";
 
@@ -13,6 +14,7 @@ export function AgentsStrip({ tab, resolution, availableIds, onSelectFact }: { t
         return <li key={`${entry.step}-${entry.agent}-${index}`}>
           <div className="agent-entry-head"><strong>{agentLabel(entry.agent)}</strong>
             <span className="agent-status">{entry.status}</span>
+            {duration(entry.duration_ms) && <span className="step-duration muted">{duration(entry.duration_ms)}</span>}
             {source ? <SourceBadge source={source} />
               : <span className="tag">{["evidence_loader", "fraud_detector", "precedent_agent"].includes(entry.agent) ? "Code" : "Source not supplied"}</span>}
           </div>

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { LiveProgress, ProgressAnnouncements } from "./LiveProgress";
+import { CollectorCalls } from "./CollectorCalls";
 import { AgentsStrip } from "./AgentsStrip";
 import { WorkflowTabs } from "./WorkflowTabs";
 import { savedTab, type WorkflowTab } from "./workflow";
@@ -13,8 +15,8 @@ import { focusSection, selectSample } from "./routes";
 import { AppealsPanel } from "./Appeals";
 import { PartyPreview } from "./PartyPreview";
 import { DisputeForm } from "./DisputeForm";
-import { getSamples, resolveDispute } from "./services/api";
-import type { ArgumentReview, Counterfactual, Decision, DisputeCase, PartyHistory, PrecedentReport, Resolution, RiskLevel, Triage, TriageTier } from "./types";
+import { getSamples, resolveDisputeLive } from "./services/api";
+import type { AgentLogEntry, ArgumentReview, Counterfactual, Decision, DisputeCase, PartyHistory, PrecedentReport, Resolution, RiskLevel, Triage, TriageTier } from "./types";
 
 const TYPE_LABELS: Record<DisputeCase["type"], string> = {
   route_deviation: "Route deviation",
@@ -65,6 +67,9 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
   const [selected, setSelected] = useState<DisputeCase | null>(null);
   // Results are kept per dispute so revisiting a case doesn't call the LLM again.
   const [results, setResults] = useState<Record<string, Resolution>>({});
+  const [liveSteps, setLiveSteps] = useState<AgentLogEntry[]>([]);
+  const [runStartedAt, setRunStartedAt] = useState(0);
+  const [streaming, setStreaming] = useState(true);
   const [resolving, setResolving] = useState<string | null>(null);
   const [completedId, setCompletedId] = useState<string | null>(null);
   const [loadingSamples, setLoadingSamples] = useState(true);
@@ -110,10 +115,15 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
     if (resolving !== null) return;
     setError(null);
     setResolving(dispute.dispute_id);
+    setLiveSteps([]);
+    setRunStartedAt(performance.now());
+    setStreaming(true);
     // Samples never send the code: they are served from the server's cache and
     // don't use up the judge's quota.
     const isOwn = own.some((d) => d.dispute_id === dispute.dispute_id);
-    resolveDispute(dispute, isOwn ? accessCode.trim() || undefined : undefined)
+    resolveDisputeLive(dispute, entry => {
+      setLiveSteps(previous => previous.some(item => item.step === entry.step) ? previous : [...previous, entry]);
+    }, () => setStreaming(false), isOwn ? accessCode.trim() || undefined : undefined)
       .then((r) => {
         setActiveFact(null);
         setResults((prev) => ({ ...prev, [dispute.dispute_id]: r }));
@@ -235,8 +245,9 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
 
         <main className="content" id="main-content" tabIndex={-1}>
           <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-            {loadingSamples ? "Loading sample disputes…" : resolving ? `Agents working on ${resolving} (about 10–15 seconds). Waiting for the complete result.` : resolution ? "Saved ruling ready." : ""}
+            {loadingSamples ? "Loading sample disputes…" : resolving ? `Agents working on ${resolving}.` : resolution ? "Saved ruling ready." : ""}
           </p>
+          <ProgressAnnouncements steps={liveSteps} />
           <div role="alert" aria-atomic="true">{error && <p className="error">{error}</p>}</div>
           {!form && loadingSamples && <section className="card empty-state"><h2>Loading disputes…</h2><p className="muted">The sample list is loading. No agents have run.</p></section>}
           {!form && !loadingSamples && !selected && <section className="card empty-state"><h2>No dispute selected</h2><p className="muted">Choose a sample or add a new dispute to begin.</p></section>}
@@ -245,10 +256,10 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
           {!form && selected && <section className="case-file" aria-labelledby="case-title">
             <header className="case-file-head">
               <div><p className="eyebrow">Dispute file</p><h2 id="case-title">{selected.dispute_id} <span className="tag">{TYPE_LABELS[selected.type]}</span></h2></div>
-              <span className="case-save-status">{resolving === selected.dispute_id ? "Agents working · one request" : resolution ? "Saved result · no new request" : "Ready for intake"}</span>
+              <span className="case-save-status">{resolving === selected.dispute_id ? (streaming ? "Agents working · live" : "Agents working · standard resolve") : resolution ? "Saved result · no new request" : "Ready for intake"}</span>
             </header>
             <WorkflowTabs active={activeTab} resolution={resolution} busy={resolving === selected.dispute_id} onChange={changeTab}
-              render={tab => resolving === selected.dispute_id ? <LoadingPanel disputeId={selected.dispute_id} /> : <>
+              render={tab => resolving === selected.dispute_id ? <LiveProgress disputeId={selected.dispute_id} steps={liveSteps} startedAt={runStartedAt} streaming={streaming} /> : <>
                 <AgentsStrip tab={tab} resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
                 {tab === "intake" && <>
                   <CasePanel dispute={selected} availableIds={factIds} onSelectFact={selectFact} />
@@ -256,12 +267,12 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
                     <button className="run-button" onClick={() => resolve(selected)} disabled={resolving !== null}>
                       {resolution ? "Re-run agents" : "Run agents"}
                     </button>
-                    <span className="token-warning" role="note">Uses real AI tokens when enabled · one run per click</span>
+                    <span className="token-warning" role="note">Uses real AI tokens when enabled · retries once if streaming fails</span>
                     <button className="secondary-button" onClick={() => { setForm({ template: selected }); setError(null); }}>Edit as new dispute</button>
                   </div>
                   {resolution && <p className="small muted">This case has a saved result. Re-running uses tokens again.</p>}
                 </>}
-                {tab === "evidence" && resolution && <FactLibrary facts={facts} activeId={activeFact} request={factRequest} expanded grouped onSelectFact={selectFact} />}
+                {tab === "evidence" && resolution && <><FactLibrary facts={facts} activeId={activeFact} request={factRequest} expanded grouped onSelectFact={selectFact} /><CollectorCalls collection={resolution.evidence_collection} /></>}
                 {tab === "hearing" && resolution && <Debate resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />}
                 {tab === "ruling" && resolution && <>
                   <VerdictSummary resolution={resolution} disputeId={selected.dispute_id} />
@@ -532,15 +543,6 @@ function RulingPanel({ resolution, availableIds, onSelectFact }: { resolution: R
       <EvidenceList texts={resolution.judge_evidence} availableIds={availableIds} onSelectFact={onSelectFact} />
     </section>
   );
-}
-
-function LoadingPanel({ disputeId }: { disputeId: string }) {
-  return <section className="card loading-state" aria-labelledby="loading-title">
-    <div className="card-head"><h2 id="loading-title" tabIndex={-1}>Agents working · {disputeId}</h2><span className="spinner" role="progressbar" aria-label="Waiting for the complete agent result" /></div>
-    <p>About 15 seconds. The server returns one complete result; individual step progress is not available.</p>
-    <ol className="pending-steps"><li>Evidence loader</li><li>Evidence collector</li><li>Rider &amp; Driver advocates</li><li>Fraud detector</li><li>Rebuttal round</li><li>Policy &amp; Precedent agent</li><li>Judge: policy ruling &amp; explanation</li></ol>
-    <p className="small muted">These are the stages of a resolve, not live progress. Previous saved results are retained until a new run succeeds.</p>
-  </section>;
 }
 
 function TypeIcon({ type }: { type: DisputeCase["type"] }) {

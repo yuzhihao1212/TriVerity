@@ -118,6 +118,16 @@ export interface AgentLogEntry {
   duration_ms?: number | null;  // how long it took
 }
 
+export interface ToolCallRecord {
+  round: number;
+  tool: string;
+  args: Record<string, string>;
+  reason: string;
+  source: string;
+  results: string[];
+  party?: "rider" | "driver" | null;
+}
+
 export interface Appeal {
   id: string;
   dispute_id: string;
@@ -132,8 +142,8 @@ export interface Appeal {
 }
 
 export interface Resolution {
-  // Optional until the separate evidence-collector backend PR is deployed.
-  evidence_collection?: { source: "llm" | "fallback" } | null;
+  // Optional for compatibility with older saved results.
+  evidence_collection?: { source: "llm" | "fallback"; rounds?: number; calls?: ToolCallRecord[] } | null;
   decision: Decision;
   recommended_action: string;
   refund_amount: number | null;
