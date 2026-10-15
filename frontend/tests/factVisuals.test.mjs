@@ -47,7 +47,7 @@ test('more backend formats: ranges, speeds, zero and negative deviations, quoted
   assert.equal(factParts('Fare was -1.20 vs expected fare').parts[1].text, '-$1.20');
   const threat = 'Threatening message: driver: "Pay me $50 in 5 min or else"';
   const parsed = factParts(threat);
-  assert.equal(parsed.tone, 'warn');
+  assert.equal(parsed.tone, 'danger', 'a threat is a real problem, not just attention');
   assert.deepEqual(values(parsed.parts), [], 'numbers inside a quoted message are not computed values');
   assert.equal(raw(parsed.parts), threat);
 });
@@ -161,7 +161,7 @@ test('trip tiles, chat bubbles and display sources', () => {
   assert.deepEqual(parseTile('Route was +44% vs expected distance'), { key: 'distance', label: 'Distance', value: '+44%', detail: 'vs expected distance', tone: 'warn' });
   assert.equal(parseTile('Driver arrived 87 m from pickup point').value, '87 m');
   assert.deepEqual(parseChat('Threatening message: driver: "I know where you live"'),
-    { label: 'Threatening message', sender: 'driver', message: 'I know where you live', tone: 'warn' });
+    { label: 'Threatening message', sender: 'driver', message: 'I know where you live', tone: 'danger' });
   assert.equal(parseChat('Disagreement in chat: rider: "Why this way?"').label, 'Disagreement');
   assert.equal(displaySource({ source: 'case', text: 'Trip record: no-show fee charged $4.00' }), 'trip');
   assert.equal(displaySource({ source: 'case', text: 'Rider tone: negative (1 of 1 message)' }), 'chat');

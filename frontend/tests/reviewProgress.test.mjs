@@ -12,7 +12,7 @@ const transpile = async (file, replace = {}) => {
 };
 const workflowUrl = await transpile('workflow.ts');
 const rp = await import(await transpile('reviewProgress.ts', { './workflow': workflowUrl }));
-const sv = await import(await transpile('stepVisuals.ts', { './workflow': workflowUrl }));
+const sv = await import(await transpile('stepVisuals.ts', { './workflow': workflowUrl, './outcomeTone': await transpile('outcomeTone.ts') }));
 
 const memoryStorage = () => { const map = new Map(); return { getItem: k => map.get(k) ?? null, setItem: (k, v) => map.set(k, v), map }; };
 const run = startedAt => ({ agent_log: [{ step: 1, agent: 'evidence_loader', status: 'completed', message: '', started_at: startedAt }] });

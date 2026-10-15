@@ -6,7 +6,8 @@
 
 import type { EvidenceItem } from "./presentation";
 
-export type Tone = "warn" | "ok" | "neutral";
+/** warn: needs attention (deviations, stops); danger: real problems only (threats). */
+export type Tone = "danger" | "warn" | "ok" | "neutral";
 export type ValueKind = "percent" | "money" | "minutes" | "distance" | "speed" | "clock" | "multiplier";
 export type FactPart =
   | { kind: "text"; text: string }
@@ -28,7 +29,7 @@ const VALUE_RE = new RegExp([
 ].join("|"), "g");
 
 const OK_RE = /(matches the charged fare|^Driver contacted rider|consistent with the multiplier|discount reflected in the charge|^Agreement in chat)/;
-const WARN_RE = /(^Unexpected stop:|^GPS stop:|unexpected stops total|^Off the planned route|^Threatening message:|^Disagreement in chat:|not reflected in the charge|inconsistent with the multiplier|^GPS data gap)/;
+const WARN_RE = /(^Unexpected stop:|^GPS stop:|unexpected stops total|^Off the planned route|^Disagreement in chat:|not reflected in the charge|inconsistent with the multiplier|^GPS data gap)/;
 const STOP_RE = /^(?:Unexpected stop: (?<d1>\d+(?:\.\d+)?) min at (?<t1>\d{2}:\d{2})|GPS stop: (?<d2>\d+(?:\.\d+)?) min from (?<t2>\d{2}:\d{2})|Driver stopped (?<d3>\d+(?:\.\d+)?) min at (?<t3>\d{2}:\d{2}))/;
 
 /** A positive deviation in a "vs expected" / "vs the itemised breakdown" fact. */
@@ -40,6 +41,7 @@ function positiveDeviation(text: string): boolean {
 export function factTone(text: string): Tone {
   if (OK_RE.test(text)) return "ok";
   if (/stops total 0 min$/.test(text)) return "neutral"; // No unexpected stopping at all.
+  if (/^Threatening message:/.test(text)) return "danger";
   if (WARN_RE.test(text) || positiveDeviation(text)) return "warn";
   return "neutral";
 }

@@ -15,7 +15,9 @@ import { VerdictSummary } from "./VerdictSummary";
 import { computedFacts, disputeLabel, filterDisputes, money } from "./presentation";
 import { focusSection, reveal, selectSample } from "./routes";
 import { AppealsPanel } from "./Appeals";
-import { ReviewerDecision } from "./ReviewerDecision";
+import { DecisionBar, ReviewerDecision, useReviewerDecision } from "./ReviewerDecision";
+import { DECISION_LABELS, decisionTone } from "./outcomeTone";
+import { savedText } from "./decisionState";
 import { AiToggle } from "./AiToggle";
 import { readAiMode, writeAiMode, type AiMode } from "./aiMode";
 import { NewDisputeIcon, SidebarToggle } from "./SidebarToggle";
@@ -28,18 +30,11 @@ import { DisputeForm } from "./DisputeForm";
 import { ApiError, getSamples, resolveDisputeLive } from "./services/api";
 import { AccessCodeField } from "./AccessCodeField";
 import { ACCESS_CODE_FIELD_ID, accessCodeMessage, accessCodeProblem, needsAccessCode } from "./consoleHeader";
-import { decisionTone, disputeItemName, filterLabel, filterShortLabel, STATUS_LABELS, TYPE_LABELS, type DisputeFilter } from "./disputeList";
+import { disputeItemName, filterLabel, filterShortLabel, STATUS_LABELS, TYPE_LABELS, type DisputeFilter } from "./disputeList";
 import { FilterMenu } from "./FilterMenu";
 import { Icon } from "./Icon";
 import type { AgentLogEntry, ArgumentReview, Counterfactual, Decision, DisputeCase, PartyHistory, PrecedentReport, Resolution, RiskLevel, Triage, TriageTier } from "./types";
 
-const DECISION_LABELS: Record<Decision, string> = {
-  partial_refund: "Partial refund",
-  full_refund: "Full refund",
-  compensation: "Compensation",
-  no_action: "No action",
-  needs_review: "Needs human review",
-};
 
 // The reviewer's progress per ruling, for this browser session (shared by every mount).
 let reviewStore: ReturnType<typeof createReviewStore> | null = null;
@@ -221,6 +216,10 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
     markReviewed("ruling");
   }
 
+  // One decision state for the sticky bar and the "Your decision" card, per ruling.
+  const decision = useReviewerDecision({ runKey: reviewId, dispute: selected, resolution,
+    onDecided: () => markReviewed("ruling"), onUnavailable: onDecisionsUnavailable });
+
   function changeTab(tab: WorkflowTab) {
     if (!selected) return;
     visit(activeTab, tab);
@@ -331,7 +330,7 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
 
         <main className="content" id="main-content" tabIndex={-1}>
           <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-            {loadingSamples ? "Loading sample disputes…" : resolving ? `Agents working on ${resolving}.` : resolution ? `Saved ruling ready. ${progress?.text}.` : ""}
+            {loadingSamples ? "Loading sample disputes…" : resolving ? `Agents working on ${resolving}.` : resolution ? `Saved ruling ready. ${progress?.text}.${decision.saved ? ` ${savedText(decision.saved)}.` : ""}` : ""}
           </p>
           <ProgressAnnouncements steps={liveSteps} />
           <div role="alert" aria-atomic="true">{error && <p className="error">{error}</p>}</div>
@@ -345,7 +344,7 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
             <WorkflowTabs active={activeTab} resolution={resolution} busy={resolving === selected.dispute_id}
               liveSteps={resolving === selected.dispute_id ? liveSteps : undefined} reviewed={reviewed} onChange={changeTab}
               render={tab => resolving === selected.dispute_id ? <LiveProgress disputeId={selected.dispute_id} steps={liveSteps} startedAt={runStartedAt} streaming={streaming} /> : <>
-                <AgentsStrip tab={tab} resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
+                {/* Outcome first: each step's content, then how it was decided. */}
                 {tab === "intake" && <>
                   <CasePanel dispute={selected} availableIds={factIds} onSelectFact={selectFact} />
                   {needsAccessCode(selected.dispute_id, own) && <AccessCodeField ref={accessCodeInput} id={ACCESS_CODE_FIELD_ID}
@@ -365,8 +364,7 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
                 {tab === "hearing" && resolution && <Debate resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />}
                 {tab === "ruling" && resolution && <>
                   <VerdictSummary resolution={resolution} disputeId={selected.dispute_id} />
-                  <ReviewerDecision key={`${selected.dispute_id}-${resolution.agent_log[0]?.started_at ?? ""}`} dispute={selected} resolution={resolution}
-                    onDecided={() => markReviewed("ruling")} onUnavailable={onDecisionsUnavailable} />
+                  <ReviewerDecision resolution={resolution} controller={decision} />
                   <AppealsPanel disputeId={selected.dispute_id} version={appealsVersion} onChanged={() => setAppealsVersion(v => v + 1)} />
                   <RulingSection title="Reasoning" hint="The Judge's explanation, policy and evidence" open>
                     <RulingPanel resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
@@ -386,6 +384,8 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
                 </>}
                 {tab === "notify" && resolution && <PartyPreview key={reviewId ?? ""} resolution={resolution} dispute={selected} onAppealed={() => setAppealsVersion(v => v + 1)}
                   onSeen={() => markReviewed("notify")} />}
+                <AgentsStrip tab={tab} resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
+                {tab === "ruling" && resolution && <DecisionBar resolution={resolution} controller={decision} unavailable={decisionsUnavailable} />}
               </>} />
           </section>}
 
@@ -544,7 +544,8 @@ function TriagePanel({ triage }: { triage: Triage }) {
 
 const VERDICT: Record<ArgumentReview["rules"][number]["verdict"], { label: string; level: RiskLevel }> = {
   supports: { label: "Holds for this side", level: "low" },
-  favours_other_side: { label: "Favours the other side", level: "high" },
+  // Attention, not danger: danger is kept for threats and high bad-faith risk.
+  favours_other_side: { label: "Favours the other side", level: "medium" },
   does_not_apply: { label: "Does not apply", level: "medium" },
 };
 
@@ -652,7 +653,7 @@ function RulingPanel({ resolution, availableIds, onSelectFact }: { resolution: R
             {resolution.explanation_source === "llm" ? "AI" : "Fallback"}
           </span>
         </h2>
-        <span className="decision">{DECISION_LABELS[resolution.decision]}</span>
+        <span className={`decision tone-${decisionTone(resolution.decision)}`}>{DECISION_LABELS[resolution.decision]}</span>
       </div>
 
       <div className="confidence">

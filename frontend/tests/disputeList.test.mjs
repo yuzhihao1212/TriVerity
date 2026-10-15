@@ -3,9 +3,14 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import ts from 'typescript';
 
-const source = await readFile(new URL('../src/disputeList.ts', import.meta.url), 'utf8');
-const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } });
-const dl = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`);
+// disputeList.ts re-exports decisionTone from outcomeTone.ts: transpile both and link them.
+const transpile = async (file, replace = {}) => {
+  let { outputText } = ts.transpileModule(await readFile(new URL(`../src/${file}`, import.meta.url), 'utf8'),
+    { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } });
+  for (const [from, to] of Object.entries(replace)) outputText = outputText.replaceAll(`from "${from}"`, `from "${to}"`);
+  return `data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`;
+};
+const dl = await import(await transpile('disputeList.ts', { './outcomeTone': await transpile('outcomeTone.ts') }));
 
 test('decisionTone: refunds and compensation ok, escalation warn, no action neutral', () => {
   assert.equal(dl.decisionTone('partial_refund'), 'ok');

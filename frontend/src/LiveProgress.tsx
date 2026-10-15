@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { SourceBadge } from "./Debate";
+import { humanizeAgentMessage } from "./agentText";
 import { duration, stepMessage, stepSource } from "./progress";
 import { agentLabel } from "./workflow";
 import type { AgentLogEntry } from "./types";
@@ -26,7 +27,7 @@ export function LiveProgress({ disputeId, steps, startedAt, streaming }: {
           <div className="live-step-head"><span className="live-step-check" aria-hidden="true">✓</span><strong>{agentLabel(entry.agent)}</strong>
             {source === "llm" || source === "fallback" ? <SourceBadge source={source} /> : <span className="tag">{source === "code" ? "Code" : "Source not supplied"}</span>}
             {time && <span className="step-duration muted">{time}</span>}
-          </div><p title={stepMessage(entry)}>{stepMessage(entry)}</p>
+          </div><p title={humanizeAgentMessage(entry.agent, stepMessage(entry)) || stepMessage(entry)}>{humanizeAgentMessage(entry.agent, stepMessage(entry)) || stepMessage(entry)}</p>
         </li>;
       })}
     </ol>
