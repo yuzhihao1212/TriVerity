@@ -6,7 +6,7 @@ Measures, per sample and overall:
 - AI rate: how often each agent's output came from the LLM rather than the fallback
 
 Resolves in-process, so the API rate limits don't apply, but every run spends real
-LLM tokens (about 4,000 per resolve) against DAILY_TOKEN_BUDGET. Use preset 1 in
+LLM tokens (about 5,400 per resolve when both rebuttals run) against DAILY_TOKEN_BUDGET. Use preset 1 in
 backend/.env.example for eval runs. With no API key everything is Fallback.
 
 Usage (from the repo root, with the backend venv active):
@@ -29,7 +29,7 @@ from app.services.orchestrator import resolve_dispute  # noqa: E402
 from app.services.sample_service import load_samples  # noqa: E402
 
 EXPECTED_PATH = ROOT / "data" / "expected_rulings.json"
-AGENTS = ("rider", "driver", "judge")
+AGENTS = ("rider", "driver", "rider_rebuttal", "driver_rebuttal", "judge")
 
 
 def load_expected() -> dict[str, dict]:
@@ -56,6 +56,8 @@ def score(result: Resolution, expected: dict) -> dict:
         "source": {
             "rider": result.rider_case.source,
             "driver": result.driver_case.source,
+            "rider_rebuttal": result.rider_case.rebuttal.source if result.rider_case.rebuttal else None,
+            "driver_rebuttal": result.driver_case.rebuttal.source if result.driver_case.rebuttal else None,
             "judge": result.explanation_source,
         },
         "wrong_side": [],
@@ -77,7 +79,14 @@ def score(result: Resolution, expected: dict) -> dict:
 
 def evaluate(ids: list[str] | None, runs: int) -> dict[str, list[dict]]:
     labels = load_expected()
-    samples = [c for c in load_samples() if not ids or c.dispute_id in ids]
+    samples = load_samples()
+    if ids is not None:
+        ids = [dispute_id.strip() for dispute_id in ids]
+        unknown = set(ids) - {case.dispute_id for case in samples}
+        if unknown:
+            names = ", ".join(repr(name) for name in sorted(unknown))
+            raise SystemExit(f"Unknown dispute ID(s): {names}. Use IDs from the sample disputes.")
+        samples = [case for case in samples if case.dispute_id in ids]
     results: dict[str, list[dict]] = {}
     for case in samples:
         if case.dispute_id not in labels:
@@ -97,14 +106,14 @@ def report(results: dict[str, list[dict]], runs: int) -> str:
     lines = [
         f"# Evaluation: {len(results)} samples x {runs} run(s)",
         "",
-        "| Sample | Ruling correct | Rider AI | Driver AI | Judge AI | Wrong-side citations | Other off-target citations |",
-        "|---|---|---|---|---|---|---|",
+        "| Sample | Ruling correct | Rider AI | Driver AI | Rider rebuttal AI | Driver rebuttal AI | Judge AI | Wrong-side citations | Other off-target citations |",
+        "|---|---|---|---|---|---|---|---|---|",
     ]
     totals = Counter()
     for dispute_id, rows in results.items():
         ok = [r for r in rows if "error" not in r]
         errors = len(rows) - len(ok)
-        ai = {a: sum(r["source"][a] == "llm" for r in ok) for a in AGENTS}
+        ai = {a: sum(r["source"].get(a) == "llm" for r in ok) for a in AGENTS}
         wrong = [c for r in ok for c in r["wrong_side"]]
         neither = [c for r in ok for c in r["neither_side"]]
         correct = sum(r["ruling_ok"] for r in ok)
@@ -121,6 +130,8 @@ def report(results: dict[str, list[dict]], runs: int) -> str:
         "",
         f"- Rulings correct: {totals['correct']}/{totals['runs']}",
         f"- AI rate: rider {totals['ai_rider'] / n:.0%}, driver {totals['ai_driver'] / n:.0%}, "
+        f"rider rebuttal {totals['ai_rider_rebuttal'] / n:.0%}, "
+        f"driver rebuttal {totals['ai_driver_rebuttal'] / n:.0%}, "
         f"judge {totals['ai_judge'] / n:.0%}",
         f"- Wrong-side citations: {totals['wrong']} across {2 * totals['runs']} advocate cases",
         f"- Other off-target citations (rule supports neither side): {totals['neither']}",
@@ -137,7 +148,9 @@ def main() -> None:
     parser.add_argument("--runs", type=int, default=1, help="runs per sample (default 1)")
     parser.add_argument("--ids", help="comma-separated dispute IDs (default: all samples)")
     args = parser.parse_args()
-    results = evaluate(args.ids.split(",") if args.ids else None, args.runs)
+    if args.runs < 1:
+        parser.error("--runs must be at least 1")
+    results = evaluate(args.ids.split(",") if args.ids is not None else None, args.runs)
     print(report(results, args.runs))
     # Rulings are rule-based, so any miss is a regression worth failing on.
     if any(not r.get("ruling_ok") for rows in results.values() for r in rows):
