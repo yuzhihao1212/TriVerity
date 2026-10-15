@@ -45,7 +45,7 @@ with a triage tier, and party history never changed a policy decision (500/500 w
   other in a rebuttal round** before the Judge rules
 - **The organisers' dataset format** is read directly: files in `data/organiser/` are converted and appear
   in the demo as extra samples
-- **Output**: ruling, recommended action (e.g. refund $6.30), confidence, cited policy, a neutral
+- **Output**: ruling (refund, compensation or no action), recommended action (e.g. refund $6.30), confidence, cited policy, a neutral
   explanation and separate messages to the rider and the driver
 - **Precedents (RAG)**: the Policy & Precedent agent retrieves the closest past rulings; the Judge cites them
   in the case record, and the evaluation checks each ruling's consistency with them

@@ -22,12 +22,17 @@ def rule_support(case: DisputeCase, facts: CaseFacts) -> dict[str, str | None]:
         limit = load_policy()["route_deviation"]["thresholds"]["max_distance_excess_ratio"]
         excess, duration = facts.distance_excess_ratio, facts.duration_excess_ratio
         if excess is None:
-            return {"RD-1": None, "RD-2": None, "RD-3": None, "RD-4": None}
+            return {"RD-1": None, "RD-2": None, "RD-3": None, "RD-4": None, "RD-5": None}
+        from app.agents.judge_agent import longest_stop_min
+        detour = excess > limit and (duration is None or duration > 0)
+        stop = longest_stop_min(facts)
+        min_stop = load_policy()["route_deviation"]["thresholds"]["min_compensation_stop_min"]
         return {
             "RD-1": "driver" if excess <= limit else None,
             "RD-2": "driver" if excess > limit and duration is not None and duration <= 0 else None,
-            "RD-3": "rider" if excess > limit and (duration is None or duration > 0) else None,
+            "RD-3": "rider" if detour else None,
             "RD-4": None,
+            "RD-5": "rider" if detour and stop is not None and stop >= min_stop else None,
         }
     thresholds = load_policy()["no_show_charge"]["thresholds"]
     distance, wait = facts.driver_distance_from_pickup_m, facts.driver_wait_min

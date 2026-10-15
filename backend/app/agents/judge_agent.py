@@ -113,6 +113,19 @@ def _judge_route_deviation(case: DisputeCase, facts: CaseFacts, section: dict) -
     explanation += "."
     if case.driver_statement:
         explanation += " The driver's explanation is noted but is not supported by the trip data."
+    stop = longest_stop_min(facts)
+    if stop is not None and stop >= section["thresholds"]["min_compensation_stop_min"]:
+        credit = section["thresholds"]["compensation_credit"]
+        return Ruling(
+            decision="compensation",
+            recommended_action=(f"Refund ${refund:.2f}, the fare charged above the expected fare, plus a "
+                                f"${credit:.2f} credit for the lost time."),
+            refund_amount=round(refund + credit, 2),
+            confidence=confidence,
+            explanation=explanation + f" The trip also included an unexpected stop of {stop:g} minutes.",
+            judge_evidence=evidence,
+            policy_refs=[cite(section, "RD-3"), cite(section, "RD-5")],
+        )
     return Ruling(
         decision="partial_refund",
         recommended_action=f"Refund ${refund:.2f}, the fare charged above the expected fare.",
@@ -122,6 +135,11 @@ def _judge_route_deviation(case: DisputeCase, facts: CaseFacts, section: dict) -
         judge_evidence=evidence,
         policy_refs=[cite(section, "RD-3")],
     )
+
+def longest_stop_min(facts: CaseFacts) -> float | None:
+    """The longest unexpected mid-trip stop in the GPS data, if any."""
+    stops = facts.gps.unexpected_stops if facts.gps else None
+    return max((s.duration_min for s in stops), default=None) if stops else None
 
 def _judge_no_show(case: DisputeCase, facts: CaseFacts, section: dict) -> Ruling:
     evidence = facts.describe()

@@ -59,7 +59,9 @@
    The agent reports whether the closest rulings agree with the rules' decision; it never decides.
 4. **Judge** (`backend/app/agents/judge_agent.py`).
    1. *Policy rules decide.* The decision, refund amount, confidence and the rules applied come from
-      deterministic checks against `data/policies/ryde_mock_policy.json`. A threat in the chat
+      deterministic checks against `data/policies/ryde_mock_policy.json`. The outcomes cover the brief's three ruling types: a
+      refund, **compensation** (RD-5: a detour with a 10-minute-plus unexpected stop earns the refund plus a
+      $5.00 credit) or no action. A threat in the chat
       (`SAFE-1`), a high bad-faith risk for either party (`FRAUD-1`), at least two close precedents where
       human reviewers decided differently from the rules (`PREC-1`) or confidence below 60%
       (`ESC-1`) sends the dispute to a human reviewer.

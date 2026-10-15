@@ -20,7 +20,7 @@ from app.services.policy_service import load_policy
 _PLAIN = {
     "partial_refund": "a partial refund of the fare above the expected fare",
     "full_refund": "a full refund of the no-show fee",
-    "compensation": "compensation",
+    "compensation": "compensation: the fare refund plus a credit for the lost time",
     "no_action": "no change to the charge",
     "needs_review": "review by a human",
 }
@@ -62,7 +62,10 @@ def what_would_change(case: DisputeCase, facts: CaseFacts, ruling: Ruling) -> li
 
 
 def _route_flips(facts: CaseFacts) -> list[Counterfactual]:
-    limit = load_policy()["route_deviation"]["thresholds"]["max_distance_excess_ratio"]
+    from app.agents.judge_agent import longest_stop_min
+
+    thresholds = load_policy()["route_deviation"]["thresholds"]
+    limit, min_stop = thresholds["max_distance_excess_ratio"], thresholds["min_compensation_stop_min"]
     excess, duration = facts.distance_excess_ratio, facts.duration_excess_ratio
     if excess is None:
         return [Counterfactual(
@@ -80,6 +83,13 @@ def _route_flips(facts: CaseFacts) -> list[Counterfactual]:
     if duration is not None:
         flips.append(_cf(f"the trip had taken no longer than expected (it was {duration:.0%} slower)",
                          "no_action", "RD-2"))
+    stop = longest_stop_min(facts)
+    if stop is not None and stop >= min_stop:
+        flips.append(_cf(f"the longest unexpected stop had lasted under {min_stop} minutes (it lasted {stop:g})",
+                         "partial_refund", "RD-3"))
+    elif stop is not None:
+        flips.append(_cf(f"the unexpected stop had lasted {min_stop} minutes or more (it lasted {stop:g})",
+                         "compensation", "RD-5"))
     return flips
 
 
