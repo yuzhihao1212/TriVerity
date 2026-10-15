@@ -34,11 +34,22 @@ _MARKUP_RE = re.compile(r"<|\]\(|`|!\[")
 _PHONE_RE = re.compile(r"(?<![\w$.,])\+?\d(?:[\s-]?\d){6,}")
 # For redacting contact details out of quoted text (emails first: their domain looks like a link).
 _EMAIL_REDACT_RE = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
+_URL_CHARS = r"[^\s,;\"'<>]"
+_BARE_TLDS = (
+    "com|net|org|edu|gov|mil|int|info|biz|name|io|ai|app|dev|me|ly|co|xyz|link|site|online|shop|store|"
+    "tech|cloud|page|example|sg|my|id|ph|th|vn|hk|tw|cn|jp|kr|in|au|nz|uk|us|ca|de|fr|eu"
+)
 _LINK_REDACT_RE = re.compile(
-    r"https?://[^\s,;\"']+|www\.[^\s,;\"']+"
-    r"|\b[\w-]+(?:\.[\w-]+)*\.(?:com|net|org|io|sg|co|me|ly|app|dev|info|biz|xyz|link|site|online|example)\b(?:/[^\s,;\"']*)?",
+    rf"https?://{_URL_CHARS}+|www\.{_URL_CHARS}+"
+    # host.tld/path with any alphabetic TLD: the path makes it a link
+    rf"|\b[\w-]+(?:\.[\w-]+)*\.[a-z]{{2,24}}/{_URL_CHARS}*"
+    # bare host.tld for common TLDs (a generic TLD alone would catch "arrived.Then")
+    rf"|\b[\w-]+(?:\.[\w-]+)*\.(?:{_BARE_TLDS})\b",
     re.IGNORECASE,
 )
+# Phone numbers in any common format: 9123 4567, 9123-4567, 9123–4567, 9123.4567, (65) 9123 4567.
+# Seven or more digits, so amounts ($24.80), distances (14.7 km) and times (08:10) are kept.
+_PHONE_REDACT_RE = re.compile(r"(?<![\w$.,])\+?\(?\d(?:[\s\-‐-―−.()]{0,2}\d){6,}\)?")
 _WORD_RE = re.compile(r"[a-z0-9'-]+")
 _ECHO_WORDS = 8
 
@@ -64,7 +75,7 @@ def redact_contacts(text: str) -> str:
     """
     text = _EMAIL_REDACT_RE.sub("[email removed]", text)
     text = _LINK_REDACT_RE.sub("[link removed]", text)
-    return _PHONE_RE.sub("[phone removed]", text)
+    return _PHONE_REDACT_RE.sub("[phone removed]", text)
 
 
 def find_link_or_markup(text: str) -> str | None:
