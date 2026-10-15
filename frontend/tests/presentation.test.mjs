@@ -83,3 +83,15 @@ test('presentation preference tolerates blocked storage and persists only a bool
   assert.equal(readPresentationPreference(blocked),false);
   assert.doesNotThrow(()=>writePresentationPreference(blocked,true));
 });
+
+test('computed evidence preserves unlabelled facts and matches only exact unique ID pairs', async () => {
+  const { computedFacts } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`);
+  const argument={evidence:['GPS path 14.7 km'],evidence_ids:['GPS-1'],rebuttal:null};
+  const result={judge_evidence:['Route was +44%', 'GPS path 14.7 km','GPS path 14.7 km'],rider_case:argument,driver_case:argument};
+  const facts=computedFacts(result);
+  assert.deepEqual(facts.map(f=>f.text),result.judge_evidence);
+  assert.deepEqual(facts.map(f=>f.id),[undefined,'GPS-1',undefined]);
+  assert.equal(facts[0].source,'trip');
+  assert.equal(computedFacts({...result,rider_case:{...argument,evidence_ids:[]},driver_case:{...argument,evidence_ids:[]}}).filter(f=>f.id).length,0);
+  assert.ok(computedFacts({...result,judge_evidence:[]}).some(f=>f.id==='GPS-1'));
+});

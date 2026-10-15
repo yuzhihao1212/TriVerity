@@ -89,3 +89,21 @@ export function writePresentationPreference(storage: Pick<Storage, "setItem">, e
   try { storage.setItem("triverity.presentation", String(enabled)); }
   catch { /* Presentation still works for this session if storage is blocked. */ }
 }
+
+
+export function computedFacts(resolution: Resolution): EvidenceItem[] {
+  const referenced = factIndex(resolution);
+  const byText = new Map<string, EvidenceItem[]>();
+  for (const fact of referenced) byText.set(fact.text, [...(byText.get(fact.text) ?? []), fact]);
+  const usedIds = new Set<string>();
+  const computed = evidenceItems(resolution.judge_evidence).map(fact => {
+    const matches = byText.get(fact.text) ?? [];
+    if (matches.length !== 1 || !matches[0].id || usedIds.has(matches[0].id)) return fact;
+    usedIds.add(matches[0].id);
+    return { ...fact, id: matches[0].id, source: matches[0].source };
+  });
+  const texts = new Set(computed.map(fact => fact.text));
+  // Keep explicitly paired reference facts even if the Judge's evidence subset
+  // did not include them. Never derive IDs from position or source counters.
+  return [...computed, ...referenced.filter(fact => !texts.has(fact.text))];
+}

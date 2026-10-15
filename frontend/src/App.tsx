@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { AgentsStrip } from "./AgentsStrip";
+import { WorkflowTabs } from "./WorkflowTabs";
+import { savedTab, type WorkflowTab } from "./workflow";
 import { FactLibrary } from "./FactLibrary";
 import { CaseComparison } from "./CaseComparison";
 import { Debate } from "./Debate";
-import { EvidenceList } from "./EvidenceList";
+import { EvidenceList, EvidenceText, type FactLinks } from "./EvidenceList";
 import { VerdictSummary } from "./VerdictSummary";
-import { factIndex, filterDisputes, money, readPresentationPreference, writePresentationPreference } from "./presentation";
+import { computedFacts, filterDisputes, money, readPresentationPreference, writePresentationPreference } from "./presentation";
 import { PartyPreview } from "./PartyPreview";
 import { DisputeForm } from "./DisputeForm";
 import { getSamples, resolveDispute } from "./services/api";
@@ -22,16 +25,6 @@ const DECISION_LABELS: Record<Decision, string> = {
   compensation: "Compensation",
   no_action: "No action",
   needs_review: "Needs human review",
-};
-
-const AGENT_LABELS: Record<string, string> = {
-  evidence_loader: "Evidence loader",
-  rider_advocate: "Rider advocate",
-  driver_advocate: "Driver advocate",
-  fraud_detector: "Fraud detector",
-  rider_rebuttal: "Rider rebuttal",
-  driver_rebuttal: "Driver rebuttal",
-  judge: "Judge",
 };
 
 // The judge types their access code; it is kept for this browser tab only and is
@@ -62,6 +55,7 @@ function loadPresentationMode() {
 export default function App() {
   const [presentation, setPresentation] = useState(loadPresentationMode);
   const [filter, setFilter] = useState("all");
+  const [activeTabs, setActiveTabs] = useState<Record<string, WorkflowTab>>({});
   const [activeFact, setActiveFact] = useState<string | null>(null);
   const [factRequest, setFactRequest] = useState(0);
   const [samples, setSamples] = useState<DisputeCase[]>([]);
@@ -117,18 +111,28 @@ export default function App() {
       .then((r) => {
         setActiveFact(null);
         setResults((prev) => ({ ...prev, [dispute.dispute_id]: r }));
+        setActiveTabs(prev => ({ ...prev, [dispute.dispute_id]: "evidence" }));
         setCompletedId(dispute.dispute_id);
       })
-      .catch((e: Error) => setError(e.message))
+      .catch((e: Error) => setError(`${dispute.dispute_id}: ${e.message}`))
       .finally(() => setResolving(null));
   }
 
   const resolution = selected ? results[selected.dispute_id] : undefined;
-  const facts = useMemo(() => resolution ? factIndex(resolution) : [], [resolution]);
-  const factIds = useMemo(() => new Set(facts.map(fact => fact.id!)), [facts]);
+  const facts = useMemo(() => resolution ? computedFacts(resolution) : [], [resolution]);
+  const factIds = useMemo(() => new Set(facts.flatMap(fact => fact.id ? [fact.id] : [])), [facts]);
+
+  const activeTab = savedTab(selected ? activeTabs[selected.dispute_id] : undefined, !!resolution);
+
+  function changeTab(tab: WorkflowTab) {
+    if (!selected) return;
+    setActiveFact(null);
+    setActiveTabs(prev => ({ ...prev, [selected.dispute_id]: tab }));
+  }
 
   function selectFact(id: string) {
     if (!factIds.has(id)) return;
+    if (selected) setActiveTabs(prev => ({ ...prev, [selected.dispute_id]: "evidence" }));
     setActiveFact(id);
     setFactRequest(value => value + 1);
   }
@@ -150,8 +154,8 @@ export default function App() {
   useEffect(() => {
     if (!completedId) return;
     if (!form && completedId === selected?.dispute_id) {
-      const summary = document.getElementById("ruling-summary");
-      summary?.scrollIntoView({ block: "start" });
+      const summary = document.querySelector<HTMLButtonElement>('[data-workflow-tab="evidence"]');
+      summary?.scrollIntoView({ block: "nearest" });
       summary?.focus({ preventScroll: true });
     }
     setCompletedId(null);
@@ -231,61 +235,46 @@ export default function App() {
           <div role="alert" aria-atomic="true">{error && <p className="error">{error}</p>}</div>
           {!form && loadingSamples && <section className="card empty-state"><h2>Loading disputes…</h2><p className="muted">The sample list is loading. No agents have run.</p></section>}
           {!form && !loadingSamples && !selected && <section className="card empty-state"><h2>No dispute selected</h2><p className="muted">Choose a sample or add a new dispute to begin.</p></section>}
-          {!form && resolving && <LoadingPanel disputeId={resolving} />}
-          {!form && resolution && selected && <VerdictSummary resolution={resolution} disputeId={selected.dispute_id} />}
-          {form && (
-            <DisputeForm
-              key={form.template?.dispute_id ?? "blank"}
-              template={form.template}
-              onSubmit={addOwn}
-              onCancel={() => setForm(null)}
-            />
-          )}
-          {!form && selected && <CasePanel dispute={selected} />}
-          {!form && selected && (
-            <div className="run-bar">
-              <button
-                className="run-button"
-                onClick={() => resolve(selected)}
-                disabled={resolving !== null}
-              >
-                {resolving === selected.dispute_id ? "Agents working…" : resolution ? "Re-run agents" : "Resolve dispute"}
-              </button>
-              <span className="token-warning" role="note">
-                <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-                  <path d="M8 1.5 15 14H1L8 1.5Z" fill="currentColor" />
-                  <path d="M8 6v3.5M8 11.4v.1" stroke="var(--warn-soft)" strokeWidth="1.6" strokeLinecap="round" />
-                </svg>
-                Uses real AI tokens (~5,400 per run)
-              </span>
-              {resolution && <span className="small muted">Showing the saved result. Re-running uses tokens again.</span>}
-              <button className="secondary-button" onClick={() => { setForm({ template: selected }); setError(null); }}>
-                Edit as new dispute
-              </button>
-            </div>
-          )}
-          {!form && selected && !resolution && !resolving && <section className="card empty-state"><h2>Ready when you are</h2><p className="muted">Resolve this dispute to hear both sides and see the policy ruling. Selecting a case does not run the agents.</p></section>}
-          {!form && resolution && (
-            <>
-              <Workflow resolution={resolution} />
-              <Debate key={selected?.dispute_id} resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
-              <section className="card"><RiskPanel risk={resolution.risk} /></section>
-              <RulingPanel resolution={resolution} />
-              <FactLibrary key={selected?.dispute_id} facts={facts} activeId={activeFact} request={factRequest} />
-              <PartyPreview key={selected?.dispute_id} resolution={resolution} />
-              <details className="card raw">
-                <summary>Raw API response</summary>
-                <pre>{JSON.stringify(resolution, null, 2)}</pre>
-              </details>
-            </>
-          )}
+          {!form && resolving && resolving !== selected?.dispute_id && <p className="small muted">Agents are working on {resolving}. This case remains available.</p>}
+          {form && <DisputeForm key={form.template?.dispute_id ?? "blank"} template={form.template} onSubmit={addOwn} onCancel={() => setForm(null)} />}
+          {!form && selected && <section className="case-file" aria-labelledby="case-title">
+            <header className="case-file-head">
+              <div><p className="eyebrow">Dispute file</p><h2 id="case-title">{selected.dispute_id} <span className="tag">{TYPE_LABELS[selected.type]}</span></h2></div>
+              <span className="case-save-status">{resolving === selected.dispute_id ? "Agents working · one request" : resolution ? "Saved result · no new request" : "Ready for intake"}</span>
+            </header>
+            <WorkflowTabs active={activeTab} resolution={resolution} busy={resolving === selected.dispute_id} onChange={changeTab}
+              render={tab => resolving === selected.dispute_id ? <LoadingPanel disputeId={selected.dispute_id} /> : <>
+                <AgentsStrip tab={tab} resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
+                {tab === "intake" && <>
+                  <CasePanel dispute={selected} availableIds={factIds} onSelectFact={selectFact} />
+                  <div className="run-bar">
+                    <button className="run-button" onClick={() => resolve(selected)} disabled={resolving !== null}>
+                      {resolution ? "Re-run agents" : "Run agents"}
+                    </button>
+                    <span className="token-warning" role="note">Uses real AI tokens when enabled · one run per click</span>
+                    <button className="secondary-button" onClick={() => { setForm({ template: selected }); setError(null); }}>Edit as new dispute</button>
+                  </div>
+                  {resolution && <p className="small muted">This case has a saved result. Re-running uses tokens again.</p>}
+                </>}
+                {tab === "evidence" && resolution && <FactLibrary facts={facts} activeId={activeFact} request={factRequest} expanded grouped onSelectFact={selectFact} />}
+                {tab === "hearing" && resolution && <Debate resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />}
+                {tab === "ruling" && resolution && <>
+                  <VerdictSummary resolution={resolution} disputeId={selected.dispute_id} />
+                  <RulingPanel resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
+                  <section className="card"><RiskPanel risk={resolution.risk} /></section>
+                  <details className="raw"><summary>Raw API response · internal record</summary><pre>{JSON.stringify(resolution, null, 2)}</pre></details>
+                </>}
+                {tab === "notify" && resolution && <PartyPreview resolution={resolution} />}
+              </>} />
+          </section>}
+
         </main>
       </div>
     </div>
   );
 }
 
-function CasePanel({ dispute }: { dispute: DisputeCase }) {
+function CasePanel({ dispute, availableIds, onSelectFact }: { dispute: DisputeCase } & FactLinks) {
   const { trip, fare } = dispute;
   const facts: [string, string][] = [];
   if (fare.cancellation_fee != null) facts.push(["No-show fee", money(fare.cancellation_fee)]);
@@ -296,12 +285,12 @@ function CasePanel({ dispute }: { dispute: DisputeCase }) {
 
   return (
     <section className="card case-overview">
-      <div className="card-head">
-        <h2>
-          {dispute.dispute_id} <span className="tag">{TYPE_LABELS[dispute.type]}</span>
-        </h2>
+      <div><p className="eyebrow">Step 1</p><h2>Intake</h2></div>
+      <div className="statements">
+        <blockquote className="rider"><span className="who">Rider’s claim</span><EvidenceText text={dispute.rider_claim} availableIds={availableIds} onSelectFact={onSelectFact} /></blockquote>
+        <blockquote className="driver"><span className="who">Driver’s statement</span>{dispute.driver_statement
+          ? <EvidenceText text={dispute.driver_statement} availableIds={availableIds} onSelectFact={onSelectFact} /> : <em className="muted">No statement provided</em>}</blockquote>
       </div>
-      <p className="eyebrow">Case at a glance</p>
       <CaseComparison dispute={dispute} />
       {facts.length > 0 && (
         <dl className="facts">
@@ -313,19 +302,7 @@ function CasePanel({ dispute }: { dispute: DisputeCase }) {
           ))}
         </dl>
       )}
-      <details className="case-details"><summary>Statements, chat and history</summary>
-      <div className="statements">
-        <blockquote className="rider">
-          <span className="who">Rider</span>
-          {dispute.rider_claim}
-        </blockquote>
-        <blockquote className="driver">
-          <span className="who">Driver</span>
-          {dispute.driver_statement ?? <em className="muted">No statement</em>}
-        </blockquote>
-      </div>
-
-
+      <details className="case-details"><summary>Chat log and party history</summary>
       {dispute.chat_logs.length > 0 && (
         <>
           <h3 className="section-label">Chat log</h3>
@@ -363,28 +340,6 @@ function History({ label, history }: { label: string; history: PartyHistory }) {
   );
 }
 
-function Workflow({ resolution }: { resolution: Resolution }) {
-  return (
-    <section className="card">
-      <h2>How this ruling was reached</h2>
-      <p className="small muted">Facts computed → advocates argue → fraud check → replies when available → policy rules decide → Hy3 explains.</p>
-      <details className="disclosure"><summary>View all {resolution.agent_log.length} agent log entries</summary>
-      <ol className="steps">
-        {resolution.agent_log.map((entry) => (
-          <li key={entry.step} className={`step ${entry.agent}`}>
-            <span className="step-num">{entry.step}</span>
-            <div>
-              <strong>{AGENT_LABELS[entry.agent] ?? entry.agent}</strong>
-              <p className="small muted">{entry.message}</p>
-            </div>
-          </li>
-        ))}
-      </ol>
-      </details>
-    </section>
-  );
-}
-
 function RiskPanel({ risk }: { risk: Resolution["risk"] }) {
   return (
     <div className="risk-panel">
@@ -419,7 +374,7 @@ function RiskBadge({ level }: { level: RiskLevel }) {
   );
 }
 
-function RulingPanel({ resolution }: { resolution: Resolution }) {
+function RulingPanel({ resolution, availableIds, onSelectFact }: { resolution: Resolution } & FactLinks) {
   const pct = Math.round(resolution.confidence * 100);
   return (
     <section className="card ruling-detail">
@@ -441,8 +396,8 @@ function RulingPanel({ resolution }: { resolution: Resolution }) {
         <strong>{pct}%</strong>
       </div>
 
-      <p className="action">{resolution.recommended_action}</p>
-      <p>{resolution.explanation}</p>
+      <p className="action"><EvidenceText text={resolution.recommended_action} availableIds={availableIds} onSelectFact={onSelectFact} /></p>
+      <p><EvidenceText text={resolution.explanation} availableIds={availableIds} onSelectFact={onSelectFact} /></p>
 
       <h3 className="section-label">Policy applied</h3>
       <ul className="small">
@@ -452,7 +407,7 @@ function RulingPanel({ resolution }: { resolution: Resolution }) {
       </ul>
 
       <h3 className="section-label">Evidence considered</h3>
-      <EvidenceList texts={resolution.judge_evidence} />
+      <EvidenceList texts={resolution.judge_evidence} availableIds={availableIds} onSelectFact={onSelectFact} />
     </section>
   );
 }
@@ -462,7 +417,7 @@ function LoadingPanel({ disputeId }: { disputeId: string }) {
     <div className="card-head"><h2 id="loading-title" tabIndex={-1}>Agents working · {disputeId}</h2><span className="spinner" role="progressbar" aria-label="Waiting for the complete agent result" /></div>
     <p>About 10–15 seconds. The server returns one complete result; individual step progress is not available.</p>
     <ol className="pending-steps"><li>Evidence loader</li><li>Rider &amp; Driver advocates</li><li>Fraud detector</li><li>Rebuttal round</li><li>Judge: policy ruling &amp; explanation</li></ol>
-    <p className="small muted">These are the stages of a resolve, not live progress. Any previous saved result remains below.</p>
+    <p className="small muted">These are the stages of a resolve, not live progress. Previous saved results are retained until a new run succeeds.</p>
   </section>;
 }
 

@@ -15,7 +15,7 @@ export function EvidenceList({ texts, ids = [], availableIds, onSelectFact }: { 
           {item.id && (availableIds?.has(item.id) && onSelectFact
             ? <button type="button" className="evidence-link" aria-label={`Find evidence ${item.id}`} onClick={() => onSelectFact(item.id!)}>{item.id}</button>
             : <span className="evidence-id">{item.id}</span>)}
-          {item.text}
+          <EvidenceText text={item.text} availableIds={availableIds} onSelectFact={onSelectFact} />
         </li>
       ))}
     </ul>
@@ -36,4 +36,12 @@ export function EvidenceList({ texts, ids = [], availableIds, onSelectFact }: { 
       )}
     </div>
   );
+}
+
+
+export function EvidenceText({ text, availableIds, onSelectFact }: { text: string } & FactLinks) {
+  return <>{text.split(/\b((?:TRIP|GPS|FARE|CHAT|HIST)-[1-9]\d*)\b/g).map((part, index) =>
+    availableIds?.has(part) && onSelectFact
+      ? <button type="button" className="evidence-link" key={index} onClick={() => onSelectFact(part)} aria-label={`Find evidence ${part}`}>{part}</button>
+      : part)}</>;
 }
