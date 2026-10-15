@@ -218,6 +218,7 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
   };
   const newDispute = () => { setForm({}); setError(null); };
   const ownShown = filterDisputes(own, filter), samplesShown = filterDisputes(samples, filter);
+  const showGroups = ownShown.length > 0 && samplesShown.length > 0;
 
   return (
     <div className={`app${presentation ? " presentation-mode" : ""}`}>
@@ -272,12 +273,10 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
           </button>}
           {selected && filter !== "all" && selected.type !== filter && <p className="sidebar-note">The selected case is outside this filter.</p>}
           {!loadingSamples && !ownShown.length && !samplesShown.length && <p className="sidebar-note">No disputes match this filter.</p>}
-          {/* Group labels only when there is more than one group to tell apart. */}
-          {own.length > 0 && ownShown.length > 0 && <>
-            <h2 className="sidebar-group">Yours</h2>
-            <ul className="dispute-list">{ownShown.map(disputeButton)}</ul>
-          </>}
-          {own.length > 0 && samplesShown.length > 0 && <h2 className="sidebar-group">Samples</h2>}
+          {/* Group labels only when both groups have visible items; otherwise one label would stand alone. */}
+          {showGroups && <h2 className="sidebar-group">Yours</h2>}
+          {ownShown.length > 0 && <ul className="dispute-list">{ownShown.map(disputeButton)}</ul>}
+          {showGroups && <h2 className="sidebar-group">Samples</h2>}
           {samplesShown.length > 0 && <ul className="dispute-list">{samplesShown.map(disputeButton)}</ul>}
           </div>
         </nav>
