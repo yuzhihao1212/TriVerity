@@ -8,7 +8,9 @@ export function AiToggle({ mode, onToggle }: { mode: AiMode; onToggle: () => voi
       title={live ? "AI is live: agents use Hy3 (about $0.002 per run). Switch to offline to run free."
                   : "Offline: no AI calls, no cost. Rulings are identical; arguments and explanations use template text."}>
       <span className="ai-toggle-track" aria-hidden="true"><span className="ai-toggle-thumb" /></span>
-      <span>AI <strong>{live ? "Live" : "Offline"}</strong></span>
+      {/* On phones only "AI" shows; the switch keeps its full name. */}
+      <span className="ai-toggle-label">AI <strong>{live ? "Live" : "Offline"}</strong></span>
+      <span className="ai-toggle-short" aria-hidden="true">AI</span>
     </button>
   );
 }

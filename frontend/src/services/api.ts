@@ -16,7 +16,7 @@ function describe(status: number, retryAfter: number | null): string {
     case 401:
       return "Access code not recognised. Check it and try again.";
     case 404:
-      return "This demo resolves the sample disputes only. Enter your access code (top right) to submit your own.";
+      return "This demo resolves the sample disputes only. Enter your judge access code (above Run agents) to submit your own.";
     case 413:
       return "That dispute is too large to send.";
     case 422:
