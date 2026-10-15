@@ -43,7 +43,7 @@ export function WorkflowTabs({ active, resolution, busy, onChange, render }: {
         })}
       </div>
       {!resolution && <p className="small muted" id={`${id}-locked`}>{busy ? "Waiting for the complete result to unlock steps 2–5." : "Run agents in Intake to unlock steps 2–5."}</p>}
-      {busy && <p className="small muted">Waiting for one complete response. Saved stage counts are not live progress.</p>}
+      {busy && <p className="small muted">Completed steps appear live below. Workflow tabs unlock when the ruling is ready.</p>}
     </div>
     {WORKFLOW_TABS.map((tab, index) => <div role="tabpanel" key={tab.id}
       id={`${id}-${tab.id}-panel`} aria-labelledby={`${id}-${tab.id}-tab`}
