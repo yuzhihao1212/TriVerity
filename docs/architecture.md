@@ -45,7 +45,7 @@
    2. *Hy3 explains the ruling* (`judge_narration.py`). The model writes the case-record explanation,
       answering both advocates' arguments and rebuttals, plus a message to each party.
 5. **Resolution** (`backend/app/models/resolution.py`). The ruling, both advocates' cases, the
-   fraud risk assessment and an agent log recording each step and whether the AI or the fallback
+   fraud risk assessment, the review triage (below) and an agent log recording each step and whether the AI or the fallback
    produced it. It is served by `POST /api/disputes/resolve` (see
    [api-contract.md](api-contract.md)) and shown in the demo UI.
 
@@ -74,6 +74,37 @@ fallback can't pass for an AI answer.
 evidence and cited rules, the fraud risk assessment, and the Judge's ruling side by side, as the
 brief requires.
 
+## Review triage, and the queue and SLA layer it feeds
+
+**Built: triage scoring** (`backend/app/services/triage.py`). Every escalated dispute gets a review
+tier, a score and the reasons, computed from the ruling alone with no LLM:
+
+| Tier | When |
+|---|---|
+| `safety` | A threat in the chat (`SAFE-1`). Always reviewed first, whatever the score |
+| `high` | A high bad-faith risk (`FRAUD-1`) |
+| `standard` | Missing evidence (`RD-4`, `NS-4`) or low confidence (`ESC-1`) |
+| `low` | The same as standard, with a proposed refund under $5 |
+
+The score (0–100) only orders cases within a tier: escalation-rule weights, the amount at stake, and how
+far confidence falls below 60%. Weights are in the policy's `triage` section, as team placeholders like
+the other thresholds. Auto-resolved disputes get no tier. Triage is internal, like the fraud signals:
+the rider and driver views never carry it.
+
+**Not built: persistence, a review queue and SLA tracking.** The prototype resolves each dispute in
+one request and stores nothing. In production, triage is the sort key for a reviewer queue:
+
+1. **Persistence and lifecycle.** Store each dispute and its resolution, with states such as
+   `resolved`, `queued`, `in_review` and `closed`, and record each reviewer decision.
+2. **Review queue.** Order queued disputes by tier, then score, with safety cases routed to a
+   dedicated team.
+3. **SLA tracking.** A response target per tier, a clock from the time the dispute is queued, and
+   alerts on breach. This only makes sense once 1 and 2 exist, which is why the prototype shows no
+   SLA timers.
+
+A known limit carries over: keyword abuse can force `SAFE-1` (security finding T-11), so such
+disputes would also jump the queue. The planned context-aware chat classifier addresses both.
+
 ## LLM configuration
 
 `backend/app/services/llm_client.py` calls any OpenAI-compatible chat-completions endpoint. The demo uses
@@ -86,9 +117,10 @@ LLM_MODEL=hy3
 LLM_DISABLE_THINKING=true
 ```
 
-- Each dispute makes three LLM calls (two advocates in parallel, then the Judge), about 3–4k tokens and
-  6–8 seconds with Hy3's reasoning turned off. With reasoning on it took about 22 seconds with no
-  quality gain in testing.
+- Each dispute makes up to five LLM calls (two advocates in parallel, their two rebuttals in parallel,
+  then the Judge), about 5,400 tokens and 11 seconds with Hy3's reasoning turned off. The rebuttals
+  are skipped if either advocate fell back. With reasoning on, the earlier three-call pipeline took
+  about 22 seconds with no quality gain in testing.
 - Without an API key the whole pipeline still runs, using the deterministic fallbacks, and the tests
   never call a real model.
 
