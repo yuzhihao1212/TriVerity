@@ -71,6 +71,8 @@ export interface AgentLogEntry {
 }
 
 export interface Resolution {
+  // Optional until the separate evidence-collector backend PR is deployed.
+  evidence_collection?: { source: "llm" | "fallback" } | null;
   decision: Decision;
   recommended_action: string;
   refund_amount: number | null;

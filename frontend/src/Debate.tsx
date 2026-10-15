@@ -1,6 +1,6 @@
 import { useId } from "react";
 
-import { EvidenceList, type FactLinks } from "./EvidenceList";
+import { EvidenceList, EvidenceText, type FactLinks } from "./EvidenceList";
 import type { AgentCase, Resolution } from "./types";
 
 export function SourceBadge({ source }: { source: "llm" | "fallback" }) {
@@ -12,7 +12,7 @@ export function Debate({ resolution, availableIds, onSelectFact }: { resolution:
   const argument = (side: "rider" | "driver", item: AgentCase) => (
     <article className={`advocate ${side}`} id={`${id}-${side}-argument`} tabIndex={-1}>
       <h4>{side === "rider" ? "Rider advocate" : "Driver advocate"} <SourceBadge source={item.source} /></h4>
-      <p>{item.summary || "No opening argument returned."}</p>
+      <p><EvidenceText text={item.summary || "No opening argument returned."} availableIds={availableIds} onSelectFact={onSelectFact} /></p>
       <h5 className="section-label">Policy cited</h5>
       {item.policy_refs.length ? <ul className="small">{item.policy_refs.map(ref => <li key={ref}>{ref}</li>)}</ul>
         : <p className="small muted">No policy rules cited.</p>}
@@ -27,7 +27,7 @@ export function Debate({ resolution, availableIds, onSelectFact }: { resolution:
         <a className="reply-to small" href={`#${id}-${other}-argument`}>↑ Answers the {other}'s argument</a>
         <h4>{side === "rider" ? "Rider reply" : "Driver reply"} <SourceBadge source={item.rebuttal?.source ?? "fallback"} /></h4>
         {item.rebuttal?.text ? <>
-          <p>{item.rebuttal.text}</p>
+          <p><EvidenceText text={item.rebuttal.text} availableIds={availableIds} onSelectFact={onSelectFact} /></p>
           <h5 className="section-label">Evidence cited in reply</h5>
           <EvidenceList texts={item.rebuttal.evidence} ids={item.rebuttal.evidence_ids} availableIds={availableIds} onSelectFact={onSelectFact} />
         </> : <p className="small muted">No reply generated. The rebuttal round runs only when both opening arguments use AI.</p>}
