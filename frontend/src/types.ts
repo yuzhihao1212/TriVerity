@@ -63,6 +63,14 @@ export interface RiskAssessment {
   summary: string;
 }
 
+export type TriageTier = "safety" | "high" | "standard" | "low";
+
+export interface Triage {
+  tier: TriageTier | null;
+  score: number;
+  reasons: string[];
+}
+
 export interface AgentLogEntry {
   step: number;
   agent: string;
@@ -84,5 +92,6 @@ export interface Resolution {
   rider_case: AgentCase;
   driver_case: AgentCase;
   risk: RiskAssessment;
+  triage: Triage;
   agent_log: AgentLogEntry[];
 }

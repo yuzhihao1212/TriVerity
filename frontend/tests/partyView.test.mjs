@@ -11,6 +11,7 @@ const { partyView, PARTY_DECISION_LABELS } = await import(`data:text/javascript;
 const resolution = {
   refund_amount: 6.30, rider_explanation: 'Rider message', driver_explanation: 'Driver message',
   explanation_source: 'fallback', risk: { signals: ['INTERNAL_SIGNAL'] },
+  triage: { tier: 'safety', score: 94, reasons: ['INTERNAL_TRIAGE'] },
   judge_evidence: ['INTERNAL_HISTORY'], explanation: 'INTERNAL_REASON',
   recommended_action: 'INTERNAL_PROPOSAL', rider_case: { summary: 'PRIVATE' },
 };

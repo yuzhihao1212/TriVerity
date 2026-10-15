@@ -9,7 +9,7 @@ import { factIndex, filterDisputes, money, readPresentationPreference, writePres
 import { PartyPreview } from "./PartyPreview";
 import { DisputeForm } from "./DisputeForm";
 import { getSamples, resolveDispute } from "./services/api";
-import type { Decision, DisputeCase, PartyHistory, Resolution, RiskLevel } from "./types";
+import type { Decision, DisputeCase, PartyHistory, Resolution, RiskLevel, TriageTier } from "./types";
 
 const TYPE_LABELS: Record<DisputeCase["type"], string> = {
   route_deviation: "Route deviation",
@@ -269,6 +269,7 @@ export default function App() {
             <>
               <Workflow resolution={resolution} />
               <Debate key={selected?.dispute_id} resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
+              <section className="card"><TriagePanel triage={resolution.triage} /></section>
               <section className="card"><RiskPanel risk={resolution.risk} /></section>
               <RulingPanel resolution={resolution} />
               <FactLibrary key={selected?.dispute_id} facts={facts} activeId={activeFact} request={factRequest} />
@@ -406,6 +407,35 @@ function RiskPanel({ risk }: { risk: Resolution["risk"] }) {
             <li key={i}>{s}</li>
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+// Reuses the risk badge colours: safety red, high amber, standard and low neutral.
+const TRIAGE_BADGE: Record<TriageTier, RiskLevel> = { safety: "high", high: "medium", standard: "low", low: "low" };
+const TRIAGE_LABEL: Record<TriageTier, string> = {
+  safety: "Safety · review first", high: "High", standard: "Standard", low: "Low",
+};
+
+function TriagePanel({ triage }: { triage: Resolution["triage"] }) {
+  return (
+    <div className="risk-panel">
+      <div><p className="eyebrow">Internal review only</p><h2>Review priority</h2></div>
+      {triage.tier ? (
+        <>
+          <div className="risk-badges">
+            <div className="risk-row">
+              <span className={`risk-badge ${TRIAGE_BADGE[triage.tier]}`}>{TRIAGE_LABEL[triage.tier]}</span>
+              <span className="risk-party">Score {triage.score} / 100</span>
+            </div>
+          </div>
+          <ul className="small risk-signals">
+            {triage.reasons.map((r, i) => <li key={i}>{r}</li>)}
+          </ul>
+        </>
+      ) : (
+        <p className="small muted">Resolved automatically; no human review needed.</p>
       )}
     </div>
   );
