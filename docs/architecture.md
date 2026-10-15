@@ -64,7 +64,9 @@
    2. *Hy3 explains the ruling* (`judge_narration.py`). The model writes the case-record explanation,
       answering both advocates' arguments and rebuttals and citing the retrieved precedents (retrieval-
       augmented generation), plus a message to each party. Precedents appear only in the case record.
-   3. *Learning feedback loop.* `POST /api/precedents/feedback` records a reviewer's final decision as a
+   3. *Appeals and the learning feedback loop.* A rider or driver can appeal a ruling from their view
+      (`POST /api/appeals`); the appeal joins a human review queue (threats first), and the reviewer's
+      decision becomes a precedent. Separately, `POST /api/precedents/feedback` records a reviewer's final decision as a
       new precedent. It can only cause escalations (`PREC-1`), never change a decision or an amount.
       Feedback is kept in memory; production would store it with the dispute queue. It is turned off
       in the public demo, and reviewer notes are never returned by the API.

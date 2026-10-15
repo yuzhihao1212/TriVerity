@@ -1,4 +1,4 @@
-import type { DisputeCase, Resolution } from "../types";
+import type { Appeal, Decision, DisputeCase, Resolution } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "/api";
 
@@ -19,6 +19,8 @@ function describe(status: number, retryAfter: number | null): string {
       return "That dispute is too large to send.";
     case 422:
       return "Some fields are too long or out of range: claims and statements up to 2,000 characters, up to 50 chat messages of 500 characters, and realistic trip and fare numbers.";
+    case 403:
+      return "Appeals and reviewer decisions are turned off in the public demo.";
     case 429:
       return `Rate limit reached. Try again in ${retryAfter ?? 60} seconds.`;
     case 503:
@@ -49,5 +51,24 @@ export function resolveDispute(payload: DisputeCase, accessCode?: string) {
     method: "POST",
     headers,
     body: JSON.stringify(payload),
+  });
+}
+
+const JSON_HEADERS = { "Content-Type": "application/json" };
+
+/** A party contests a ruling (off in the public demo). */
+export function fileAppeal(body: { case: DisputeCase; party: "rider" | "driver"; reason: string; original_decision: Decision }) {
+  return request<Appeal>("/appeals", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(body) });
+}
+
+/** The reviewer's queue for one dispute. */
+export function listAppeals(disputeId: string) {
+  return request<Appeal[]>(`/appeals?dispute_id=${encodeURIComponent(disputeId)}`);
+}
+
+/** The reviewer's final decision on an appeal; it becomes a precedent. */
+export function decideAppeal(id: string, body: { decision: Exclude<Decision, "needs_review">; note: string }) {
+  return request<Appeal>(`/appeals/${encodeURIComponent(id)}/decision`, {
+    method: "POST", headers: JSON_HEADERS, body: JSON.stringify(body),
   });
 }

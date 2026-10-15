@@ -78,6 +78,8 @@ PRECEDENT_TOP_K = 3                 # similar past rulings returned per dispute
 PRECEDENT_SHOW_MIN_SIMILARITY = 0.4 # weaker matches are not shown at all
 PRECEDENT_MAX_FEEDBACK = 200        # reviewer decisions kept in memory (feedback loop)
 PRECEDENT_NOTE_MAX_CHARS = 300      # reviewer note on a feedback entry
+MAX_APPEALS = 200                   # appeals kept in memory (reviewer queue)
+APPEAL_REASON_MAX_CHARS = 500       # a party's reason for appealing
 
 # -- Evidence Collection agent (agents/evidence_agent.py) ----------------------
 EVIDENCE_AGENT_MAX_ROUNDS = 2         # 1 = plan once; 2 = one follow-up round on the results

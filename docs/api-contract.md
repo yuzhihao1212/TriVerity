@@ -207,4 +207,21 @@ with links or markup, or a note over 300 characters; `409` when the in-memory st
 entries). Notes stay in the store: they are never returned by the API (not in `precedents.matches`) and
 never sent to the LLM.
 
+## Appeals: `/api/appeals`
+
+The product loop: a party contests a ruling → a human reviewer decides → the decision becomes a precedent.
+All three endpoints return `403` in the public demo (a real deployment puts them behind the party and
+reviewer logins). The reason is party text: cleaned, plain text only, never sent to the LLM.
+
+- `POST /api/appeals`: `{"case": DisputeCase, "party": "rider | driver", "reason": "up to 500 characters",
+  "original_decision": "partial_refund | full_refund | compensation | no_action"}` returns `201` with the
+  appeal (`id` like `A-001`, `priority` `safety` when the chat holds a threat, else `standard`,
+  `status: "queued"`). `422` for an escalated ruling (already with a human), an empty reason, or links or
+  markup; `409` when the queue is full (200). Shares the resolve rate limits.
+- `GET /api/appeals?dispute_id=D001`: the queue, safety first, then oldest first. Not rate-limited.
+- `POST /api/appeals/{id}/decision`: `{"decision": "partial_refund | full_refund | compensation | no_action",
+  "note": "optional, up to 300 characters"}` records the reviewer's final decision and adds it to the
+  precedent knowledge base (`precedent_id` like `R-001`). `404` for an unknown appeal, `409` if already
+  decided. Shares the resolve rate limits.
+
 Keep this contract stable so frontend and backend development can proceed independently.

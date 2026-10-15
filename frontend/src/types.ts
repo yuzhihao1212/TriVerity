@@ -103,6 +103,19 @@ export interface AgentLogEntry {
   message: string;
 }
 
+export interface Appeal {
+  id: string;
+  dispute_id: string;
+  party: "rider" | "driver";
+  reason: string;
+  original_decision: Decision;
+  priority: "safety" | "standard";
+  status: "queued" | "decided";
+  created_at: string;
+  reviewer_decision: Exclude<Decision, "needs_review"> | null;
+  precedent_id: string | null;
+}
+
 export interface Resolution {
   // Optional until the separate evidence-collector backend PR is deployed.
   evidence_collection?: { source: "llm" | "fallback" } | null;
