@@ -4,6 +4,7 @@ from app.models.dispute import DisputeCase
 from app.models.resolution import AgentCase
 from app.services.evidence import CaseFacts
 from app.agents._advocate import _policy_section, advocate_system_prompt, build_advocate_case
+from app.services.text_safety import sanitise
 
 _SYSTEM = advocate_system_prompt("driver", own_account="statement")
 
@@ -16,7 +17,7 @@ def build_driver_case(case: DisputeCase, facts: CaseFacts) -> AgentCase:
     LLM is offline, raises an HTTP error, or returns unparseable JSON.
     """
     section = _policy_section(case)
-    statement = case.driver_statement or "No statement provided."
+    statement = sanitise(case.driver_statement or "") or "No statement provided."
     user = json.dumps({
         "driver_statement": statement,
         "dispute_type": case.type,
@@ -31,4 +32,5 @@ def build_driver_case(case: DisputeCase, facts: CaseFacts) -> AgentCase:
         fallback_summary=f"Driver's position: {statement}",
         facts=facts,
         section=section,
+        case_data=case.trip.model_dump_json() + case.fare.model_dump_json(),
     )

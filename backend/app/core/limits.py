@@ -61,6 +61,14 @@ JUDGE_MAX_TOKENS = 800
 DEFAULT_MAX_TOKENS = 800
 LLM_TIMEOUT_S = 25
 
+# -- LLM output checks (judge_narration, _advocate) ---------------------------
+# Longer output is rejected (not truncated) and the deterministic text is kept.
+NARRATION_MAX_PARTY_CHARS = 600     # rider_explanation, driver_explanation
+NARRATION_MAX_RECORD_CHARS = 1_200  # explanation (case record)
+ADVOCATE_MAX_SUMMARY_CHARS = 1_200  # live Hy3 summaries ran 391-973 chars; 800 rejected 21 of 102
+ADVOCATE_MAX_EVIDENCE_ITEMS = 8
+ADVOCATE_MAX_EVIDENCE_CHARS = 300
+
 # -- Concurrency (503 with Retry-After when full) -----------------------------
 MAX_CONCURRENT_RESOLVES = 3
 BUSY_RETRY_AFTER_S = 5
