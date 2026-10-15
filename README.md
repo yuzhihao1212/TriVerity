@@ -45,6 +45,8 @@ The sample disputes are synthetic; these are measurements on them, not productio
   explanation and separate messages to the rider and the driver
 - **Precedents (RAG)**: the Policy & Precedent agent retrieves the closest past rulings; the Judge cites them
   in the case record, and the evaluation checks each ruling's consistency with them
+- **What would change the ruling**: every ruling states the facts it turned on and the outcome a different
+  fact would give (counterfactual explanations), computed from the policy and verified by the tests
 - **Review triage**: escalated disputes get a priority tier (safety, high, standard, low), a score and
   the reasons, so safety cases are reviewed first; internal only, like the fraud signals
 - **Learning feedback loop**: a reviewer's decision becomes a precedent; when reviewers keep deciding

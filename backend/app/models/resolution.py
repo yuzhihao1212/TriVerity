@@ -80,6 +80,13 @@ class EvidenceCollection(BaseModel):
     rounds: int = 0
     calls: list[ToolCallRecord] = Field(default_factory=list)
 
+class Counterfactual(BaseModel):
+    """What would have changed the ruling (computed from the policy thresholds, never by the LLM)."""
+    change: str                       # e.g. "the route had been at most 15% longer than expected (it was 44% longer)"
+    outcome: str                      # the result in plain words
+    decision: Decision | None = None  # None: the case would be decided automatically instead of escalated
+    rules: list[str] = Field(default_factory=list)
+
 class AgentLogEntry(BaseModel):
     step: int
     agent: str
@@ -106,6 +113,8 @@ class Resolution(Ruling):
     risk: RiskAssessment = Field(default_factory=RiskAssessment)
     triage: Triage = Field(default_factory=Triage)
     precedents: PrecedentReport = Field(default_factory=PrecedentReport)
+    # What would have changed the ruling; internal only, like the rest of the reasoning.
+    counterfactuals: list[Counterfactual] = Field(default_factory=list)
     evidence_collection: EvidenceCollection = Field(default_factory=EvidenceCollection)
     agent_log: list[AgentLogEntry] = Field(default_factory=list)
 

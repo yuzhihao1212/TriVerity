@@ -134,6 +134,8 @@ See `backend/app/models/resolution.py`.
   "evidence_collection": {"source": "llm | fallback", "rounds": 2,
     "calls": [{"round": 1, "tool": "gps_window", "args": {"start": "08:10", "end": "08:18"},
                "reason": "string", "source": "gps", "results": ["GPS 08:10-08:18: 9 points, ..."]}]},
+  "counterfactuals": [{"change": "the route had been at most 15% longer than expected (it was 44% longer)",
+                      "outcome": "no change to the charge", "decision": "no_action", "rules": ["RD-1"]}],
   "agent_log": [{"step": 1, "agent": "evidence_loader", "status": "completed", "message": "string"}]
 }
 ```
@@ -168,6 +170,10 @@ See `backend/app/models/resolution.py`.
 - `evidence_collection` is the Evidence Collection agent's record: each tool call with its round, arguments,
   reason and result lines. `source: "fallback"` means the default plan ran. The result lines also join the
   evidence the advocates cite by ID.
+- `counterfactuals` says what would have changed the ruling: "if `change`, the outcome would be `outcome`".
+  Computed from the policy thresholds in code, never by the LLM; each one is checked in the tests by changing
+  the fact and re-running the rules. `decision` is `null` when the change would let the rules decide
+  automatically instead of escalating (e.g. missing data recorded). Internal only.
 - `agent_log` steps: `evidence_loader`, `evidence_collector`, `rider_advocate`, `driver_advocate`,
   `fraud_detector`, `rider_rebuttal`, `driver_rebuttal`, `precedent_agent`, `judge`.
 - `compensation` is reserved for payouts beyond a refund; no rule produces it yet.

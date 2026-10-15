@@ -68,6 +68,10 @@
       new precedent. It can only cause escalations (`PREC-1`), never change a decision or an amount.
       Feedback is kept in memory; production would store it with the dispute queue. It is turned off
       in the public demo, and reviewer notes are never returned by the API.
+   **What would change the ruling** (`backend/app/services/counterfactuals.py`). From the policy
+   thresholds, the code states the facts the ruling turned on and the outcome a different fact would give,
+   e.g. "if the route had been at most 15% longer than expected (it was 44% longer), there would be no
+   refund (RD-1)". Every statement is verified in the tests by re-running the rules on the changed facts.
 5. **Resolution** (`backend/app/models/resolution.py`). The ruling, both advocates' cases, the
    fraud risk assessment, the review triage (below) and an agent log recording each step and whether the AI or the fallback
    produced it. It is served by `POST /api/disputes/resolve` (see
