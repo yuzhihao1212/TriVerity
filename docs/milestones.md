@@ -9,13 +9,13 @@ Status as of 15 Oct 2026.
 |---|---|---|
 | ✅ | Rider Advocate, Driver Advocate and Judge agents | LLM-backed (Tencent Hy3), with checked output and fallbacks |
 | ✅ | Evidence: GPS/telemetry, chat logs, fare and payment data, history profiles | Computed into facts by the evidence loader |
-| ✅ | Advocates cite company policy | Rule IDs validated against the policy; 0 wrong-side citations in 54 live advocate cases |
+| ✅ | Advocates cite company policy | Rule IDs validated; evidence cited by ID from named sources; rebuttal round |
 | ✅ | Ruling with recommended action, confidence and natural-language reasoning | Rule-based ruling, LLM explanation for the record and for each party |
 | ✅ | Two dispute categories end to end | Route deviation and no-show charge |
 | ✅ | Observable inter-agent communication | Agent log and demo UI with AI / Fallback badges |
 | ✅ | Working prototype, architecture diagram, source on GitHub | Diagram in [architecture.md](architecture.md) |
 | ✅ | Handle the organisers' sample dataset | Adapter in `backend/app/services/ryde_adapter.py`; DISP-002 resolves as expected |
-| ✅ | Evaluation | `scripts/evaluate.py` ([evaluation.md](evaluation.md)): 27/27 rulings correct in live runs |
+| ✅ | Evaluation | `scripts/evaluate.py` ([evaluation.md](evaluation.md)): 9/9 rulings correct live, 45/45 outputs by the AI |
 | ⬜ | Live demo walkthrough | Rehearse with D001 (refund), D005 (no-show refund), D007 (safety and fraud escalation), DISP-002 (organisers' case) |
 
 ## Stretch goals (bonus points)
