@@ -10,7 +10,20 @@
    how much longer and slower the route was, the fare difference and whether the itemised breakdown
    explains the charge, how far the driver stopped from the pickup point, the waiting time, whether the
    driver tried to make contact, and threats, agreements and disagreements in the chat. No LLM is
-   involved, so facts are never generated.
+   involved, so facts are never generated. GPS telemetry is validated, capped at 5,000 points,
+   ordered in linear time and deduplicated before computing the observed path, sustained stops
+   and data gaps. Stops near pickup, marked as arrived/completed, or near a route's final observed
+   position are excluded; `TripData` has no drop-off coordinates, so that final position is an
+   inferred endpoint, not a verified destination. Stop durations exclude gaps over three minutes;
+   path distance still connects observed samples and is not a map-matched route. Naive timestamps
+   use UTC; aware timestamps retain their supplied offset. Same-time duplicates keep the first
+   valid observation and count the rest as rejected. `describe_by_source()` groups every summary
+   under trip, GPS, fare, chat or history; `describe()` flattens those groups in that order.
+   Promo checks compare the charge to the pre-promo breakdown minus the recorded discount.
+   Surge checks compare the total of lines labelled “surge” to the non-surge subtotal times
+   `(multiplier - 1)`, allowing cent/coarse rounding. This checks arithmetic, not tariff eligibility:
+   untyped fare lines cannot establish which charges are surge-exempt. Missing inputs remain
+   unknown; neither fare check changes policy rules or rulings.
 3. **Rider and Driver advocates** (`backend/app/agents/rider_agent.py`, `driver_agent.py`,
    shared logic in `_advocate.py`). Each receives the facts, its own party's account and the policy
    rules for the dispute type, and asks Hy3 to argue for its party only. They run in parallel.

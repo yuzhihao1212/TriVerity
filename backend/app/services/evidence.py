@@ -3,7 +3,10 @@ from math import asin, cos, radians, sin, sqrt
 
 from pydantic import BaseModel, Field
 
-from app.models.dispute import ChatMessage, DisputeCase, PartyHistory
+from app.core import limits
+from app.services.gps_analysis import GpsAnalysis, analyse_gps
+
+from app.models.dispute import ChatMessage, DisputeCase, FareData, PartyHistory
 from app.services.text_safety import sanitise
 
 EARTH_RADIUS_M = 6_371_000
@@ -47,27 +50,47 @@ class CaseFacts(BaseModel):
     # Charged fare minus (itemised breakdown - promo discount); non-zero means the
     # breakdown doesn't explain the charge.
     fare_breakdown_gap: float | None = None
+    promo_applied_correctly: bool | None = None
+    surge_consistent: bool | None = None
+    gps: GpsAnalysis | None = None
     chat: ChatAnalysis = Field(default_factory=ChatAnalysis)
     rider_history: PartyHistory = Field(default_factory=PartyHistory)
     driver_history: PartyHistory = Field(default_factory=PartyHistory)
 
     def describe(self) -> list[str]:
-        lines = []
+        return [line for lines in self.describe_by_source().values() for line in lines]
+
+    def describe_by_source(self) -> dict[str, list[str]]:
+        groups = {source: [] for source in ("trip", "gps", "fare", "chat", "history")}
+        lines = groups["trip"]
         if self.distance_excess_ratio is not None:
             lines.append(f"Route was {self.distance_excess_ratio:+.0%} vs expected distance")
         if self.duration_excess_ratio is not None:
             lines.append(f"Trip took {self.duration_excess_ratio:+.0%} vs expected duration")
-        if self.fare_difference is not None:
-            lines.append(f"Fare was {self.fare_difference:+.2f} vs expected fare")
         if self.driver_distance_from_pickup_m is not None:
             lines.append(f"Driver arrived {self.driver_distance_from_pickup_m:.0f} m from pickup point")
         if self.driver_wait_min is not None:
             lines.append(f"Driver waited {self.driver_wait_min:g} min at pickup")
-        lines.append(
-            "Driver contacted rider via in-app chat"
-            if self.driver_contact_attempted
-            else "No driver contact attempt in chat log"
-        )
+        lines = groups["gps"]
+        if self.gps is not None:
+            gps = self.gps
+            if gps.path_distance_km is not None:
+                comparison = (f" ({gps.path_vs_expected_ratio - 1:+.0%} vs expected)"
+                              if gps.path_vs_expected_ratio is not None else "")
+                lines.append(f"GPS path {gps.path_distance_km:.1f} km over {gps.points_used} points{comparison}")
+            else:
+                lines.append(f"GPS path unavailable ({gps.points_used} usable {'point' if gps.points_used == 1 else 'points'})")
+            for stop in gps.unexpected_stops or []:
+                lines.append(f"Unexpected stop: {stop.duration_min:g} min at {stop.start_time:%H:%M}")
+            if gps.total_stopped_min is not None:
+                lines.append(f"GPS unexpected stops total {gps.total_stopped_min:g} min")
+            if gps.max_gap_min is not None and gps.max_gap_min > limits.GPS_REPORT_GAP_MIN:
+                lines.append(f"GPS data gap of {gps.max_gap_min:g} min")
+            if gps.points_rejected:
+                lines.append(f"GPS points rejected: {gps.points_rejected}")
+        lines = groups["fare"]
+        if self.fare_difference is not None:
+            lines.append(f"Fare was {self.fare_difference:+.2f} vs expected fare")
         if self.surge_multiplier and self.surge_multiplier > 1:
             lines.append(f"Surge pricing applied: x{self.surge_multiplier:g}")
         if self.promo_code:
@@ -79,14 +102,33 @@ class CaseFacts(BaseModel):
                 if abs(self.fare_breakdown_gap) < 0.01
                 else f"Charged fare is {self.fare_breakdown_gap:+.2f} vs the itemised breakdown"
             )
+        if self.promo_applied_correctly is not None:
+            lines.append(
+                f"Promo {self.promo_code} discount reflected in the charge"
+                if self.promo_applied_correctly
+                else f"Promo {self.promo_code} discount not reflected in the charge"
+            )
+        if self.surge_consistent is not None:
+            lines.append(
+                "Surge breakdown consistent with the multiplier"
+                if self.surge_consistent
+                else "Surge breakdown inconsistent with the multiplier"
+            )
+        lines = groups["chat"]
+        lines.append(
+            "Driver contacted rider via in-app chat"
+            if self.driver_contact_attempted
+            else "No driver contact attempt in chat log"
+        )
         lines += [f"Threatening message: {m}" for m in self.chat.threats]
         lines += [f"Agreement in chat: {m}" for m in self.chat.agreements]
         lines += [f"Disagreement in chat: {m}" for m in self.chat.disagreements]
+        lines = groups["history"]
         for party, history in (("Rider", self.rider_history), ("Driver", self.driver_history)):
             summary = _describe_history(history)
             if summary:
                 lines.append(f"{party} history: {summary}")
-        return lines
+        return {source: lines for source, lines in groups.items() if lines}
 
 def _describe_history(history: PartyHistory) -> str:
     parts = []
@@ -125,7 +167,38 @@ def _haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     dlat = radians(lat2 - lat1)
     dlng = radians(lng2 - lng1)
     a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlng / 2) ** 2
-    return 2 * EARTH_RADIUS_M * asin(sqrt(a))
+    return 2 * EARTH_RADIUS_M * asin(sqrt(min(1.0, max(0.0, a))))
+
+def _promo_check(fare: FareData) -> bool | None:
+    if not fare.promo_code:
+        return None
+    if fare.promo_discount is None:
+        return None  # no recorded discount: the data is missing, not proof the promo was ignored
+    if not fare.breakdown or fare.actual is None:
+        return None
+    expected_charge = sum(line.amount for line in fare.breakdown) - fare.promo_discount
+    # Round the difference to eliminate binary floating point at the cent boundary.
+    return abs(round(fare.actual - expected_charge, 6)) <= limits.FARE_PROMO_TOLERANCE
+
+
+def _surge_check(fare: FareData) -> bool | None:
+    if fare.surge_multiplier is None or fare.surge_multiplier <= 1 or not fare.breakdown:
+        return None
+    surge_lines = [line for line in fare.breakdown if re.search(r"\bsurge\b", line.label, re.IGNORECASE)]
+    if not surge_lines:
+        return None  # surge may be built into the base or distance lines, so it can't be checked
+    # FareData defines the breakdown as pre-promo charges. Without typed tariff
+    # components, use the non-surge subtotal as the multiplier's base. This checks
+    # arithmetic, not tariff eligibility (e.g. whether a toll is surge-exempt).
+    subtotal = sum(line.amount for line in fare.breakdown if line not in surge_lines)
+    if subtotal <= 0:
+        return None
+    if any(line.amount < 0 for line in surge_lines):
+        return False
+    expected_surge = subtotal * (fare.surge_multiplier - 1)
+    tolerance = max(limits.FARE_SURGE_ABS_TOLERANCE,
+                    expected_surge * limits.FARE_SURGE_REL_TOLERANCE)
+    return abs(round(sum(line.amount for line in surge_lines) - expected_surge, 6)) <= tolerance
 
 def compute_facts(case: DisputeCase) -> CaseFacts:
     trip, fare = case.trip, case.fare
@@ -155,6 +228,9 @@ def compute_facts(case: DisputeCase) -> CaseFacts:
         promo_code=fare.promo_code,
         promo_discount=fare.promo_discount,
         fare_breakdown_gap=breakdown_gap,
+        promo_applied_correctly=_promo_check(fare),
+        surge_consistent=_surge_check(fare),
+        gps=analyse_gps(case.gps_points, trip, route_trip=case.type == "route_deviation"),
         chat=analyse_chat(case.chat_logs),
         rider_history=case.rider_history,
         driver_history=case.driver_history,
