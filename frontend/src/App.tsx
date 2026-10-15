@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { LiveProgress, ProgressAnnouncements } from "./LiveProgress";
 import { CollectorCalls } from "./CollectorCalls";
@@ -474,15 +474,18 @@ function CasePanel({ dispute, availableIds, onSelectFact }: { dispute: DisputeCa
 }
 
 function History({ label, history }: { label: string; history: PartyHistory }) {
-  const parts = [
+  const parts: ReactNode[] = [
     history.account_age_days != null && `${history.account_age_days} days old`,
-    history.rating != null && `★ ${history.rating}`,
+    history.rating != null && <span key="rating"><span className="rating-star" aria-hidden="true">★</span> {history.rating}
+      <span className="sr-only"> rating out of 5</span></span>,
     history.completed_trips != null && `${history.completed_trips} trips`,
     history.disputes_last_90d != null && `${history.disputes_last_90d} disputes / 90d`,
   ].filter(Boolean);
   return (
     <p className="muted small">
-      <strong>{label}:</strong> {parts.length ? parts.join(" · ") : "not provided"}
+      <strong>{label}:</strong> {parts.length
+        ? parts.map((part, i) => <Fragment key={i}>{i > 0 && " · "}{part}</Fragment>)
+        : "not provided"}
     </p>
   );
 }

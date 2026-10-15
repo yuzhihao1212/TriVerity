@@ -24,6 +24,7 @@
   --ok-soft: #e6f4ea;
   --warn-text: #8a5200;
   --warn-soft: #fdf1dc;
+  --star: #e8a317; /* rating stars: warm gold, visible on white */
   --transparent: transparent;
   --space-1: 4px;
   --space-2: 8px;
@@ -934,3 +935,8 @@ main[tabindex="-1"]:focus { outline: none; }
   /* Below the photo on phones, overlapping only its bottom edge. */
   .problem-notice { position: relative; top: auto; right: auto; transform: none; width: calc(100% - 32px); margin: -40px auto 0; }
 }
+
+/* Rating star in party history (App.tsx, History). Decorative: the number carries the meaning. */
+.rating-star { color: var(--star); }
+[data-theme="dark"] { --star: #ffc53d; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --star: #ffc53d; } }
