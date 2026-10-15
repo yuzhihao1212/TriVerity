@@ -58,7 +58,7 @@ SYSTEM = (
     "this ruling is with them. In the explanation (case record) only, add one sentence on that "
     "consistency, citing precedent IDs exactly as given (e.g. P-004). Never mention precedents, "
     "past rulings or other disputes in rider_explanation or driver_explanation.\n"
-    "Never mention bad-faith or fraud risk, or either party's account or dispute history, in the "
+    "Never mention bad-faith or fraud risk, either party's account or dispute history, or either party's tone, in the "
     "rider_explanation or driver_explanation. These are internal signals only. "
     "Write plain text only: no links, email addresses, phone numbers, HTML or markdown. "
     "Write all three texts in English.\n"
@@ -70,6 +70,9 @@ _ECHO_SOURCE = SYSTEM.replace(_ESCALATION_WORDING, " ")
 # Rules whose text describes internal signals; the narration sees only a neutral line.
 _INTERNAL_RULES = {"FRAUD-1": "the dispute is escalated to a human reviewer."}
 _HISTORY_PREFIXES = ("Rider history:", "Driver history:")
+# A party's chat tone is evidence for the advocates, never something to tell the parties.
+_TONE_PREFIXES = ("Rider tone:", "Driver tone:")
+_TONE_RE = re.compile(r"\b(tone|sentiment|attitude)\b", re.IGNORECASE)
 _FRAUD_SENTENCE_RE = re.compile(r"[^.]*\b(bad[-\s]?faith|fraud)\b[^.]*\.\s*", re.IGNORECASE)
 
 _AMOUNT_RE = re.compile(r"\$\s?(\d[\d,]*(?:\.\d+)?)")
@@ -142,7 +145,7 @@ def narrate(case: DisputeCase, ruling: Ruling, rider_case: AgentCase, driver_cas
 def _user_prompt(case: DisputeCase, ruling: Ruling, rider_case: AgentCase, driver_case: AgentCase,
                  precedents: PrecedentReport | None = None) -> str:
     # H1: no party history and no fraud reasoning; the rules have already used them.
-    facts = [line for line in ruling.judge_evidence if not line.startswith(_HISTORY_PREFIXES)]
+    facts = [line for line in ruling.judge_evidence if not line.startswith(_HISTORY_PREFIXES + _TONE_PREFIXES)]
     policy = [
         f"{ref.split(':')[0]}: {_INTERNAL_RULES[ref.split(':')[0]]}" if ref.split(":")[0] in _INTERNAL_RULES else ref
         for ref in ruling.policy_refs
@@ -268,6 +271,8 @@ def _check(texts: dict, case: DisputeCase, ruling: Ruling, rider_case: AgentCase
             return f"promise: mentions the proposal on an escalated case ({key})"
         if _LEAK_RE.search(text):
             return f"leak: {key} mentions fraud, risk or party history"
+        if _TONE_RE.search(text):
+            return f"leak: {key} describes a party's tone"
     return None
 
 

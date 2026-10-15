@@ -169,7 +169,7 @@ precedents lists similar past rulings from the precedent knowledge base and how 
 with them. In the explanation (case record) only, add one sentence on that consistency, citing precedent
 IDs exactly as given (e.g. P-004). Never mention precedents, past rulings or other disputes in
 rider_explanation or driver_explanation.
-Never mention bad-faith or fraud risk, or either party's account or dispute history, in the
+Never mention bad-faith or fraud risk, either party's account or dispute history, or either party's tone, in the
 rider_explanation or driver_explanation. These are internal signals only. Write plain text only: no links,
 email addresses, phone numbers, HTML or markdown. Write all three texts in English.
 Respond with the JSON object only.

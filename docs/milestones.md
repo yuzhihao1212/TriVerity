@@ -8,7 +8,7 @@ Status as of 16 Oct 2026.
 | | Requirement | Status |
 |---|---|---|
 | ✅ | Rider Advocate, Driver Advocate and Judge agents | LLM-backed (Tencent Hy3), with checked output and fallbacks |
-| ✅ | Evidence: GPS/telemetry, chat logs, fare and payment data, history profiles | Computed into facts by the evidence loader |
+| ✅ | Evidence: GPS/telemetry, chat logs, fare and payment data, history profiles | Computed into facts by the evidence loader; chat analysis covers threats, agreements, disagreements and per-party sentiment (keyword-based) |
 | ✅ | Advocates cite company policy | Rule IDs validated; evidence cited by ID from named sources; rebuttal round |
 | ✅ | Ruling with recommended action, confidence and natural-language reasoning | Rule-based ruling, LLM explanation for the record and for each party |
 | ✅ | Two dispute categories end to end | Route deviation and no-show charge |

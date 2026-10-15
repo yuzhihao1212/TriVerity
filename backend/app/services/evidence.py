@@ -1,5 +1,8 @@
 import re
+from collections import Counter
 from math import asin, cos, radians, sin, sqrt
+
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -26,11 +29,33 @@ DISAGREEMENT_PATTERNS = [
     r"\bdisagree\b", r"\bnot true\b", r"\blying\b", r"\bliar\b",
 ]
 
+# Sentiment per message, then per party. Negative is checked before positive, so
+# "not great" or "no thanks, this is unfair" reads negative. Disagreement words count
+# as negative; a threat makes the party's tone hostile outright.
+NEGATIVE_PATTERNS = DISAGREEMENT_PATTERNS + [
+    r"\bangry\b", r"\bannoy(ed|ing)\b", r"\bridiculous\b", r"\bterrible\b", r"\bworst\b",
+    r"\bscam\b", r"\bwast(e|ed|ing)\b", r"\bnever again\b", r"\bdisgust\w*", r"\bcomplain\w*",
+]
+POSITIVE_PATTERNS = [
+    r"\bthank(s| you)\b", r"\bthx\b", r"\bappreciate\w*", r"\bgreat\b", r"\bnice\b",
+    r"\bno worries\b", r"\bno problem\b", r"\bsounds good\b", r"\bhave a good\b",
+]
+Tone = Literal["positive", "neutral", "negative", "hostile"]
+
+class PartyTone(BaseModel):
+    """A party's overall chat tone and how many of their messages carry it."""
+    tone: Tone
+    messages: int
+    total: int
+
 class ChatAnalysis(BaseModel):
     """Chat messages flagged by category, each quoted as 'sender: "message"'."""
     threats: list[str] = Field(default_factory=list)
     agreements: list[str] = Field(default_factory=list)
     disagreements: list[str] = Field(default_factory=list)
+    # Evidence only: no policy rule reads tone, and the Judge's party messages never see it.
+    rider_tone: PartyTone | None = None
+    driver_tone: PartyTone | None = None
 
 class CaseFacts(BaseModel):
     """Facts computed deterministically from the case data.
@@ -135,6 +160,11 @@ class CaseFacts(BaseModel):
         lines += [f"Threatening message: {m}" for m in self.chat.threats]
         lines += [f"Agreement in chat: {m}" for m in self.chat.agreements]
         lines += [f"Disagreement in chat: {m}" for m in self.chat.disagreements]
+        # Last in the group, so the existing CHAT-n evidence IDs keep their numbers.
+        for party, tone in (("Rider", self.chat.rider_tone), ("Driver", self.chat.driver_tone)):
+            if tone:
+                lines.append(f"{party} tone: {tone.tone} ({tone.messages} of {tone.total} "
+                             f"{'message' if tone.total == 1 else 'messages'})")
         lines = groups["history"]
         for party, history in (("Rider", self.rider_history), ("Driver", self.driver_history)):
             summary = _describe_history(history)
@@ -160,8 +190,32 @@ def _describe_history(history: PartyHistory) -> str:
 def _matches(text: str, patterns: list[str]) -> bool:
     return any(re.search(p, text, re.IGNORECASE) for p in patterns)
 
+def _message_tone(text: str) -> Tone:
+    if _matches(text, THREAT_PATTERNS):
+        return "hostile"
+    if _matches(text, NEGATIVE_PATTERNS):
+        return "negative"
+    if _matches(text, POSITIVE_PATTERNS):
+        return "positive"
+    return "neutral"
+
+def _party_tone(messages: list[ChatMessage], sender: str) -> PartyTone | None:
+    """Hostile if any message threatens; otherwise the most common tone, ties going
+    negative, then positive, then neutral (a complaint outweighs small talk)."""
+    tones = Counter(_message_tone(m.message) for m in messages if m.sender == sender)
+    if not tones:
+        return None
+    total = sum(tones.values())
+    if tones["hostile"]:
+        return PartyTone(tone="hostile", messages=tones["hostile"], total=total)
+    tone = max(("negative", "positive", "neutral"), key=lambda t: tones[t])
+    return PartyTone(tone=tone, messages=tones[tone], total=total)
+
 def analyse_chat(messages: list[ChatMessage]) -> ChatAnalysis:
-    analysis = ChatAnalysis()
+    analysis = ChatAnalysis(
+        rider_tone=_party_tone(messages, "rider"),
+        driver_tone=_party_tone(messages, "driver"),
+    )
     for m in messages:
         # Quoted chat reaches the prompts, so strip control characters (H8) and contact details.
         quoted = f'{m.sender}: "{redact_contacts(sanitise(m.message))}"'

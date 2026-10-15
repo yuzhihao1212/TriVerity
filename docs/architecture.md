@@ -9,8 +9,11 @@
 2. **Evidence loader** (`backend/app/services/evidence.py`). Computes `CaseFacts` from the raw data:
    how much longer and slower the route was, the fare difference and whether the itemised breakdown
    explains the charge, how far the driver stopped from the pickup point, the waiting time, whether the
-   driver tried to make contact, and threats, agreements and disagreements in the chat. No LLM is
-   involved, so facts are never generated. GPS telemetry is validated, capped at 5,000 points,
+   driver tried to make contact, threats, agreements and disagreements in the chat, and each party's
+   chat tone (positive, neutral, negative, or hostile when they threatened, from short keyword lists;
+   system messages ignored). Tone is evidence the advocates can cite (e.g. "Rider tone: negative
+   (3 of 4 messages)"); no policy rule reads it, and the Judge's party messages never see or mention it.
+   No LLM is involved, so facts are never generated. GPS telemetry is validated, capped at 5,000 points,
    ordered in linear time and deduplicated before computing the observed path, sustained stops
    and data gaps. Stops near pickup, marked as arrived/completed, or near a route's final observed
    position are excluded; `TripData` has no drop-off coordinates, so that final position is an
