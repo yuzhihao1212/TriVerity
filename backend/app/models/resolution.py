@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 Decision = Literal["partial_refund", "full_refund", "compensation", "no_action", "needs_review"]
 CaseSource = Literal["llm", "fallback"]
 RiskLevel = Literal["low", "medium", "high"]
+TriageTier = Literal["safety", "high", "standard", "low"]
 
 class Rebuttal(BaseModel):
     """An advocate's reply to the other side's case (second round)."""
@@ -31,6 +32,16 @@ class RiskAssessment(BaseModel):
     signals: list[str] = Field(default_factory=list)
     summary: str = ""
 
+class Triage(BaseModel):
+    """Review priority for an escalated dispute (internal only; see services/triage.py).
+
+    ``tier`` is None when no human review is needed. ``score`` (0-100) orders
+    cases within a tier; the tier itself always wins.
+    """
+    tier: TriageTier | None = None
+    score: int = Field(default=0, ge=0, le=100)
+    reasons: list[str] = Field(default_factory=list)
+
 class AgentLogEntry(BaseModel):
     step: int
     agent: str
@@ -55,6 +66,7 @@ class Resolution(Ruling):
     rider_case: AgentCase
     driver_case: AgentCase
     risk: RiskAssessment = Field(default_factory=RiskAssessment)
+    triage: Triage = Field(default_factory=Triage)
     agent_log: list[AgentLogEntry] = Field(default_factory=list)
 
 class PartyResolution(BaseModel):

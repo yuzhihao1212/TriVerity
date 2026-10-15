@@ -38,7 +38,7 @@ but unknown fields are dropped (not kept or returned).
 ### Views: `?view=internal | rider | driver`
 
 The default, `internal`, returns the full `Resolution` below, for the reviewer console.
-It contains internal data: the fraud `risk`, both parties' history in `judge_evidence`,
+It contains internal data: the fraud `risk`, the review `triage`, both parties' history in `judge_evidence`,
 the advocates' cases and the agent log. A client facing the rider or the driver must ask
 for its own view instead:
 
@@ -118,6 +118,7 @@ See `backend/app/models/resolution.py`.
     "signals": ["Rider has 4 disputes in the last 90 days"],
     "summary": "Rider: medium risk (1 signal); Driver: low risk"
   },
+  "triage": {"tier": "safety | high | standard | low | null", "score": 0, "reasons": ["Threatening message in chat (SAFE-1)"]},
   "agent_log": [{"step": 1, "agent": "evidence_loader", "status": "completed", "message": "string"}]
 }
 ```
@@ -137,6 +138,11 @@ See `backend/app/models/resolution.py`.
   bad-faith indicators (e.g. 3+ disputes in 90 days, low rating, claims contradicted
   by trip data). The fraud agent never changes a refund or penalises anyone; a
   `high` risk for either party triggers `FRAUD-1` escalation to human review.
+- `triage` orders escalated disputes for human reviewers (internal only, never in the rider or driver
+  view). `tier` is `null` when no review is needed; otherwise `safety` (SAFE-1, always first), `high`
+  (FRAUD-1), `standard` (missing evidence or low confidence) or `low` (the same, with a proposed refund
+  under $5). `score` (0-100) orders cases within a tier from the escalation rules, the amount at stake and
+  how far confidence falls below 60%; weights are in the policy's `triage` section.
 - An advocate's `evidence_ids` are the IDs of the computed facts it cited (prefixes `TRIP`, `GPS`, `FARE`,
   `CHAT`, `HIST`), `evidence` their exact text, and `sources` the evidence sources used. `rebuttal` is its
   reply to the other side; an empty `text` with `source: "fallback"` means no rebuttal was made.

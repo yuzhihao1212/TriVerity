@@ -10,6 +10,7 @@ from app.models.dispute import DisputeCase
 from app.models.resolution import AgentLogEntry, Resolution
 from app.core import limits
 from app.services.evidence import compute_facts
+from app.services.triage import triage
 
 # Caps how many resolves run their LLM calls at once, so slow model calls can't
 # starve the server's thread pool (and /health with it).
@@ -67,5 +68,6 @@ def resolve_dispute(case: DisputeCase) -> Resolution:
         rider_case=rider_case,
         driver_case=driver_case,
         risk=risk,
+        triage=triage(ruling),
         agent_log=agent_log,
     )

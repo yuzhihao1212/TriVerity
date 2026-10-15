@@ -1,7 +1,7 @@
 """Score every sample dispute against its expected ruling in data/expected_rulings.json.
 
 Measures, per sample and overall:
-- ruling: decision, refund and policy rules match the expected label
+- ruling: decision, refund, policy rules and triage tier match the expected label
 - citations: advocate rules that support the other side ("wrong side") or neither side
 - AI rate: how often each agent's output came from the LLM rather than the fallback
 
@@ -53,6 +53,7 @@ def score(result: Resolution, expected: dict) -> dict:
         "decision_ok": result.decision == expected["decision"],
         "refund_ok": refund_ok,
         "rules_ok": set(rule_ids(result.policy_refs)) == set(expected["policy_refs"]),
+        "tier_ok": result.triage.tier == expected.get("tier"),
         "source": {
             "rider": result.rider_case.source,
             "driver": result.driver_case.source,
@@ -63,7 +64,7 @@ def score(result: Resolution, expected: dict) -> dict:
         "wrong_side": [],
         "neither_side": [],
     }
-    row["ruling_ok"] = row["decision_ok"] and row["refund_ok"] and row["rules_ok"]
+    row["ruling_ok"] = row["decision_ok"] and row["refund_ok"] and row["rules_ok"] and row["tier_ok"]
     supports = expected["supports"]
     for party, other, case in (
         ("rider", "driver", result.rider_case),

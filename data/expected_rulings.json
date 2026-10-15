@@ -1,12 +1,12 @@
 {
-  "_note": "Expected ruling per sample, and which policy rules each side may cite given its facts (a rule supports a side when its condition, applied to the facts, favours that side). Escalation rules (RD-4, NS-4, SAFE-1, FRAUD-1, ESC-1, REF-1) support neither side. DISP-002's label is the organisers' own.",
-  "D001": {"decision": "partial_refund", "refund": 6.3, "policy_refs": ["RD-3"], "supports": {"rider": ["RD-3"], "driver": []}},
-  "D002": {"decision": "needs_review", "refund": null, "policy_refs": ["NS-4"], "supports": {"rider": ["NS-3"], "driver": ["NS-1"]}},
-  "D003": {"decision": "no_action", "refund": null, "policy_refs": ["RD-1"], "supports": {"rider": [], "driver": ["RD-1"]}},
-  "D004": {"decision": "no_action", "refund": null, "policy_refs": ["RD-2"], "supports": {"rider": [], "driver": ["RD-2"]}},
-  "D005": {"decision": "full_refund", "refund": 4.0, "policy_refs": ["NS-1"], "supports": {"rider": ["NS-1"], "driver": ["NS-2", "NS-3"]}},
-  "D006": {"decision": "no_action", "refund": null, "policy_refs": ["NS-1", "NS-2", "NS-3"], "supports": {"rider": [], "driver": ["NS-1", "NS-2", "NS-3"]}},
-  "D007": {"decision": "needs_review", "refund": 6.9, "policy_refs": ["RD-3", "SAFE-1", "FRAUD-1"], "supports": {"rider": ["RD-3"], "driver": []}},
-  "D008": {"decision": "needs_review", "refund": 6.3, "policy_refs": ["RD-3", "FRAUD-1"], "supports": {"rider": ["RD-3"], "driver": []}},
-  "DISP-002": {"decision": "no_action", "refund": null, "policy_refs": ["NS-1", "NS-2", "NS-3"], "supports": {"rider": [], "driver": ["NS-1", "NS-2", "NS-3"]}}
+  "_note": "Expected ruling per sample, and which policy rules each side may cite given its facts (a rule supports a side when its condition, applied to the facts, favours that side). Escalation rules (RD-4, NS-4, SAFE-1, FRAUD-1, ESC-1, REF-1) support neither side. DISP-002's label is the organisers' own. tier is the internal triage tier (null = no human review needed).",
+  "D001": {"decision": "partial_refund", "refund": 6.3, "policy_refs": ["RD-3"], "tier": null, "supports": {"rider": ["RD-3"], "driver": []}},
+  "D002": {"decision": "needs_review", "refund": null, "policy_refs": ["NS-4"], "tier": "standard", "supports": {"rider": ["NS-3"], "driver": ["NS-1"]}},
+  "D003": {"decision": "no_action", "refund": null, "policy_refs": ["RD-1"], "tier": null, "supports": {"rider": [], "driver": ["RD-1"]}},
+  "D004": {"decision": "no_action", "refund": null, "policy_refs": ["RD-2"], "tier": null, "supports": {"rider": [], "driver": ["RD-2"]}},
+  "D005": {"decision": "full_refund", "refund": 4.0, "policy_refs": ["NS-1"], "tier": null, "supports": {"rider": ["NS-1"], "driver": ["NS-2", "NS-3"]}},
+  "D006": {"decision": "no_action", "refund": null, "policy_refs": ["NS-1", "NS-2", "NS-3"], "tier": null, "supports": {"rider": [], "driver": ["NS-1", "NS-2", "NS-3"]}},
+  "D007": {"decision": "needs_review", "refund": 6.9, "policy_refs": ["RD-3", "SAFE-1", "FRAUD-1"], "tier": "safety", "supports": {"rider": ["RD-3"], "driver": []}},
+  "D008": {"decision": "needs_review", "refund": 6.3, "policy_refs": ["RD-3", "FRAUD-1"], "tier": "high", "supports": {"rider": ["RD-3"], "driver": []}},
+  "DISP-002": {"decision": "no_action", "refund": null, "policy_refs": ["NS-1", "NS-2", "NS-3"], "tier": null, "supports": {"rider": [], "driver": ["NS-1", "NS-2", "NS-3"]}}
 }
