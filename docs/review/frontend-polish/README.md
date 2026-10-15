@@ -51,3 +51,34 @@ list sometimes differ in length. IDs are displayed only when supplied lists alig
 frontend does not guess new IDs or alter any evidence. Source labels are display categories,
 with unrecognised text retained as “Case evidence”. Skipped rebuttals remain visibly empty,
 with no simulated AI reply. The existing build/dev-tool dependency advisories are unchanged.
+
+## P2 added after the P1 push
+
+- Clicking an unambiguous evidence ID opens its reference list, scrolls to the exact fact
+  and focuses/highlights it. The same action works from rebuttal evidence and on repeated
+  selection after closing the reference list. Contradictory ID/text pairs are not linked.
+- Sidebar route/clock icons are decorative inline SVGs; the labelled type filter keeps
+  current selection and cached resolved badges. It does not run agents or auto-select a case.
+- Presentation mode increases body, controls and metadata type sizes for projectors. The
+  pressed-state button persists a boolean preference in localStorage; reads and writes
+  tolerate blocked storage. It still works for the current session if storage is unavailable.
+- **19 frontend tests pass**. Added tests for reference conflicts, stable filtering, and
+  enabled/disabled/blocked-storage preferences. TypeScript and the production build pass.
+- Browser tested filters, persisted mode after reload, blocked storage, repeated fact focus,
+  cached badges, and zero extra requests from these controls. An explicitly constructed
+  aligned-ID fixture exercised reference navigation; committed screenshots use the three
+  original offline responses and retain Fallback badges, without fabricated model output.
+- In presentation mode, all 162 sampled text nodes pass contrast: minimum **4.87:1 light**
+  and **4.58:1 dark**. No overflow at 1280×720 or 375×812. The full P1 regression checks
+  also pass after P2. No screen-reader speech testing was performed.
+
+Additional inspected views:
+
+- [Two debate rounds](debate-light.png)
+- [Honest loading on a projector](loading-projector.png), captured with a deliberately delayed
+  offline response; it shows no completed stages or simulated progress.
+- [Presentation mode on a projector](presentation-projector.png)
+
+The evidence-ID limitation above remains: unequal lists are preserved without a guessed
+mapping. Reference navigation is available only where the response supplies a unique,
+aligned ID/text pair. Nothing here changes that backend contract.
