@@ -811,3 +811,40 @@ main[tabindex="-1"]:focus { outline: none; }
 @keyframes console-intro-fade { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(1.04); } }
 /* The CTA navigates natively under reduced motion; this is a backstop. */
 @media (prefers-reduced-motion: reduce) { .console-intro { display: none; } }
+
+/* Landing hero visual: the photo plus a floating ruling card (Landing.tsx, HeroVisual). */
+.landing-hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 560px); align-items: center; gap: 56px; }
+.landing-hero-visual { position: relative; margin: 0; animation: hero-rise .6s cubic-bezier(.22, 1, .36, 1) both; }
+.landing-hero-visual img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; object-position: 55% 40%; border-radius: 24px; box-shadow: 0 24px 60px rgb(43 47 54 / .16); }
+.hero-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ok-text); flex: none; }
+.hero-speed { position: absolute; top: 18px; right: 18px; display: inline-flex; align-items: center; gap: var(--space-2); padding: 6px 12px; border-radius: 999px; background: var(--bg); color: var(--text); font-size: 12px; font-weight: 600; box-shadow: 0 6px 18px rgb(43 47 54 / .14); }
+.hero-ruling { position: absolute; left: -36px; bottom: -32px; width: min(300px, 70%); display: grid; gap: 6px; padding: 16px 18px; border: 1px solid var(--border); border-radius: 18px; background: var(--bg); color: var(--text); box-shadow: 0 18px 44px rgb(43 47 54 / .18); animation: hero-rise .6s cubic-bezier(.22, 1, .36, 1) .18s both; }
+.hero-ruling p { margin: 0; }
+.hero-ruling-head { display: flex; align-items: center; justify-content: space-between; font-size: 12px; }
+.hero-ruling-status { display: inline-flex; align-items: center; gap: var(--space-2); font-weight: 600; color: var(--ok-text); }
+.hero-ruling-id { color: var(--muted); font-weight: 600; letter-spacing: .02em; }
+.hero-ruling-outcome { font-size: 20px; font-weight: 600; letter-spacing: -.02em; }
+.hero-ruling-outcome strong { color: var(--ok-text); }
+.hero-ruling-why { font-size: 13px; color: var(--muted); }
+.hero-ruling-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 11px; }
+.hero-steps { display: inline-flex; gap: 8px; color: var(--muted); white-space: nowrap; }
+.hero-confidence { font-weight: 600; white-space: nowrap; }
+[data-theme="dark"] .landing-hero-visual img, [data-theme="dark"] .hero-ruling, [data-theme="dark"] .hero-speed { box-shadow: 0 18px 44px rgb(0 0 0 / .45); }
+@keyframes hero-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@media (max-width: 1100px) {
+  .landing-hero-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 440px); gap: 40px; }
+}
+@media (max-width: 900px) {
+  .landing-hero-grid { grid-template-columns: minmax(0, 1fr); gap: 40px; }
+  .landing-hero-visual { max-width: 620px; margin-bottom: 36px; }
+  .hero-ruling { left: 16px; }
+}
+@media (max-width: 600px) {
+  .landing-hero-visual { margin-bottom: 0; }
+  .landing-hero-visual img { border-radius: 18px; aspect-ratio: 4 / 3; object-position: 52% 35%; }
+  /* Below the photo, overlapping only its bottom edge, so the people stay visible. */
+  .hero-ruling { position: relative; left: auto; bottom: auto; width: calc(100% - 32px); margin: -40px auto 0; padding: 12px 14px; }
+  .hero-ruling-outcome { font-size: 18px; }
+  .hero-speed { top: 12px; right: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .landing-hero-visual, .hero-ruling { animation: none; } }

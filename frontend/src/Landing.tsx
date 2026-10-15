@@ -2,6 +2,8 @@ import type { MouseEvent } from "react";
 import { focusSection } from "./routes";
 import { PresentationToggle, ThemeToggle } from "./ThemeToggle";
 import type { Theme } from "./theme";
+import heroLarge from "./assets/hero-ride-1536.webp";
+import heroSmall from "./assets/hero-ride-768.webp";
 
 const GITHUB = "https://github.com/yuzhihao1212/TriVerity";
 
@@ -56,7 +58,8 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
     </header>
     <main id="landing-main" tabIndex={-1}>
       <section className="landing-hero" aria-labelledby="landing-title">
-        <div className="landing-wrap">
+        <div className="landing-wrap landing-hero-grid">
+          <div className="landing-hero-copy">
           <p className="landing-kicker">Multi-agent dispute resolution for Ryde</p>
           <h1 id="landing-title" tabIndex={-1}>TriVerity<span className="landing-dot" aria-hidden="true">.</span></h1>
           <p className="landing-byline">By OeroAI</p>
@@ -65,6 +68,8 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
           <div className="landing-actions"><a className="landing-primary" href="#/console" onClick={onOpenConsole}>Open the reviewer console <span aria-hidden="true">↗</span></a>
             <a href={GITHUB}>View the source on GitHub <span aria-hidden="true">↗</span></a></div>
           <p className="landing-provider muted">Built on Tencent Hy3 via Tencent Cloud TokenHub.</p>
+          </div>
+          <HeroVisual />
         </div>
       </section>
       <div className="landing-wrap landing-sections">
@@ -102,4 +107,24 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
       <nav aria-label="Documentation"><a href={`${GITHUB}/blob/main/docs/architecture.md`}>Architecture</a><a href={`${GITHUB}/blob/main/docs/security.md`}>Security</a><a href={`${GITHUB}/blob/main/docs/evaluation.md`}>Evaluation</a></nav>
     </div></footer>
   </div>;
+}
+
+/** The people a dispute is about, with the kind of ruling TriVerity gives them (D001's real result). */
+function HeroVisual() {
+  return <figure className="landing-hero-visual">
+    <img src={heroLarge} srcSet={`${heroSmall} 768w, ${heroLarge} 1536w`} sizes="(max-width: 760px) 100vw, 560px"
+      width={1536} height={1024} fetchPriority="high" decoding="async"
+      alt="A smiling driver turns around in the front seat to greet a rider who is holding a phone at the open rear door." />
+    <div className="hero-speed" aria-hidden="true"><span className="hero-dot" />Ruled in about 16 s</div>
+    <div className="hero-ruling" role="img"
+      aria-label="Example ruling for sample dispute D001: partial refund of $6.30, 80% confident. The route was 44% longer with a 6-minute stop.">
+      <div className="hero-ruling-head"><span className="hero-ruling-status"><span className="hero-dot" />Ruling ready</span><span className="hero-ruling-id">D001</span></div>
+      <p className="hero-ruling-outcome">Partial refund <strong>$6.30</strong></p>
+      <p className="hero-ruling-why">Route 44% longer · 6-min stop</p>
+      <div className="hero-ruling-foot">
+        <span className="hero-steps"><span>✓ Evidence</span><span>✓ Hearing</span><span>✓ Ruling</span></span>
+        <span className="hero-confidence">80% confident</span>
+      </div>
+    </div>
+  </figure>;
 }
