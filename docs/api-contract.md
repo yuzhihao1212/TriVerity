@@ -194,7 +194,8 @@ See `backend/app/models/resolution.py`.
   automatically instead of escalating (e.g. missing data recorded). Internal only.
 - `agent_log` steps: `evidence_loader`, `evidence_collector`, `rider_advocate`, `driver_advocate`,
   `fraud_detector`, `rider_rebuttal`, `driver_rebuttal`, `precedent_agent`, `judge`.
-- `compensation` is reserved for payouts beyond a refund; no rule produces it yet.
+- `compensation` (rule RD-5): an unjustified detour (RD-3) that also included an unexpected stop of 10 minutes or
+  more. `refund_amount` is the total: the fare charged above the expected fare plus a $5.00 credit for the lost time.
 
 ## POST `/api/precedents/feedback`
 

@@ -93,7 +93,8 @@ def test_escalations_say_what_the_rules_alone_would_decide():
 def test_sample_wording():
     d001 = [cf.change for cf in resolve_dispute(SAMPLES["D001"]).counterfactuals]
     assert d001 == ["the route had been at most 15% longer than expected (it was 44% longer)",
-                    "the trip had taken no longer than expected (it was 59% slower)"]
+                    "the trip had taken no longer than expected (it was 59% slower)",
+                    "the unexpected stop had lasted 10 minutes or more (it lasted 6)"]
     d005 = resolve_dispute(SAMPLES["D005"]).counterfactuals
     assert [(cf.change, cf.decision) for cf in d005] == [
         ("the driver had stopped within 100 m of the pickup point (they stopped 378 m away)", "no_action")]

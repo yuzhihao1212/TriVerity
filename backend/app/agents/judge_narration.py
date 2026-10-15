@@ -230,6 +230,8 @@ def _check(texts: dict, case: DisputeCase, ruling: Ruling, rider_case: AgentCase
         return "money-format: money not written as $12.34"
     fare = case.fare
     known = [ruling.refund_amount, fare.expected, fare.actual, fare.cancellation_fee, fare.promo_discount]
+    if ruling.decision == "compensation":   # RD-5: the fare refund and the credit, mentioned separately
+        known.append(load_policy()["route_deviation"]["thresholds"]["compensation_credit"])
     if fare.expected is not None and fare.actual is not None:
         known.append(abs(fare.actual - fare.expected))
     allowed = {round(a, 2) for a in known if a is not None}

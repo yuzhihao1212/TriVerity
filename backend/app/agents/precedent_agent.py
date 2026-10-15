@@ -49,8 +49,10 @@ def check_consistency(report: PrecedentReport, decision: Decision) -> tuple[Prec
             "consistency": "no_precedent",
             "summary": "No closely similar past ruling in the knowledge base.",
         }), []
-    agree = [m for m in close if m.decision == decision]
-    overrides = [m for m in close if m.decided_by == "human_review" and m.decision != decision]
+    # Compensation (RD-5) is the partial refund plus a credit, so refund precedents agree with it.
+    same = {"partial_refund", "compensation"} if decision in ("partial_refund", "compensation") else {decision}
+    agree = [m for m in close if m.decision in same]
+    overrides = [m for m in close if m.decided_by == "human_review" and m.decision not in same]
     min_overrides = load_policy()["precedent"]["thresholds"]["min_human_overrides"]
     ids = ", ".join(m.id for m in close)
     if len(overrides) >= min_overrides:
