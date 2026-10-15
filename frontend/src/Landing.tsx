@@ -1,9 +1,10 @@
-import type { MouseEvent } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import { focusSection } from "./routes";
 import { PresentationToggle, ThemeToggle } from "./ThemeToggle";
 import type { Theme } from "./theme";
 import heroLarge from "./assets/hero-ride-1536.webp";
 import heroSmall from "./assets/hero-ride-768.webp";
+import { HERO_ROTATE_MS, HERO_RULINGS, nextHeroIndex } from "./heroRulings";
 
 const GITHUB = "https://github.com/yuzhihao1212/TriVerity";
 
@@ -109,22 +110,69 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
   </div>;
 }
 
-/** The people a dispute is about, with the kind of ruling TriVerity gives them (D001's real result). */
+/** The people a dispute is about, with real rulings TriVerity gave on the sample cases, rotating. */
 function HeroVisual() {
   return <figure className="landing-hero-visual">
     <img src={heroLarge} srcSet={`${heroSmall} 768w, ${heroLarge} 1536w`} sizes="(max-width: 760px) 100vw, 560px"
       width={1536} height={1024} fetchPriority="high" decoding="async"
       alt="A smiling driver turns around in the front seat to greet a rider who is holding a phone at the open rear door." />
-    <div className="hero-speed" aria-hidden="true"><span className="hero-dot" />Ruled in about 16 s</div>
-    <div className="hero-ruling" role="img"
-      aria-label="Example ruling for sample dispute D001: partial refund of $6.30, 80% confident. The route was 44% longer with a 6-minute stop.">
-      <div className="hero-ruling-head"><span className="hero-ruling-status"><span className="hero-dot" />Ruling ready</span><span className="hero-ruling-id">D001</span></div>
-      <p className="hero-ruling-outcome">Partial refund <strong>$6.30</strong></p>
-      <p className="hero-ruling-why">Route 44% longer · 6-min stop</p>
-      <div className="hero-ruling-foot">
-        <span className="hero-steps"><span>✓ Evidence</span><span>✓ Hearing</span><span>✓ Ruling</span></span>
-        <span className="hero-confidence">80% confident</span>
-      </div>
-    </div>
+    <div className="hero-speed" aria-hidden="true"><span className="hero-dot ok" />Ruled in about 16 s</div>
+    <HeroRulingCard />
   </figure>;
+}
+
+/**
+ * Cycles through example rulings every HERO_ROTATE_MS. Pauses while hovered or focused,
+ * and when the viewer presses pause or picks a case; never rotates under reduced motion.
+ */
+function HeroRulingCard() {
+  const [index, setIndex] = useState(0);
+  const [held, setHeld] = useState(false);       // hover or keyboard focus inside
+  const [stopped, setStopped] = useState(false); // the pause button, or a case picked by hand
+  const [reduced, setReduced] = useState(() => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false);
+  useEffect(() => {
+    const query = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    if (!query) return;
+    const change = (event: MediaQueryListEvent) => setReduced(event.matches);
+    query.addEventListener("change", change);
+    return () => query.removeEventListener("change", change);
+  }, []);
+  const rotating = !reduced && !stopped && HERO_RULINGS.length > 1;
+  useEffect(() => {
+    if (!rotating || held) return;
+    const timer = window.setInterval(() => setIndex(i => nextHeroIndex(i, HERO_RULINGS.length)), HERO_ROTATE_MS);
+    return () => window.clearInterval(timer);
+  }, [rotating, held]);
+  const ruling = HERO_RULINGS[index];
+  if (!ruling) return null;
+  return <section className={`hero-ruling ${ruling.tone}`} aria-roledescription="carousel" aria-label="Example rulings"
+    onMouseEnter={() => setHeld(true)} onMouseLeave={() => setHeld(false)}
+    onFocus={() => setHeld(true)} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setHeld(false); }}>
+    {/* Auto-rotation is not announced; a case the viewer picks is. */}
+    <p className="sr-only" aria-live={stopped ? "polite" : "off"}>{ruling.label}</p>
+    {/* Every slide shares one grid cell, so the card is always as tall as the tallest and never jumps. */}
+    <div className="hero-ruling-slides" aria-hidden="true">
+      {HERO_RULINGS.map((item, i) => <div key={item.id} className={`hero-ruling-slide ${item.tone}${i === index ? " active" : ""}`}>
+        <div className="hero-ruling-head">
+          <span className="hero-ruling-status"><span className={`hero-dot ${item.tone}`} />{item.status}</span>
+          <span className="hero-ruling-id">{item.id} · {item.kind}</span>
+        </div>
+        <p className="hero-ruling-outcome">{item.outcome}{item.amount && <> <strong>{item.amount}</strong></>}</p>
+        <p className="hero-ruling-why">{item.why}</p>
+      </div>)}
+    </div>
+    <div className="hero-ruling-foot">
+      <span className="hero-confidence" aria-hidden="true">{ruling.confidence}</span>
+      <span className="hero-controls">
+        {HERO_RULINGS.map((item, i) => <button key={item.id} type="button" className="hero-pick" aria-pressed={i === index}
+          aria-label={`Show example ${i + 1} of ${HERO_RULINGS.length}: ${item.id}`} onClick={() => { setIndex(i); setStopped(true); }} />)}
+        {!reduced && HERO_RULINGS.length > 1 && <button type="button" className="hero-pause" onClick={() => setStopped(s => !s)}
+          aria-label={stopped ? "Play example rulings" : "Pause example rulings"}>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
+            {stopped ? <path d="M8 5.5v13l10-6.5Z" /> : <path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" />}
+          </svg>
+        </button>}
+      </span>
+    </div>
+  </section>;
 }
