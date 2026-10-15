@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { FactLibrary } from "./FactLibrary";
 import { CaseComparison } from "./CaseComparison";
 import { Debate } from "./Debate";
 import { EvidenceList } from "./EvidenceList";
 import { VerdictSummary } from "./VerdictSummary";
-import { money } from "./presentation";
+import { factIndex, filterDisputes, money, readPresentationPreference, writePresentationPreference } from "./presentation";
 import { PartyPreview } from "./PartyPreview";
 import { DisputeForm } from "./DisputeForm";
 import { getSamples, resolveDispute } from "./services/api";
@@ -54,7 +55,15 @@ function saveAccessCode(code: string) {
   }
 }
 
+function loadPresentationMode() {
+  try { return readPresentationPreference(localStorage); } catch { return false; }
+}
+
 export default function App() {
+  const [presentation, setPresentation] = useState(loadPresentationMode);
+  const [filter, setFilter] = useState("all");
+  const [activeFact, setActiveFact] = useState<string | null>(null);
+  const [factRequest, setFactRequest] = useState(0);
   const [samples, setSamples] = useState<DisputeCase[]>([]);
   // Disputes the judge typed in; resolved with their access code.
   const [own, setOwn] = useState<DisputeCase[]>([]);
@@ -80,12 +89,14 @@ export default function App() {
   }, []);
 
   function select(dispute: DisputeCase) {
+    setActiveFact(null);
     setSelected(dispute);
     setForm(null);
     setError(null);
   }
 
   function addOwn(dispute: DisputeCase) {
+    setFilter("all");
     setOwn((prev) => [dispute, ...prev]);
     select(dispute);
   }
@@ -104,6 +115,7 @@ export default function App() {
     const isOwn = own.some((d) => d.dispute_id === dispute.dispute_id);
     resolveDispute(dispute, isOwn ? accessCode.trim() || undefined : undefined)
       .then((r) => {
+        setActiveFact(null);
         setResults((prev) => ({ ...prev, [dispute.dispute_id]: r }));
         setCompletedId(dispute.dispute_id);
       })
@@ -112,6 +124,28 @@ export default function App() {
   }
 
   const resolution = selected ? results[selected.dispute_id] : undefined;
+  const facts = useMemo(() => resolution ? factIndex(resolution) : [], [resolution]);
+  const factIds = useMemo(() => new Set(facts.map(fact => fact.id!)), [facts]);
+
+  function selectFact(id: string) {
+    if (!factIds.has(id)) return;
+    setActiveFact(id);
+    setFactRequest(value => value + 1);
+  }
+
+  function togglePresentation() {
+    const next = !presentation;
+    setPresentation(next);
+    try { writePresentationPreference(localStorage, next); } catch { /* Storage itself may be blocked. */ }
+  }
+
+  useEffect(() => {
+    if (!form && resolving === selected?.dispute_id) {
+      const heading = document.getElementById("loading-title");
+      heading?.scrollIntoView({ block: "start" });
+      heading?.focus({ preventScroll: true });
+    }
+  }, [resolving, selected?.dispute_id, form]);
 
   useEffect(() => {
     if (!completedId) return;
@@ -131,7 +165,7 @@ export default function App() {
       onClick={() => select(d)}
     >
       <span className="dispute-meta">
-        {d.dispute_id} · {TYPE_LABELS[d.type]}
+        <TypeIcon type={d.type} />{d.dispute_id} · {TYPE_LABELS[d.type]}
       </span>
       <span className="dispute-claim">{d.rider_claim}</span>
       {results[d.dispute_id] && (
@@ -141,12 +175,13 @@ export default function App() {
   );
 
   return (
-    <div className="app">
+    <div className={`app${presentation ? " presentation-mode" : ""}`}>
       <a className="skip-link" href="#main-content">Skip to dispute</a>
       <header className="topbar">
         <h1 className="brand">TriVerity</h1>
         <span className="muted">Multi-agent dispute resolution for Ryde</span>
         <div className="topbar-right">
+          <button type="button" className="secondary-button presentation-toggle" aria-pressed={presentation} onClick={togglePresentation}>Presentation mode</button>
           <label className="access-code">
             <span className="small muted">Judge access code</span>
             <input
@@ -172,14 +207,21 @@ export default function App() {
           <button className="secondary-button" onClick={() => { setForm({}); setError(null); }}>
             + New dispute
           </button>
+          <label className="sidebar-filter"><span className="section-label">Filter disputes</span>
+            <select value={filter} onChange={event => setFilter(event.target.value)}>
+              <option value="all">All dispute types</option><option value="route_deviation">Route deviation</option><option value="no_show_charge">No-show charge</option>
+            </select>
+          </label>
+          {selected && filter !== "all" && selected.type !== filter && <p className="small muted">The selected case is outside this filter.</p>}
+          {!loadingSamples && !filterDisputes([...own, ...samples], filter).length && <p className="small muted">No disputes match this filter.</p>}
           {own.length > 0 && (
             <>
               <h2 className="section-label">Your disputes</h2>
-              {own.map(disputeButton)}
+              {filterDisputes(own, filter).map(disputeButton)}
             </>
           )}
           <h2 className="section-label">Sample disputes</h2>
-          {samples.map(disputeButton)}
+          {filterDisputes(samples, filter).map(disputeButton)}
         </nav>
 
         <main className="content" id="main-content" tabIndex={-1}>
@@ -226,9 +268,10 @@ export default function App() {
           {!form && resolution && (
             <>
               <Workflow resolution={resolution} />
-              <Debate key={selected?.dispute_id} resolution={resolution} />
+              <Debate key={selected?.dispute_id} resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
               <section className="card"><RiskPanel risk={resolution.risk} /></section>
               <RulingPanel resolution={resolution} />
+              <FactLibrary key={selected?.dispute_id} facts={facts} activeId={activeFact} request={factRequest} />
               <PartyPreview key={selected?.dispute_id} resolution={resolution} />
               <details className="card raw">
                 <summary>Raw API response</summary>
@@ -248,7 +291,8 @@ function CasePanel({ dispute }: { dispute: DisputeCase }) {
   if (fare.cancellation_fee != null) facts.push(["No-show fee", money(fare.cancellation_fee)]);
   if (trip.driver_wait_min != null) facts.push(["Driver waited", `${trip.driver_wait_min} min`]);
   if (fare.surge_multiplier != null && fare.surge_multiplier > 1) facts.push(["Surge", `x${fare.surge_multiplier}`]);
-  if (fare.promo_code) facts.push(["Promo", `${fare.promo_code} (${money(fare.promo_discount)} off)`]);
+  if (fare.promo_code) facts.push(["Promo", fare.promo_discount != null
+    ? `${fare.promo_code} (${money(fare.promo_discount)} off)` : `${fare.promo_code} (discount not recorded)`]);
 
   return (
     <section className="card case-overview">
@@ -415,9 +459,17 @@ function RulingPanel({ resolution }: { resolution: Resolution }) {
 
 function LoadingPanel({ disputeId }: { disputeId: string }) {
   return <section className="card loading-state" aria-labelledby="loading-title">
-    <div className="card-head"><h2 id="loading-title">Agents working · {disputeId}</h2><span className="spinner" role="progressbar" aria-label="Waiting for the complete agent result" /></div>
+    <div className="card-head"><h2 id="loading-title" tabIndex={-1}>Agents working · {disputeId}</h2><span className="spinner" role="progressbar" aria-label="Waiting for the complete agent result" /></div>
     <p>About 10–15 seconds. The server returns one complete result; individual step progress is not available.</p>
     <ol className="pending-steps"><li>Evidence loader</li><li>Rider &amp; Driver advocates</li><li>Fraud detector</li><li>Rebuttal round</li><li>Judge: policy ruling &amp; explanation</li></ol>
     <p className="small muted">These are the stages of a resolve, not live progress. Any previous saved result remains below.</p>
   </section>;
+}
+
+function TypeIcon({ type }: { type: DisputeCase["type"] }) {
+  return <svg className="type-icon" viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true" focusable="false">
+    {type === "route_deviation"
+      ? <><circle cx="4" cy="4" r="2" /><circle cx="16" cy="16" r="2" /><path d="M6 4h6a4 4 0 0 1 0 8H8a4 4 0 0 0-4 4h10" /></>
+      : <><circle cx="10" cy="10" r="7" /><path d="M10 5v5l3 2" /></>}
+  </svg>;
 }

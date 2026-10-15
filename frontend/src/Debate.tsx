@@ -1,13 +1,13 @@
 import { useId } from "react";
 
-import { EvidenceList } from "./EvidenceList";
+import { EvidenceList, type FactLinks } from "./EvidenceList";
 import type { AgentCase, Resolution } from "./types";
 
 export function SourceBadge({ source }: { source: "llm" | "fallback" }) {
   return <span className={`source-badge ${source}`}>{source === "llm" ? "AI" : "Fallback"}</span>;
 }
 
-export function Debate({ resolution }: { resolution: Resolution }) {
+export function Debate({ resolution, availableIds, onSelectFact }: { resolution: Resolution } & FactLinks) {
   const id = useId();
   const argument = (side: "rider" | "driver", item: AgentCase) => (
     <article className={`advocate ${side}`} id={`${id}-${side}-argument`} tabIndex={-1}>
@@ -17,7 +17,7 @@ export function Debate({ resolution }: { resolution: Resolution }) {
       {item.policy_refs.length ? <ul className="small">{item.policy_refs.map(ref => <li key={ref}>{ref}</li>)}</ul>
         : <p className="small muted">No policy rules cited.</p>}
       <h5 className="section-label">Evidence by source</h5>
-      <EvidenceList texts={item.evidence} ids={item.evidence_ids} />
+      <EvidenceList texts={item.evidence} ids={item.evidence_ids} availableIds={availableIds} onSelectFact={onSelectFact} />
     </article>
   );
   const reply = (side: "rider" | "driver", item: AgentCase) => {
@@ -29,7 +29,7 @@ export function Debate({ resolution }: { resolution: Resolution }) {
         {item.rebuttal?.text ? <>
           <p>{item.rebuttal.text}</p>
           <h5 className="section-label">Evidence cited in reply</h5>
-          <EvidenceList texts={item.rebuttal.evidence} ids={item.rebuttal.evidence_ids} />
+          <EvidenceList texts={item.rebuttal.evidence} ids={item.rebuttal.evidence_ids} availableIds={availableIds} onSelectFact={onSelectFact} />
         </> : <p className="small muted">No reply generated. The rebuttal round runs only when both opening arguments use AI.</p>}
       </article>
     );

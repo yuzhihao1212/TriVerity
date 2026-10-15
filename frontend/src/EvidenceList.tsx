@@ -2,7 +2,9 @@ import { useId } from "react";
 
 import { evidenceItems, SOURCE_LABELS } from "./presentation";
 
-export function EvidenceList({ texts, ids = [] }: { texts: string[]; ids?: string[] }) {
+export interface FactLinks { availableIds?: Set<string>; onSelectFact?: (id: string) => void }
+
+export function EvidenceList({ texts, ids = [], availableIds, onSelectFact }: { texts: string[]; ids?: string[] } & FactLinks) {
   const id = useId();
   const items = evidenceItems(texts, ids);
   const render = (start: number, end?: number) => (
@@ -10,7 +12,9 @@ export function EvidenceList({ texts, ids = [] }: { texts: string[]; ids?: strin
       {items.slice(start, end).map((item, index) => (
         <li key={start + index}>
           <span className="source-chip">{SOURCE_LABELS[item.source]}</span>{" "}
-          {item.id && <span className="evidence-id">{item.id}</span>}
+          {item.id && (availableIds?.has(item.id) && onSelectFact
+            ? <button type="button" className="evidence-link" aria-label={`Find evidence ${item.id}`} onClick={() => onSelectFact(item.id!)}>{item.id}</button>
+            : <span className="evidence-id">{item.id}</span>)}
           {item.text}
         </li>
       ))}

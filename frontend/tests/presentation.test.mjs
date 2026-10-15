@@ -52,3 +52,34 @@ test('source display distinguishes skipped replies from fallback explanations', 
   assert.equal(outputSources({ rider_case:{source:'llm',rebuttal:{source:'fallback',text:''}},
     driver_case:{source:'llm'}, explanation_source:'llm' })[2].source, null);
 });
+
+test('fact index includes exact aligned references and rejects conflicting IDs', async () => {
+  const { factIndex } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`);
+  const rider = { evidence:['GPS path 14.7 km','Unexpected stop: 6 min'], evidence_ids:['GPS-1','GPS-2'],
+    rebuttal:{evidence:['Unexpected stop: 6 min'],evidence_ids:['GPS-2']} };
+  const driver = { evidence:['GPS path 14.7 km'],evidence_ids:['GPS-1'],rebuttal:null };
+  assert.deepEqual(factIndex({rider_case:rider,driver_case:driver}).map(x=>x.id), ['GPS-1','GPS-2']);
+  assert.deepEqual(factIndex({rider_case:rider,driver_case:{...driver,evidence:['Conflicting path']}}).map(x=>x.id), ['GPS-2']);
+  assert.deepEqual(factIndex({rider_case:{...rider,evidence_ids:[],rebuttal:null},driver_case:{...driver,evidence_ids:[]}}), []);
+});
+
+test('filtering preserves case order and never mutates or chooses a different case', async () => {
+  const { filterDisputes } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`);
+  const cases = [{id:'D001',type:'route_deviation'},{id:'D005',type:'no_show_charge'}];
+  assert.equal(filterDisputes(cases,'all'),cases);
+  assert.deepEqual(filterDisputes(cases,'no_show_charge'),[cases[1]]);
+  assert.deepEqual(filterDisputes([], 'route_deviation'), []);
+  assert.equal(cases.length,2);
+});
+
+test('presentation preference tolerates blocked storage and persists only a boolean', async () => {
+  const { readPresentationPreference, writePresentationPreference } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`);
+  let value = null;
+  const storage = {getItem:()=>value,setItem:(key,next)=>{assert.equal(key,'triverity.presentation');value=next}};
+  assert.equal(readPresentationPreference(storage), false);
+  writePresentationPreference(storage,true); assert.equal(readPresentationPreference(storage),true);
+  writePresentationPreference(storage,false); assert.equal(readPresentationPreference(storage),false);
+  const blocked = {getItem:()=>{throw new Error('blocked')},setItem:()=>{throw new Error('blocked')}};
+  assert.equal(readPresentationPreference(blocked),false);
+  assert.doesNotThrow(()=>writePresentationPreference(blocked,true));
+});

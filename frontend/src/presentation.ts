@@ -58,3 +58,34 @@ export function outputSources(resolution: Resolution) {
     { label: "Judge explanation", source: resolution.explanation_source },
   ];
 }
+
+export function factIndex(resolution: Resolution): EvidenceItem[] {
+  const candidates = new Map<string, EvidenceItem>();
+  const conflicts = new Set<string>();
+  for (const item of [resolution.rider_case, resolution.driver_case]) {
+    for (const fact of [
+      ...evidenceItems(item.evidence, item.evidence_ids),
+      ...evidenceItems(item.rebuttal?.evidence ?? [], item.rebuttal?.evidence_ids ?? []),
+    ]) {
+      if (!fact.id) continue;
+      const previous = candidates.get(fact.id);
+      if (previous && previous.text !== fact.text) conflicts.add(fact.id);
+      else candidates.set(fact.id, fact);
+    }
+  }
+  return [...candidates.values()].filter(fact => !conflicts.has(fact.id!));
+}
+
+export function filterDisputes<T extends { type: string }>(cases: T[], type: string): T[] {
+  return type === "all" ? cases : cases.filter(item => item.type === type);
+}
+
+export function readPresentationPreference(storage: Pick<Storage, "getItem">): boolean {
+  try { return storage.getItem("triverity.presentation") === "true"; }
+  catch { return false; }
+}
+
+export function writePresentationPreference(storage: Pick<Storage, "setItem">, enabled: boolean): void {
+  try { storage.setItem("triverity.presentation", String(enabled)); }
+  catch { /* Presentation still works for this session if storage is blocked. */ }
+}
