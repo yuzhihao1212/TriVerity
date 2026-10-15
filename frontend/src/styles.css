@@ -336,6 +336,9 @@ textarea { width: 100%; resize: vertical; }
   .content { padding: var(--space-6); }
 }
 
+/* The AI switch's short phone label; the base rule sits BEFORE the phone media query so the query wins. */
+.ai-toggle-short { display: none; font-weight: 600; }
+
 @media (max-width: 760px) {
   .layout { grid-template-columns: minmax(0, 1fr); }
   .topbar { padding: var(--space-3) var(--space-4); gap: var(--space-2); }
@@ -347,7 +350,7 @@ textarea { width: 100%; resize: vertical; }
   .console-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .ai-toggle { padding-inline: var(--space-2); }
   .ai-toggle-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .ai-toggle .ai-toggle-short { display: inline; }
+  .ai-toggle-short { display: inline; }
   .access-code-field input { width: 100%; }
   .sidebar { position: static; max-height: min(320px, 45vh); border-right: 0; border-bottom: 1px solid var(--border); padding: var(--space-3) var(--space-4); }
   .sidebar > * { flex: none; }
@@ -594,7 +597,6 @@ textarea { width: 100%; resize: vertical; }
 .ai-toggle:hover { background: var(--accent-soft); }
 .ai-toggle strong { color: var(--accent-text); }
 .ai-toggle.offline strong { color: var(--text); }
-.ai-toggle-short { display: none; font-weight: 600; }
 .ai-toggle-track { position: relative; width: 28px; height: 16px; border-radius: 999px; background: var(--control-border); transition: background .15s; }
 .ai-toggle-thumb { position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--bg); transition: transform .15s; }
 .ai-toggle.live .ai-toggle-track { background: var(--accent-control); }
