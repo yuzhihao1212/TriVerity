@@ -126,18 +126,24 @@ textarea { width: 100%; resize: vertical; }
 .layout { display: grid; grid-template-columns: 236px minmax(0, 1fr); min-height: calc(100vh - 100px); transition: grid-template-columns .2s ease; }
 .layout.sidebar-collapsed { grid-template-columns: 60px minmax(0, 1fr); }
 .sidebar { display: flex; flex-direction: column; gap: var(--space-2); border-right: 1px solid var(--border); padding: var(--space-5) var(--space-3); align-self: start; position: sticky; top: 0; max-height: 100vh; overflow-y: auto; }
-.sidebar-filter { display: grid; gap: var(--space-1); margin-block: var(--space-2); }
-.sidebar-select { position: relative; display: block; }
-.sidebar-filter select { appearance: none; -webkit-appearance: none; width: 100%; min-height: 44px; padding-inline-end: var(--space-10); font-size: 12px; }
-.select-chevron { position: absolute; inset-inline-end: var(--space-3); top: 50%; width: 16px; height: 16px; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
-.dispute-item { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; min-height: 44px; padding: var(--space-1) var(--space-3); border: 0; border-left: 2px solid var(--transparent); border-radius: 0 8px 8px 0; background: var(--bg); color: var(--text); text-align: left; font-size: 12px; }
+/* Dispute sidebar: items (App.tsx disputeButton). */
+.dispute-list { display: grid; gap: 2px; list-style: none; margin: 0; padding: 0; }
+.dispute-item { display: grid; gap: 2px; width: 100%; padding: var(--space-2) var(--space-2); border: 0; border-radius: 8px; background: var(--transparent); color: var(--text); text-align: left; font-size: 13px; line-height: 1.4; }
 .dispute-item:hover { background: var(--surface); }
-.dispute-item.active { background: var(--accent-soft); border-left-color: var(--accent); }
-.dispute-meta { display: flex; align-items: center; gap: var(--space-1); color: var(--muted); font-size: 11px; font-weight: 500; }
-.dispute-item.active .dispute-meta { color: var(--accent-text); }
-.type-icon { flex: none; }
-.dispute-label { width: 100%; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--muted); font-size: 12px; line-height: 1.4; }
-.dispute-done { margin-top: var(--space-1); font-size: 10px; color: var(--muted); border-radius: 999px; padding: 1px 7px; background: var(--bg); }
+.dispute-item.active { background: var(--accent-soft); color: var(--accent-text); }
+.dispute-line { display: flex; align-items: flex-start; gap: var(--space-2); min-width: 0; }
+.type-icon { flex: none; margin-top: 1px; color: var(--muted); }
+.dispute-item.active .type-icon { color: var(--accent-text); }
+.dispute-label { min-width: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+/* Line 2: the ID, and the ruling status right-aligned (it does not fit beside a 2-line summary at 236 px). */
+.dispute-sub { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding-left: 26px; color: var(--muted); font-size: 11px; }
+.dispute-item.active .dispute-sub { color: var(--accent-text); }
+.dispute-id { font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.dispute-status { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.dispute-status .status-dot { width: 7px; height: 7px; }
+.dispute-status.ok .status-dot { background: var(--ok-text); }
+.dispute-status.warn .status-dot { background: var(--warn-text); }
+.dispute-status.neutral .status-dot { background: var(--control-border); }
 .content { padding: var(--space-8); min-width: 0; max-width: 1280px; }
 .content > [role="alert"]:has(> *) { margin-bottom: var(--space-5); }
 .case-file { min-width: 0; }
@@ -316,7 +322,7 @@ textarea { width: 100%; resize: vertical; }
 .presentation-mode .fact-card-head h3 { font-size: 17px; }
 .presentation-mode .fact-original, .presentation-mode .fact-related > summary, .presentation-mode .fact-tile-label, .presentation-mode .fact-tile-detail, .presentation-mode .fact-bubble-meta, .presentation-mode .receipt-note .fact-row-body { font-size: 13px; }
 .presentation-mode .fact-tile-value { font-size: 36px; }
-.presentation-mode .section-label, .presentation-mode .eyebrow, .presentation-mode .tag, .presentation-mode .source-badge, .presentation-mode .source-chip, .presentation-mode .dispute-meta, .presentation-mode .dispute-label, .presentation-mode .dispute-done, .presentation-mode .agent-entries p, .presentation-mode .evidence-id, .presentation-mode .evidence-link { font-size: 13px; }
+.presentation-mode .section-label, .presentation-mode .eyebrow, .presentation-mode .tag, .presentation-mode .source-badge, .presentation-mode .source-chip, .presentation-mode .dispute-sub, .presentation-mode .sidebar-group, .presentation-mode .sidebar-note, .presentation-mode .filter-chip, .presentation-mode .new-button, .presentation-mode .agent-entries p, .presentation-mode .evidence-id, .presentation-mode .evidence-link { font-size: 13px; }
 .presentation-mode .agent-entry-head, .presentation-mode .run-button, .presentation-mode .secondary-button, .presentation-mode .party-tabs button { font-size: 15px; }
 .presentation-mode .tab-label { font-size: 15px; }
 .presentation-mode .tab-progress { font-size: 12px; }
@@ -361,8 +367,7 @@ textarea { width: 100%; resize: vertical; }
 }
 
 @media (forced-colors: active) {
-  .sidebar-filter select { appearance: auto; -webkit-appearance: auto; }
-  .select-chevron { display: none; }
+  .filter-dot, .status-dot { forced-color-adjust: none; background: CanvasText; }
 }
 
 .precedent-list { display: grid; gap: var(--space-2); }
@@ -565,8 +570,35 @@ textarea { width: 100%; resize: vertical; }
 /* Collapsible dispute list */
 .sidebar-body { display: flex; flex-direction: column; gap: var(--space-2); }
 .sidebar-body[hidden] { display: none; }
-.sidebar-head { display: flex; align-items: center; gap: var(--space-2); }
+.sidebar-head { position: relative; display: flex; align-items: center; gap: var(--space-2); }
 .sidebar-head .section-label { margin: 0; }
+/* Header: collapse toggle on the left; the filter and "+ New" on the right. */
+.sidebar-actions { display: flex; align-items: center; gap: var(--space-1); margin-left: auto; }
+.new-button { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 var(--space-2); border: 0; border-radius: 8px; background: var(--transparent); color: var(--accent-text); font-size: 12px; font-weight: 600; }
+.new-button svg { width: 16px; height: 16px; }
+.new-button:hover { background: var(--accent-soft); }
+/* The popover is placed against the whole header row, so it always fits the sidebar's width. */
+.filter-menu { position: static; }
+.filter-button { position: relative; color: var(--muted); }
+.filter-button svg { width: 18px; height: 18px; }
+.filter-button.active, .filter-button[aria-expanded="true"] { color: var(--accent-text); }
+.filter-dot { position: absolute; top: 7px; right: 7px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--bg); }
+.filter-popover { position: absolute; z-index: 40; top: calc(100% + 4px); right: 0; display: grid; width: max-content; min-width: min(184px, 100%); max-width: 100%; padding: var(--space-1); border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); box-shadow: 0 8px 24px rgb(0 0 0 / .14); }
+.filter-option { display: flex; align-items: center; gap: var(--space-2); min-height: 36px; padding: 0 var(--space-3) 0 var(--space-2); border: 0; border-radius: 6px; background: var(--transparent); color: var(--text); font-size: 13px; text-align: left; white-space: nowrap; }
+.filter-option:hover, .filter-option:focus-visible { background: var(--surface); }
+.filter-option[aria-checked="true"] { color: var(--accent-text); font-weight: 600; }
+.filter-check { flex: none; width: 16px; height: 16px; }
+/* :where(...):focus-visible draws an outline-offset ring; inside the popover keep it within the menu. */
+.filter-option:focus-visible { outline-offset: -2px; }
+.filter-chip { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; min-height: 28px; padding: 0 var(--space-2) 0 var(--space-3); border: 0; border-radius: 999px; background: var(--accent-soft); color: var(--accent-text); font-size: 12px; font-weight: 600; }
+.filter-chip svg { width: 14px; height: 14px; }
+.filter-chip:hover { box-shadow: inset 0 0 0 1px var(--accent-text); }
+.sidebar-group { margin: var(--space-2) 0 0; padding-inline: var(--space-2); color: var(--muted); font-size: 11px; font-weight: 600; }
+.sidebar-note { margin: 0; padding-inline: var(--space-2); color: var(--muted); font-size: 11px; }
+.presentation-mode .dispute-item { font-size: 15px; }
+/* The console's main region receives focus after navigation (Router, skip link). It is a
+   landmark, not a control: its 3px focus ring drew a full-height accent line beside the sidebar. */
+main[tabindex="-1"]:focus { outline: none; }
 .icon-button { display: inline-grid; place-items: center; width: 36px; height: 36px; min-height: 36px; padding: 0; border: 1px solid var(--transparent); border-radius: 10px; background: var(--transparent); color: var(--text); flex: none; }
 .icon-button:hover { background: var(--surface, var(--border)); }
 .icon-button svg { width: 20px; height: 20px; }

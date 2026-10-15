@@ -25,12 +25,9 @@ import type { Theme } from "./theme";
 import { PartyPreview } from "./PartyPreview";
 import { DisputeForm } from "./DisputeForm";
 import { getSamples, resolveDisputeLive } from "./services/api";
+import { decisionTone, disputeItemName, filterLabel, filterShortLabel, STATUS_LABELS, TYPE_LABELS, type DisputeFilter } from "./disputeList";
+import { FilterMenu } from "./FilterMenu";
 import type { AgentLogEntry, ArgumentReview, Counterfactual, Decision, DisputeCase, PartyHistory, PrecedentReport, Resolution, RiskLevel, Triage, TriageTier } from "./types";
-
-const TYPE_LABELS: Record<DisputeCase["type"], string> = {
-  route_deviation: "Route deviation",
-  no_show_charge: "No-show charge",
-};
 
 const DECISION_LABELS: Record<Decision, string> = {
   partial_refund: "Partial refund",
@@ -65,7 +62,7 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
   active: boolean; sampleId?: string; presentation: boolean; onTogglePresentation: () => void;
   theme: Theme; onToggleTheme: () => void;
 }) {
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState<DisputeFilter>("all");
   const [aiMode, setAiMode] = useState<AiMode>(() => readAiMode(localStorage));
   const [sidebarOpen, setSidebarOpen] = useState(() => readSidebarOpen(localStorage));
   function toggleSidebar() {
@@ -204,22 +201,23 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
     setCompletedId(null);
   }, [active, completedId, selected, form]);
 
-  const disputeButton = (d: DisputeCase) => (
-    <button
-      key={d.dispute_id}
-      className={`dispute-item ${!form && selected?.dispute_id === d.dispute_id ? "active" : ""}`}
-      aria-current={!form && selected?.dispute_id === d.dispute_id ? "true" : undefined}
-      onClick={() => select(d)}
-    >
-      <span className="dispute-meta">
-        <TypeIcon type={d.type} />{d.dispute_id} · {TYPE_LABELS[d.type]}
-      </span>
-      <span className="dispute-label" title={disputeLabel(d)}>{disputeLabel(d)}</span>
-      {results[d.dispute_id] && (
-        <span className="dispute-done">{DECISION_LABELS[results[d.dispute_id].decision]}</span>
-      )}
-    </button>
-  );
+  const disputeButton = (d: DisputeCase) => {
+    const current = !form && selected?.dispute_id === d.dispute_id;
+    const summary = disputeLabel(d);
+    const decision = results[d.dispute_id]?.decision;
+    return <li key={d.dispute_id}>
+      <button type="button" className={`dispute-item${current ? " active" : ""}`} aria-current={current ? "true" : undefined}
+        aria-label={disputeItemName(d, summary, decision)} title={summary} onClick={() => select(d)}>
+        <span className="dispute-line"><TypeIcon type={d.type} /><span className="dispute-label">{summary}</span></span>
+        <span className="dispute-sub">
+          <span className="dispute-id">{d.dispute_id}</span>
+          {decision && <span className={`dispute-status ${decisionTone(decision)}`}><span className="status-dot" aria-hidden="true" />{STATUS_LABELS[decision]}</span>}
+        </span>
+      </button>
+    </li>;
+  };
+  const newDispute = () => { setForm({}); setError(null); };
+  const ownShown = filterDisputes(own, filter), samplesShown = filterDisputes(samples, filter);
 
   return (
     <div className={`app${presentation ? " presentation-mode" : ""}`}>
@@ -256,36 +254,31 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
           <div className="sidebar-head">
             <SidebarToggle open={sidebarOpen} onToggle={toggleSidebar} />
             {sidebarOpen
-              ? <span className="section-label">Disputes</span>
-              : <button type="button" className="icon-button" aria-label="New dispute" title="New dispute" onClick={() => { setForm({}); setError(null); }}>
+              ? <div className="sidebar-actions">
+                  <FilterMenu value={filter} onChange={setFilter} />
+                  <button type="button" className="new-button" aria-label="New dispute" title="New dispute" onClick={newDispute}>
+                    <NewDisputeIcon /><span aria-hidden="true">New</span>
+                  </button>
+                </div>
+              : <button type="button" className="icon-button" aria-label="New dispute" title="New dispute" onClick={newDispute}>
                   <NewDisputeIcon />
                 </button>}
           </div>
           {!sidebarOpen && selected && <span className="sidebar-current" title={`Open: ${selected.dispute_id}`}>{selected.dispute_id}</span>}
           <div className="sidebar-body" id="dispute-list" hidden={!sidebarOpen}>
-          <button className="secondary-button" onClick={() => { setForm({}); setError(null); }}>
-            + New dispute
-          </button>
-          <label className="sidebar-filter"><span className="section-label">Filter disputes</span>
-            <span className="sidebar-select">
-              <select value={filter} onChange={event => setFilter(event.target.value)}>
-                <option value="all">All dispute types</option><option value="route_deviation">Route deviation</option><option value="no_show_charge">No-show charge</option>
-              </select>
-              <svg className="select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-                <path d="m6 9 6 6 6-6" />
-              </svg>
-            </span>
-          </label>
-          {selected && filter !== "all" && selected.type !== filter && <p className="small muted">The selected case is outside this filter.</p>}
-          {!loadingSamples && !filterDisputes([...own, ...samples], filter).length && <p className="small muted">No disputes match this filter.</p>}
-          {own.length > 0 && (
-            <>
-              <h2 className="section-label">Your disputes</h2>
-              {filterDisputes(own, filter).map(disputeButton)}
-            </>
-          )}
-          <h2 className="section-label">Sample disputes</h2>
-          {filterDisputes(samples, filter).map(disputeButton)}
+          {filter !== "all" && <button type="button" className="filter-chip" aria-label={`Clear filter: ${filterLabel(filter)}`} onClick={() => setFilter("all")}>
+            {filterShortLabel(filter)}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7 7 17" /></svg>
+          </button>}
+          {selected && filter !== "all" && selected.type !== filter && <p className="sidebar-note">The selected case is outside this filter.</p>}
+          {!loadingSamples && !ownShown.length && !samplesShown.length && <p className="sidebar-note">No disputes match this filter.</p>}
+          {/* Group labels only when there is more than one group to tell apart. */}
+          {own.length > 0 && ownShown.length > 0 && <>
+            <h2 className="sidebar-group">Yours</h2>
+            <ul className="dispute-list">{ownShown.map(disputeButton)}</ul>
+          </>}
+          {own.length > 0 && samplesShown.length > 0 && <h2 className="sidebar-group">Samples</h2>}
+          {samplesShown.length > 0 && <ul className="dispute-list">{samplesShown.map(disputeButton)}</ul>}
           </div>
         </nav>
 
