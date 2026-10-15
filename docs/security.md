@@ -94,7 +94,7 @@ flowchart LR
 | TB3 | LLM output to our code | **the key boundary**: model output is untrusted input; only validated fields pass |
 | TB4 | Internal view to party view | fraud signals and the other party's data never cross |
 | TB5 | Developer machine to repo and CI | no secrets, no unreviewed dependencies |
-| TB6 | Organisers' dataset to repo | only the organisers' sample case DISP-002 is committed, to this private repository, so the demo and tests can use it; nothing else from the organisers is added |
+| TB6 | Organisers' dataset to repo | only the organisers' sample case DISP-002 is committed (the repository is public since 15 Oct 2026; the case data is fictional), so the demo and tests can use it; nothing else from the organisers is added |
 
 ## 5. Threat table
 
@@ -228,8 +228,9 @@ controls on model output. Verify the current versions on the official sites befo
 this is not legal advice. Our own samples (`data/disputes/`) are synthetic. The organisers'
 sample case DISP-002 (`data/organiser/disp_002.json`) is committed as provided, including
 its sample names, vehicle plate and fraud-flag details; the adapter drops those fields
-before anything reaches the agents or the model. Check the organisers' terms before the
-repository is made public; if they don't allow it, remove the file and git-ignore
+before anything reaches the agents or the model. The repository was made public on
+15 Oct 2026 for the submission; the team kept this file because its names, IDs and plate
+are fictional sample data. If the organisers ask, remove it and git-ignore
 `data/organiser/*.json` (it stays in git history unless the history is rewritten).
 
 ## 9. Residual and accepted risks
@@ -245,7 +246,7 @@ repository is made public; if they don't allow it, remove the file and git-ignor
 | Advocate summaries can carry attacker text into the reviewer console (11 of 51 live runs after hardening: a canary, a repeated invented figure, or no rule cited) | internal only, labelled as an unverified argument, checked for links and markup, never decides | reviewer training; a second-opinion check if the console is ever shown to parties |
 | Claims and chat go to a third-party model | needed for the product | data-processing agreement; regional model hosting |
 | No audit log of decisions | nothing is persisted | append-only audit log |
-| The organisers' sample case (DISP-002) is in the repository, with its sample names, plate and flags | the repository is private and the demo needs the case | confirm the organisers' terms before publishing; otherwise remove and git-ignore it |
+| The organisers' sample case (DISP-002) is in the repository, with its sample names, plate and flags | the data is fictional and the demo needs the case | remove and git-ignore it if the organisers ask |
 
 ## 10. Production roadmap
 

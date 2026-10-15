@@ -50,9 +50,9 @@ Blueprint with the public-demo settings and the Preset 2 limits). Render provide
 
 **Setup, once (about 20 minutes):**
 
-1. **Account.** Sign up at render.com with **Sign in with GitHub**. The repo is private
-   and owned by the lead's account, so either the lead does this, or the lead grants
-   Render's GitHub app access to `TriVerity` when Render asks.
+1. **Account.** Sign up at render.com with **Sign in with GitHub**. The repo is public
+   (since 15 Oct 2026, for the submission), so any team member's Render account can
+   deploy it.
 2. **Blueprint.** In the Render dashboard: **New → Blueprint**, pick the `TriVerity` repo
    and branch `main`. Render reads `render.yaml` and shows one free web service,
    `triverity-demo`, in Singapore.

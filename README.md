@@ -96,7 +96,7 @@ scripts/        evaluate.py, run_sample.py, red-team and demo setup scripts
 
 - **Python 3.10 or newer** (the code uses `match` statements and `X | None` types; CI runs 3.12)
 - **Node.js 18, or 20 or newer** (required by Vite 5)
-- Git, and access to this private repository
+- Git
 
 Check with `python3 --version` and `node --version`.
 
