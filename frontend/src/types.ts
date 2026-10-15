@@ -101,6 +101,8 @@ export interface AgentLogEntry {
   agent: string;
   status: string;
   message: string;
+  started_at?: string | null;   // ISO time the step started
+  duration_ms?: number | null;  // how long it took
 }
 
 export interface Appeal {

@@ -89,7 +89,8 @@ def test_label_does_not_change_facts_or_the_full_resolution(id):
     labelled_case = SAMPLES[id]
     unlabelled = labelled_case.model_copy(update={"label": None})
     assert compute_facts(labelled_case) == compute_facts(unlabelled)
-    assert resolve_dispute(labelled_case).model_dump() == resolve_dispute(unlabelled).model_dump()
+    timing = {"agent_log": {"__all__": {"started_at", "duration_ms"}}}   # wall-clock, differs per run
+    assert resolve_dispute(labelled_case).model_dump(exclude=timing) == resolve_dispute(unlabelled).model_dump(exclude=timing)
 
 
 def test_label_never_enters_any_prompt_including_both_rebuttals_and_collector_rounds():
