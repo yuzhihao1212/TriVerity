@@ -1,6 +1,6 @@
 """Bounded, deterministic telemetry summaries; raw coordinates never enter prompts."""
 from datetime import datetime, timezone
-from math import isfinite
+from math import cos, hypot, isfinite, radians
 
 from pydantic import BaseModel
 
@@ -15,6 +15,22 @@ class GpsStop(BaseModel):
     lng: float
 
 
+class OffRouteEpisode(BaseModel):
+    start_time: datetime
+    end_time: datetime
+    distance_km: float      # GPS path driven while off the planned route
+    max_offset_m: float     # furthest point from the planned route
+
+
+class RouteComparison(BaseModel):
+    """GPS path against the platform's planned (optimal) route, point by point."""
+    points_checked: int
+    points_on_route: int    # within GPS_OFF_ROUTE_M of the planned route
+    max_offset_m: float
+    off_route_km: float
+    episodes: list[OffRouteEpisode]
+
+
 class GpsAnalysis(BaseModel):
     path_distance_km: float | None = None
     path_vs_expected_ratio: float | None = None
@@ -24,6 +40,7 @@ class GpsAnalysis(BaseModel):
     points_used: int | None = None
     points_rejected: int | None = None
     max_gap_min: float | None = None
+    route_comparison: RouteComparison | None = None
 
 
 def _number(value: object) -> float:
@@ -103,6 +120,8 @@ def analyse_gps(raw_points: list[dict], trip: TripData, *, route_trip: bool = Fa
         return None
     ordered, rejected = parse_points(raw_points)
     result = GpsAnalysis(points_used=len(ordered), points_rejected=rejected)
+    if len(trip.planned_route) >= 2 and ordered:
+        result.route_comparison = compare_to_route(ordered, [(p.lat, p.lng) for p in trip.planned_route])
     if len(ordered) < 2:
         return result
 
@@ -166,3 +185,56 @@ def analyse_gps(raw_points: list[dict], trip: TripData, *, route_trip: bool = Fa
     result.total_stopped_min = sum(stop.duration_min for stop in stops)
     result.max_gap_min = max_gap
     return result
+
+
+def _offset_m(lat: float, lng: float, route: list[tuple[float, float]]) -> float:
+    """Distance in metres from a point to the nearest segment of the route.
+
+    Uses a local flat projection around the point: accurate to well under a metre at
+    city scale, which is all a ride needs.
+    """
+    m_lat, m_lng = 110_540.0, 111_320.0 * cos(radians(lat))
+    best = float("inf")
+    for (a_lat, a_lng), (b_lat, b_lng) in zip(route, route[1:]):
+        ax, ay = (a_lng - lng) * m_lng, (a_lat - lat) * m_lat
+        bx, by = (b_lng - lng) * m_lng, (b_lat - lat) * m_lat
+        dx, dy = bx - ax, by - ay
+        length_sq = dx * dx + dy * dy
+        share = 0.0 if length_sq == 0 else max(0.0, min(1.0, -(ax * dx + ay * dy) / length_sq))
+        best = min(best, hypot(ax + share * dx, ay + share * dy))
+    return best
+
+
+def compare_to_route(ordered: list[tuple], route: list[tuple[float, float]]) -> RouteComparison:
+    """Measure how far each GPS point (time-ordered) strays from the planned route."""
+    from app.services.evidence import _haversine_m
+
+    offsets = [_offset_m(p[2], p[3], route) for p in ordered]
+    off = [offset > limits.GPS_OFF_ROUTE_M for offset in offsets]
+    # Episodes are runs of consecutive off-route points: [first index, last index, metres driven].
+    episodes, episode_of = [], {}
+    for i, is_off in enumerate(off):
+        if is_off:
+            if i == 0 or not off[i - 1]:
+                episodes.append([i, i, 0.0])
+            episodes[-1][1] = i
+            episode_of[i] = len(episodes) - 1
+    # A segment is off-route driving when either end is off the route; it belongs to
+    # the episode it enters (or, when rejoining the route, the one it leaves).
+    total_off_m = 0.0
+    for i in range(1, len(ordered)):
+        if off[i] or off[i - 1]:
+            a, b = ordered[i - 1], ordered[i]
+            segment = _haversine_m(a[2], a[3], b[2], b[3])
+            total_off_m += segment
+            episodes[episode_of[i] if off[i] else episode_of[i - 1]][2] += segment
+    return RouteComparison(
+        points_checked=len(ordered),
+        points_on_route=off.count(False),
+        max_offset_m=round(max(offsets), 1),
+        off_route_km=round(total_off_m / 1000, 2),
+        episodes=[OffRouteEpisode(start_time=ordered[first][1], end_time=ordered[last][1],
+                                  distance_km=round(metres / 1000, 2),
+                                  max_offset_m=round(max(offsets[first:last + 1]), 1))
+                  for first, last, metres in episodes],
+    )

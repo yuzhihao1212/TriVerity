@@ -18,6 +18,10 @@ Surge = Annotated[float, Field(ge=limits.MIN_SURGE, le=limits.MAX_SURGE, allow_i
 Rating = Annotated[float, Field(ge=0, le=limits.MAX_RATING, allow_inf_nan=False)]
 Statement = Annotated[str, Field(max_length=limits.MAX_STATEMENT_CHARS)]
 
+class RoutePoint(BaseModel):
+    lat: Latitude
+    lng: Longitude
+
 class TripData(BaseModel):
     expected_distance_km: Km | None = None
     actual_distance_km: Km | None = None
@@ -28,6 +32,8 @@ class TripData(BaseModel):
     driver_arrival_lat: Latitude | None = None
     driver_arrival_lng: Longitude | None = None
     driver_wait_min: Minutes | None = None
+    # The platform's planned (optimal) route as ordered points, for comparing the GPS path against.
+    planned_route: list[RoutePoint] = Field(default_factory=list, max_length=limits.MAX_PLANNED_ROUTE_POINTS)
 
 class FareLine(BaseModel):
     label: str = Field(max_length=limits.MAX_FARE_LABEL_CHARS)

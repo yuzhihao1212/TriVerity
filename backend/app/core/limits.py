@@ -149,6 +149,10 @@ GPS_ENDPOINT_RADIUS_M = 100
 # Do not infer stationary time across sparse telemetry; report these gaps instead.
 GPS_STOP_MAX_GAP_MIN = 3
 GPS_REPORT_GAP_MIN = 3
+# Planned (optimal) route comparison: a GPS point further than this from the planned route is off it.
+MAX_PLANNED_ROUTE_POINTS = 200     # x MAX_GPS_POINTS bounds the comparison work
+GPS_OFF_ROUTE_M = 150
+GPS_MAX_OFF_ROUTE_EPISODES = 3   # reported in the facts; the rest are summed
 
 # -- Fare validation (facts only; no policy decisions) --------------------------
 FARE_PROMO_TOLERANCE = 0.01        # a cent of rounding in the final charge

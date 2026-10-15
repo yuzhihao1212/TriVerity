@@ -7,7 +7,13 @@
     "expected_distance_km": 10.0,
     "actual_distance_km": 13.0,
     "expected_duration_min": 25,
-    "actual_duration_min": 21
+    "actual_duration_min": 21,
+    "planned_route": [
+      {"lat": 1.3006, "lng": 103.8352},
+      {"lat": 1.306, "lng": 103.86},
+      {"lat": 1.308, "lng": 103.9},
+      {"lat": 1.31, "lng": 103.93}
+    ]
   },
   "fare": {
     "expected": 18.0,
