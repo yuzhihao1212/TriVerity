@@ -480,8 +480,8 @@ function RulingPanel({ resolution, availableIds, onSelectFact }: { resolution: R
 function LoadingPanel({ disputeId }: { disputeId: string }) {
   return <section className="card loading-state" aria-labelledby="loading-title">
     <div className="card-head"><h2 id="loading-title" tabIndex={-1}>Agents working · {disputeId}</h2><span className="spinner" role="progressbar" aria-label="Waiting for the complete agent result" /></div>
-    <p>About 10–15 seconds. The server returns one complete result; individual step progress is not available.</p>
-    <ol className="pending-steps"><li>Evidence loader</li><li>Rider &amp; Driver advocates</li><li>Fraud detector</li><li>Rebuttal round</li><li>Policy &amp; Precedent agent</li><li>Judge: policy ruling &amp; explanation</li></ol>
+    <p>About 15 seconds. The server returns one complete result; individual step progress is not available.</p>
+    <ol className="pending-steps"><li>Evidence loader</li><li>Evidence collector</li><li>Rider &amp; Driver advocates</li><li>Fraud detector</li><li>Rebuttal round</li><li>Policy &amp; Precedent agent</li><li>Judge: policy ruling &amp; explanation</li></ol>
     <p className="small muted">These are the stages of a resolve, not live progress. Previous saved results are retained until a new run succeeds.</p>
   </section>;
 }

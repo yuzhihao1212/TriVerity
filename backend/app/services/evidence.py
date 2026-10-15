@@ -7,7 +7,7 @@ from app.core import limits
 from app.services.gps_analysis import GpsAnalysis, analyse_gps
 
 from app.models.dispute import ChatMessage, DisputeCase, DisputeType, FareData, PartyHistory
-from app.services.text_safety import sanitise
+from app.services.text_safety import redact_contacts, sanitise
 
 EARTH_RADIUS_M = 6_371_000
 
@@ -58,6 +58,9 @@ class CaseFacts(BaseModel):
     chat: ChatAnalysis = Field(default_factory=ChatAnalysis)
     rider_history: PartyHistory = Field(default_factory=PartyHistory)
     driver_history: PartyHistory = Field(default_factory=PartyHistory)
+    # Lines gathered by the Evidence Collection agent's tools, by source; appended after
+    # the core facts of that source (agents/evidence_agent.py).
+    collected: dict[str, list[str]] = Field(default_factory=dict)
 
     def describe(self) -> list[str]:
         return [line for lines in self.describe_by_source().values() for line in lines]
@@ -137,6 +140,9 @@ class CaseFacts(BaseModel):
             summary = _describe_history(history)
             if summary:
                 lines.append(f"{party} history: {summary}")
+        for source, extra in self.collected.items():
+            bucket = groups.setdefault(source, [])
+            bucket += [line for line in extra if line not in bucket]
         return {source: lines for source, lines in groups.items() if lines}
 
 def _describe_history(history: PartyHistory) -> str:
@@ -157,8 +163,8 @@ def _matches(text: str, patterns: list[str]) -> bool:
 def analyse_chat(messages: list[ChatMessage]) -> ChatAnalysis:
     analysis = ChatAnalysis()
     for m in messages:
-        # Quoted chat reaches the prompts, so strip control characters first (H8).
-        quoted = f'{m.sender}: "{sanitise(m.message)}"'
+        # Quoted chat reaches the prompts, so strip control characters (H8) and contact details.
+        quoted = f'{m.sender}: "{redact_contacts(sanitise(m.message))}"'
         if _matches(m.message, THREAT_PATTERNS):
             analysis.threats.append(quoted)
         elif _matches(m.message, DISAGREEMENT_PATTERNS):

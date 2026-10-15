@@ -37,7 +37,7 @@ sys.path[:0] = [str(ROOT / "backend"), str(ROOT / "backend" / "tests")]
 from pydantic import ValidationError  # noqa: E402
 
 from attacks import ATTACKS, BY_ID, Attack  # noqa: E402
-from app.agents import judge_narration  # noqa: E402
+from app.agents import evidence_agent, judge_narration  # noqa: E402
 from app.core import limits  # noqa: E402
 from app.core.config import settings  # noqa: E402
 from app.models.dispute import DisputeCase  # noqa: E402
@@ -64,6 +64,8 @@ class Recorder:
         reply = self.complete_fn(system, user, **kwargs)
         if system == judge_narration.SYSTEM:
             agent = "judge"
+        elif system == evidence_agent.SYSTEM:
+            agent = "evidence_collector"
         else:
             agent = "rider" if "Rider Advocate" in system else "driver"
         self.replies.append({"agent": agent, "reply": str(reply)[:MAX_REPLY_CHARS]})
@@ -111,7 +113,8 @@ def _clean_ruling(attack: Attack) -> dict:
     previous = logging.root.manager.disable
     logging.disable(logging.WARNING)  # the offline fallbacks would log "no API key configured"
     try:
-        with patch("app.agents._advocate.complete", offline), patch("app.agents.judge_narration.complete", offline):
+        with patch("app.agents._advocate.complete", offline), patch("app.agents.judge_narration.complete", offline), \
+                patch("app.agents.evidence_agent.complete", offline):
             r = resolve_dispute(DisputeCase(**attack.clean()))
     finally:
         logging.disable(previous)
@@ -127,11 +130,13 @@ def run_once(attack: Attack, run: int, complete_fn) -> dict:
         return {**row, "rejected_at_input": True}
 
     recorder, capture = Recorder(complete_fn), DetectorCapture()
-    loggers = [logging.getLogger("app.agents._advocate"), logging.getLogger(judge_narration.__name__)]
+    loggers = [logging.getLogger("app.agents._advocate"), logging.getLogger(judge_narration.__name__),
+               logging.getLogger(evidence_agent.__name__)]
     for lg in loggers:
         lg.addHandler(capture)
     try:
-        with patch("app.agents._advocate.complete", recorder), patch("app.agents.judge_narration.complete", recorder):
+        with patch("app.agents._advocate.complete", recorder), patch("app.agents.judge_narration.complete", recorder), \
+                patch("app.agents.evidence_agent.complete", recorder):
             result = resolve_dispute(case)
     finally:
         for lg in loggers:

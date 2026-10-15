@@ -32,6 +32,26 @@ _LINK_RE = re.compile(
 )
 _MARKUP_RE = re.compile(r"<|\]\(|`|!\[")
 _PHONE_RE = re.compile(r"(?<![\w$.,])\+?\d(?:[\s-]?\d){6,}")
+# For redacting contact details out of quoted text (emails first: their domain looks like a link).
+_EMAIL_REDACT_RE = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
+_URL_CHARS = r"[^\s,;\"'<>]"
+_BARE_TLDS = (
+    "com|net|org|edu|gov|mil|int|info|biz|name|io|ai|app|dev|me|ly|co|xyz|link|site|online|shop|store|"
+    "tech|cloud|page|example|sg|my|id|ph|th|vn|hk|tw|cn|jp|kr|in|au|nz|uk|us|ca|de|fr|eu"
+)
+_LINK_REDACT_RE = re.compile(
+    rf"https?://{_URL_CHARS}+|www\.{_URL_CHARS}+"
+    # host.tld/path with any alphabetic TLD: the path makes it a link
+    rf"|\b[\w-]+(?:\.[\w-]+)*\.[a-z]{{2,24}}/{_URL_CHARS}*"
+    # bare host.tld for common TLDs (a generic TLD alone would catch "arrived.Then")
+    rf"|\b[\w-]+(?:\.[\w-]+)*\.(?:{_BARE_TLDS})\b",
+    re.IGNORECASE,
+)
+# Phone numbers in any common format: 9123 4567, 9123-4567, 9123–4567, 9123.4567, (65) 9123 4567.
+# Seven or more digits, so amounts ($24.80), distances (14.7 km) and times (08:10) are kept.
+_PHONE_REDACT_RE = re.compile(r"(?<![\w$.,\-])\+?\(?\d(?:[\s\-‐-―−.()]{0,2}\d){6,}\)?")
+# Dates look like phone numbers by digit count; they are evidence, not contact details.
+_DATE_RE = re.compile(r"\d{4}[-./]\d{1,2}[-./]\d{1,2}|\d{1,2}[-./]\d{1,2}[-./]\d{4}")
 _WORD_RE = re.compile(r"[a-z0-9'-]+")
 _ECHO_WORDS = 8
 
@@ -47,6 +67,18 @@ def normalise(text: str) -> str:
     text = unicodedata.normalize("NFKC", text)
     text = _INVISIBLE_RE.sub("", text)
     return text.translate(_DASHES).translate(_QUOTES).translate(_CONFUSABLES)
+
+
+def redact_contacts(text: str) -> str:
+    """Replace phone numbers, emails and links with placeholders (data minimisation).
+
+    For party text quoted to the AI provider. Names and street addresses can't be
+    detected reliably and are kept; see docs/security.md.
+    """
+    text = _EMAIL_REDACT_RE.sub("[email removed]", text)
+    text = _LINK_REDACT_RE.sub("[link removed]", text)
+    return _PHONE_REDACT_RE.sub(
+        lambda m: m.group(0) if _DATE_RE.fullmatch(m.group(0).strip()) else "[phone removed]", text)
 
 
 def find_link_or_markup(text: str) -> str | None:
