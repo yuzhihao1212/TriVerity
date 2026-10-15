@@ -1,26 +1,53 @@
-import { Fragment } from "react";
+import { Fragment, useId, useState } from "react";
+
+import { humanizeAgentMessage } from "./agentText";
 
 import { EvidenceText, type FactLinks } from "./EvidenceList";
 import { SourceBadge } from "./Debate";
 import { Icon } from "./Icon";
 import { reveal } from "./routes";
 import {
-  agentBadge, agentIcon, callColumns, durationShare, durationText, statusBadge, stepFlow, stripSourceTag, toolIcon, toolName, toolTooltip,
+  agentBadge, agentIcon, callColumns, durationShare, durationText, statusBadge, stepFlow, toolIcon, toolName, toolTooltip,
 } from "./stepVisuals";
 import { agentLabel, agentRole, agentsForTab, agentSource, type WorkflowTab } from "./workflow";
 import type { AgentLogEntry, Resolution } from "./types";
 
+const OPEN_KEY = "triverity.agentDetails";
+function readOpen(): boolean {
+  try { return sessionStorage.getItem(OPEN_KEY) === "open"; } catch { return false; }
+}
+
+/**
+ * "How this step was decided", shown after the step's own content. Collapsed (the default):
+ * one line per agent. Expanded: the full cards, the flow between them and the tool chips.
+ * The choice is remembered for the session.
+ */
 export function AgentsStrip({ tab, resolution, availableIds, onSelectFact }: { tab: WorkflowTab; resolution?: Resolution } & FactLinks) {
+  const id = useId();
+  const [open, setOpen] = useState(readOpen);
+  function toggle() {
+    setOpen(previous => {
+      try { sessionStorage.setItem(OPEN_KEY, previous ? "closed" : "open"); } catch { /* Storage blocked: this session only. */ }
+      return !previous;
+    });
+  }
   const all = resolution?.agent_log ?? [];
   const entries = agentsForTab(all, tab);
   const flow = resolution ? stepFlow(tab, entries, resolution) : null;
   const card = (entry: AgentLogEntry, index: number) => <AgentCard key={`${entry.step}-${entry.agent}-${index}`} entry={entry} all={all}
     resolution={resolution} availableIds={availableIds} onSelectFact={onSelectFact} />;
-  return <section className="agents-strip" aria-label="Agents in this step">
-    <h3 className="section-label">Agents in this step</h3>
+  return <section className="agents-strip" aria-labelledby={`${id}-title`}>
+    <div className="agents-head">
+      <h3 className="section-label" id={`${id}-title`}>How this step was decided</h3>
+      {entries.length > 0 && <button type="button" className="agents-toggle" aria-expanded={open} aria-controls={`${id}-body`} onClick={toggle}>
+        {open ? "Hide details" : "Show details"}<Icon name="arrow" className="agents-toggle-icon" />
+      </button>}
+    </div>
+    <div id={`${id}-body`}>
     {entries.length === 0 ? <p className="small muted">{tab === "intake" ? "Manual intake. No agents run in this step."
       : tab === "notify" ? "No additional agent run. These messages come from the saved Judge’s ruling."
       : "No agent log entries were returned for this step."}</p>
+    : !open ? <ul className="agent-lines">{entries.map((entry, index) => <AgentLine key={`${entry.step}-${entry.agent}-${index}`} entry={entry} resolution={resolution} />)}</ul>
     : flow ? <ol className="agent-flow" aria-label="Agents in order, with what each passes on">
       {entries.map((entry, index) => <Fragment key={`${entry.step}-${entry.agent}-${index}`}>
         {card(entry, index)}
@@ -29,7 +56,22 @@ export function AgentsStrip({ tab, resolution, availableIds, onSelectFact }: { t
       {flow.result && <li className="agent-flow-result"><strong>{flow.result}</strong></li>}
     </ol>
     : <ul className="agent-entries">{entries.map(card)}</ul>}
+    </div>
   </section>;
+}
+
+/** One line per agent: "◎ Judge · ✓ · Fallback · 0.1 s". */
+function AgentLine({ entry, resolution }: { entry: AgentLogEntry; resolution?: Resolution }) {
+  const status = statusBadge(entry.status);
+  const badge = agentBadge(entry.agent, resolution ? agentSource(entry.agent, resolution) : null);
+  const time = durationText(entry.duration_ms);
+  return <li className="agent-line">
+    <span className="agent-line-avatar" aria-hidden="true"><Icon name={agentIcon(entry.agent)} /></span>
+    <strong>{agentLabel(entry.agent)}</strong>
+    <span className={`agent-line-status ${status.tone}`}>{status.icon ? <Icon name={status.icon} /> : null}<span className={status.icon ? "sr-only" : ""}>{status.label}</span></span>
+    {badge ? <SourceBadge source={badge} explain /> : <span className="tag">Source not supplied</span>}
+    {time && <span className="agent-line-time"><span className="sr-only">took </span>{time}</span>}
+  </li>;
 }
 
 function FlowEdge({ label }: { label: string | null }) {
@@ -62,7 +104,7 @@ function AgentCard({ entry, all, resolution, availableIds, onSelectFact }: {
       <span className="agent-duration-text"><span className="sr-only">Took </span>{time}</span>
     </div>}
     {calls.length > 0 ? <ToolCalls calls={calls} />
-      : <p className="agent-message"><EvidenceText text={stripSourceTag(entry.message) || "No additional message recorded."} availableIds={availableIds} onSelectFact={onSelectFact} /></p>}
+      : <p className="agent-message"><EvidenceText text={humanizeAgentMessage(entry.agent, entry.message, resolution) || "No additional message recorded."} availableIds={availableIds} onSelectFact={onSelectFact} /></p>}
   </li>;
 }
 

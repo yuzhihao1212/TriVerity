@@ -157,8 +157,25 @@ textarea { width: 100%; resize: vertical; }
 .workflow-bar > p { margin-top: var(--space-2); font-size: 11px; }
 .workflow-panel { min-width: 0; }
 .next-step { display: flex; justify-content: flex-end; padding-top: var(--space-6); margin-top: var(--space-6); border-top: 1px solid var(--border); }
-.agents-strip { border-bottom: 1px solid var(--border); padding-bottom: var(--space-5); margin-bottom: var(--space-6); }
-.agents-strip > h3 { margin-bottom: var(--space-3); }
+/* "How this step was decided": after the step's content (outcome first, process second). */
+.agents-strip { border-top: 1px solid var(--border); padding-top: var(--space-5); margin-top: var(--space-8); }
+.agents-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
+.agents-head h3 { margin: 0; }
+.agents-toggle { display: inline-flex; align-items: center; gap: var(--space-1); min-height: 36px; padding: 0 var(--space-3); border: 0; border-radius: 8px; background: var(--transparent); color: var(--link-color); font-size: 12px; font-weight: 600; }
+.agents-toggle:hover { background: var(--accent-soft); }
+.agents-toggle-icon { width: 14px; height: 14px; transform: rotate(90deg); transition: transform .2s ease; }
+.agents-toggle[aria-expanded="true"] .agents-toggle-icon { transform: rotate(-90deg); }
+.agent-lines { display: grid; gap: var(--space-1); list-style: none; margin: 0; padding: 0; }
+.agent-line { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: 13px; }
+.agent-line-avatar { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-text); }
+.agent-line-avatar .icon { width: 14px; height: 14px; }
+.agent-line strong { font-weight: 600; }
+.agent-line-status { display: inline-flex; align-items: center; color: var(--muted); font-size: 12px; }
+.agent-line-status .icon { width: 14px; height: 14px; }
+.agent-line-status.ok { color: var(--ok-text); }
+.agent-line-status.warn { color: var(--error); }
+.agent-line-time { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.presentation-mode .agent-line { font-size: 15px; }
 .agent-entries { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4) var(--space-6); list-style: none; padding: 0; }
 .agent-entry-head { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; font-size: 12px; }
 .agent-entry-head > strong { font-weight: 600; }
@@ -244,9 +261,12 @@ textarea { width: 100%; resize: vertical; }
 
 /* Values carry their meaning in text; the tone only adds emphasis. */
 .fact-chip { display: inline-block; padding: 0 6px; border-radius: 6px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
-.fact-chip.warn { background: var(--accent-soft); color: var(--accent-text); border-color: var(--transparent); }
+/* Attention (deviations, stops) is amber; danger (threats) is the error colour. Never brand red. */
+.fact-chip.warn { background: var(--warn-soft); color: var(--warn-text); border-color: var(--transparent); }
+.fact-chip.danger { background: var(--error-soft); color: var(--error); border-color: var(--transparent); }
 .fact-chip.ok { color: var(--muted); }
-.fact-plain.warn { border-left-color: var(--accent-soft); }
+.fact-plain.warn { border-left-color: var(--warn-soft); }
+.fact-plain.danger { border-left-color: var(--error); }
 
 .fact-related { margin-top: var(--space-1); padding-left: var(--space-1); }
 .fact-related > summary { width: fit-content; cursor: pointer; color: var(--link-color); font-size: 11px; font-weight: 600; }
@@ -259,7 +279,7 @@ textarea { width: 100%; resize: vertical; }
 .fact-tile .fact-row-body { display: flex; flex-direction: column; }
 .fact-tile-label { order: -1; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
 .fact-tile-value { font-size: 30px; font-weight: 600; line-height: 1.25; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
-.fact-tile.warn .fact-tile-value { color: var(--accent-text); }
+.fact-tile.warn .fact-tile-value { color: var(--warn-text); }
 .fact-tile-detail { color: var(--muted); font-size: 11px; }
 
 .fact-coverage { padding: var(--space-2) var(--space-2) var(--space-3); border-bottom: 1px solid var(--border); }
@@ -278,15 +298,17 @@ textarea { width: 100%; resize: vertical; }
 .receipt-amount { white-space: nowrap; text-align: right; }
 .receipt-total { margin-top: var(--space-1); padding-top: var(--space-2); border-top: 1px dashed var(--control-border); font-weight: 600; }
 .receipt-difference { margin: var(--space-2) calc(-1 * var(--space-2)) 0; padding: var(--space-2); border-radius: 6px; background: var(--surface); font-weight: 600; }
-.receipt-difference.warn { background: var(--accent-soft); color: var(--accent-text); }
+.receipt-difference.warn { background: var(--warn-soft); color: var(--warn-text); }
 .receipt-note .fact-row-body { display: flex; gap: var(--space-2); font-size: 12px; color: var(--muted); }
-.receipt-note.warn .fact-row-body { color: var(--accent-text); }
+.receipt-note.warn .fact-row-body { color: var(--warn-text); }
 
 .fact-bubble-row { padding-block: var(--space-2) !important; border-bottom: 0 !important; }
 .fact-bubble { display: inline-flex; flex-direction: column; max-width: 100%; padding: var(--space-2) var(--space-3); border-radius: 12px 12px 12px 3px; background: var(--bg); border: 1px solid var(--border); }
-.fact-bubble-row.warn .fact-bubble { background: var(--accent-soft); border-color: var(--accent); }
+.fact-bubble-row.warn .fact-bubble { background: var(--warn-soft); border-color: var(--warn-text); }
+.fact-bubble-row.danger .fact-bubble { background: var(--error-soft); border-color: var(--error); }
 .fact-bubble-meta { color: var(--muted); font-size: 11px; font-weight: 600; }
-.fact-bubble-row.warn .fact-bubble-meta { color: var(--accent-text); }
+.fact-bubble-row.warn .fact-bubble-meta { color: var(--warn-text); }
+.fact-bubble-row.danger .fact-bubble-meta { color: var(--error); }
 .fact-bubble q { overflow-wrap: anywhere; }
 .verdict-metrics { display: grid; grid-template-columns: 1fr .7fr 1.2fr; gap: var(--space-6); padding-block: var(--space-3); }
 .verdict-value { color: var(--text); font-size: 30px; font-weight: 600; line-height: 1.4; }
@@ -304,7 +326,9 @@ textarea { width: 100%; resize: vertical; }
 .risk-badges { display: flex; gap: var(--space-6); flex-wrap: wrap; }
 .risk-row { display: flex; align-items: center; gap: var(--space-2); }
 .risk-party { font-size: 13px; font-weight: 500; }
-.risk-badge.high { background: var(--accent-soft); color: var(--accent-text); }
+/* Danger only for real problems: high bad-faith risk, a safety tier. Medium (attention) is amber. */
+.risk-badge.high { background: var(--error-soft); color: var(--error); }
+.risk-badge.medium { background: var(--warn-soft); color: var(--warn-text); }
 .risk-signals { color: var(--muted); }
 .party-tabs { display: flex; gap: var(--space-2); }
 .party-tabs button { font-size: 12px; }
@@ -565,7 +589,35 @@ textarea { width: 100%; resize: vertical; }
 .reviewer-decision { display: grid; gap: var(--space-3); }
 .reviewer-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .reviewer-form { display: grid; gap: var(--space-2); max-width: 520px; }
-.reviewer-done { padding: var(--space-3); border-radius: 12px; background: var(--accent-soft); color: var(--text); }
+.reviewer-done { padding: var(--space-3); border-radius: 12px; background: var(--ok-soft); color: var(--ok-text); font-weight: 600; }
+
+/* Outcome tones (outcomeTone.ts): ok = in a party's favour, warn = needs attention, neutral = factual. */
+.decision.tone-ok { background: var(--ok-soft); color: var(--ok-text); }
+.decision.tone-warn { background: var(--warn-soft); color: var(--warn-text); }
+.decision.tone-neutral { background: var(--neutral-soft); color: var(--text); }
+.verdict-value.tone-text-ok { color: var(--ok-text); }
+.verdict-value.tone-text-warn { color: var(--warn-text); }
+
+/* Sticky decision bar on the Ruling step (ReviewerDecision.tsx DecisionBar). */
+.decision-bar { position: sticky; bottom: 0; z-index: 15; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-5);
+  margin-top: var(--space-8); padding: var(--space-3) var(--space-5); border-top: 1px solid var(--border); background: var(--surface); box-shadow: 0 -6px 16px rgb(0 0 0 / .06); }
+.decision-bar-outcome { display: inline-flex; align-items: center; gap: var(--space-2); margin: 0; font-size: 15px; font-weight: 600; }
+.decision-bar-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--control-border); }
+.decision-bar.tone-ok .decision-bar-outcome { color: var(--ok-text); }
+.decision-bar.tone-ok .decision-bar-dot { background: var(--ok-text); }
+.decision-bar.tone-warn .decision-bar-outcome { color: var(--warn-text); }
+.decision-bar.tone-warn .decision-bar-dot { background: var(--warn-text); }
+.decision-bar-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.decision-bar-actions .run-button, .decision-bar-actions .secondary-button { min-height: 40px; }
+/* Focusing or scrolling to something under the bar keeps it clear of the bar. */
+html:has(.decision-bar) { scroll-padding-bottom: 96px; }
+.presentation-mode .decision-bar-outcome { font-size: 18px; }
+@media (max-width: 760px) {
+  .decision-bar { flex-direction: column; align-items: stretch; gap: var(--space-2); margin-inline: calc(-1 * var(--space-4)); padding: var(--space-2) var(--space-4); }
+  .decision-bar-outcome { font-size: 14px; }
+  .decision-bar-actions > * { flex: 1; }
+  .decision-bar .run-button, .decision-bar .secondary-button { min-height: 40px; padding-block: 8px; }
+}
 
 /* Jargon tooltips: hover or keyboard focus. */
 .term { position: relative; border-bottom: 1px dotted currentColor; cursor: help; }

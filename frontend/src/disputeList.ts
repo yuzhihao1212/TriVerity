@@ -40,12 +40,8 @@ export const STATUS_LABELS: Record<Decision, string> = {
   needs_review: "Escalated",
 };
 
-/** Money back for the rider is "ok", a human review is "warn", no change is neutral. */
-export function decisionTone(decision: Decision): Tone {
-  if (decision === "partial_refund" || decision === "full_refund" || decision === "compensation") return "ok";
-  if (decision === "needs_review") return "warn";
-  return "neutral";
-}
+/** One source of truth for outcome tones (outcomeTone.ts): the sidebar dots match the ruling, header and bar. */
+export { decisionTone } from "./outcomeTone";
 
 /** "D001, Route deviation: 6-min stop, long detour. Ruling: Partial refund" — the type stays audible though only its icon shows. */
 export function disputeItemName(dispute: Pick<DisputeCase, "dispute_id" | "type">, summary: string, decision?: Decision | null): string {

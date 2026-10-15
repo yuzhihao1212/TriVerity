@@ -2,6 +2,7 @@
 // Everything here derives from data the console already has; nothing is sent
 // to the backend and no ruling, fact or message text is changed.
 
+import { decisionTone } from "./outcomeTone";
 import { WORKFLOW_TABS, type WorkflowTab } from "./workflow";
 import type { AgentLogEntry, Decision, DisputeCase, Resolution, ToolCallRecord } from "./types";
 
@@ -95,13 +96,15 @@ const money = (amount: number) => `$${amount.toFixed(2)}`;
 
 export function outcomeChip(decision: Decision, refund: number | null): HeaderChip {
   const amount = refund != null && refund > 0 ? ` ${money(refund)}` : "";
+  // Tones come from the one outcome mapping (outcomeTone.ts), shared with the sidebar and the bar.
+  const tone = decisionTone(decision);
   switch (decision) {
-    case "partial_refund": return { key: "outcome", label: `Partial refund${amount}`, tone: "ok" };
-    case "full_refund": return { key: "outcome", label: `Full refund${amount}`, tone: "ok" };
-    case "compensation": return { key: "outcome", label: `Compensation${amount}`, tone: "ok" };
-    case "no_action": return { key: "outcome", label: "No action", tone: "neutral" };
+    case "partial_refund": return { key: "outcome", label: `Partial refund${amount}`, tone };
+    case "full_refund": return { key: "outcome", label: `Full refund${amount}`, tone };
+    case "compensation": return { key: "outcome", label: `Compensation${amount}`, tone };
+    case "no_action": return { key: "outcome", label: "No action", tone };
     // A human decides: any proposed amount is not an outcome yet.
-    case "needs_review": return { key: "outcome", label: "Escalated to a human", tone: "warn" };
+    case "needs_review": return { key: "outcome", label: "Escalated to a human", tone };
   }
 }
 
@@ -120,7 +123,8 @@ export function distanceTone(resolution?: Pick<Resolution, "decision" | "policy_
   if (within || resolution.decision === "no_action") return "neutral";
   const refunded = ["partial_refund", "full_refund", "compensation"].includes(resolution.decision);
   const routeRule = refs.some(ref => /^\s*RD-(?!1\b)\d+\b/.test(ref));
-  return refunded || routeRule ? "accent" : "neutral";
+  // Attention, not brand red: amber when the deviation counted against the driver.
+  return refunded || routeRule ? "warn" : "neutral";
 }
 
 export function headerChips(dispute: DisputeCase, resolution?: Resolution): HeaderChip[] {

@@ -11,7 +11,7 @@ const transpile = async (file, replace = {}) => {
   return `data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`;
 };
 const workflowUrl = await transpile('workflow.ts');
-const sv = await import(await transpile('stepVisuals.ts', { './workflow': workflowUrl }));
+const sv = await import(await transpile('stepVisuals.ts', { './workflow': workflowUrl, './outcomeTone': await transpile('outcomeTone.ts') }));
 const wf = await import(workflowUrl);
 
 const log = (agent, message = '', duration_ms = 1) => ({ step: 0, agent, status: 'completed', message, duration_ms });
@@ -112,7 +112,7 @@ const D001 = {
 test('header chips come from the case, and are skipped when their data is missing', () => {
   assert.deepEqual(sv.headerChips(D001).map(c => c.label), ['+44% distance', '$24.80 charged']);
   const ruled = sv.headerChips(D001, { decision: 'partial_refund', refund_amount: 6.3, policy_refs: ['RD-3: A route more than 15% longer…'] });
-  assert.deepEqual(ruled.map(c => [c.label, c.tone]), [['+44% distance', 'accent'], ['$24.80 charged', 'neutral'], ['Partial refund $6.30', 'ok']]);
+  assert.deepEqual(ruled.map(c => [c.label, c.tone]), [['+44% distance', 'warn'], ['$24.80 charged', 'neutral'], ['Partial refund $6.30', 'ok']]);
   const noShow = { ...D001, type: 'no_show_charge', trip: { driver_wait_min: 7 }, fare: { cancellation_fee: 4, breakdown: [] } };
   assert.deepEqual(sv.headerChips(noShow).map(c => c.label), ['Driver waited 7 min', '$4.00 no-show fee']);
   assert.deepEqual(sv.headerChips({ ...D001, trip: {}, fare: { breakdown: [] } }), []);
@@ -125,15 +125,15 @@ test('the distance chip is a warning only when the deviation counted against the
   // Before a ruling the rules have not decided.
   assert.equal(tone(undefined), 'neutral');
   // D001-like: +44%, partial refund under RD-3.
-  assert.equal(tone({ decision: 'partial_refund', refund_amount: 6.3, policy_refs: ['RD-3: A route more than 15% longer than expected that also took longer is treated as an unjustified detour; the fare above the expected fare is refunded.'] }), 'accent');
+  assert.equal(tone({ decision: 'partial_refund', refund_amount: 6.3, policy_refs: ['RD-3: A route more than 15% longer than expected that also took longer is treated as an unjustified detour; the fare above the expected fare is refunded.'] }), 'warn');
   // D003-like: +8%, within tolerance (RD-1), no action.
   assert.equal(tone({ decision: 'no_action', refund_amount: null, policy_refs: ['RD-1: A route up to 15% longer than expected is within normal tolerance; no refund is due.'] }), 'neutral');
   // D004-like: no action under RD-2 (congestion): neutral.
   assert.equal(tone({ decision: 'no_action', refund_amount: null, policy_refs: ['RD-2: A longer route that did not take longer…'] }), 'neutral');
   // D007-like: escalated, but the route rule RD-3 counted against the driver.
-  assert.equal(tone({ decision: 'needs_review', refund_amount: 6.9, policy_refs: ['RD-3: …', 'SAFE-1: …'] }), 'accent');
+  assert.equal(tone({ decision: 'needs_review', refund_amount: 6.9, policy_refs: ['RD-3: …', 'SAFE-1: …'] }), 'warn');
   // RD-1 is matched as a rule ID, not a prefix of RD-10.
-  assert.equal(sv.distanceTone({ decision: 'needs_review', policy_refs: ['RD-10: hypothetical'] }), 'accent');
+  assert.equal(sv.distanceTone({ decision: 'needs_review', policy_refs: ['RD-10: hypothetical'] }), 'warn');
   assert.equal(sv.distanceTone({ decision: 'needs_review', policy_refs: ['SAFE-1: threat'] }), 'neutral');
 });
 

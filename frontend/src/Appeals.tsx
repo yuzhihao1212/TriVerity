@@ -85,7 +85,8 @@ function AppealItem({ appeal, onDecided }: { appeal: Appeal; onDecided: () => vo
   return (
     <li>
       <p><strong>{appeal.id}</strong> · {appeal.party === "rider" ? "Rider" : "Driver"} appeal
-        {appeal.priority === "safety" && <span className="risk-badge high"> Safety · review first</span>}</p>
+        {appeal.priority === "safety" && <span className="risk-badge high"> Safety · review first</span>}
+        {appeal.status === "queued" && <span className="risk-badge medium">Pending review</span>}</p>
       <p className="small muted">“{appeal.reason}”</p>
       {appeal.status === "decided" ? (
         <p className="small">Decided: <strong>{FINAL[appeal.reviewer_decision!]}</strong>. Added to the precedent knowledge base as {appeal.precedent_id}.</p>

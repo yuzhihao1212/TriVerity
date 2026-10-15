@@ -3,6 +3,7 @@ import { useId } from "react";
 import { SourceBadge } from "./Debate";
 import { partyView, PARTY_DECISION_LABELS } from "./partyView";
 import { money, outputSources, policyIds } from "./presentation";
+import { decisionTone } from "./outcomeTone";
 import { Term } from "./Term";
 import type { Resolution } from "./types";
 
@@ -10,16 +11,18 @@ export function VerdictSummary({ resolution, disputeId }: { resolution: Resoluti
   const id = useId();
   const view = partyView(resolution, "rider");
   const percent = Math.round(resolution.confidence * 100);
+  // The outcome's own tone (ok / warn / neutral), not brand red.
+  const tone = decisionTone(resolution.decision);
   return (
     <section id="ruling-summary" tabIndex={-1} className={`card verdict ruling ${resolution.decision}`} aria-labelledby={`${id}-title`}>
       <div className="card-head">
         <div><p className="eyebrow">Policy decides · {disputeId}</p><h2 id={`${id}-title`}>The ruling</h2></div>
-        <span className="decision">{PARTY_DECISION_LABELS[view.decision]}</span>
+        <span className={`decision tone-${tone}`}>{PARTY_DECISION_LABELS[view.decision]}</span>
       </div>
       <WhySummary resolution={resolution} />
       <div className="verdict-metrics">
         <div><span className="section-label">{view.refund_amount != null ? "Amount approved" : "Next step"}</span>
-          <p className="verdict-value">{view.refund_amount != null ? money(view.refund_amount) : resolution.decision === "needs_review" ? "Human review" : "Charge stands"}</p>
+          <p className={`verdict-value tone-text-${tone}`}>{view.refund_amount != null ? money(view.refund_amount) : resolution.decision === "needs_review" ? "Human review" : "Charge stands"}</p>
         </div>
         <div><span className="section-label"><Term term="confidence">Confidence</Term></span><p className="verdict-value">{percent}%</p>
           <p className="small muted">{percent >= 60 ? "Clear enough to decide automatically" : "Below 60%: a human decides"}</p></div>
