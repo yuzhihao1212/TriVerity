@@ -31,7 +31,7 @@ export default function Router() {
     // Keep initial keyboard focus at the document start (the skip link).
     if (previousRoute.current === route) return;
     previousRoute.current = route;
-    focusSection(route.page === "landing" ? "landing-title" : "main-content");
+    focusSection(route.page === "landing" ? "landing-title" : "main-content", { instant: true });
     window.scrollTo(0, 0);
   }, [route]);
   const [theme, setTheme] = useState<Theme>(() => resolveTheme(readTheme(localStorage),

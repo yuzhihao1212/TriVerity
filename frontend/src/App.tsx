@@ -13,7 +13,7 @@ import { Debate } from "./Debate";
 import { EvidenceList, EvidenceText, type FactLinks } from "./EvidenceList";
 import { VerdictSummary } from "./VerdictSummary";
 import { computedFacts, disputeLabel, filterDisputes, money } from "./presentation";
-import { focusSection, selectSample } from "./routes";
+import { focusSection, reveal, selectSample } from "./routes";
 import { AppealsPanel } from "./Appeals";
 import { ReviewerDecision } from "./ReviewerDecision";
 import { AiToggle } from "./AiToggle";
@@ -238,18 +238,14 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
 
   useEffect(() => {
     if (active && !form && resolving === selected?.dispute_id) {
-      const heading = document.getElementById("loading-title");
-      heading?.scrollIntoView({ block: "start" });
-      heading?.focus({ preventScroll: true });
+      reveal(document.getElementById("loading-title"));
     }
   }, [active, resolving, selected?.dispute_id, form]);
 
   useEffect(() => {
     if (!completedId) return;
     if (active && !form && completedId === selected?.dispute_id) {
-      const summary = document.querySelector<HTMLButtonElement>('[data-workflow-tab="evidence"]');
-      summary?.scrollIntoView({ block: "nearest" });
-      summary?.focus({ preventScroll: true });
+      reveal(document.querySelector<HTMLButtonElement>('[data-workflow-tab="evidence"]'), "nearest");
     }
     setCompletedId(null);
   }, [active, completedId, selected, form]);
@@ -258,8 +254,7 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
   useEffect(() => {
     if (!focusAccessCode || resolving) return;
     setFocusAccessCode(false);
-    accessCodeInput.current?.focus();
-    accessCodeInput.current?.scrollIntoView({ block: "center" });
+    reveal(accessCodeInput.current, "center");
   }, [focusAccessCode, resolving]);
 
   const disputeButton = (d: DisputeCase) => {

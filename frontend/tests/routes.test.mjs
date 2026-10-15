@@ -5,7 +5,7 @@ import ts from 'typescript';
 
 const source = await readFile(new URL('../src/routes.ts', import.meta.url), 'utf8');
 const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } });
-const { parseRoute, selectSample } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`);
+const { parseRoute, selectSample, scrollBehavior } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`);
 
 test('empty, root and unknown hashes show the landing page', () => {
   for (const hash of ['', '#/', '#', '#/unknown', '#/console/D007/extra', '#console', '#/console/%ZZ']) {
@@ -25,4 +25,9 @@ test('sample selection uses the server list; unknown IDs select its first case',
   assert.equal(selectSample(samples, parseRoute('#/console/UNKNOWN').sampleId), samples[0]);
   assert.equal(selectSample(samples), samples[0]);
   assert.equal(selectSample([], 'D007'), null);
+});
+
+test('auto-scrolls are smooth unless the viewer prefers reduced motion', () => {
+  assert.equal(scrollBehavior(false), 'smooth');
+  assert.equal(scrollBehavior(true), 'auto');
 });
