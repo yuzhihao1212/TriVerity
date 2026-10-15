@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from app.core import limits
 from app.services.gps_analysis import GpsAnalysis, analyse_gps
 
-from app.models.dispute import ChatMessage, DisputeCase, FareData, PartyHistory
+from app.models.dispute import ChatMessage, DisputeCase, DisputeType, FareData, PartyHistory
 from app.services.text_safety import sanitise
 
 EARTH_RADIUS_M = 6_371_000
@@ -38,6 +38,8 @@ class CaseFacts(BaseModel):
     Agents may argue about what these facts mean, but must not contradict them.
     A value of None means the underlying data was not provided.
     """
+    dispute_type: DisputeType | None = None
+    gps_stop_distances_from_pickup_m: list[float | None] = Field(default_factory=list)
     distance_excess_ratio: float | None = None
     duration_excess_ratio: float | None = None
     fare_difference: float | None = None
@@ -80,10 +82,17 @@ class CaseFacts(BaseModel):
                 lines.append(f"GPS path {gps.path_distance_km:.1f} km over {gps.points_used} points{comparison}")
             else:
                 lines.append(f"GPS path unavailable ({gps.points_used} usable {'point' if gps.points_used == 1 else 'points'})")
-            for stop in gps.unexpected_stops or []:
-                lines.append(f"Unexpected stop: {stop.duration_min:g} min at {stop.start_time:%H:%M}")
+            for index, stop in enumerate(gps.unexpected_stops or []):
+                if self.dispute_type == "no_show_charge":
+                    distance = (self.gps_stop_distances_from_pickup_m[index]
+                                if index < len(self.gps_stop_distances_from_pickup_m) else None)
+                    location = f", {distance:.0f} m from the pickup point" if distance is not None else ""
+                    lines.append(f"Driver stopped {stop.duration_min:g} min at {stop.start_time:%H:%M}{location}")
+                else:
+                    lines.append(f"Unexpected stop: {stop.duration_min:g} min at {stop.start_time:%H:%M}")
             if gps.total_stopped_min is not None:
-                lines.append(f"GPS unexpected stops total {gps.total_stopped_min:g} min")
+                label = "GPS observed stops total" if self.dispute_type == "no_show_charge" else "GPS unexpected stops total"
+                lines.append(f"{label} {gps.total_stopped_min:g} min")
             if gps.max_gap_min is not None and gps.max_gap_min > limits.GPS_REPORT_GAP_MIN:
                 lines.append(f"GPS data gap of {gps.max_gap_min:g} min")
             if gps.points_rejected:
@@ -217,7 +226,16 @@ def compute_facts(case: DisputeCase) -> CaseFacts:
         itemised = sum(line.amount for line in fare.breakdown) - (fare.promo_discount or 0.0)
         breakdown_gap = round(fare.actual - itemised, 2)
 
+    gps = analyse_gps(case.gps_points, trip, route_trip=case.type == "route_deviation")
+    stop_distances = [
+        _haversine_m(stop.lat, stop.lng, trip.pickup_lat, trip.pickup_lng)
+        if trip.pickup_lat is not None and trip.pickup_lng is not None else None
+        for stop in (gps.unexpected_stops or [])
+    ] if gps else []
+
     return CaseFacts(
+        dispute_type=case.type,
+        gps_stop_distances_from_pickup_m=stop_distances,
         distance_excess_ratio=_excess_ratio(trip.expected_distance_km, trip.actual_distance_km),
         duration_excess_ratio=_excess_ratio(trip.expected_duration_min, trip.actual_duration_min),
         fare_difference=fare_difference,
@@ -230,7 +248,7 @@ def compute_facts(case: DisputeCase) -> CaseFacts:
         fare_breakdown_gap=breakdown_gap,
         promo_applied_correctly=_promo_check(fare),
         surge_consistent=_surge_check(fare),
-        gps=analyse_gps(case.gps_points, trip, route_trip=case.type == "route_deviation"),
+        gps=gps,
         chat=analyse_chat(case.chat_logs),
         rider_history=case.rider_history,
         driver_history=case.driver_history,

@@ -223,3 +223,25 @@ def test_stop_ends_when_the_vehicle_crawls_away():
 def test_one_usable_point_wording():
     facts = CaseFacts(gps=analyse_gps([point()], TripData()), chat=ChatAnalysis())
     assert "GPS path unavailable (1 usable point)" in facts.describe()
+
+
+def test_no_show_wording_uses_observed_stop_location():
+    case = DisputeCase(dispute_id='X', type='no_show_charge', rider_claim='',
+                       trip={'pickup_lat': 1.3521, 'pickup_lng': 103.8198},
+                       gps_points=[point(i, lat=1.3555, lng=103.8198) for i in range(7)])
+    facts = compute_facts(case)
+    lines = facts.describe_by_source()['gps']
+    assert 'Driver stopped 6 min at 08:00, 378 m from the pickup point' in lines
+    assert 'GPS observed stops total 6 min' in lines
+    assert all('unexpected' not in line.lower() for line in lines)
+    case.trip.pickup_lat = None
+    assert 'Driver stopped 6 min at 08:00' in compute_facts(case).describe()
+    assert all('from the pickup point' not in line for line in compute_facts(case).describe())
+
+
+def test_route_stop_wording_is_unchanged():
+    facts = CaseFacts(dispute_type='route_deviation', gps=GpsAnalysis(
+        unexpected_stops=[GpsStop(start_time=point()['timestamp'], duration_min=6, lat=1.32, lng=103.85)],
+        total_stopped_min=6, points_used=7))
+    assert 'Unexpected stop: 6 min at 08:00' in facts.describe()
+    assert 'GPS unexpected stops total 6 min' in facts.describe()
