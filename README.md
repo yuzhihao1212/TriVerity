@@ -16,7 +16,6 @@ Not affiliated with or endorsed by Ryde. All dispute data is synthetic.*
 | **9/9** sample rulings correct | **500/500** fairness checks: history removed or swapped |
 
 Live sample measurements and offline simulation results; [measurement context below](#results).
-Digital Native Track (Ryde).
 
 ## A quick look
 
