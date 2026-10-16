@@ -124,3 +124,13 @@ test('the current result survives a page refresh so a closed review cannot be re
   const bad=backend();bad.setItem(n.REVIEW_RESULTS_KEY,'{"D001":null,"D002":{}}');
   assert.deepEqual(n.createSentStore(bad).results(),{});
 });
+
+test('the header outcome chip follows the final decision, marked when the reviewer changed it', async () => {
+  const { headerChips } = await load('stepVisuals');
+  const dispute = { trip: { expected_distance_km: 10.2, actual_distance_km: 14.7 }, fare: { actual: 24.8 } };
+  const resolution = { decision: 'partial_refund', refund_amount: 6.3, policy_refs: ['RD-3: …'] };
+  const outcome = chips => chips.find(c => c.key === 'outcome').label;
+  assert.equal(outcome(headerChips(dispute, resolution)), 'Partial refund $6.30');
+  assert.equal(outcome(headerChips(dispute, resolution, { decision: 'full_refund', amount: 24.8, by: 'overridden' })), 'Full refund $24.80 · overridden');
+  assert.equal(outcome(headerChips(dispute, resolution, { decision: 'no_action', amount: null, by: 'decided' })), 'No action · decided by reviewer');
+});

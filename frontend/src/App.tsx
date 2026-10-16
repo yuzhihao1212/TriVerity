@@ -6,7 +6,7 @@ import { AgentsStrip } from "./AgentsStrip";
 import { WorkflowTabs } from "./WorkflowTabs";
 import { savedTab, type WorkflowTab } from "./workflow";
 import { FactLibrary } from "./FactLibrary";
-import { headerChips, statusPill } from "./stepVisuals";
+import { headerChips, statusPill, type FinalHeaderOutcome } from "./stepVisuals";
 import { createReviewStore, openCounts, reviewKey, reviewSummary, reviewedSteps, REOPENED_STEPS, type ReviewSummary } from "./reviewProgress";
 import { CaseComparison } from "./CaseComparison";
 import { Debate } from "./Debate";
@@ -22,7 +22,7 @@ import { DecisionBar, ReviewerDecision, useReviewerDecision } from "./ReviewerDe
 import { DECISION_LABELS, decisionTone, riskTone } from "./outcomeTone";
 import { Chip, InternalBadge } from "./Chip";
 import { chipClass, chipTone, sourceTone } from "./chipStyle";
-import { savedText } from "./decisionState";
+import { savedText, type SavedDecision } from "./decisionState";
 import { AiToggle } from "./AiToggle";
 import { readAiMode, writeAiMode, type AiMode } from "./aiMode";
 import { NewDisputeIcon, SidebarToggle } from "./SidebarToggle";
@@ -31,7 +31,7 @@ import { Term } from "./Term";
 import { PresentationToggle, ThemeToggle } from "./ThemeToggle";
 import type { Theme } from "./theme";
 import { PartyPreview, sentRecords } from "./PartyPreview";
-import { clockText, DELIVERED_ANNOUNCEMENT } from "./notifyState";
+import { clockText, DELIVERED_ANNOUNCEMENT, finalOutcome, type SentRecord } from "./notifyState";
 import { DisputeForm } from "./DisputeForm";
 import { ApiError, getSamples, listAppeals, resolveDisputeLive } from "./services/api";
 import { AccessCodeField } from "./AccessCodeField";
@@ -417,7 +417,8 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
             {reviewId && <ClosedCase disputeId={selected.dispute_id} sent={sent} latest={latestSent}
               events={sentRecords().events(reviewId)} earlier={sentRecords().earlier(selected.dispute_id, reviewId)}
               appealWaiting={waitingIds.has(selected.dispute_id)} onReopen={reopenCase} />}
-            <CaseHeader dispute={selected} resolution={resolution} busy={resolving === selected.dispute_id} streaming={streaming} progress={progress} />
+            <CaseHeader dispute={selected} resolution={resolution} busy={resolving === selected.dispute_id} streaming={streaming} progress={progress}
+              final={resolution ? headerFinal(resolution, selected, decision.saved, latestSent) : null} />
             <WorkflowTabs active={activeTab} resolution={resolution} busy={resolving === selected.dispute_id}
               liveSteps={resolving === selected.dispute_id ? liveSteps : undefined} reviewed={reviewed} onChange={changeTab}
               render={tab => resolving === selected.dispute_id ? <LiveProgress disputeId={selected.dispute_id} steps={liveSteps} startedAt={runStartedAt} streaming={streaming} /> : <>
@@ -478,10 +479,28 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
   );
 }
 
-function CaseHeader({ dispute, resolution, busy, streaming, progress }: {
+/**
+ * The outcome the header shows: the reviewer's current decision, else the last one sent, else
+ * the AI ruling (null). Accepting the ruling keeps the AI outcome without a suffix.
+ */
+function headerFinal(resolution: Resolution, dispute: DisputeCase, saved: SavedDecision | null | undefined,
+  latest: SentRecord | null): FinalHeaderOutcome | null {
+  if (saved && saved.kind !== "accepted") {
+    const outcome = finalOutcome(resolution, saved, dispute, null);
+    const amount = outcome.needsAmount && latest?.decision === saved.decision ? latest.amount : outcome.amount;
+    return { decision: saved.decision, amount, by: saved.kind === "decided" ? "decided" : "overridden" };
+  }
+  if (!saved && latest && latest.decision !== resolution.decision) {
+    return { decision: latest.decision, amount: latest.amount, by: latest.reviewer?.kind === "decided" ? "decided" : "overridden" };
+  }
+  return null;
+}
+
+function CaseHeader({ dispute, resolution, busy, streaming, progress, final }: {
   dispute: DisputeCase; resolution?: Resolution; busy: boolean; streaming: boolean; progress: ReviewSummary | null;
+  final?: FinalHeaderOutcome | null;
 }) {
-  const chips = headerChips(dispute, resolution);
+  const chips = headerChips(dispute, resolution, final);
   const status = statusPill({ busy, streaming, hasResult: !!resolution });
   return <header className="case-file-head">
     <div className="case-file-title">
