@@ -1054,6 +1054,38 @@ article[tabindex="-1"] { scroll-margin-block: var(--space-4); }
 @media (max-width: 760px) { .landing-trust { grid-template-columns: minmax(0, 1fr); } .trust-tile-title { font-size: 25px; } }
 @media (prefers-reduced-motion: reduce) { .trust-tile-front, .trust-tile-detail { transition: none; } }
 
+/* Measured results: decorative illustrations. Final geometry is the default;
+   only an active observer opts into hidden start states and one-time motion. */
+.landing-metrics .landing-result-visual { order: -1; width: 96px; height: 96px; align-self: center; margin-bottom: var(--space-3); }
+.landing-result-visual svg { display: block; width: 100%; height: 100%; color: var(--accent); }
+.results-tick-circle { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; }
+.results-pop { transform-box: fill-box; transform-origin: center; }
+path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.results-dot, .results-watch-button { fill: currentColor; }
+.results-ring-track { fill: none; stroke: var(--border); }
+.results-ring { fill: none; stroke: currentColor; }
+.results-watch-stem { stroke: var(--muted); stroke-width: 3; }
+.results-watch-hand { transform-origin: 50px 56px; transform: rotate(var(--results-angle)); }
+.results-watch-hand path { stroke: currentColor; stroke-width: 3; stroke-linecap: round; }
+.landing-result-caption { order: 3; color: var(--muted); font-size: 12px; }
+.landing.presentation-mode .landing-result-visual { width: 104px; height: 104px; }
+.landing.presentation-mode .landing-result-caption { font-size: 14px; }
+@media (prefers-reduced-motion: no-preference) {
+  .results-ready:not(.results-animate) .results-pop { opacity: 0; transform: scale(.6); }
+  .results-ready:not(.results-animate) .results-ring { stroke-dashoffset: var(--results-circumference); }
+  .results-ready:not(.results-animate) .results-watch-hand { transform: rotate(0deg); }
+  .results-animate .results-pop { animation: results-pop 400ms ease-out calc(var(--results-delay) + var(--results-item-delay)) both; }
+  .results-animate .results-ring { animation: results-sweep 760ms ease-out var(--results-delay) both; }
+  .results-animate .results-watch-hand { animation: results-hand 760ms ease-out var(--results-delay) both; }
+}
+@keyframes results-pop { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: scale(1); } }
+@keyframes results-sweep { from { stroke-dashoffset: var(--results-circumference); } to { stroke-dashoffset: var(--results-offset); } }
+@keyframes results-hand { from { transform: rotate(0deg); } to { transform: rotate(var(--results-angle)); } }
+@media (max-width: 760px) {
+  .landing-metrics .landing-result-visual { width: 72px; height: 72px; }
+  .landing.presentation-mode .landing-result-visual { width: 80px; height: 80px; }
+}
+
 /* ---- Review workflow: Notify editors, reviewer home, breadcrumb (PR B) ---- */
 .breadcrumb ol { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); list-style: none; margin: 0 0 var(--space-3); padding: 0; color: var(--muted); font-size: 13px; }
 .breadcrumb li + li::before { content: "›"; margin-right: var(--space-1); color: var(--muted); }
