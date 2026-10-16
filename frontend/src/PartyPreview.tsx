@@ -5,7 +5,7 @@ import type { SavedDecision } from "./decisionState";
 import { Icon } from "./Icon";
 import {
   cleanNote, clockText, closingTitle, createSentStore, finalOutcome, generatedMessage, maxRefund, NOTE_LIMIT, NOTE_PLACEHOLDER,
-  noteCounter, noteWarnings, notifyGate, PARTIES, phoneState, SEND_TOOLTIP, sendBlock, sentText, validateAmount,
+  noteCounter, noteWarnings, notifyGate, PARTIES, phoneState, SEND_TOOLTIP, sendBlock, sentText, sentOutcome, validateAmount,
   type FinalOutcome, type Party, type SentRecord,
 } from "./notifyState";
 import type { ReviewSummary } from "./reviewProgress";
@@ -30,8 +30,9 @@ const NO_NOTES: Record<Party, string> = { rider: "", driver: "" };
  * shown read-only, exactly as they will see it, and the reviewer may add a short note under it.
  * The phones are a preview until "Approve & send"; then they are delivered and can be appealed.
  */
-export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailable, rulingVisited, progress, onGoToRuling, onSent, onAppealed, next, onNext, onBack }: {
+export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailable, rulingVisited, progress, onGoToRuling, onSent, onAppealed, next, onNext, onBack, reopened = false, previous = null, appealsAvailable = true }: {
   resolution: Resolution; dispute: DisputeCase; reviewKey: string;
+  reopened?: boolean; previous?: SentRecord | null; appealsAvailable?: boolean;
   saved: SavedDecision | null; unavailable: boolean; rulingVisited: boolean;
   /** The reviewer's progress: the closing card says "Review complete" only when every step is reviewed. */
   progress: ReviewSummary | null;
@@ -42,13 +43,13 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
   const id = useId();
   const [sent, setSent] = useState<SentRecord | null>(() => sentRecords().get(reviewKey));
   const [notes, setNotes] = useState<Record<Party, string>>(NO_NOTES);
-  const [amountText, setAmountText] = useState("");
+  const [amountText, setAmountText] = useState(previous?.reviewer?.decision === "partial_refund" && previous.reviewer.kind !== "accepted" && previous.amount != null ? previous.amount.toFixed(2) : "");
   const [sendAnyway, setSendAnyway] = useState(false);
-  const gate = notifyGate({ saved: !!saved, unavailable, rulingVisited });
+  const gate = reopened ? "open" : notifyGate({ saved: !!saved, unavailable, rulingVisited });
   const max = maxRefund(dispute);
   const amountCheck = validateAmount(amountText, max);
   const outcome: FinalOutcome = sent
-    ? { ...finalOutcome(resolution, saved, dispute), decision: sent.decision, amount: sent.amount, needsAmount: false }
+    ? sentOutcome(sent)
     : finalOutcome(resolution, saved, dispute, amountCheck.ok ? amountCheck.value : null);
   const message = (party: Party) => sent ? sent.messages[party] : generatedMessage(party, resolution, outcome);
   const note = (party: Party) => sent ? sent.notes?.[party] ?? "" : notes[party];
@@ -60,15 +61,15 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
   const blocked = sendBlock({ amountMissing, warnings, sendAnyway });
 
   function send() {
-    if (blocked || sent) return;
+    if (blocked || sent || sentRecords().get(reviewKey)) return;
     const record: SentRecord = {
-      at: clockText(new Date()),
+      at: clockText(new Date()), timestamp: new Date().toISOString(), disputeId: dispute.dispute_id, reviewer: saved ?? undefined,
       messages: { rider: message("rider"), driver: message("driver") },
       notes: { rider: cleanNote(notes.rider), driver: cleanNote(notes.driver) },
       decision: outcome.decision, amount: outcome.amount,
     };
     sentRecords().set(reviewKey, record);
-    setSent(record);
+    setSent(sentRecords().get(reviewKey));
     onSent();
   }
 
@@ -84,7 +85,7 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
   return (
     <section className="card party-preview" aria-labelledby={`${id}-heading`}>
       <h2 id={`${id}-heading`}>Notify parties</h2>
-      <p className="small muted">The message comes from the final decision. Add an optional note for each party. To change the outcome or explanation, use Override on the Ruling step. Notes are checked so internal details never reach the parties.</p>
+      <p className="small muted">{sent ? "These are the exact messages and notes delivered. Reopen the case to make a correction." : "The message comes from the final decision. Add an optional note for each party. To change the outcome or explanation, use Override on the Ruling step. Notes are checked so internal details never reach the parties."}</p>
       {outcome.needsAmount && !sent && <div className="notify-amount">
         <label className="section-label" htmlFor={`${id}-amount`}>Partial refund amount</label>
         <input id={`${id}-amount`} inputMode="decimal" required aria-required="true" aria-invalid={!amountCheck.ok}
@@ -119,7 +120,7 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
               </>}
           </div>
           <Phone party={party} outcome={outcome} message={message(party)} note={cleanNote(note(party))} sent={sent}
-            dispute={dispute} decision={resolution.decision} onAppealed={onAppealed} id={id} />
+            dispute={dispute} decision={outcome.decision} onAppealed={onAppealed} appealsAvailable={appealsAvailable} id={id} />
         </div>)}
       </div>
       {sent ? <div className="notify-done">
@@ -143,9 +144,9 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
   );
 }
 
-function Phone({ party, outcome, message, note, sent, dispute, decision, onAppealed, id }: {
+function Phone({ party, outcome, message, note, sent, dispute, decision, onAppealed, appealsAvailable, id }: {
   party: Party; outcome: FinalOutcome; message: string; note: string; sent: SentRecord | null;
-  dispute: DisputeCase; decision: Resolution["decision"]; onAppealed?: () => void; id: string;
+  dispute: DisputeCase; decision: Resolution["decision"]; onAppealed?: () => void; appealsAvailable: boolean; id: string;
 }) {
   const state = phoneState(party, sent);
   return <figure className={`phone-wrap${state.delivered ? " delivered" : " preview"}`} aria-labelledby={`${id}-${party}`}>
@@ -164,8 +165,8 @@ function Phone({ party, outcome, message, note, sent, dispute, decision, onAppea
           <p className="phone-note-label">Note from your reviewer</p>
           <p className="phone-note-text">“{note}”</p>
         </div>}
-        <AppealForm key={`${dispute.dispute_id}-${party}-${state.delivered ? "delivered" : "preview"}`} dispute={dispute} party={party}
-          decision={decision} onFiled={onAppealed} available={state.canAppeal} unavailableNote={state.caption ?? undefined} />
+        {appealsAvailable && <AppealForm key={`${dispute.dispute_id}-${party}-${state.delivered ? "delivered" : "preview"}`} dispute={dispute} party={party}
+          decision={decision} onFiled={onAppealed} available={state.canAppeal} unavailableNote={state.caption ?? undefined} />}
       </div>
     </div>
   </figure>;

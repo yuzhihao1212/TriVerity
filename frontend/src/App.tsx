@@ -6,22 +6,23 @@ import { AgentsStrip } from "./AgentsStrip";
 import { WorkflowTabs } from "./WorkflowTabs";
 import { savedTab, type WorkflowTab } from "./workflow";
 import { FactLibrary } from "./FactLibrary";
-import { headerChips, statusPill } from "./stepVisuals";
-import { createReviewStore, openCounts, reviewKey, reviewSummary, type ReviewSummary } from "./reviewProgress";
+import { headerChips, statusPill, type FinalHeaderOutcome } from "./stepVisuals";
+import { createReviewStore, openCounts, reviewKey, reviewSummary, reviewedSteps, REOPENED_STEPS, type ReviewSummary } from "./reviewProgress";
 import { CaseComparison } from "./CaseComparison";
 import { Debate } from "./Debate";
 import { EvidenceList, EvidenceText, type FactLinks } from "./EvidenceList";
 import { VerdictSummary } from "./VerdictSummary";
 import { computedFacts, disputeLabel, filterDisputes, money } from "./presentation";
 import { caseHash, focusSection, HOME_HASH, missingCase, reveal, selectSample } from "./routes";
-import { caseStatus, nextCase, STATUS_WORDS, type CaseStatus } from "./caseQueue";
+import { allowedActions, caseStatus, nextCase, pendingAppealIds, STATUS_WORDS, type CaseStatus } from "./caseQueue";
 import { Home, type HomeRow } from "./Home";
 import { AppealsPanel } from "./Appeals";
+import { ClosedCase, ClosedSummary } from "./ClosedCase";
 import { DecisionBar, ReviewerDecision, useReviewerDecision } from "./ReviewerDecision";
 import { DECISION_LABELS, decisionTone, riskTone } from "./outcomeTone";
 import { Chip, InternalBadge } from "./Chip";
 import { chipClass, chipTone, sourceTone } from "./chipStyle";
-import { savedText } from "./decisionState";
+import { savedText, type SavedDecision } from "./decisionState";
 import { AiToggle } from "./AiToggle";
 import { readAiMode, writeAiMode, type AiMode } from "./aiMode";
 import { NewDisputeIcon, SidebarToggle } from "./SidebarToggle";
@@ -30,7 +31,7 @@ import { Term } from "./Term";
 import { PresentationToggle, ThemeToggle } from "./ThemeToggle";
 import type { Theme } from "./theme";
 import { PartyPreview, sentRecords } from "./PartyPreview";
-import { DELIVERED_ANNOUNCEMENT } from "./notifyState";
+import { clockText, DELIVERED_ANNOUNCEMENT, finalOutcome, type SentRecord } from "./notifyState";
 import { DisputeForm } from "./DisputeForm";
 import { ApiError, getSamples, listAppeals, resolveDisputeLive } from "./services/api";
 import { AccessCodeField } from "./AccessCodeField";
@@ -38,7 +39,7 @@ import { ACCESS_CODE_FIELD_ID, accessCodeMessage, accessCodeProblem, needsAccess
 import { disputeItemName, filterLabel, filterShortLabel, TYPE_LABELS, type DisputeFilter } from "./disputeList";
 import { FilterMenu } from "./FilterMenu";
 import { Icon } from "./Icon";
-import type { AgentLogEntry, ArgumentReview, Counterfactual, Decision, DisputeCase, PartyHistory, PrecedentReport, Resolution, RiskLevel, Triage, TriageTier } from "./types";
+import type { AgentLogEntry, Appeal, ArgumentReview, Counterfactual, Decision, DisputeCase, PartyHistory, PrecedentReport, Resolution, RiskLevel, Triage, TriageTier } from "./types";
 
 
 // The reviewer's progress per ruling, for this browser session (shared by every mount).
@@ -115,7 +116,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
   const [focusAccessCode, setFocusAccessCode] = useState(false);
   const [selected, setSelected] = useState<DisputeCase | null>(null);
   // Results are kept per dispute so revisiting a case doesn't call the LLM again.
-  const [results, setResults] = useState<Record<string, Resolution>>({});
+  const [results, setResults] = useState<Record<string, Resolution>>(() => sentRecords().results());
   const [liveSteps, setLiveSteps] = useState<AgentLogEntry[]>([]);
   const [runStartedAt, setRunStartedAt] = useState(0);
   const [streaming, setStreaming] = useState(true);
@@ -173,6 +174,8 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
 
   function resolve(dispute: DisputeCase) {
     if (resolving !== null) return;
+    const previous = results[dispute.dispute_id];
+    if (previous && sentRecords().get(reviewKey(dispute.dispute_id, previous))) return;
     setError(null);
     setResolving(dispute.dispute_id);
     setLiveSteps([]);
@@ -186,6 +189,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
     }, () => setStreaming(false), isOwn ? accessCode.trim() || undefined : undefined, aiMode)
       .then((r) => {
         setActiveFact(null);
+        sentRecords().saveResult(dispute.dispute_id, r);
         setResults((prev) => ({ ...prev, [dispute.dispute_id]: r }));
         setActiveTabs(prev => ({ ...prev, [dispute.dispute_id]: "evidence" }));
         setCompletedId(dispute.dispute_id);
@@ -209,11 +213,16 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
   // Reviewer progress. A step counts once the reviewer has been on it: marked when they
   // navigate to it or move on from it (the automatic switch to Evidence after a run is
   // not the reviewer's own visit until they move on). Ruling and Notify need real actions.
+  const [sentVersion, setSentVersion] = useState(0);
   const [reviewVersion, setReviewVersion] = useState(0);
   const [decisionsUnavailable, setDecisionsUnavailable] = useState(false);
   const reviewId = selected && resolution ? reviewKey(selected.dispute_id, resolution) : null;
-  const reviewed = useMemo(() => reviewId ? reviews().get(reviewId) : new Set<WorkflowTab>(),
-    [reviewId, reviewVersion]);
+  const sent = reviewId ? sentRecords().get(reviewId) : null;
+  const latestSent = reviewId ? sentRecords().latest(reviewId) : null;
+  const reopened = !!reviewId && sentRecords().reopened(reviewId);
+  const closed = !!sent;
+  const reviewed = useMemo(() => reviewedSteps(reviewId ? reviews().get(reviewId) : [], closed),
+    [reviewId, reviewVersion, closed]);
   const progress: ReviewSummary | null = resolution ? reviewSummary(reviewed) : null;
   function markReviewed(tab: WorkflowTab) {
     if (reviewId && reviews().add(reviewId, tab)) setReviewVersion(v => v + 1);
@@ -233,10 +242,12 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
 
   // One decision state for the sticky bar and the "Your decision" card, per ruling.
   const decision = useReviewerDecision({ runKey: reviewId, dispute: selected, resolution,
-    onDecided: () => markReviewed("ruling"), onUnavailable: onDecisionsUnavailable });
+    onDecided: () => markReviewed("ruling"), onUnavailable: onDecisionsUnavailable, locked: closed });
 
   // One status per case, the same wording on the home page and in the sidebar.
-  const [sentVersion, setSentVersion] = useState(0);
+  const [appeals, setAppeals] = useState<Appeal[] | null>(null);
+  const waitingIds = useMemo(() => pendingAppealIds(appeals), [appeals]);
+  const actions = allowedActions(closed ? "closed" : reopened ? "reopened" : "ready", closed);
   // Announced once through the polite status region when the phones switch to delivered.
   const [deliveredFor, setDeliveredFor] = useState<string | null>(null);
   const allCases = useMemo(() => [...own, ...samples], [own, samples]);
@@ -244,24 +255,34 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
     const result = results[d.dispute_id];
     const key = result ? reviewKey(d.dispute_id, result) : null;
     const saved = decision.savedFor(key);
-    const status: CaseStatus = caseStatus(result, !!saved, !!(key && sentRecords().get(key)));
+    const status: CaseStatus = caseStatus(result, !!saved, !!(key && sentRecords().get(key)), { reopened: !!key && sentRecords().reopened(key), appealWaiting: waitingIds.has(d.dispute_id) });
     // The outcome dot follows the final decision: an override replaces the ruling's outcome.
-    return { id: d.dispute_id, dispute: d, status, tier: result?.triage?.tier ?? null, decision: saved?.decision ?? result?.decision ?? null };
+    return { id: d.dispute_id, dispute: d, status, tier: result?.triage?.tier ?? null, decision: saved?.decision ?? (key ? sentRecords().latest(key)?.decision : null) ?? result?.decision ?? null };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [allCases, results, decision.savedFor, sentVersion]);
+  }), [allCases, results, decision.savedFor, sentVersion, waitingIds]);
   const statusOf = (id: string) => queueRows.find(row => row.id === id)?.status ?? "not_run";
   const following = selected ? nextCase(queueRows, selected.dispute_id) : null;
 
-  // Appeals waiting, for the home tile; hidden when the queue is unavailable (public demo).
-  const [appealsWaiting, setAppealsWaiting] = useState<number | null>(null);
+  // One appeal list feeds the queue and case banner; unavailable (403) shows neither.
   const onHome = active && !form && !selected && !loadingSamples;
   useEffect(() => {
-    if (!onHome) return;
+    if (!active) return;
     let live = true;
-    listAppeals().then(list => { if (live) setAppealsWaiting(list.filter(item => item.status === "queued").length); })
-      .catch(() => { if (live) setAppealsWaiting(null); });
+    listAppeals().then(list => { if (live) setAppeals(list); })
+      .catch(() => { if (live) setAppeals(null); });
     return () => { live = false; };
-  }, [onHome, appealsVersion]);
+  }, [active, selected?.dispute_id, appealsVersion]);
+
+  function reopenCase() {
+    if (!reviewId || !selected || !sentRecords().reopen(reviewId, clockText(new Date()), new Date().toISOString())) return;
+    decision.reopen();
+    reviews().set(reviewId, REOPENED_STEPS);
+    setReviewVersion(v => v + 1);
+    setSentVersion(v => v + 1);
+    setDeliveredFor(null);
+    setActiveTabs(prev => ({ ...prev, [selected.dispute_id]: "ruling" }));
+    requestAnimationFrame(() => reveal(document.querySelector<HTMLButtonElement>('[data-workflow-tab="ruling"]'), "nearest"));
+  }
 
   function changeTab(tab: WorkflowTab) {
     if (!selected) return;
@@ -310,7 +331,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
         <span className="dispute-line"><TypeIcon type={d.type} /><span className="dispute-label">{summary}</span></span>
         <span className="dispute-sub">
           <span className="dispute-id">{d.dispute_id}</span>
-          {decision && <Chip size="sm" dot tone={decisionTone(decision)} title={DECISION_LABELS[decision]}>{STATUS_WORDS[status]}</Chip>}
+          {decision && <Chip size="sm" dot tone={status === "appeal_waiting" ? "warn" : status === "closed" ? "ok" : decisionTone(decision)} title={DECISION_LABELS[decision]}>{STATUS_WORDS[status]}</Chip>}
         </span>
       </button>
     </li>;
@@ -383,7 +404,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
           <ProgressAnnouncements steps={liveSteps} />
           <div role="alert" aria-atomic="true">{error && <p className="error">{error}</p>}</div>
           {!form && loadingSamples && <section className="card empty-state"><h2>Loading disputes…</h2><p className="muted">The sample list is loading. No agents have run.</p></section>}
-          {onHome && <Home rows={queueRows} appealsWaiting={appealsWaiting} showStart={Object.keys(results).length === 0}
+          {onHome && <Home rows={queueRows} appealsWaiting={appeals === null ? null : waitingIds.size} showStart={Object.keys(results).length === 0}
             missing={missing} onDismissMissing={() => setMissing(null)} onNew={newDispute} typeIcon={type => <TypeIcon type={type} />} />}
           {!form && resolving && resolving !== selected?.dispute_id && <p className="small muted">Agents are working on {resolving}. This case remains available.</p>}
           {form && <DisputeForm key={form.template?.dispute_id ?? "blank"} template={form.template} onSubmit={addOwn} onCancel={() => setForm(null)}
@@ -393,16 +414,20 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
               <li><a href={HOME_HASH}>Console</a></li>
               <li aria-current="page">{selected.dispute_id}</li>
             </ol></nav>
-            <CaseHeader dispute={selected} resolution={resolution} busy={resolving === selected.dispute_id} streaming={streaming} progress={progress} />
+            {reviewId && <ClosedCase disputeId={selected.dispute_id} sent={sent} latest={latestSent}
+              events={sentRecords().events(reviewId)} earlier={sentRecords().earlier(selected.dispute_id, reviewId)}
+              appealWaiting={waitingIds.has(selected.dispute_id)} onReopen={reopenCase} />}
+            <CaseHeader dispute={selected} resolution={resolution} busy={resolving === selected.dispute_id} streaming={streaming} progress={progress}
+              final={resolution ? headerFinal(resolution, selected, decision.saved, latestSent) : null} />
             <WorkflowTabs active={activeTab} resolution={resolution} busy={resolving === selected.dispute_id}
               liveSteps={resolving === selected.dispute_id ? liveSteps : undefined} reviewed={reviewed} onChange={changeTab}
               render={tab => resolving === selected.dispute_id ? <LiveProgress disputeId={selected.dispute_id} steps={liveSteps} startedAt={runStartedAt} streaming={streaming} /> : <>
                 {/* Outcome first: each step's content, then how it was decided. */}
                 {tab === "intake" && <>
                   <CasePanel dispute={selected} availableIds={factIds} onSelectFact={selectFact} />
-                  {needsAccessCode(selected.dispute_id, own) && <AccessCodeField ref={accessCodeInput} id={ACCESS_CODE_FIELD_ID}
+                  {actions.run && needsAccessCode(selected.dispute_id, own) && <AccessCodeField ref={accessCodeInput} id={ACCESS_CODE_FIELD_ID}
                     value={accessCode} onChange={changeAccessCode} />}
-                  <div className="run-bar">
+                  {actions.run ? <><div className="run-bar">
                     <button className="run-button" onClick={() => resolve(selected)} disabled={resolving !== null}>
                       {resolution ? "Re-run agents" : "Run agents"}
                     </button>
@@ -411,13 +436,13 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
                       : "AI offline: free, same ruling; arguments and explanations use template text"}</span>
                     <button className="secondary-button" onClick={() => { setForm({ template: selected }); setError(null); }}>Edit as new dispute</button>
                   </div>
-                  {resolution && <p className="small muted">This case has a saved result. Re-running uses tokens again.</p>}
+                  {resolution && <p className="small muted">This case has a saved result. Re-running uses tokens again.</p>}</> : <p className="small muted">Closed. Reopen the case to run the agents again.</p>}
                 </>}
                 {tab === "evidence" && resolution && <><FactLibrary facts={facts} activeId={activeFact} request={factRequest} expanded grouped onSelectFact={selectFact} dispute={selected} resolution={resolution} /><CollectorCalls collection={resolution.evidence_collection} /></>}
                 {tab === "hearing" && resolution && <Debate resolution={resolution} dispute={selected} availableIds={factIds} onSelectFact={selectFact} />}
                 {tab === "ruling" && resolution && <>
                   <VerdictSummary resolution={resolution} disputeId={selected.dispute_id} />
-                  <ReviewerDecision resolution={resolution} controller={decision} />
+                  {actions.decide ? <ReviewerDecision resolution={resolution} controller={decision} /> : sent && <ClosedSummary record={sent} />}
                   <AppealsPanel disputeId={selected.dispute_id} version={appealsVersion} onChanged={() => setAppealsVersion(v => v + 1)} />
                   <RulingSection title="Reasoning" hint="The Judge's explanation, policy and evidence" open>
                     <RulingPanel resolution={resolution} dispute={selected} availableIds={factIds} onSelectFact={selectFact} />
@@ -435,15 +460,16 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
                   </RulingSection>
                   <details className="raw"><summary>Raw API response · internal record</summary><pre>{JSON.stringify(resolution, null, 2)}</pre></details>
                 </>}
-                {tab === "notify" && resolution && reviewId && <PartyPreview key={reviewId} reviewKey={reviewId} resolution={resolution} dispute={selected}
-                  saved={decision.saved} unavailable={decisionsUnavailable} rulingVisited={reviewed.has("ruling")}
+                {tab === "notify" && resolution && reviewId && <PartyPreview key={`${reviewId}-${sentRecords().events(reviewId).length}`} reviewKey={reviewId} resolution={resolution} dispute={selected}
+                  reopened={reopened} previous={reopened ? latestSent : null} appealsAvailable={appeals !== null}
+                  saved={decision.saved ?? (reopened ? latestSent?.reviewer ?? null : null)} unavailable={decisionsUnavailable} rulingVisited={reviewed.has("ruling")}
                   onGoToRuling={() => changeTab("ruling")} onAppealed={() => setAppealsVersion(v => v + 1)}
                   progress={progress}
                   onSent={() => { markReviewed("notify"); setSentVersion(v => v + 1); setDeliveredFor(reviewId); }}
                   next={following?.id ?? null} onNext={() => { if (following) window.location.hash = caseHash(following.id); }}
                   onBack={() => { window.location.hash = HOME_HASH; }} />}
                 <AgentsStrip tab={tab} resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
-                {tab === "ruling" && resolution && <DecisionBar resolution={resolution} controller={decision} unavailable={decisionsUnavailable} />}
+                {tab === "ruling" && resolution && actions.decide && <DecisionBar resolution={resolution} controller={decision} unavailable={decisionsUnavailable} />}
               </>} />
           </section>}
 
@@ -453,10 +479,28 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
   );
 }
 
-function CaseHeader({ dispute, resolution, busy, streaming, progress }: {
+/**
+ * The outcome the header shows: the reviewer's current decision, else the last one sent, else
+ * the AI ruling (null). Accepting the ruling keeps the AI outcome without a suffix.
+ */
+function headerFinal(resolution: Resolution, dispute: DisputeCase, saved: SavedDecision | null | undefined,
+  latest: SentRecord | null): FinalHeaderOutcome | null {
+  if (saved && saved.kind !== "accepted") {
+    const outcome = finalOutcome(resolution, saved, dispute, null);
+    const amount = outcome.needsAmount && latest?.decision === saved.decision ? latest.amount : outcome.amount;
+    return { decision: saved.decision, amount, by: saved.kind === "decided" ? "decided" : "overridden" };
+  }
+  if (!saved && latest && latest.decision !== resolution.decision) {
+    return { decision: latest.decision, amount: latest.amount, by: latest.reviewer?.kind === "decided" ? "decided" : "overridden" };
+  }
+  return null;
+}
+
+function CaseHeader({ dispute, resolution, busy, streaming, progress, final }: {
   dispute: DisputeCase; resolution?: Resolution; busy: boolean; streaming: boolean; progress: ReviewSummary | null;
+  final?: FinalHeaderOutcome | null;
 }) {
-  const chips = headerChips(dispute, resolution);
+  const chips = headerChips(dispute, resolution, final);
   const status = statusPill({ busy, streaming, hasResult: !!resolution });
   return <header className="case-file-head">
     <div className="case-file-title">

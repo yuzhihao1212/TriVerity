@@ -127,7 +127,10 @@ export function distanceTone(resolution?: Pick<Resolution, "decision" | "policy_
   return refunded || routeRule ? "warn" : "neutral";
 }
 
-export function headerChips(dispute: DisputeCase, resolution?: Resolution): HeaderChip[] {
+/** The outcome a reviewer settled on, when it differs from (or replaces) the AI ruling. */
+export interface FinalHeaderOutcome { decision: Decision; amount: number | null; by: "overridden" | "decided" | null }
+
+export function headerChips(dispute: DisputeCase, resolution?: Resolution, final?: FinalHeaderOutcome | null): HeaderChip[] {
   const chips: HeaderChip[] = [];
   const expected = num(dispute.trip.expected_distance_km), actual = num(dispute.trip.actual_distance_km);
   if (expected && actual != null) {
@@ -139,7 +142,12 @@ export function headerChips(dispute: DisputeCase, resolution?: Resolution): Head
   const charged = num(dispute.fare.actual), fee = num(dispute.fare.cancellation_fee);
   if (charged != null) chips.push({ key: "charged", label: `${money(charged)} charged`, tone: "neutral" });
   else if (fee != null) chips.push({ key: "charged", label: `${money(fee)} no-show fee`, tone: "neutral" });
-  if (resolution) chips.push(outcomeChip(resolution.decision, resolution.refund_amount));
+  // The header shows the final outcome: the reviewer's override wins over the AI ruling,
+  // so it never contradicts the closed banner or the parties' messages.
+  if (final) {
+    const chip = outcomeChip(final.decision, final.amount);
+    chips.push(final.by ? { ...chip, label: `${chip.label} · ${final.by === "overridden" ? "overridden" : "decided by reviewer"}` } : chip);
+  } else if (resolution) chips.push(outcomeChip(resolution.decision, resolution.refund_amount));
   return chips.slice(0, 4);
 }
 

@@ -2,6 +2,7 @@
 // check and the "sent" record. Pure apart from the storage handed to the sent store.
 
 import type { FinalDecision, SavedDecision } from "./decisionState";
+import { DECISION_LABELS } from "./outcomeTone";
 import { PARTY_DECISION_LABELS } from "./partyView";
 import type { Decision, DisputeCase, Resolution } from "./types";
 
@@ -149,29 +150,109 @@ export function privacyWarnings(text: string): string[] {
 // ---- Sent record ------------------------------------------------------------------
 
 /** What was sent: the generated message and the reviewer's note (empty: none) per party. */
-export interface SentRecord { at: string; messages: Record<Party, string>; notes: Record<Party, string>; decision: Decision; amount: number | null }
+export interface SentRecord { at: string; messages: Record<Party, string>; notes: Record<Party, string>; decision: Decision; amount: number | null; disputeId?: string; reviewer?: SavedDecision; correction?: boolean; timestamp?: string }
 export interface SentStoreBackend { getItem(key: string): string | null; setItem(key: string, value: string): void }
 export const SENT_KEY = "triverity.sent";
 
-/** "Approve & send" per review key: sessionStorage when available, always an in-memory map. */
+export type ReviewEvent = ({ type: "sent" } & SentRecord) | { type: "reopened"; at: string; timestamp?: string };
+export const CASE_HISTORY_KEY = "triverity.caseHistory";
+export const REVIEW_RESULTS_KEY = "triverity.reviewResults";
+const copy = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
+
+/** Append-only history; SENT_KEY is read solely to migrate records from the earlier UI. */
 export function createSentStore(storage?: SentStoreBackend | null) {
-  const memory = new Map<string, SentRecord>();
-  const readAll = (): Record<string, SentRecord> => {
-    try { const parsed = JSON.parse(storage?.getItem(SENT_KEY) ?? "{}"); return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {}; }
+  const memory = new Map<string, ReviewEvent[]>();
+  const resultMemory = new Map<string, Resolution>();
+  const readObject = (key: string): Record<string, unknown> => {
+    try { const parsed = JSON.parse(storage?.getItem(key) ?? "{}"); return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {}; }
     catch { return {}; }
   };
+  const results = (): Record<string, Resolution> => {
+    const restored: Record<string, Resolution> = {};
+    for (const [id, candidate] of Object.entries(readObject(REVIEW_RESULTS_KEY))) {
+      const r = candidate as Resolution | null;
+      if (r && Array.isArray(r.agent_log) && r.rider_case && r.driver_case && r.risk && Array.isArray(r.judge_evidence)) restored[id] = r;
+    }
+    for (const [id, result] of resultMemory) restored[id] = result;
+    return copy(restored);
+  };
+  const validSent = (value: unknown): value is SentRecord => {
+    const r = value as SentRecord | null;
+    return !!r && typeof r.at === "string" && !!r.messages && PARTIES.every(p => typeof r.messages[p] === "string")
+      && Object.hasOwn(PARTY_DECISION_LABELS, r.decision) && (r.amount === null || Number.isFinite(r.amount));
+  };
+  const events = (key: string): ReviewEvent[] => {
+    if (memory.has(key)) return copy(memory.get(key)!);
+    const stored = readObject(CASE_HISTORY_KEY)[key];
+    if (Array.isArray(stored)) {
+      const list = stored.filter(event => event && (event.type === "sent" ? validSent(event) : event.type === "reopened" && typeof event.at === "string"));
+      memory.set(key, list);
+      return copy(list);
+    }
+    const legacy = readObject(SENT_KEY)[key];
+    const list: ReviewEvent[] = validSent(legacy) ? [{ ...copy(legacy), type: "sent" }] : [];
+    memory.set(key, list);
+    return copy(list);
+  };
+  const append = (key: string, event: ReviewEvent) => {
+    const next = [...events(key), copy(event)];
+    memory.set(key, next);
+    try {
+      const all = readObject(CASE_HISTORY_KEY);
+      // Include memory-only writes if a prior write failed (e.g. storage was full).
+      for (const [k, list] of memory) all[k] = list;
+      storage?.setItem(CASE_HISTORY_KEY, JSON.stringify(all));
+    } catch { /* Memory remains authoritative, including reopens, when storage is blocked. */ }
+  };
+  const get = (key: string): SentRecord | null => {
+    const last = events(key).at(-1);
+    if (last?.type !== "sent") return null;
+    const { type: _type, ...record } = last;
+    return record;
+  };
   return {
-    get(key: string): SentRecord | null { return memory.get(key) ?? readAll()[key] ?? null; },
+    events, get, results,
+    saveResult(disputeId: string, result: Resolution): void {
+      resultMemory.set(disputeId, copy(result));
+      try { storage?.setItem(REVIEW_RESULTS_KEY, JSON.stringify(results())); } catch { /* Memory keeps the current review and its closed state. */ }
+    },
+    latest(key: string): SentRecord | null {
+      const last = events(key).filter((e): e is ReviewEvent & SentRecord => e.type === "sent").at(-1);
+      if (!last) return null;
+      const { type: _type, ...record } = last;
+      return record;
+    },
+    reopened(key: string): boolean { return events(key).at(-1)?.type === "reopened"; },
     set(key: string, record: SentRecord): void {
-      memory.set(key, record);
-      try {
-        const all = readAll(); all[key] = record;
-        const keys = Object.keys(all);
-        for (const old of keys.slice(0, Math.max(0, keys.length - 100))) delete all[old];
-        storage?.setItem(SENT_KEY, JSON.stringify(all));
-      } catch { /* Storage blocked or full: memory still holds. */ }
+      if (get(key)) return; // A closed review cannot send again until deliberately reopened.
+      const id = record.disputeId ?? (key.includes("|") ? key.slice(0, key.indexOf("|")) : null);
+      const keys = new Set([...Object.keys(readObject(SENT_KEY)), ...Object.keys(readObject(CASE_HISTORY_KEY)), ...memory.keys()]);
+      const correction = events(key).some(e => e.type === "sent") || (id != null && [...keys].some(k => k !== key && k.startsWith(`${id}|`) && events(k).some(e => e.type === "sent")));
+      append(key, { ...record, ...(correction ? { correction: true } : {}), type: "sent" });
+    },
+    reopen(key: string, at: string, timestamp?: string): boolean {
+      if (!get(key)) return false;
+      append(key, { type: "reopened", at, timestamp });
+      return true;
+    },
+    earlier(disputeId: string, currentKey: string): { key: string; events: ReviewEvent[] }[] {
+      const keys = new Set([...Object.keys(readObject(SENT_KEY)), ...Object.keys(readObject(CASE_HISTORY_KEY)), ...memory.keys()]);
+      return [...keys].filter(key => key !== currentKey && key.startsWith(`${disputeId}|`))
+        .map(key => ({ key, events: events(key) })).filter(item => item.events.some(e => e.type === "sent"));
     },
   };
+}
+
+/** The delivered snapshot, not the current editable ruling or decision. */
+export function sentOutcome(record: SentRecord): FinalOutcome {
+  return { decision: record.decision, label: PARTY_DECISION_LABELS[record.decision], amount: ["no_action", "needs_review"].includes(record.decision) ? null : record.amount,
+    source: record.reviewer && record.reviewer.kind !== "accepted" ? "override" : "ruling", needsAmount: false };
+}
+export function sentOutcomeText(record: SentRecord): string {
+  return `${DECISION_LABELS[record.decision]}${record.amount != null && !["no_action", "needs_review"].includes(record.decision) ? ` $${record.amount.toFixed(2)}` : ""}`;
+}
+export function reviewAction(record: SentRecord): string {
+  return record.reviewer?.kind === "overridden" ? "overridden" : record.reviewer?.kind === "decided" ? "decided by reviewer" : record.reviewer ? "accepted" : "policy ruling";
 }
 
 /** "08:42" from a Date, in the reviewer's own time. */
@@ -184,8 +265,8 @@ export function hasNote(record: Pick<SentRecord, "notes">): boolean {
 }
 
 /** "✓ Sent to rider and driver · 08:42 · with a reviewer note" (or "· as generated"). */
-export function sentText(record: Pick<SentRecord, "at" | "notes">): string {
-  return `✓ Sent to rider and driver · ${record.at} · ${hasNote(record) ? "with a reviewer note" : "as generated"}`;
+export function sentText(record: Pick<SentRecord, "at" | "notes" | "correction">): string {
+  return `✓ ${record.correction ? "Correction sent" : "Sent"} to rider and driver · ${record.at} · ${hasNote(record) ? "with a reviewer note" : "as generated"}`;
 }
 
 // ---- Phones: preview, then delivered ----------------------------------------------------

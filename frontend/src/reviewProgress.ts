@@ -53,7 +53,7 @@ export function createReviewStore(storage?: ReviewStoreBackend | null) {
   const get = (key: string): Set<WorkflowTab> => {
     const stored = readAll()[key];
     const tabs = Array.isArray(stored) ? stored.filter((tab): tab is WorkflowTab => TABS.has(tab)) : [];
-    return new Set<WorkflowTab>([...(memory.get(key) ?? []), ...tabs]);
+    return new Set<WorkflowTab>([...(memory.get(key) ?? tabs)]);
   };
   const add = (key: string, tab: WorkflowTab): boolean => {
     const current = get(key);
@@ -70,5 +70,16 @@ export function createReviewStore(storage?: ReviewStoreBackend | null) {
     } catch { /* Storage blocked or full: the in-memory map still holds. */ }
     return true;
   };
-  return { get, add };
+  const set = (key: string, tabs: WorkflowTab[]) => {
+    const next = new Set(tabs);
+    memory.set(key, next);
+    try { const all = readAll(); all[key] = [...next]; storage?.setItem(REVIEW_KEY, JSON.stringify(all)); } catch { /* Memory still holds. */ }
+  };
+  return { get, add, set };
 }
+
+/** Closed reviews count as fully reviewed; reopening deliberately clears the last two ticks. */
+export function reviewedSteps(tabs: Iterable<WorkflowTab>, closed: boolean): Set<WorkflowTab> {
+  return new Set(closed ? WORKFLOW_TABS.map(t => t.id) : tabs);
+}
+export const REOPENED_STEPS: WorkflowTab[] = ["intake", "evidence", "hearing"];

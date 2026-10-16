@@ -163,36 +163,36 @@ test('Notify is ticked by Approve & send, not by opening it; a new run resets it
 
 // ---- 9. Queue ----------------------------------------------------------------------------
 
-test('caseStatus: not run, ready, decide, reviewed, sent', () => {
+test('caseStatus: not run, ready, decide, reviewed, closed', () => {
   assert.equal(q.caseStatus(null, false, false), 'not_run');
   assert.equal(q.caseStatus({ decision: 'partial_refund' }, false, false), 'ready');
   assert.equal(q.caseStatus({ decision: 'needs_review' }, false, false), 'decide');
   assert.equal(q.caseStatus({ decision: 'needs_review' }, true, false), 'reviewed');
-  assert.equal(q.caseStatus({ decision: 'no_action' }, true, true), 'sent');
-  assert.deepEqual(Object.values(q.STATUS_WORDS), ['Not run', 'Ready', 'Decide', 'Reviewed', 'Sent']);
+  assert.equal(q.caseStatus({ decision: 'no_action' }, true, true), 'closed');
+  assert.deepEqual(Object.values(q.STATUS_WORDS), ['Not run', 'Ready', 'Decide', 'Reviewed', 'Closed', 'Reopened', 'Appeal waiting']);
   for (const status of Object.keys(q.STATUS_WORDS)) assert.ok(q.STATUS_ICONS[status], `${status} has an icon (always with its word)`);
 });
 
 const rows = [
-  { id: 'D001', status: 'sent' }, { id: 'D002', status: 'not_run' }, { id: 'D003', status: 'ready' },
+  { id: 'D001', status: 'closed' }, { id: 'D002', status: 'not_run' }, { id: 'D003', status: 'ready' },
   { id: 'D004', status: 'decide', tier: 'high' }, { id: 'D005', status: 'reviewed' }, { id: 'D007', status: 'decide', tier: 'safety' },
   { id: 'D008', status: 'ready' },
 ];
 
-test('queue order: Decide (safety first), Ready, Reviewed, Not run, Sent', () => {
+test('queue order: Decide (safety first), Ready, Reviewed, Not run, Closed', () => {
   assert.deepEqual(q.sortQueue(rows).map(r => r.id), ['D007', 'D004', 'D003', 'D008', 'D005', 'D002', 'D001']);
   assert.deepEqual(rows.map(r => r.id), ['D001', 'D002', 'D003', 'D004', 'D005', 'D007', 'D008'], 'the input is not reordered');
 });
 
-test('next case: the next not-done case in queue order, none when all are sent', () => {
+test('next case: the next not-done case in queue order, none when all are closed', () => {
   assert.equal(q.nextCase(rows, 'D007').id, 'D004');
   assert.equal(q.nextCase(rows, 'D001').id, 'D007');
-  assert.equal(q.nextCase([{ id: 'D001', status: 'sent' }, { id: 'D002', status: 'sent' }], 'D001'), null);
+  assert.equal(q.nextCase([{ id: 'D001', status: 'closed' }, { id: 'D002', status: 'closed' }], 'D001'), null);
   assert.equal(q.nextCase([{ id: 'D001', status: 'ready' }], 'D001'), null, 'never the current case');
 });
 
 test('tile counts', () => {
-  assert.deepEqual(q.tileCounts(rows), { queue: 7, ready: 2, decide: 2, done: 1 });
-  assert.deepEqual(q.tileCounts([]), { queue: 0, ready: 0, decide: 0, done: 0 });
+  assert.deepEqual(q.tileCounts(rows), { queue: 7, ready: 2, decide: 2, done: 1, appeals: 0 });
+  assert.deepEqual(q.tileCounts([]), { queue: 0, ready: 0, decide: 0, done: 0, appeals: 0 });
   assert.deepEqual(q.START_HERE.map(s => [s.id, s.title]), [['D001', 'Detour caught'], ['D006', 'Fee upheld'], ['D007', 'Escalated']]);
 });
