@@ -1195,8 +1195,8 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .home-row-id { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .home-row-status { display: inline-flex; flex: none; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; font-weight: 600; }
 .home-row-status .icon { width: 16px; height: 16px; }
-.home-row-status.status-decide { color: var(--warn-text); }
-.home-row-status.status-sent { color: var(--ok-text); }
+.home-row-status.status-decide, .home-row-status.status-appeal_waiting { color: var(--warn-text); }
+.home-row-status.status-closed { color: var(--ok-text); }
 .outcome-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--control-border); }
 .outcome-dot.tone-ok { background: var(--ok-text); }
 .outcome-dot.tone-warn { background: var(--warn-text); }
@@ -1204,3 +1204,35 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .presentation-mode .home-tile-value { font-size: 34px; }
 @media (max-width: 480px) { .home-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .home-tile { padding: var(--space-3); } }
 @media (forced-colors: active) { .outcome-dot { forced-color-adjust: none; background: CanvasText; } }
+
+/* Closed cases remain readable. Native dialog supplies modal focus containment and Esc. */
+.closed-case { display: grid; gap: var(--space-4); margin-block: var(--space-4) var(--space-6); padding: var(--space-5); border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.closed-case.is-closed { border-left: 4px solid var(--ok-text); }
+.closed-case-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
+.closed-case-text { min-width: 0; display: grid; gap: var(--space-2); }
+.closed-case h2 { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: 18px; }
+.closed-case h2 > .icon { width: 20px; height: 20px; flex: none; }
+.closed-case-text p { font-size: 13px; overflow-wrap: anywhere; }
+.closed-reopen { flex: none; }
+.closed-summary { padding: var(--space-4); background: var(--surface); border-radius: 10px; }
+.closed-summary h2 { font-size: 18px; }
+.closed-history > summary { width: fit-content; }
+.closed-events { display: grid; gap: var(--space-3); margin-top: var(--space-3); padding-left: var(--space-5); font-size: 13px; }
+.closed-events summary { line-height: 1.6; }
+.closed-snapshot { display: grid; gap: var(--space-4); margin-block: var(--space-3); padding: var(--space-4); border: 1px solid var(--border); border-radius: 10px; background: var(--bg); }
+.closed-snapshot p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.closed-snapshot h3 { font-size: 13px; margin-bottom: var(--space-2); }
+.closed-earlier { margin-block: var(--space-4); }
+.closed-earlier h3 { font-size: 14px; }
+.text-button { padding: 0; border: 0; background: none; color: var(--link-color); font: inherit; text-decoration: underline; cursor: pointer; }
+.closed-dialog { width: min(480px, calc(100% - 40px)); max-height: calc(100% - 40px); margin: auto; padding: var(--space-6); border: 1px solid var(--border); border-radius: 16px; background: var(--bg); color: var(--text); }
+.closed-dialog::backdrop { background: var(--text); opacity: .35; }
+.closed-dialog h2 { font-size: 22px; margin-bottom: var(--space-4); }
+.closed-dialog p { font-size: 14px; }
+.closed-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-3); margin-top: var(--space-6); }
+.presentation-mode .closed-case-text p, .presentation-mode .closed-events, .presentation-mode .closed-snapshot h3, .presentation-mode .closed-dialog p { font-size: 16px; }
+@media (max-width: 760px) {
+  .closed-case-head { flex-direction: column; }
+  .closed-reopen { width: 100%; }
+  .closed-dialog-actions > button { flex: 1; }
+}

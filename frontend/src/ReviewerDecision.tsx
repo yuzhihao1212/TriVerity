@@ -16,9 +16,9 @@ export type DecisionController = ReturnType<typeof useReviewerDecision>;
  * and resets with a new run. `onDecided` fires exactly once per saved decision; a second
  * submit is ignored while one is in flight or after one is saved.
  */
-export function useReviewerDecision({ runKey, dispute, resolution, onDecided, onUnavailable }: {
+export function useReviewerDecision({ runKey, dispute, resolution, onDecided, onUnavailable, locked = false }: {
   runKey: string | null; dispute?: DisputeCase | null; resolution?: Resolution | null;
-  onDecided?: () => void; onUnavailable?: () => void;
+  onDecided?: () => void; onUnavailable?: () => void; locked?: boolean;
 }) {
   const [entries, setEntries] = useState<Record<string, Entry>>({});
   const inFlight = useRef(new Set<string>());
@@ -30,13 +30,13 @@ export function useReviewerDecision({ runKey, dispute, resolution, onDecided, on
     setEntries(prev => ({ ...prev, [key]: { ...(prev[key] ?? blank), ...change } }));
 
   function record(decision: FinalDecision, note: string, kind: SavedDecision["kind"]) {
-    if (!runKey || !dispute || inFlight.current.has(runKey) || entry.saved) return;
+    if (locked || !runKey || !dispute || inFlight.current.has(runKey) || entry.saved) return;
     const key = runKey;
     inFlight.current.add(key);
     patch(key, { busy: true, error: null });
     recordReviewerDecision({ case: dispute, decision, note })
       .then(saved => {
-        patch(key, { busy: false, saved: { kind, decision, precedentId: saved.id } });
+        patch(key, { busy: false, saved: { kind, decision, precedentId: saved.id, reason: note } });
         onDecided?.();
       })
       .catch((e: Error) => {
@@ -48,6 +48,7 @@ export function useReviewerDecision({ runKey, dispute, resolution, onDecided, on
 
   return {
     ...entry,
+    reopen() { if (runKey && !entry.busy) patch(runKey, { ...blank }); },
     escalated,
     overrideRequest,
     /** The saved decision for any ruling (by review key), for the queue and the sidebar. */
@@ -61,6 +62,7 @@ export function useReviewerDecision({ runKey, dispute, resolution, onDecided, on
     submit(choice: FinalDecision, reason: string) { record(choice, reason, escalated ? "decided" : "overridden"); },
     /** Open the override form; the card scrolls to it and focuses its first field. */
     startOverride() {
+      if (locked) return;
       if (runKey) patch(runKey, { mode: "override" });
       setOverrideRequest(n => n + 1);
     },
@@ -71,7 +73,8 @@ export function useReviewerDecision({ runKey, dispute, resolution, onDecided, on
 export function ReviewerDecision({ resolution, controller }: { resolution: Resolution; controller: DecisionController }) {
   const id = useId();
   const { escalated, mode, busy, saved, error } = controller;
-  const options = (Object.keys(FINAL_LABELS) as FinalDecision[]).filter(d => escalated || d !== resolution.decision);
+  // A partial refund can be overridden to another amount, while keeping the outcome type.
+  const options = (Object.keys(FINAL_LABELS) as FinalDecision[]).filter(d => escalated || d !== resolution.decision || d === "partial_refund");
   const choice = controller.choice ?? options[0];
   const first = useRef<HTMLSelectElement>(null);
 

@@ -31,8 +31,8 @@ export function Home({ rows, appealsWaiting, showStart, missing, onDismissMissin
       <Tile icon="queue" value={tiles.queue} word="Queue" />
       <Tile icon="scales" value={tiles.ready} word="Ready" />
       <Tile icon="warning" value={tiles.decide} word="Decide" tone="warn" />
-      <Tile icon="send" value={tiles.done} word="Done" />
-      {appealsWaiting != null && appealsWaiting > 0 && <Tile icon="appeal" value={appealsWaiting} word="Appeals" tone="warn" />}
+      <Tile icon="check" value={tiles.done} word="Done" />
+      {appealsWaiting != null && tiles.appeals > 0 && <Tile icon="appeal" value={tiles.appeals} word="Appeals" tone="warn" />}
     </ul>
     {showStart && starts.length > 0 && <section className="home-start" aria-labelledby="home-start-title">
       <h3 id="home-start-title">Start here</h3>
