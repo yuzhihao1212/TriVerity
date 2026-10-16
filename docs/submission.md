@@ -13,13 +13,9 @@ TriVerity: Multi-Agent Autonomous Dispute Resolution System
 
 ## Short blurb (under 10 words)
 
-Option 1: **AI agents argue both sides; policy rules decide fairly.** — 9 words
+**Ride disputes resolved fairly in seconds, not days.** (8 words; use this one in the form)
 
-Option 2: **Fair, explained ride-hailing dispute rulings in seconds** — 7 words
-
-Option 3: **Two AI advocates, one rule-bound judge, every dispute explained** — 9 words
-
-(Word counts treat hyphenated terms such as "ride-hailing" and "rule-bound" as one word.)
+The tagline on the landing page and README stays "AI agents argue both sides; policy rules decide fairly."
 
 ## Project description
 
