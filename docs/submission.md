@@ -117,7 +117,7 @@ TriVerity targets each of these:
 
 **Technology:** Tencent Hy3 through Tencent Cloud TokenHub; Python FastAPI backend; React + TypeScript
 frontend; 810 backend and 169 frontend tests (verified on 16 Oct 2026); a Docker image and Render Blueprint for the live
-demo ([CHECK: live link]). **Built with:** Tencent Cloud **CodeBuddy**
+demo (https://triverity-demo.onrender.com). **Built with:** Tencent Cloud **CodeBuddy**
 (the LLM client, advocate agents, hardening, UI badges and the Fraud & Bad-Faith detector); **WorkBuddy**
 (Hy4 preview) to polish this submission text, review the docs for consistency, prepare judge Q&A and
 summarise the build history; **Miora** for the cover image; and the AI coding assistants **Claude Code**,

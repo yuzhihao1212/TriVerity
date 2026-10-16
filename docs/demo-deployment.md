@@ -158,7 +158,7 @@ Before judging:
 
 - [ ] `python scripts/setup_demo_access.py list` shows `PUBLIC_DEMO=true` and the judges' names.
 - [ ] Backend restarted after the last `.env` change.
-- [ ] Prewarm after each deploy, restart or wake from sleep (roughly 72,000 tokens for 9 fresh samples):
+- [ ] Prewarm after each deploy, restart or wake from sleep (roughly 90,000 tokens for 9 fresh samples):
       `python scripts/prewarm_demo.py --base-url https://demo.example.com --yes`.
       Check every sample's collector, advocates, replies and Judge explanation show AI.
       If any shows Fallback, check the provider/key, budget or output checks, wait for its
