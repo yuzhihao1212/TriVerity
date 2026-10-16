@@ -44,7 +44,7 @@ Status as of 16 Oct 2026.
 
 | | Item | Owner |
 |---|---|---|
-| ⬜ | Built with CodeBuddy, with proof (at least 3 chat screenshots) | Everyone: screenshots in the shared folder |
+| ✅ | CodeBuddy / WorkBuddy usage proof prepared: 7 CodeBuddy and 3 WorkBuddy captures | [Evidence PDF](submission/ai-tool-evidence.pdf); upload to the submission form still needs confirmation |
 | ✅ | Project title and blurb under 10 words ([submission.md](submission.md)) | Lead |
 | ⬜ | Project description: overview, pain points, solution design incl. how prompts drive generation ([prompts.md](prompts.md)), business value | Lead, from the docs |
 | ✅ | 16:9 cover image (380×216) | Lead (Miora) |
