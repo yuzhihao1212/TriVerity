@@ -141,7 +141,7 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
         </section>
       </div>
     </main>
-    <footer className="landing-footer"><div className="landing-wrap"><div><strong>TriVerity</strong> <span className="byline">By OeroAI</span><p className="muted">Synthetic data; a hackathon prototype.</p></div>
+    <footer className="landing-footer"><div className="landing-wrap"><div><strong>TriVerity</strong> <span className="byline">By OeroAI</span><p className="muted">a hackathon prototype</p></div>
       <nav aria-label="Documentation"><a href={`${GITHUB}/blob/main/docs/architecture.md`}>Architecture</a><a href={`${GITHUB}/blob/main/docs/security.md`}>Security</a><a href={`${GITHUB}/blob/main/docs/evaluation.md`}>Evaluation</a></nav>
     </div>
     <div className="landing-wrap landing-legal">
