@@ -10,7 +10,7 @@ export const FINAL_LABELS: Record<FinalDecision, string> = {
 };
 
 /** What was saved: accepting the ruling, overriding it, or deciding an escalated case. */
-export interface SavedDecision { kind: "accepted" | "overridden" | "decided"; decision: FinalDecision; precedentId: string }
+export interface SavedDecision { kind: "accepted" | "overridden" | "decided"; decision: FinalDecision; precedentId: string; reason?: string }
 
 /** The outcome in words, with its amount and tone, e.g. "Partial refund · $6.30". */
 export function outcomeLine(decision: Decision, refund: number | null): { label: string; amount: string | null; tone: OutcomeTone } {
