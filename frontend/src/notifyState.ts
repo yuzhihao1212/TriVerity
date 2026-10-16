@@ -70,10 +70,11 @@ export function validateAmount(text: string, max: number | null): { ok: true; va
 const money = (value: number) => `$${value.toFixed(2)}`;
 
 /**
- * The suggested message. Accepted: the ruling's own explanation for that party. Overridden
- * or decided by the reviewer: plain wording for the final outcome, so it never contradicts it.
+ * The generated message, read-only: exactly what the party sees. Accepted: the ruling's own
+ * explanation for that party. Overridden or decided by the reviewer: plain wording for the
+ * final outcome, so it never contradicts it. The reviewer can only add a note under it.
  */
-export function suggestedMessage(party: Party, resolution: Pick<Resolution, "rider_explanation" | "driver_explanation">,
+export function generatedMessage(party: Party, resolution: Pick<Resolution, "rider_explanation" | "driver_explanation">,
   outcome: Pick<FinalOutcome, "decision" | "amount" | "source">): string {
   if (outcome.source === "ruling") return party === "rider" ? resolution.rider_explanation : resolution.driver_explanation;
   const amount = outcome.amount != null ? money(outcome.amount) : "the approved amount";
@@ -90,6 +91,39 @@ export function suggestedMessage(party: Party, resolution: Pick<Resolution, "rid
     no_action: "A reviewer looked at this trip's dispute. The charge stays as it is; nothing changes for you.",
   };
   return (party === "rider" ? rider : driver)[outcome.decision] ?? (party === "rider" ? resolution.rider_explanation : resolution.driver_explanation);
+}
+
+// ---- Reviewer notes ----------------------------------------------------------------
+
+/** The most a reviewer note can hold. */
+export const NOTE_LIMIT = 280;
+export const NOTE_PLACEHOLDER = "Optional: a personal note, such as an apology or next steps";
+
+/** "120 / 280". */
+export function noteCounter(note: string): string {
+  return `${note.length} / ${NOTE_LIMIT}`;
+}
+
+/** A note as stored and shown: trimmed, at most NOTE_LIMIT characters; "" means no note. */
+export function cleanNote(note: string): string {
+  return note.trim().slice(0, NOTE_LIMIT);
+}
+
+/**
+ * The privacy check runs on the reviewer's notes only: the generated message is the system's
+ * own party-safe wording and is never checked or blocked.
+ */
+export function noteWarnings(notes: Record<Party, string>): Record<Party, string[]> {
+  return { rider: privacyWarnings(notes.rider), driver: privacyWarnings(notes.driver) };
+}
+
+/** Why "Approve & send" is blocked, or null when it can go. */
+export function sendBlock({ amountMissing, warnings, sendAnyway }: {
+  amountMissing: boolean; warnings: Record<Party, string[]>; sendAnyway: boolean;
+}): "amount" | "privacy" | null {
+  if (amountMissing) return "amount";
+  if (PARTIES.some(party => warnings[party].length) && !sendAnyway) return "privacy";
+  return null;
 }
 
 // ---- Privacy check -------------------------------------------------------------
@@ -114,7 +148,8 @@ export function privacyWarnings(text: string): string[] {
 
 // ---- Sent record ------------------------------------------------------------------
 
-export interface SentRecord { at: string; edited: boolean; messages: Record<Party, string>; decision: Decision; amount: number | null }
+/** What was sent: the generated message and the reviewer's note (empty: none) per party. */
+export interface SentRecord { at: string; messages: Record<Party, string>; notes: Record<Party, string>; decision: Decision; amount: number | null }
 export interface SentStoreBackend { getItem(key: string): string | null; setItem(key: string, value: string): void }
 export const SENT_KEY = "triverity.sent";
 
@@ -144,9 +179,33 @@ export function clockText(date: Date): string {
   return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }
 
-/** "✓ Sent to rider and driver · 08:42 · edited by reviewer" (or "· as suggested"). */
-export function sentText(record: Pick<SentRecord, "at" | "edited">): string {
-  return `✓ Sent to rider and driver · ${record.at} · ${record.edited ? "edited by reviewer" : "as suggested"}`;
+export function hasNote(record: Pick<SentRecord, "notes">): boolean {
+  return PARTIES.some(party => !!record.notes?.[party]?.trim());
+}
+
+/** "✓ Sent to rider and driver · 08:42 · with a reviewer note" (or "· as generated"). */
+export function sentText(record: Pick<SentRecord, "at" | "notes">): string {
+  return `✓ Sent to rider and driver · ${record.at} · ${hasNote(record) ? "with a reviewer note" : "as generated"}`;
+}
+
+// ---- Phones: preview, then delivered ----------------------------------------------------
+
+export interface PhoneState { delivered: boolean; tag: string; canAppeal: boolean; caption: string | null }
+
+/**
+ * Before "Approve & send" the phones are a preview and the appeal button is disabled; after it,
+ * they are delivered and the parties can appeal.
+ */
+export function phoneState(party: Party, sent: Pick<SentRecord, "at"> | null): PhoneState {
+  if (sent) return { delivered: true, tag: `Delivered ${sent.at}`, canAppeal: true, caption: null };
+  return { delivered: false, tag: "Preview", canAppeal: false, caption: `Available to the ${party} after sending` };
+}
+
+export const DELIVERED_ANNOUNCEMENT = "Messages delivered; parties can now appeal";
+
+/** "Messages sent for D001", or "Review complete for D001" once all five steps are reviewed. */
+export function closingTitle(disputeId: string, summary: { complete: boolean } | null): string {
+  return summary?.complete ? `Review complete for ${disputeId}` : `Messages sent for ${disputeId}`;
 }
 
 export const SEND_TOOLTIP = "Simulated: this prototype sends no real message to the rider or driver.";

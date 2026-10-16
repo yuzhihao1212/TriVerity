@@ -1105,7 +1105,24 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .notify-row { display: grid; grid-template-columns: minmax(0, 1fr) 272px; align-items: start; gap: var(--space-6); }
 .notify-editor { display: grid; gap: var(--space-2); min-width: 0; }
 .notify-editor textarea { width: 100%; min-height: 140px; padding: var(--space-3); border: 1px solid var(--control-border); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; font-size: 14px; line-height: 1.5; resize: vertical; }
-.notify-sent-text { margin: 0; padding: var(--space-3); border-radius: 8px; background: var(--surface); font-size: 14px; line-height: 1.5; }
+/* The generated message: read-only, exactly as the party sees it. */
+.notify-message { display: grid; gap: var(--space-1); padding: var(--space-3) var(--space-4); border-radius: 8px; background: var(--surface); font-size: 14px; line-height: 1.5; }
+.notify-message p { margin: 0; }
+.notify-note-meta { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: 36px; }
+.notify-note-meta > .small { font-variant-numeric: tabular-nums; }
+.notify-note-sent { display: grid; gap: var(--space-1); padding: var(--space-3) var(--space-4); border-left: 3px solid var(--accent-text); border-radius: 8px; background: var(--accent-soft); }
+.notify-note-sent p { margin: 0; font-size: 14px; }
+/* On the phone: the reviewer's note sits apart from the official message. */
+.phone-note { display: grid; gap: 2px; padding: var(--space-2) var(--space-3); border-left: 3px solid var(--accent-text); border-radius: 12px; background: var(--accent-soft); }
+.phone-note-label { color: var(--accent-text); font-size: 11px; font-weight: 600; }
+.phone-note-text { color: var(--text); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+/* Preview until sent, then delivered. */
+.phone-wrap figcaption { display: flex; align-items: center; gap: var(--space-2); }
+.phone-tag { padding: 1px 8px; border-radius: 999px; background: var(--neutral-soft); color: var(--muted); font-size: 11px; font-weight: 600; }
+.phone-tag.delivered { background: var(--ok-soft); color: var(--ok-text); }
+.appeal-unavailable { display: grid; gap: var(--space-1); }
+.appeal-unavailable .secondary-button:disabled { cursor: not-allowed; border-style: dashed; }
+.appeal-note { margin: 0; text-align: center; }
 .notify-warning { display: flex; align-items: flex-start; gap: var(--space-2); margin: 0; padding: var(--space-2) var(--space-3); border-radius: 8px; background: var(--warn-soft); color: var(--warn-text); font-size: 13px; font-weight: 600; }
 .notify-warning .icon { flex: none; width: 16px; height: 16px; margin-top: 2px; }
 .notify-reset { justify-self: start; }

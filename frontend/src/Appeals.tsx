@@ -10,8 +10,12 @@ const FINAL: Record<FinalDecision, string> = {
 };
 
 /** A party contests the ruling; the appeal joins the human review queue. */
-export function AppealForm({ dispute, party, decision, onFiled }: {
+export function AppealForm({ dispute, party, decision, onFiled, available = true, unavailableNote }: {
   dispute: DisputeCase; party: "rider" | "driver"; decision: Decision; onFiled?: () => void;
+  /** False while the reviewer is still drafting: the button is disabled and cannot open the form. */
+  available?: boolean;
+  /** Shown under the disabled button and linked to it, e.g. "Available to the rider after sending". */
+  unavailableNote?: string;
 }) {
   const id = useId();
   const [open, setOpen] = useState(false);
@@ -25,6 +29,12 @@ export function AppealForm({ dispute, party, decision, onFiled }: {
     return <p className="small appeal-status" role="status">
       Appeal {filed.id} sent. A human reviewer will look at it{filed.priority === "safety" ? " first" : ""} and follow up.
     </p>;
+  }
+  if (!available) {
+    return <div className="appeal-unavailable">
+      <button type="button" className="secondary-button" disabled aria-describedby={unavailableNote ? `${id}-note` : undefined}>Appeal this decision</button>
+      {unavailableNote && <p className="small muted appeal-note" id={`${id}-note`}>{unavailableNote}</p>}
+    </div>;
   }
   if (!open) {
     return <button type="button" className="secondary-button" onClick={() => setOpen(true)}>Appeal this decision</button>;

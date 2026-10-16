@@ -51,17 +51,67 @@ test('partial-refund validation: required, $0.01 up to the fare charged (REF-1)'
   assert.equal(ns.maxRefund({ fare: {} }), null);
 });
 
-test('suggested wording: the ruling when accepted, plain wording for an override', () => {
+test('the generated message is read-only wording: the ruling when accepted, plain wording for an override', () => {
   const accepted = ns.finalOutcome(ruling, saved('accepted', 'partial_refund'), D001);
-  assert.equal(ns.suggestedMessage('rider', ruling, accepted), ruling.rider_explanation);
-  assert.equal(ns.suggestedMessage('driver', ruling, accepted), ruling.driver_explanation);
-  const partial = ns.finalOutcome(ruling, saved('overridden', 'partial_refund'), D001, 2.4);
-  assert.match(ns.suggestedMessage('rider', ruling, partial), /partial refund of \$2\.40/);
+  assert.equal(ns.generatedMessage('rider', ruling, accepted), ruling.rider_explanation);
+  assert.equal(ns.generatedMessage('driver', ruling, accepted), ruling.driver_explanation);
+  const partial = ns.finalOutcome(ruling, saved('overridden', 'partial_refund'), D001, 2.5);
+  assert.match(ns.generatedMessage('rider', ruling, partial), /partial refund of \$2\.50/);
   const none = ns.finalOutcome(ruling, saved('overridden', 'no_action'), D001);
-  assert.doesNotMatch(ns.suggestedMessage('rider', ruling, none), /\$6\.30/, 'never contradicts the final outcome');
+  assert.doesNotMatch(ns.generatedMessage('rider', ruling, none), /\$6\.30/, 'never contradicts the final outcome');
   for (const decision of ['partial_refund', 'full_refund', 'compensation', 'no_action']) for (const party of ['rider', 'driver']) {
-    assert.deepEqual(ns.privacyWarnings(ns.suggestedMessage(party, ruling, ns.finalOutcome(ruling, saved('overridden', decision), D001, 1))), [], `${decision} ${party}`);
+    assert.deepEqual(ns.privacyWarnings(ns.generatedMessage(party, ruling, ns.finalOutcome(ruling, saved('overridden', decision), D001, 1))), [], `${decision} ${party}`);
   }
+});
+
+// ---- 1. Reviewer notes ---------------------------------------------------------------------
+
+test('reviewer notes: at most 280 characters, a live counter, empty by default', () => {
+  assert.equal(ns.NOTE_LIMIT, 280);
+  assert.equal(ns.noteCounter(''), '0 / 280');
+  assert.equal(ns.noteCounter('x'.repeat(120)), '120 / 280');
+  assert.equal(ns.cleanNote('  Sorry for the trouble on this trip.  '), 'Sorry for the trouble on this trip.');
+  assert.equal(ns.cleanNote('x'.repeat(300)).length, 280);
+  assert.equal(ns.cleanNote('   '), '', 'whitespace is no note');
+  assert.match(ns.NOTE_PLACEHOLDER, /^Optional/);
+});
+
+test('the privacy check runs on the notes only; the generated message is never checked or blocked', () => {
+  const none = { amountMissing: false, sendAnyway: false };
+  const clean = ns.noteWarnings({ rider: '', driver: '' });
+  assert.deepEqual(clean, { rider: [], driver: [] });
+  assert.equal(ns.sendBlock({ ...none, warnings: clean }), null, 'no notes: nothing to block, whatever the generated message says');
+  const flagged = ns.noteWarnings({ rider: 'Your fraud risk is high', driver: '' });
+  assert.deepEqual(flagged, { rider: ['fraud', 'risk'], driver: [] });
+  assert.equal(ns.sendBlock({ ...none, warnings: flagged }), 'privacy');
+  assert.equal(ns.sendBlock({ ...none, warnings: flagged, sendAnyway: true }), null, '"Send anyway"');
+  assert.equal(ns.sendBlock({ ...none, warnings: ns.noteWarnings({ rider: 'Sorry for the trouble on this trip.', driver: '' }) }), null);
+  assert.equal(ns.sendBlock({ amountMissing: true, warnings: clean, sendAnyway: true }), 'amount', 'the partial-refund amount still comes first');
+});
+
+test('"Clear note" empties the note, which removes its warning and its phone block', () => {
+  let notes = { rider: 'Your fraud risk is high', driver: 'Thanks' };
+  notes = { ...notes, rider: '' }; // the "Clear note" action
+  assert.deepEqual(ns.noteWarnings(notes).rider, []);
+  assert.equal(ns.cleanNote(notes.rider), '', 'an empty note shows no "Note from your reviewer" block');
+  assert.equal(ns.hasNote({ notes }), true, 'the other note stays');
+});
+
+// ---- 2. Appeals only after sending ---------------------------------------------------------
+
+test('phones: a preview with appeals disabled before sending, delivered and appealable after', () => {
+  assert.deepEqual(ns.phoneState('rider', null), { delivered: false, tag: 'Preview', canAppeal: false, caption: 'Available to the rider after sending' });
+  assert.equal(ns.phoneState('driver', null).caption, 'Available to the driver after sending');
+  assert.deepEqual(ns.phoneState('driver', { at: '08:42' }), { delivered: true, tag: 'Delivered 08:42', canAppeal: true, caption: null });
+  assert.equal(ns.DELIVERED_ANNOUNCEMENT, 'Messages delivered; parties can now appeal');
+});
+
+// ---- 3. Closing card --------------------------------------------------------------------------
+
+test('the closing card says "Messages sent" unless every step is reviewed', () => {
+  assert.equal(ns.closingTitle('D001', rp.reviewSummary(['ruling', 'notify'])), 'Messages sent for D001');
+  assert.equal(ns.closingTitle('D001', rp.reviewSummary(['evidence', 'hearing', 'ruling', 'notify'])), 'Review complete for D001');
+  assert.equal(ns.closingTitle('D001', null), 'Messages sent for D001');
 });
 
 // ---- 8d. Privacy ------------------------------------------------------------------------
@@ -86,17 +136,18 @@ test('sent records per review key survive blocked storage, and read back', () =>
   const map = new Map();
   const storage = { getItem: k => map.get(k) ?? null, setItem: (k, v) => map.set(k, v) };
   const store = ns.createSentStore(storage);
-  const record = { at: '08:42', edited: true, messages: { rider: 'a', driver: 'b' }, decision: 'partial_refund', amount: 6.3 };
+  const record = { at: '08:42', messages: { rider: 'a', driver: 'b' }, notes: { rider: 'Sorry for the trouble on this trip.', driver: '' }, decision: 'partial_refund', amount: 6.3 };
   assert.equal(store.get('D001|t1'), null);
   store.set('D001|t1', record);
-  assert.deepEqual(ns.createSentStore(storage).get('D001|t1'), record, 'another mount reads it from sessionStorage');
+  assert.deepEqual(ns.createSentStore(storage).get('D001|t1'), record, 'another mount reads the message and notes from sessionStorage');
   assert.equal(store.get('D001|t2'), null, 'a new run (new key) starts unsent');
   const blocked = { getItem: () => { throw new Error('x'); }, setItem: () => { throw new Error('x'); } };
   const memory = ns.createSentStore(blocked);
   memory.set('k', record);
   assert.deepEqual(memory.get('k'), record);
-  assert.equal(ns.sentText(record), '✓ Sent to rider and driver · 08:42 · edited by reviewer');
-  assert.equal(ns.sentText({ ...record, edited: false }), '✓ Sent to rider and driver · 08:42 · as suggested');
+  assert.equal(ns.sentText(record), '✓ Sent to rider and driver · 08:42 · with a reviewer note');
+  assert.equal(ns.sentText({ ...record, notes: { rider: '', driver: '' } }), '✓ Sent to rider and driver · 08:42 · as generated');
+  assert.equal(ns.sentText({ ...record, notes: { rider: '', driver: 'Thanks' } }), '✓ Sent to rider and driver · 08:42 · with a reviewer note');
   assert.equal(ns.clockText(new Date(2026, 9, 16, 8, 5)), '08:05');
   assert.match(ns.SEND_TOOLTIP, /no real message/);
 });

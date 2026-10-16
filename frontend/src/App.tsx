@@ -30,6 +30,7 @@ import { Term } from "./Term";
 import { PresentationToggle, ThemeToggle } from "./ThemeToggle";
 import type { Theme } from "./theme";
 import { PartyPreview, sentRecords } from "./PartyPreview";
+import { DELIVERED_ANNOUNCEMENT } from "./notifyState";
 import { DisputeForm } from "./DisputeForm";
 import { ApiError, getSamples, listAppeals, resolveDisputeLive } from "./services/api";
 import { AccessCodeField } from "./AccessCodeField";
@@ -236,6 +237,8 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
 
   // One status per case, the same wording on the home page and in the sidebar.
   const [sentVersion, setSentVersion] = useState(0);
+  // Announced once through the polite status region when the phones switch to delivered.
+  const [deliveredFor, setDeliveredFor] = useState<string | null>(null);
   const allCases = useMemo(() => [...own, ...samples], [own, samples]);
   const queueRows: HomeRow[] = useMemo(() => allCases.map(d => {
     const result = results[d.dispute_id];
@@ -373,7 +376,9 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
 
         <main className="content" id="main-content" tabIndex={-1}>
           <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-            {loadingSamples ? "Loading sample disputes…" : resolving ? `Agents working on ${resolving}.` : resolution ? `Saved ruling ready. ${progress?.text}.${decision.saved ? ` ${savedText(decision.saved)}.` : ""}` : ""}
+            {loadingSamples ? "Loading sample disputes…" : resolving ? `Agents working on ${resolving}.`
+              : resolution && deliveredFor === reviewId ? `${DELIVERED_ANNOUNCEMENT}.`
+              : resolution ? `Saved ruling ready. ${progress?.text}.${decision.saved ? ` ${savedText(decision.saved)}.` : ""}` : ""}
           </p>
           <ProgressAnnouncements steps={liveSteps} />
           <div role="alert" aria-atomic="true">{error && <p className="error">{error}</p>}</div>
@@ -433,7 +438,8 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
                 {tab === "notify" && resolution && reviewId && <PartyPreview key={reviewId} reviewKey={reviewId} resolution={resolution} dispute={selected}
                   saved={decision.saved} unavailable={decisionsUnavailable} rulingVisited={reviewed.has("ruling")}
                   onGoToRuling={() => changeTab("ruling")} onAppealed={() => setAppealsVersion(v => v + 1)}
-                  onSent={() => { markReviewed("notify"); setSentVersion(v => v + 1); }}
+                  progress={progress}
+                  onSent={() => { markReviewed("notify"); setSentVersion(v => v + 1); setDeliveredFor(reviewId); }}
                   next={following?.id ?? null} onNext={() => { if (following) window.location.hash = caseHash(following.id); }}
                   onBack={() => { window.location.hash = HOME_HASH; }} />}
                 <AgentsStrip tab={tab} resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
