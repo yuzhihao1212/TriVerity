@@ -32,4 +32,4 @@ These after-only captures come from a run slowed to one event every 450 ms:
 - The stepper filling during the run: frames [1](after/stepper-live-0.png), [2](after/stepper-live-1.png), [3](after/stepper-live-4.png) and [done](after/stepper-live-5.png).
 - The [live header pill](after/header-live.png).
 - The [keyboard focus ring](after/stepper-focus-ring.png).
-- D002 at 375 px before any run, with the steps [locked](after/D002-intake-light-375.png).
+- D002 at 375 px before any run, with the steps [locked](after/after-D002-intake-light-375.png).

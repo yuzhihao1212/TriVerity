@@ -20,7 +20,7 @@ on the demo server, use Preset 2 and check the backend's start-up log: it prints
 ## 1. A separate LLM key for the demo
 
 In the TokenHub console, create a **new API key** just for the demo, with a small
-**Total Quota** (for example 400,000 tokens, about 50 resolves at ~8,000 tokens each). If the link is abused,
+**Total Quota** (for example 400,000 tokens, about 40 resolves at ~10,000 tokens each). If the link is abused,
 only this key runs dry, and you can revoke it without touching your development key.
 Put it in the demo server's `backend/.env` as `LLM_API_KEY`. Never paste it into chat,
 code, screenshots or the frontend.
@@ -66,7 +66,7 @@ Blueprint with the public-demo settings and the Preset 2 limits). Render provide
 4. **Apply.** Render builds the image (about 5 minutes) and gives the link, e.g.
    `https://triverity-demo.onrender.com`. Open it: the samples should load.
 5. **Warm the cache after every deploy** so the first judges don't wait for the AI
-   (about 8,000 tokens per fresh sample, roughly 72,000 for all 9):
+   (about 10,000 tokens per fresh sample, roughly 90,000 for all 9):
    `python scripts/prewarm_demo.py --base-url https://<your-link> --yes`.
    Check every sample in the UI: the evidence collector, both advocates, both replies
    and Judge explanation must show **AI** for the seven-day cache. Fraud and precedent

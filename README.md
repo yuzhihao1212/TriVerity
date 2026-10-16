@@ -2,14 +2,24 @@
 
 **Digital Native Track (Ryde): Multi-Agent Autonomous Dispute Resolution System**
 
+**Live demo:** [CHECK: link after the final redeploy] · **Demo video:** [CHECK: link] ·
+[Ryde requirements, where to see each](#ryde-requirements-where-to-see-each)
+
+*A hackathon prototype by OeroAI, built for Ryde's challenge at the Tencent Cloud AI Hackathon Singapore 2026.
+Not affiliated with or endorsed by Ryde. All dispute data is synthetic.*
+
 TriVerity resolves rider–driver disputes with a team of agents. A Rider Advocate and a Driver Advocate
 each build their side's case from verified trip data, a Fraud detector checks both parties for bad-faith
-patterns, and a Judge applies Ryde's policy to issue a ruling with a recommended action, a confidence
+patterns, and a Judge applies the platform's policy (a mock Ryde policy) to issue a ruling with a recommended action, a confidence
 score and an explanation for each party.
 
 **The AI argues and explains; policy rules decide.** Facts are computed in code, the decision comes from
-Ryde's policy rules, and Tencent Hy3 writes each side's argument and the explanation of the outcome. So the
+the policy rules, and Tencent Hy3 writes each side's argument and the explanation of the outcome. So the
 same facts always give the same ruling, and every ruling is explained.
+
+| Evidence that explains itself | The ruling, ready to accept or override |
+|---|---|
+| ![Evidence step: route sketch against the planned route, trip timeline, fare checks](docs/review/evidence-clarity/after/d001-evidence-light-1280.png) | ![Ruling step: outcome first, reason, what would change it, accept or override](docs/review/console-polish/after/ruling-light-1280.png) |
 
 ![TriVerity architecture](docs/architecture.svg)
 
@@ -158,8 +168,8 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`, pick a sample dispute and press **Resolve dispute**. Each run makes six or seven
-LLM calls (about 10,000 tokens).
+Open `http://localhost:5173`, open the reviewer console, pick a sample dispute and press **Run agents**. Each run
+makes 7–9 LLM calls (about 10,000 tokens); switch **AI** to **Offline** in the header to run it free.
 
 ### Tests and evaluation
 
@@ -176,6 +186,48 @@ python scripts/evaluate.py --runs 3
 ```
 
 Optional: `pip install pre-commit && pre-commit install` adds the gitleaks secret check to every commit.
+
+## Ryde requirements, where to see each
+
+| Ryde brief | Where to see it |
+|---|---|
+| **Rider Advocate, Driver Advocate and Judge agents** | Console → Hearing (both arguments and replies) and Ruling; `backend/app/agents/` |
+| **GPS and telemetry**: actual vs optimal route, unexpected stops, duration vs estimate | Console → Evidence → GPS card (route sketch against the planned route, timeline, stops) |
+| **Chat logs**: sentiment, agreements, disagreements, threats | Evidence → Chat card; threats escalate (SAFE-1) |
+| **Payment and fare data**: breakdown validation, surge, promo codes | Evidence → Fare card (verdict and checks) |
+| **Historical behaviour**: dispute history, ratings, account age | Evidence → History card (used only for bad-faith checks; never changes a ruling, 500/500) |
+| **Advocates gather their own evidence and cite policy** | Evidence → "How the evidence was gathered" (each side's lookups); Hearing → key facts and cited rules |
+| **Ruling with a confidence score and a plain-language explanation** | Ruling step (outcome, confidence, reason, what would change it) |
+| **Recommended action and an explanation to both parties** | Ruling (e.g. partial refund $6.30) and Notify parties (each party's message, approved by the reviewer) |
+| **At least two dispute categories, end to end** | Route deviation (D001, D003, D004, D007, D008) and no-show charge (D002, D005, D006, DISP-002) |
+| **Observable inter-agent communication** | Live progress while agents run; "How this step was decided" on every step; the agent log |
+| **Architecture diagram** | [docs/architecture.svg](docs/architecture.svg), [docs/architecture.md](docs/architecture.md) |
+| **Stretch: Evidence Collection agent** | Per-side tool calls over mock Ryde data APIs |
+| **Stretch: Fraud & Bad-Faith detection** | Risk scores feed the Judge; History card flags high risk |
+| **Stretch: Policy & Precedent agent** | Ruling → precedents; reviewer decisions and appeals become precedents |
+| **Stretch: Escalation protocol** | Low confidence, threats, missing data or high risk → human review with a priority tier |
+| **Stretch: Learning feedback loop** | Accept or override on the Ruling step; appeals; repeated reviewer disagreement escalates similar cases |
+| **Stretch: SLA and routing** | Triage tiers (safety, high, standard, low); the reviewer queue shows cases needing a decision first |
+| **Stretch: Image analysis** | Not built, on purpose; see [What's next](#whats-next) |
+
+## What's next
+
+**Image evidence for damage and mess disputes** (the brief's third category). We deliberately didn't ship image
+analysis in the hackathon: photos bring risks (faked or AI-generated images, instructions hidden in pictures,
+faces and licence plates) that need proper safeguards, and a half-built version would undermine the trust the
+rest of the system is built on. The design keeps the same principle, rules decide and AI explains:
+
+- A vision-capable model only **extracts facts** from photos (type and severity of mess or damage) as evidence
+  with IDs; the policy rules still decide any cleaning fee.
+- **Authenticity checks:** the photo's time and place must match the trip's end; edited or AI-generated images
+  are flagged; every image case starts with human review until accuracy is measured.
+- **Security and privacy:** text inside images is untrusted data (as in the prompt-injection tests); file type,
+  size and count limits; faces and licence plates blurred before anything is stored or shown; photos kept only
+  while the dispute is open.
+- **Evaluation first:** a labelled test set and red-team images before any live use.
+
+Also next: server-side lookup of trip data (instead of trusting submitted facts), persistence and SLA clocks for
+the review queue, and shadow-mode agreement measured against Ryde's reviewers.
 
 ## Built with
 

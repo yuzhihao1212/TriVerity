@@ -149,3 +149,7 @@ Measured on the 9 sample disputes, including the organisers' case, and on 500 ge
 For the platform, that means reviewers spend their time on the cases that need judgement, with safety first.
 Riders and drivers get an explained answer in seconds. Rulings stay consistent and auditable, with every
 step logged, every rule cited, and a human able to override or hear an appeal.
+
+**Next:** image evidence for damage and mess disputes (the brief's third category). We deliberately didn't
+ship it in the hackathon: photos need authenticity, privacy and prompt-injection safeguards first. In the
+design, a vision model only extracts facts and the policy rules still decide.

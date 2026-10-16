@@ -1,6 +1,6 @@
 # How prompts drive the agents
 
-TriVerity's agents make up to seven LLM calls per dispute: one or two Evidence Collection plans, two advocate
+TriVerity's agents make 7–9 LLM calls per dispute: one or two Evidence Collection plans for each side, two advocate
 cases, two rebuttals and the Judge's explanation. (The Fraud detector is deterministic and makes no LLM call.) Each has a narrow job, receives only verified inputs, and
 must answer in JSON that the code checks before use (see [architecture.md](architecture.md)).
 
@@ -201,13 +201,13 @@ attack tests are in `backend/tests/test_prompt_injection.py`; findings in `docs/
 
 ## What testing changed
 
-Each rule in the prompts above exists because live Hy3 output broke it. We ran all seven sample disputes
-after each change.
+Each rule in the prompts above exists because live Hy3 output broke it. We ran all the sample disputes
+after each change (seven at the time of the early rows below; nine later).
 
 | Problem seen with Hy3 | Prompt change |
 |---|---|
 | With reasoning turned off for speed, advocates argued the other side ("the no-show charge should not apply", from the *driver* advocate) and ruled on the case themselves | Advocate rules 1 and 3: argue only for your client, never rule, acknowledge bad facts without conceding |
-| Advocates cited rules that favour the other party: 9 wrong-side citations across the 14 advocate cases in the seven samples | Advocate rule 4: cite only rules whose conditions support your client, or none. Down to 2 |
+| Advocates cited rules that favour the other party: 9 wrong-side citations across the 14 advocate cases in the seven samples of that run | Advocate rule 4: cite only rules whose conditions support your client, or none. Down to 2 |
 | The Judge told the driver "$6.30 will be deducted from your earnings", which nothing in the case states | "Do not state consequences the ruling does not give" |
 | The check rejected good explanations that named an advocate's cited rules to say why they lost (e.g. "the driver's advocate cited NS-2 and NS-3, but…"), so the Judge's badge flipped between AI and Fallback on re-runs | The check allows rules the ruling applied **or an advocate cited**, and the prompt allows naming advocate-cited rules only to explain why they didn't decide the case |
 | On escalated cases with a proposed refund (D007, D008) the Judge told the rider "a refund of $6.30 … has been proposed", which the promise check rejected, so the badge was Fallback in most runs (D007 4 of 5, D008 1 of 1) | The party messages must not mention any refund, amount or proposal, only that a human reviewer will decide and follow up; the refund is labelled as for the reviewer only. Live after the fix: D007 5/5 and D008 5/5 AI |
@@ -220,5 +220,6 @@ after each change.
 | After the Fraud detector was added, the rider was told "your account's dispute history triggered a review" and the driver "the rider's history led to review" | "Never mention bad-faith or fraud risk, or either party's account or dispute history" in party messages, plus a check that rejects them |
 
 Reasoning ("thinking") is turned off for every call. With it on, the two advocates alone took about
-40 seconds per dispute and the Judge's explanation about 20 more; with it off, a whole dispute takes 6–8
-seconds, and with the rules above the output was as good or better.
+40 seconds per dispute and the Judge's explanation about 20 more; with it off, a whole dispute took 6–8
+seconds in the early three-call pipeline (about 16–18 seconds today with the evidence collector and
+rebuttals), and with the rules above the output was as good or better.

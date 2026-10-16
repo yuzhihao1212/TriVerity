@@ -9,7 +9,7 @@ the mapping.
 ## The design choice behind most rows
 
 **Policy rules decide; the AI argues and explains.** Facts are computed in code, the decision comes from
-Ryde's policy rules, and Tencent Hy3 writes the advocates' arguments and the Judge's explanation. So the
+the policy rules (a mock Ryde policy), and Tencent Hy3 writes the advocates' arguments and the Judge's explanation. So the
 same facts always give the same ruling, a manipulated model can't move money, and every decision can be
 traced to a rule and a fact.
 

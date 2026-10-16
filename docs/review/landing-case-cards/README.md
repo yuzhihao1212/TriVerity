@@ -38,4 +38,4 @@ Stopwatch: [before](stopwatch-before.png) / [after](stopwatch-after.png).
 - Tab visits each card once, focus outlines surround the whole card, Enter opens D001. Clicking D007's title and DISP-002's padding also opens the correct sample. Browser Back returns to the landing page. “Run agents” remains unpressed and available; **zero resolve requests**. The landing itself makes **zero `/api` requests**.
 - Ordinary-motion hover raises a card 2 px; reduced motion has no lift or transition. No new runtime dependencies or backend changes; console routing/intro and token protection remain intact.
 
-No open questions. PR left unmerged.
+No open questions. Merged as #79.
