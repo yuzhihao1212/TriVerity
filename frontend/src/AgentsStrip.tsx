@@ -3,11 +3,11 @@ import { Fragment, useId, useState } from "react";
 import { humanizeAgentMessage } from "./agentText";
 
 import { EvidenceText, type FactLinks } from "./EvidenceList";
+import { openAuditTrail } from "./CollectorCalls";
 import { Chip } from "./Chip";
 import { chipClass, chipTone } from "./chipStyle";
 import { SourceBadge } from "./Debate";
 import { Icon } from "./Icon";
-import { reveal } from "./routes";
 import {
   agentBadge, agentIcon, callColumns, durationShare, durationText, statusBadge, stepFlow, toolIcon, toolName, toolTooltip,
 } from "./stepVisuals";
@@ -126,7 +126,8 @@ function ToolCalls({ calls }: { calls: NonNullable<NonNullable<Resolution["evide
     </div>)}</div>
     <a className="tool-calls-link" href="#collector-calls-title" onClick={event => {
       event.preventDefault();
-      reveal(document.getElementById("collector-calls-title"), "start", { flash: true });
+      // Opens the audit trail first; it then scrolls to its heading and flashes it.
+      openAuditTrail();
     }}>Full lookup details <span aria-hidden="true">↓</span></a>
   </div>;
 }

@@ -362,14 +362,14 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
                   </div>
                   {resolution && <p className="small muted">This case has a saved result. Re-running uses tokens again.</p>}
                 </>}
-                {tab === "evidence" && resolution && <><FactLibrary facts={facts} activeId={activeFact} request={factRequest} expanded grouped onSelectFact={selectFact} /><CollectorCalls collection={resolution.evidence_collection} /></>}
-                {tab === "hearing" && resolution && <Debate resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />}
+                {tab === "evidence" && resolution && <><FactLibrary facts={facts} activeId={activeFact} request={factRequest} expanded grouped onSelectFact={selectFact} dispute={selected} resolution={resolution} /><CollectorCalls collection={resolution.evidence_collection} /></>}
+                {tab === "hearing" && resolution && <Debate resolution={resolution} dispute={selected} availableIds={factIds} onSelectFact={selectFact} />}
                 {tab === "ruling" && resolution && <>
                   <VerdictSummary resolution={resolution} disputeId={selected.dispute_id} />
                   <ReviewerDecision resolution={resolution} controller={decision} />
                   <AppealsPanel disputeId={selected.dispute_id} version={appealsVersion} onChanged={() => setAppealsVersion(v => v + 1)} />
                   <RulingSection title="Reasoning" hint="The Judge's explanation, policy and evidence" open>
-                    <RulingPanel resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
+                    <RulingPanel resolution={resolution} dispute={selected} availableIds={factIds} onSelectFact={selectFact} />
                   </RulingSection>
                   {(resolution.argument_review?.length || resolution.counterfactuals?.length) ? <RulingSection title="How the Judge weighed each side" hint="Cited rules checked against the facts, and what would change the ruling">
                     {resolution.argument_review && resolution.argument_review.length > 0 && <section className="card"><ArgumentReviewPanel reviews={resolution.argument_review} /></section>}
@@ -642,7 +642,7 @@ function RiskBadge({ level }: { level: RiskLevel }) {
   return <Chip tone={riskTone(level)}>{level.charAt(0).toUpperCase() + level.slice(1)}</Chip>;
 }
 
-function RulingPanel({ resolution, availableIds, onSelectFact }: { resolution: Resolution } & FactLinks) {
+function RulingPanel({ resolution, dispute, availableIds, onSelectFact }: { resolution: Resolution; dispute: DisputeCase } & FactLinks) {
   const pct = Math.round(resolution.confidence * 100);
   const source = resolution.explanation_source === "llm" ? "llm" : "fallback";
   return (
@@ -676,7 +676,7 @@ function RulingPanel({ resolution, availableIds, onSelectFact }: { resolution: R
       </ul>
 
       <h3 className="section-label">Evidence considered</h3>
-      <EvidenceList texts={resolution.judge_evidence} availableIds={availableIds} onSelectFact={onSelectFact} />
+      <EvidenceList texts={resolution.judge_evidence} mention={resolution.explanation} dispute={dispute} availableIds={availableIds} onSelectFact={onSelectFact} />
     </section>
   );
 }

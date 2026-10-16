@@ -1,12 +1,9 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import ts from 'typescript';
+import { load } from './_load.mjs';
 
-// factVisuals.ts imports only a type from presentation.ts, which transpiling erases.
-const source = await readFile(new URL('../src/factVisuals.ts', import.meta.url), 'utf8');
-const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } });
-const fv = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`);
+// factVisuals.ts imports numberFormat.ts at runtime; the loader transpiles both.
+const fv = await load('factVisuals');
 const { factParts, factTone, groupFacts, fareReceipt, centsToMoney, parseRouteCoverage, parseStop, parseTile, parseChat, displaySource } = fv;
 
 const raw = parts => parts.map(part => part.kind === 'text' ? part.text : part.raw).join('');

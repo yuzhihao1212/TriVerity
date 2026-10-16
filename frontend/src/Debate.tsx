@@ -5,7 +5,7 @@ import { Chip } from "./Chip";
 import { sourceTone } from "./chipStyle";
 import { EvidenceList, EvidenceText, type FactLinks } from "./EvidenceList";
 import { FALLBACK_TOOLTIP } from "./stepVisuals";
-import type { AgentCase, Resolution } from "./types";
+import type { AgentCase, DisputeCase, Resolution } from "./types";
 
 /** AI (accent, sparkle), Fallback (amber, explained in its tooltip) or Code (neutral). */
 export function SourceBadge({ source, explain = false }: { source: "llm" | "fallback" | "code"; explain?: boolean }) {
@@ -14,8 +14,9 @@ export function SourceBadge({ source, explain = false }: { source: "llm" | "fall
   return <Chip size="sm" tone={sourceTone(source)} className="has-tooltip" title={FALLBACK_TOOLTIP}>Fallback{explain && <span className="sr-only">: {FALLBACK_TOOLTIP}</span>}</Chip>;
 }
 
-export function Debate({ resolution, availableIds, onSelectFact }: { resolution: Resolution } & FactLinks) {
+export function Debate({ resolution, dispute, availableIds, onSelectFact }: { resolution: Resolution; dispute?: DisputeCase } & FactLinks) {
   const id = useId();
+  const otherCase = (side: "rider" | "driver") => side === "rider" ? resolution.driver_case : resolution.rider_case;
   const argument = (side: "rider" | "driver", item: AgentCase) => (
     <article className={`advocate ${side}`} id={`${id}-${side}-argument`} tabIndex={-1}>
       <h4>{side === "rider" ? "Rider advocate" : "Driver advocate"} <SourceBadge source={item.source} /></h4>
@@ -23,8 +24,10 @@ export function Debate({ resolution, availableIds, onSelectFact }: { resolution:
       <h5 className="section-label">Policy cited</h5>
       {item.policy_refs.length ? <ul className="small">{item.policy_refs.map(ref => <li key={ref}>{ref}</li>)}</ul>
         : <p className="small muted">No policy rules cited.</p>}
-      <h5 className="section-label">Evidence by source</h5>
-      <EvidenceList texts={item.evidence} ids={item.evidence_ids} availableIds={availableIds} onSelectFact={onSelectFact} />
+      <h5 className="section-label">Evidence</h5>
+      <EvidenceList texts={item.evidence} ids={item.evidence_ids} mention={item.summary} dispute={dispute}
+        compare={{ party: side, otherTexts: otherCase(side).evidence, otherIds: otherCase(side).evidence_ids }}
+        availableIds={availableIds} onSelectFact={onSelectFact} />
     </article>
   );
   const reply = (side: "rider" | "driver", item: AgentCase) => {
@@ -36,7 +39,9 @@ export function Debate({ resolution, availableIds, onSelectFact }: { resolution:
         {item.rebuttal?.text ? <>
           <p><EvidenceText text={item.rebuttal.text} availableIds={availableIds} onSelectFact={onSelectFact} /></p>
           <h5 className="section-label">Evidence cited in reply</h5>
-          <EvidenceList texts={item.rebuttal.evidence} ids={item.rebuttal.evidence_ids} availableIds={availableIds} onSelectFact={onSelectFact} />
+          <EvidenceList texts={item.rebuttal.evidence} ids={item.rebuttal.evidence_ids} mention={item.rebuttal.text} dispute={dispute}
+            compare={otherCase(side).rebuttal?.text ? { party: side, otherTexts: otherCase(side).rebuttal!.evidence, otherIds: otherCase(side).rebuttal!.evidence_ids } : undefined}
+            availableIds={availableIds} onSelectFact={onSelectFact} />
         </> : <p className="small muted">No reply generated. The rebuttal round runs only when both opening arguments use AI.</p>}
       </article>
     );

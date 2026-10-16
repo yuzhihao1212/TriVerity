@@ -1,20 +1,116 @@
+import { useEffect, useRef, useState } from "react";
+
 import { Chip } from "./Chip";
-import { SourceBadge } from "./Debate";
-import { callsByRound } from "./progress";
+import { sourceTone } from "./chipStyle";
+import {
+  AUDIT_OPEN_KEY, collectionSummary, FALLBACK_EXPLANATION, lookupName, lookupReason, lookupTarget, mergeLookups, roundLabel,
+  type LookupRow,
+} from "./collectionStory";
+import { Icon } from "./Icon";
+import { reveal } from "./routes";
+import { toolIcon } from "./stepVisuals";
 import type { Resolution } from "./types";
 
+export const AUDIT_TITLE_ID = "collector-calls-title";
+export const AUDIT_BODY_ID = "collector-calls-body";
+const OPEN_EVENT = "triverity:open-audit";
+
+function readOpen(): boolean {
+  try { return sessionStorage.getItem(AUDIT_OPEN_KEY) === "open"; } catch { return false; }
+}
+
+/**
+ * Opens the audit trail if it is collapsed (the "Full lookup details ↓" link). The component
+ * listens for this, so the link and the toggle share one state.
+ */
+export function openAuditTrail(): void {
+  try { sessionStorage.setItem(AUDIT_OPEN_KEY, "open"); } catch { /* This session only. */ }
+  window.dispatchEvent(new Event(OPEN_EVENT));
+}
+
+/** Open the audit trail, then scroll to its heading and flash it once it has rendered open. */
+function useRevealAfterOpen() {
+  const [request, setRequest] = useState(0);
+  useEffect(() => {
+    if (!request) return;
+    reveal(document.getElementById(AUDIT_TITLE_ID), "start", { flash: true });
+  }, [request]);
+  return () => setRequest(n => n + 1);
+}
+
+/** "How the evidence was gathered": a plain summary, then the lookups on demand. */
 export function CollectorCalls({ collection }: { collection?: Resolution["evidence_collection"] }) {
-  if (!collection?.calls?.length) return null;
-  return <section className="card collector-calls" aria-labelledby="collector-calls-title">
-    <div className="card-head"><h2 id="collector-calls-title" tabIndex={-1}>What the evidence collector looked up</h2><SourceBadge source={collection.source} /></div>
-    {callsByRound(collection.calls).map(({ round, calls }) => <section className="collector-round" key={round}>
-      <h3>Round {round}</h3>
-      <ol className="collector-call-list">{calls.map((call, index) => <li key={index}>
-        <div className="card-head"><h4><code>{call.tool}</code></h4>{call.party && <Chip size="sm" tone="outline">{call.party === "rider" ? "Rider" : "Driver"}</Chip>}</div>
-        {Object.keys(call.args).length > 0 && <dl className="collector-args">{Object.entries(call.args).map(([name, value]) => <div key={name}><dt>{name}</dt><dd>{value}</dd></div>)}</dl>}
-        <p className="small"><strong>Reason:</strong> {call.reason || "No reason recorded."}</p>
-        {call.results.length > 0 ? <ul className="small">{call.results.map((line, index) => <li key={index}>{line}</li>)}</ul> : <p className="small muted">No result lines returned.</p>}
-      </li>)}</ol>
-    </section>)}
+  const [open, setOpen] = useState(readOpen);
+  const revealHeading = useRevealAfterOpen();
+  // The "Full lookup details" link in "How this step was decided" opens it first, then scrolls.
+  useOpenEvent(() => { setOpen(true); revealHeading(); });
+  if (!collection) return null;
+  const calls = collection.calls ?? [];
+  const summary = collectionSummary(collection);
+  const rounds = mergeLookups(calls);
+  const toggle = () => setOpen(previous => {
+    try { sessionStorage.setItem(AUDIT_OPEN_KEY, previous ? "closed" : "open"); } catch { /* This session only. */ }
+    return !previous;
+  });
+  return <section className="card collector-calls" aria-labelledby={AUDIT_TITLE_ID}>
+    <div className="card-head">
+      <div className="panel-head"><h2 id={AUDIT_TITLE_ID} tabIndex={-1}>How the evidence was gathered</h2><Chip size="sm" tone="outline">Audit trail</Chip></div>
+      <span className="collector-source">
+        <Chip size="sm" tone={sourceTone(collection.source)} icon={collection.source === "llm" ? "sparkle" : undefined}
+          title={collection.source === "fallback" ? FALLBACK_EXPLANATION : undefined}>{collection.source === "llm" ? "AI" : "Fallback"}</Chip>
+      </span>
+    </div>
+    <p className="collector-summary"><strong>{summary.lead}</strong>{summary.rest}</p>
+    {collection.source === "fallback" && <p className="small muted">{FALLBACK_EXPLANATION}</p>}
+    {!!calls.length && <button type="button" className="agents-toggle collector-toggle" aria-expanded={open} aria-controls={AUDIT_BODY_ID} onClick={toggle}>
+      {open ? "Hide the lookups" : `Show the ${calls.length} lookups`}<Icon name="arrow" className="agents-toggle-icon" />
+    </button>}
+    <div id={AUDIT_BODY_ID} hidden={!open}>
+      {rounds.map((round, index) => <section className="collector-round" key={round.round} aria-label={roundLabel(index, rounds.length) ?? "Lookups"}>
+        {roundLabel(index, rounds.length) && <h3>{roundLabel(index, rounds.length)}</h3>}
+        {!!round.both.length && <div className="lookup-group">
+          <h4 className="section-label">Both sides</h4>
+          <ul className="lookup-list">{round.both.map(row => <LookupItem key={row.key} row={row} />)}</ul>
+        </div>}
+        {!!(round.rider.length || round.driver.length) && <div className="lookup-columns">
+          {(["rider", "driver"] as const).map(party => round[party].length > 0 && <div className="lookup-group" key={party}>
+            <h4 className="section-label">{party === "rider" ? "Rider's side" : "Driver's side"}</h4>
+            <ul className="lookup-list">{round[party].map(row => <LookupItem key={row.key} row={row} only />)}</ul>
+          </div>)}
+        </div>}
+      </section>)}
+    </div>
   </section>;
+}
+
+function LookupItem({ row, only = false }: { row: LookupRow; only?: boolean }) {
+  const call = row.calls[0];
+  const reasons = [...new Set(row.calls.map(item => lookupReason(item.reason)).filter((reason): reason is string => !!reason))];
+  const target = lookupTarget(call);
+  const results = [...new Set(row.calls.flatMap(item => item.results))];
+  return <li className={`lookup-item${only ? " only" : ""}`}>
+    <div className="lookup-head">
+      <span className="lookup-icon" aria-hidden="true"><Icon name={toolIcon(call.tool)} /></span>
+      <strong>{lookupName(call)}</strong>
+      {only && <Chip size="sm" tone="brand">Only this side</Chip>}
+    </div>
+    {reasons.map(reason => <p className="small muted lookup-reason" key={reason}>{reason}</p>)}
+    {target && <p className="small lookup-target">{target.count} <span aria-hidden="true">→</span>{" "}
+      <a href={`#${target.id}`} onClick={event => { event.preventDefault(); reveal(document.getElementById(target.id), "start", { flash: true }); }}>
+        <strong>{target.card}</strong></a></p>}
+    {!!results.length && <details className="disclosure lookup-raw">
+      <summary>Show the raw results</summary>
+      <ul className="small">{results.map((line, index) => <li key={index}><code>{line}</code></li>)}</ul>
+    </details>}
+  </li>;
+}
+
+function useOpenEvent(onOpen: () => void) {
+  const latest = useRef(onOpen);
+  latest.current = onOpen;
+  useEffect(() => {
+    const listener = () => latest.current();
+    window.addEventListener(OPEN_EVENT, listener);
+    return () => window.removeEventListener(OPEN_EVENT, listener);
+  }, []);
 }

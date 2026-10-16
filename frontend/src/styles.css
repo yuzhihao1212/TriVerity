@@ -272,15 +272,74 @@ textarea { width: 100%; resize: vertical; }
 .fact-tile.warn .fact-tile-value { color: var(--warn-text); }
 .fact-tile-detail { color: var(--muted); font-size: 11px; }
 
-.fact-coverage { padding: var(--space-2) var(--space-2) var(--space-3); border-bottom: 1px solid var(--border); }
-.fact-coverage .fact-row-body { display: grid; gap: var(--space-2); }
-.fact-bar { display: block; height: 6px; border-radius: 999px; background: var(--border); overflow: hidden; }
-.fact-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--accent-text); }
+/* Story lines: one plain sentence that says what a card shows (gpsStory.ts, fareStory.ts). */
+.story-headline { margin: 0; font-size: 14px; line-height: 1.55; }
+.story-details > .fact-row { padding-block: var(--space-1); }
 
-.fact-timeline { display: grid; gap: 0; padding-left: var(--space-2) !important; }
-.fact-stop { position: relative; padding: var(--space-2) 0 var(--space-2) var(--space-5); }
-.fact-stop::before { content: ""; position: absolute; left: 4px; top: 0; bottom: 0; border-left: 1px dashed var(--control-border); }
-.fact-stop-dot { position: absolute; left: 0; top: calc(var(--space-2) + .55em); width: 9px; height: 9px; border-radius: 50%; background: var(--accent-text); }
+/* GPS route sketch: planned (dashed), driven (amber off route), stop pins. */
+.route-sketch { margin: 0; display: grid; gap: var(--space-2); }
+.route-sketch svg { display: block; width: 100%; height: auto; max-height: 320px; background: var(--bg); border-radius: 8px; }
+.route-planned { fill: none; stroke: var(--control-border); stroke-width: 2.5; stroke-dasharray: 7 6; stroke-linecap: round; }
+.route-driven { fill: none; stroke: var(--text); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+.route-driven.off { stroke: var(--warn-text); }
+.route-stop circle { fill: var(--warn-text); stroke: var(--bg); stroke-width: 2.5; }
+.route-stop text { fill: var(--text); font-size: 15px; font-weight: 600; paint-order: stroke; stroke: var(--bg); stroke-width: 4px; }
+.route-pin { stroke: var(--text); stroke-width: 2.5; }
+.route-pin.start { fill: var(--bg); }
+.route-pin.end { fill: var(--text); }
+.route-legend { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); color: var(--muted); font-size: 12px; }
+.route-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.route-legend i { display: inline-block; flex: none; }
+.legend-planned { width: 22px; border-top: 2px dashed var(--control-border); }
+.legend-driven, .legend-off { width: 22px; height: 4px; border-radius: 2px; background: var(--text); }
+.legend-off { background: var(--warn-text); }
+.legend-stop { width: 10px; height: 10px; border-radius: 50%; background: var(--warn-text); }
+.legend-start, .legend-end { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--text); }
+.legend-end { background: var(--text); }
+@media (prefers-reduced-motion: no-preference) {
+  /* The driven line reveals left to right, once per case per session. Hidden only inside .route-intro. */
+  .route-intro .route-reveal { animation: evidence-route-draw .8s ease-out both; transform-box: fill-box; transform-origin: left center; }
+  .route-intro .route-stop { animation: evidence-fade .25s ease-out .8s both; }
+}
+@keyframes evidence-route-draw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes evidence-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* GPS timeline: first to last timestamp. */
+.gps-timeline { margin: 0; display: grid; gap: var(--space-1); }
+.timeline-track { position: relative; height: 12px; border-radius: 999px; background: var(--border); overflow: hidden; }
+.timeline-segment { position: absolute; top: 0; bottom: 0; background: var(--control-border); }
+.timeline-segment.off { background: var(--warn-text); }
+.timeline-gap { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(45deg, var(--bg) 0 3px, var(--transparent) 3px 6px); }
+.timeline-stop { position: absolute; top: 1px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--text); box-shadow: 0 0 0 2px var(--bg); }
+.timeline-marks { position: relative; color: var(--text); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.timeline-mark { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.timeline-mark.start { transform: none; }
+.timeline-mark.end { transform: translateX(-100%); }
+.timeline-mark.gap { color: var(--muted); font-weight: 500; }
+.timeline-ends { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+
+/* Count-up digits never shift the tile. */
+.count-up { display: inline-block; font-variant-numeric: tabular-nums; }
+
+/* Fare: verdict, checks, compact receipt, link to the ruling. */
+.fare-checks { gap: var(--space-2); }
+.fare-check-sources { margin-top: calc(-1 * var(--space-2)); }
+.receipt-difference-value { color: var(--warn-text); }
+.fare-ruling-link { margin: 0; font-size: 13px; }
+.fare-ruling-link.refund strong { color: var(--ok-text); }
+
+/* History: two calm profiles. */
+.history-profiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.history-profile { padding: var(--space-3) var(--space-4); background: var(--bg); border-radius: 8px; border: 1px solid var(--transparent); }
+.history-profile .fact-row-body { display: grid; gap: 2px; font-size: 13px; }
+.history-profile.tone-warn { border-color: var(--warn-text); }
+.history-profile.tone-danger { border-color: var(--error); }
+.history-who { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-weight: 600; margin-bottom: 2px; }
+.history-line { color: var(--text); font-variant-numeric: tabular-nums; }
+.history-signals { margin: var(--space-1) 0 0 !important; padding-left: var(--space-4) !important; list-style: disc !important; color: var(--muted); font-size: 12px; }
+.fairness-note { display: flex; align-items: flex-start; gap: var(--space-2); margin: 0; color: var(--muted); font-size: 12px; }
+.fairness-note .icon { flex: none; width: 16px; height: 16px; margin-top: 1px; }
+@media (max-width: 760px) { .history-profiles { grid-template-columns: 1fr; } }
 
 .fact-receipt { padding: var(--space-2) var(--space-3) !important; background: var(--bg); border-radius: 8px; font-variant-numeric: tabular-nums; }
 .fact-receipt .fact-row-body { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); }
@@ -487,12 +546,32 @@ textarea { width: 100%; resize: vertical; }
 .elapsed-time { font-size: 13px; font-variant-numeric: tabular-nums; }
 .live-pending { display: flex; align-items: center; gap: var(--space-3); font-size: 13px; color: var(--muted); padding-block: var(--space-3); }
 .collector-round { display: grid; gap: var(--space-3); }
-.collector-call-list { display: grid; gap: var(--space-4); list-style: none; padding: 0; }
-.collector-call-list > li { background: var(--surface); border-radius: 10px; padding: var(--space-4); display: grid; gap: var(--space-3); min-width: 0; }
-.collector-call-list code { font-size: 13px; overflow-wrap: anywhere; }
-.collector-args { margin: 0; display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-6); font-size: 12px; }
-.collector-args dt { color: var(--muted); }
-.collector-args dd { margin: 0; }
+.collector-round > h3 { font-size: 14px; }
+.collector-summary { margin: 0; font-size: 14px; line-height: 1.55; }
+.collector-toggle { justify-self: start; }
+.collector-source { flex: none; }
+.lookup-group { display: grid; gap: var(--space-2); }
+.lookup-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.lookup-list { display: grid; gap: var(--space-2); list-style: none; padding: 0; margin: 0; }
+.lookup-item { display: grid; gap: var(--space-1); min-width: 0; padding: var(--space-3) var(--space-4); background: var(--surface); border-radius: 10px; border: 1px solid var(--transparent); }
+.lookup-item.only { border-color: var(--accent-text); }
+.lookup-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: 13px; }
+.lookup-icon { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-text); }
+.lookup-icon .icon { width: 14px; height: 14px; }
+.lookup-reason, .lookup-target { margin: 0; }
+.lookup-raw code { font-size: 12px; overflow-wrap: anywhere; }
+@media (max-width: 760px) { .lookup-columns { grid-template-columns: 1fr; } }
+
+/* Cited evidence: key facts, then categories that open on click. */
+.evidence-same { margin: 0; }
+.evidence-categories { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); }
+.category-toggle { min-height: 32px; padding: 0 var(--space-3); border: 1px solid var(--border); border-radius: 999px; background: var(--bg); color: var(--text); font-size: 12px; font-weight: 600; cursor: pointer; }
+.category-toggle:hover { border-color: var(--accent-text); }
+.category-toggle[aria-expanded="true"] { background: var(--accent-soft); border-color: var(--accent-text); color: var(--accent-text); }
+.category-count { color: inherit; font-weight: 500; }
+.evidence-category { display: grid; gap: var(--space-2); padding: var(--space-3); border-left: 2px solid var(--border); }
+.category-summary { margin: 0; color: var(--muted); }
+.presentation-mode .category-toggle, .presentation-mode .story-headline, .presentation-mode .collector-summary { font-size: 15px; }
 .presentation-mode .live-step-head, .presentation-mode .live-timeline > li > p, .presentation-mode .live-pending,
 .presentation-mode .collector-call-list code, .presentation-mode .collector-args, .presentation-mode .elapsed-time { font-size: 15px; }
 .presentation-mode .step-duration { font-size: 13px; }

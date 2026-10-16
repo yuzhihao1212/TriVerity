@@ -266,7 +266,9 @@ export function toolIcon(tool: string): ToolIcon { return Object.hasOwn(TOOL_ICO
 
 export function toolTooltip(call: ToolCallRecord): string {
   const n = call.results.length;
-  return `${call.reason || "No reason recorded."} · ${n} ${n === 1 ? "result" : "results"}`;
+  // The fallback's literal "default plan" is never shown (collectionStory.ts).
+  const reason = call.reason?.trim().toLowerCase() === "default plan" ? "Standard lookup (AI off)" : call.reason;
+  return `${reason || "No reason recorded."} · ${n} ${n === 1 ? "result" : "results"}`;
 }
 
 export interface CallColumn { key: "rider" | "driver" | "all"; title: string; calls: ToolCallRecord[] }
