@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { CLOSED_TRUST_TILE, trustTileState } from "./trustTileState";
 import { Chip } from "./Chip";
+import { CASES } from "./landingCases";
 import { Icon } from "./Icon";
 import { focusSection } from "./routes";
 import { PresentationToggle, ThemeToggle } from "./ThemeToggle";
@@ -54,12 +55,6 @@ export const TRUST_TILES: readonly TrustTile[] = [
   { icon: "shield", title: "Humans for risky cases", detail: "Uncertain or high-risk cases go to a human reviewer with a priority tier. Safety cases come first." },
   { icon: "books", title: "Appeals teach the system", detail: "A reviewer's appeal decision becomes a precedent for similar future cases.", note: "Disabled in the public demo." },
   { icon: "lock", title: "Tested against prompt injection", proof: "0 of 68 live runs swayed", detail: "23 attack scenarios tested offline. Across 17 attacks and 68 live Hy3 runs, no injection changed a ruling." },
-];
-
-const CASES = [
-  { id: "D001", title: "A detour and a refund", detail: "A longer, slower route and a six-minute stop. See how policy calculates a partial refund.", action: "Try the detour case" },
-  { id: "D007", title: "When a human should step in", detail: "A threat in chat and high bad-faith risk trigger escalation, with safety review first.", action: "Try the escalation case" },
-  { id: "DISP-002", title: "The organisers’ own case", detail: "A lobby no-show dispute in the organisers’ dataset format. Examine arrival, waiting and contact evidence.", action: "Try the organisers’ case" },
 ];
 
 export function Landing({ presentation, onTogglePresentation, theme, onToggleTheme, onOpenConsole }: {
@@ -136,9 +131,13 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
         </section>
         <section aria-labelledby="try-title">
           <div className="landing-section-head"><p className="eyebrow">Try these cases</p><h2 id="try-title">Start with a case, then follow the reasoning.</h2><p className="muted">Opening a case loads its evidence. Agents run only when you press “Run agents”.</p></div>
-          <div className="landing-cases">{CASES.map(sample => <article className="landing-card" key={sample.id}>
-            <span className="landing-case-id">{sample.id}</span><h3>{sample.title}</h3><p className="muted">{sample.detail}</p><a href={`#/console/${sample.id}`}>{sample.action} <span aria-hidden="true">→</span></a>
-          </article>)}</div>
+          <div className="landing-cases">{CASES.map(sample => <a className="landing-case" key={sample.id} href={sample.href} aria-label={sample.accessibleName}>
+            <span className={`landing-case-icon${sample.tone === "warn" ? " warn" : ""}`} aria-hidden="true"><Icon name={sample.icon} /></span>
+            <h3>{sample.title}</h3>
+            <div className="chip-row landing-case-evidence">{sample.evidence.map(line => <Chip key={line} size="sm" tone="outline">{line}</Chip>)}</div>
+            <p className={`landing-case-outcome tone-${sample.tone}`}><span className="landing-case-dot" aria-hidden="true" /><strong>{sample.outcome}</strong></p>
+            <span className="landing-case-footer"><span className="landing-case-id">{sample.id}</span><span aria-hidden="true">·</span><span className="landing-case-action">Open case <span aria-hidden="true">→</span></span></span>
+          </a>)}</div>
         </section>
       </div>
     </main>
