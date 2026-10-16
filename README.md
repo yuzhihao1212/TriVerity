@@ -232,4 +232,6 @@ the review queue, and shadow-mode agreement measured against Ryde's reviewers.
 ## Built with
 
 Developed with Tencent Cloud **CodeBuddy** (LLM client, advocate agents, hardening, UI badges and the
-Fraud & Bad-Faith detector) and Claude Code.
+Fraud & Bad-Faith detector), with **WorkBuddy** for the submission text, a docs consistency review and judge Q&A
+preparation, and **Miora** for the cover image. The AI coding assistants **Claude Code**, **OpenAI Codex** and
+**Kiro** helped build and review features. Every change went through a pull request, automated tests and CI.
