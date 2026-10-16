@@ -143,6 +143,10 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
     </main>
     <footer className="landing-footer"><div className="landing-wrap"><div><strong>TriVerity</strong> <span className="byline">By OeroAI</span><p className="muted">Synthetic data; a hackathon prototype.</p></div>
       <nav aria-label="Documentation"><a href={`${GITHUB}/blob/main/docs/architecture.md`}>Architecture</a><a href={`${GITHUB}/blob/main/docs/security.md`}>Security</a><a href={`${GITHUB}/blob/main/docs/evaluation.md`}>Evaluation</a></nav>
+    </div>
+    <div className="landing-wrap landing-legal">
+      <p>Built for Ryde’s challenge at the Tencent Cloud AI Hackathon Singapore 2026. Not affiliated with or endorsed by Ryde.</p>
+      <p>© 2026 OeroAI. All rights reserved.</p>
     </div></footer>
   </div>;
 }

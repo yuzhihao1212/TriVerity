@@ -1104,3 +1104,8 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
   .landing-case { transition: transform 160ms ease; }
   .landing-case:hover { transform: translateY(-2px); }
 }
+
+/* Landing footer: non-affiliation and copyright lines. */
+.landing-legal { display: grid; gap: var(--space-1); margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--border); }
+.landing-legal p { margin: 0; font-size: 12px; color: var(--muted); }
+.landing.presentation-mode .landing-legal p { font-size: 14px; }
