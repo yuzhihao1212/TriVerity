@@ -16,6 +16,6 @@ export function ringGeometry(radius: number, achieved: number, total: number) {
 }
 export const AUTOMATION_RING = { ...ringGeometry(38, 390, 500), x: 50, y: 50, width: 12 };
 export const STOPWATCH = {
-  ...ringGeometry(34, 17, 60), x: 50, y: 56, width: 4, handLength: 25, handAngle: 360 * 17 / 60,
+  ...ringGeometry(34, 17, 60), x: 50, y: 56, width: 8, handLength: 25, handAngle: 360 * 17 / 60,
   button: { x: 42, y: 4, width: 16, height: 8 }, stem: { x: 50, y1: 12, y2: 22 },
 };

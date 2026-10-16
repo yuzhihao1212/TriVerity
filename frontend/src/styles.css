@@ -492,8 +492,6 @@ textarea { width: 100%; resize: vertical; }
 .landing-problem p + p { margin-top: var(--space-4); }
 .landing-section-head { display: grid; gap: var(--space-2); margin-bottom: var(--space-8); }
 .landing-trust { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
-.landing-card { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); min-width: 0; padding: var(--space-6); border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
-.landing-card p { font-size: 13px; }
 .landing-results { border-block: 1px solid var(--border); padding-block: var(--space-10); }
 .landing-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-8); margin: 0; }
 .landing-metrics > div { display: flex; flex-direction: column; gap: var(--space-2); }
@@ -503,21 +501,19 @@ textarea { width: 100%; resize: vertical; }
 .landing-metric-detail { order: 2; color: var(--muted); font-size: 12px; }
 .landing-footnote { font-size: 11px; margin-top: var(--space-6); max-width: 900px; }
 .landing-cases { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
-.landing-cases .landing-card { background: var(--bg); }
-.landing-case-id { color: var(--accent-text); font-size: 12px; font-weight: 600; }
-.landing-cases a { margin-top: auto; padding-top: var(--space-3); font-size: 13px; font-weight: 600; }
 .landing-footer { border-top: 1px solid var(--border); background: var(--surface); padding-block: var(--space-8); }
 .landing-footer > div { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-6); }
 .landing-footer p, .landing-footer nav { font-size: 12px; }
 .landing.presentation-mode .landing-lead { font-size: clamp(28px, 3.5vw, 44px); }
-.landing.presentation-mode .landing-intro, .landing.presentation-mode .landing-card p { font-size: 17px; }
+.landing.presentation-mode .landing-intro { font-size: 17px; }
 .landing.presentation-mode .landing-metric-detail, .landing.presentation-mode .landing-metrics dt,
 .landing.presentation-mode .landing-provider, .landing.presentation-mode .landing-footnote, .landing.presentation-mode .landing-footer p,
-.landing.presentation-mode nav, .landing.presentation-mode .landing-cases a, .landing.presentation-mode .landing-actions > a:not(.landing-primary) { font-size: 14px; }
+.landing.presentation-mode nav, .landing.presentation-mode .landing-actions > a:not(.landing-primary) { font-size: 14px; }
 .landing.presentation-mode h3 { font-size: 18px; }
 @media (max-width: 1100px) {
   .landing-wrap { width: calc(100% - 64px); }
   .landing-problem { gap: var(--space-8); }
+  .landing-cases { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 760px) {
   .landing-wrap { width: calc(100% - 40px); }
@@ -1028,7 +1024,7 @@ article[tabindex="-1"] { scroll-margin-block: var(--space-4); }
   .landing-stage:not(:last-child)::after { content: "↓"; top: auto; bottom: calc(-1 * var(--space-8) + 4px); right: auto; left: 18px; }
 }
 
-/* Trust tiles: independent of .landing-card, which also styles Try these cases. */
+/* Trust tiles: independent of the linked case cards below. */
 .landing-trust { grid-auto-rows: 1fr; }
 .trust-tile { position: relative; display: block; width: 100%; height: 100%; min-height: 270px; padding: var(--space-6); border: 1px solid var(--border); border-radius: 16px; background: var(--surface); color: var(--text); text-align: left; overflow: hidden; }
 .trust-tile-front { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4); min-height: 220px; opacity: 1; transition: opacity 180ms ease; }
@@ -1085,6 +1081,37 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
   .landing-metrics .landing-result-visual { width: 72px; height: 72px; }
   .landing.presentation-mode .landing-result-visual { width: 80px; height: 80px; }
 }
+
+/* Featured cases: one link per card, facts first and aligned outcomes/footers. */
+.landing-cases { grid-auto-rows: 1fr; }
+.landing-case { display: grid; grid-template-rows: auto minmax(2.8em, auto) 1fr auto auto; align-items: start; gap: var(--space-4); min-width: 0; padding: var(--space-6); border: 1px solid var(--border); border-radius: 16px; background: var(--surface); color: var(--text); text-decoration: none; }
+.landing-case:hover { text-decoration: none; }
+.landing-case:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+.landing-case-icon { display: inline-grid; place-items: center; width: 56px; height: 56px; border-radius: 18px; background: var(--accent-soft); color: var(--accent-text); }
+.landing-case-icon .icon { width: 28px; height: 28px; }
+.landing-case-icon.warn { background: var(--warn-soft); color: var(--warn-text); }
+.landing-case h3 { font-size: 20px; min-height: 2.8em; }
+.landing-case-evidence { align-self: start; }
+.landing-case-outcome { display: flex; align-items: baseline; gap: var(--space-2); font-size: 14px; color: var(--muted); }
+.landing-case-outcome.tone-ok { color: var(--ok-text); }
+.landing-case-outcome.tone-warn { color: var(--warn-text); }
+.landing-case-dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.landing-case-footer { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2); padding-top: var(--space-2); font-size: 13px; color: var(--muted); }
+.landing-case-id { font-size: 12px; }
+.landing-case-action { font-weight: 600; color: var(--accent-text); }
+.landing-case:hover .landing-case-action { text-decoration: underline; }
+.landing.presentation-mode .landing-case h3 { font-size: 22px; }
+.landing.presentation-mode .landing-case-outcome { font-size: 17px; }
+.landing.presentation-mode .landing-case-footer, .landing.presentation-mode .landing-case-id { font-size: 14px; }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .landing-case { transition: transform 160ms ease; }
+  .landing-case:hover { transform: translateY(-2px); }
+}
+
+/* Landing footer: non-affiliation and copyright lines. */
+.landing-legal { display: grid; gap: var(--space-1); margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--border); }
+.landing-legal p { margin: 0; font-size: 12px; color: var(--muted); }
+.landing.presentation-mode .landing-legal p { font-size: 14px; }
 
 /* ---- Review workflow: Notify editors, reviewer home, breadcrumb (PR B) ---- */
 .breadcrumb ol { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); list-style: none; margin: 0 0 var(--space-3); padding: 0; color: var(--muted); font-size: 13px; }
