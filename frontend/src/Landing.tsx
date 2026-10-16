@@ -81,7 +81,7 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
       <section className="landing-hero" aria-labelledby="landing-title">
         <div className="landing-wrap landing-hero-grid">
           <div className="landing-hero-copy">
-          <p className="landing-kicker">Multi-agent dispute resolution for Ryde</p>
+          <p className="landing-kicker">Multi-Agent Autonomous Dispute Resolution System</p>
           <h1 id="landing-title" tabIndex={-1}>TriVerity<span className="landing-dot" aria-hidden="true">.</span></h1>
           <p className="landing-byline">By OeroAI</p>
           <p className="landing-lead">AI agents argue both sides;<br className="landing-desktop-break" /> policy rules decide fairly.</p>
