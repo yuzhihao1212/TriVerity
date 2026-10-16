@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useState, type MouseEvent } from "react";
+import { useEffect, useReducer, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { CLOSED_TRUST_TILE, trustTileState } from "./trustTileState";
 import { Chip } from "./Chip";
 import { Icon } from "./Icon";
@@ -10,6 +10,7 @@ import heroSmall from "./assets/hero-ride-768.webp";
 import problemLarge from "./assets/problem-rider-1400.webp";
 import problemSmall from "./assets/problem-rider-760.webp";
 import { HERO_ROTATE_MS, HERO_RULINGS, nextHeroIndex } from "./heroRulings";
+import { AUTOMATION_RING, REPEAT_DOTS, RESULTS_BOX, SAMPLE_TICKS, STOPWATCH } from "./resultsVisuals";
 
 const GITHUB = "https://github.com/yuzhihao1212/TriVerity";
 
@@ -66,6 +67,7 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
   /** CTA click handler: plays the console intro on a plain left-click, otherwise leaves the link alone. */
   onOpenConsole?: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
+  const resultsRef = useResultsAnimation();
   return <div className={`landing${presentation ? " presentation-mode" : ""}`}>
     <a className="skip-link" href="#landing-main" onClick={event => { event.preventDefault(); focusSection("landing-main"); }}>Skip to content</a>
     <header className="landing-header">
@@ -121,9 +123,15 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
           <div className="landing-section-head"><p className="eyebrow">What makes it trustworthy</p><h2 id="trust-title">A ruling you can question, inspect and appeal.</h2><p className="muted">Select a card for details.</p></div>
           <TrustTiles />
         </section>
-        <section className="landing-results" aria-labelledby="results-title">
+        <section ref={resultsRef} className="landing-results" aria-labelledby="results-title">
           <div className="landing-section-head"><p className="eyebrow">Measured results</p><h2 id="results-title">Small sample. Clear benchmarks.</h2></div>
-          <dl className="landing-metrics">{LANDING_RESULTS.map(result => <div key={result.label}><dt>{result.label}</dt><dd className="landing-metric-value">{result.value}</dd><dd className="landing-metric-detail">{result.detail}</dd></div>)}</dl>
+          <dl className="landing-metrics">{LANDING_RESULTS.map((result, index) => <div key={result.label} style={{ "--results-delay": `${index * 120}ms` } as CSSProperties}>
+            <dt>{result.label}</dt>
+            <dd className="landing-result-visual" aria-hidden="true"><ResultVisual index={index} /></dd>
+            <dd className="landing-metric-value">{result.value}</dd><dd className="landing-metric-detail">{result.detail}</dd>
+            {index === 1 && <dd className="landing-result-caption">22% go to a human reviewer</dd>}
+            {index === 3 && <dd className="landing-result-caption">vs <strong>24–72 h</strong> today (Ryde's brief)</dd>}
+          </div>)}</dl>
           <p className="landing-footnote muted">Synthetic data, not production results. Sample accuracy, latency and cost come from live Hy3 measurements; automation and repeatability come from the offline simulation. <a href={`${GITHUB}/blob/main/docs/evaluation.md`}>Evaluation</a> · <a href={`${GITHUB}/blob/main/docs/simulation.md`}>500-dispute simulation</a></p>
         </section>
         <section aria-labelledby="try-title">
@@ -138,6 +146,62 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
       <nav aria-label="Documentation"><a href={`${GITHUB}/blob/main/docs/architecture.md`}>Architecture</a><a href={`${GITHUB}/blob/main/docs/security.md`}>Security</a><a href={`${GITHUB}/blob/main/docs/evaluation.md`}>Evaluation</a></nav>
     </div></footer>
   </div>;
+}
+
+// Progressive enhancement: the unobserved/default SVGs always show their final state.
+function useResultsAnimation() {
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const section = ref.current;
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (!section || motion.matches || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(entries => {
+      if (!entries.some(entry => entry.isIntersecting && entry.intersectionRatio >= 0.3)) return;
+      section.classList.add("results-animate");
+      observer.disconnect();
+    }, { threshold: 0.3 });
+    section.classList.add("results-ready");
+    observer.observe(section);
+    const finish = () => {
+      if (!motion.matches) return;
+      observer.disconnect();
+      section.classList.remove("results-ready", "results-animate");
+    };
+    motion.addEventListener("change", finish);
+    return () => {
+      observer.disconnect();
+      motion.removeEventListener("change", finish);
+      section.classList.remove("results-ready", "results-animate");
+    };
+  }, []);
+  return ref;
+}
+
+function ResultVisual({ index }: { index: number }) {
+  const ring = index === 1 ? AUTOMATION_RING : STOPWATCH;
+  return <svg viewBox={`0 0 ${RESULTS_BOX} ${RESULTS_BOX}`} aria-hidden="true" focusable="false">
+    {index === 0 && SAMPLE_TICKS.map((tick, i) => <g key={tick.id}>
+      <circle className="results-tick-circle" cx={tick.x} cy={tick.y} r={tick.radius}><title>{tick.id}</title></circle>
+      <path className="results-pop" style={{ "--results-item-delay": `${i * 40}ms` } as CSSProperties}
+        d={`M ${tick.x - 5} ${tick.y} l 3.5 3.5 l 6.5 -7`} />
+    </g>)}
+    {index === 2 && REPEAT_DOTS.map((dot, i) => <circle key={i} className="results-dot results-pop" cx={dot.x} cy={dot.y} r={dot.radius}
+      style={{ "--results-item-delay": `${dot.row * 40}ms` } as CSSProperties} />)}
+    {(index === 1 || index === 3) && <>
+      <circle className="results-ring-track" cx={ring.x} cy={ring.y} r={ring.radius} strokeWidth={ring.width} />
+      <circle className="results-ring" cx={ring.x} cy={ring.y} r={ring.radius} strokeWidth={ring.width}
+        strokeDasharray={ring.circumference} strokeDashoffset={ring.offset} transform={`rotate(-90 ${ring.x} ${ring.y})`}
+        style={{ "--results-circumference": ring.circumference, "--results-offset": ring.offset } as CSSProperties} />
+    </>}
+    {index === 3 && <>
+      <rect className="results-watch-button" {...STOPWATCH.button} rx="2" />
+      <path className="results-watch-stem" d={`M ${STOPWATCH.stem.x} ${STOPWATCH.stem.y1} V ${STOPWATCH.stem.y2}`} />
+      <g className="results-watch-hand" style={{ "--results-angle": `${STOPWATCH.handAngle}deg` } as CSSProperties}>
+        <path d={`M ${STOPWATCH.x} ${STOPWATCH.y} v ${-STOPWATCH.handLength}`} />
+      </g>
+      <circle className="results-dot" cx={STOPWATCH.x} cy={STOPWATCH.y} r="3" />
+    </>}
+  </svg>;
 }
 
 function TrustTiles() {
