@@ -82,7 +82,7 @@ are noisy (new accounts are mostly risky in this mix, so most were escalated):
 | RD-4 | 16 |
 | SAFE-1 | 11 |
 
-## At Ryde's scale (illustrative: 5,000 disputes a day)
+## At 5,000 disputes a day (illustrative)
 
 Live measurements: about 10,000 tokens and 18 s per dispute with Hy3 ($0.132 / $0.528 per million input/output tokens).
 

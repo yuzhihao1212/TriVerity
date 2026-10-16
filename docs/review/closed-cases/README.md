@@ -38,4 +38,4 @@ The D001 captures show a $3.00 correction after accepting $6.30 with a rider not
 - Chrome accessibility tree exposes the Closed heading and a named `Reopen D001?` modal; buttons have names, focus is visible, Tab/Shift+Tab stay within the modal, Escape cancels and restores the trigger. Closed controls are removed rather than visually disabled. No physical screen-reader listening session was performed.
 - Banner text/control contrast: minimum **5.99:1 light / 7.50:1 dark**. Existing theme tokens only; no new animation/keyframes, blur or dependencies.
 
-No open questions. PR left unmerged.
+No open questions. Merged as #83.

@@ -129,7 +129,7 @@ far confidence falls below 60%. Weights are in the policy's `triage` section, as
 the other thresholds. Auto-resolved disputes get no tier. Triage is internal, like the fraud signals:
 the rider and driver views never carry it.
 
-**Not built: persistence, a review queue and SLA tracking.** The prototype resolves each dispute in
+**Not built: persistence and SLA tracking.** (The console has a reviewer queue, kept in the browser session.) The prototype resolves each dispute in
 one request and stores nothing. In production, triage is the sort key for a reviewer queue:
 
 1. **Persistence and lifecycle.** Store each dispute and its resolution, with states such as
@@ -155,8 +155,8 @@ LLM_MODEL=hy3
 LLM_DISABLE_THINKING=true
 ```
 
-- Each dispute makes up to seven LLM calls (one or two Evidence Collection plans, two advocates in
-  parallel, their two rebuttals in parallel, then the Judge), about 8,000 tokens and 16 seconds with
+- Each dispute makes 7–9 LLM calls (one or two Evidence Collection plans for each side, two advocates in
+  parallel, their two rebuttals in parallel, then the Judge), about 10,000 tokens and 16 seconds with
   Hy3's reasoning turned off. The rebuttals
   are skipped if either advocate fell back. With reasoning on, the earlier three-call pipeline took
   about 22 seconds with no quality gain in testing.

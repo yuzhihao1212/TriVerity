@@ -33,7 +33,7 @@ python scripts/evaluate.py --runs 5 --ids D007,D008
 ```
 
 It resolves in-process, so the API rate limits don't apply, but each resolve spends about
-5,400 tokens when both rebuttals run of `DAILY_TOKEN_BUDGET`. If the budget runs out mid-run, the report says so,
+10,000 tokens of `DAILY_TOKEN_BUDGET` when both rebuttals run. If the budget runs out mid-run, the report says so,
 because later results would silently be Fallback. With no key everything is Fallback and
 the AI-rate columns should all be 0%. Rebuttals are skipped unless both initial advocates used the LLM.
 

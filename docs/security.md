@@ -2,8 +2,8 @@
 
 ## 1. Purpose and scope
 
-This is the threat model for TriVerity, a hackathon prototype that resolves Ryde ride-hailing
-disputes with three LLM calls around a rule-based Judge. **In scope:** the FastAPI backend, the
+This is the threat model for TriVerity, a hackathon prototype (not affiliated with Ryde) that resolves
+ride-hailing disputes with 7–9 LLM calls around a rule-based Judge. **In scope:** the FastAPI backend, the
 agents and their LLM calls, the React frontend, and the repository and CI. **Out of scope:**
 Ryde's real systems and any hosting environment. **Key assumption:** this is a prototype on
 mock data, but it is analysed as if the data were real. Every mitigation below names the test
@@ -160,17 +160,17 @@ thinking is disabled.
 | Numbers | no NaN/Infinity; distance 0–500 km; durations 0–600 min; money 0–1,000; surge 1–10; rating 0–5; valid lat/lng; counts ≥ 0 | 422 | `test_f3_bad_numbers_rejected` |
 | Per IP | 3 per minute, 30 per day | 429 + `Retry-After` | `test_fourth_request_in_a_minute_gets_429`, `test_per_ip_daily_limit` |
 | Per access code | 3 per minute, 20 per day | 429 + `Retry-After` | `test_judges_sharing_one_ip_are_limited_per_code`, `test_per_code_daily_quota` |
-| Global | 10 resolves per minute (the model allows 60 requests; a resolve is 3) | 429 + `Retry-After` | `test_global_limit_applies_across_ips` |
-| Daily LLM budget | 300,000 tokens or 75 resolves, counted from the provider's `usage` | 200 with Fallback badges | `test_budget_spent_still_returns_full_fallback_ruling`, `test_real_token_usage_is_counted` |
+| Global | 10 resolves per minute (the model allows 60 requests; a resolve is up to 9) | 429 + `Retry-After` | `test_global_limit_applies_across_ips` |
+| Daily LLM budget | 300,000 tokens (about 30 resolves at ~10,000 tokens) or 75 resolves, whichever comes first, counted from the provider's `usage` | 200 with Fallback badges | `test_budget_spent_still_returns_full_fallback_ruling`, `test_real_token_usage_is_counted` |
 | Per call | `max_tokens` 600 (advocates), 800 (Judge); timeout 25 s; no retries | — | `test_max_tokens_and_timeout_sent`, `test_no_retry_on_4xx` |
 | Concurrency | 3 resolves at once | 503 + `Retry-After: 5` | `test_full_semaphore_gives_503_and_health_still_works` |
 | Refund cap | never above `fare.actual`: policy rule REF-1, cited in `policy_refs` when it applies | — | `test_refund_never_exceeds_fare_actual` |
 | Errors | no traceback in a 500 | 500 | `test_500_has_no_traceback` |
 
-**Cost arithmetic.** One resolve is three LLM calls, about 3,000–4,000 tokens. The free
-1,000,000 tokens are about 250 resolves; with no limits a script at 5 requests per second
-would spend them in under a minute. The daily budget caps app spend at about 75 resolves,
-and a separate demo key with a small provider quota is the hard backstop.
+**Cost arithmetic.** One resolve is 7–9 LLM calls, about 10,000 tokens. 1,000,000 tokens are
+about 100 resolves; with no limits a script at 5 requests per second would spend them in well under
+a minute. The daily token budget caps app spend at about 30 resolves a day, and a separate demo key
+with a small provider quota is the hard backstop.
 
 **Authentication plan.**
 

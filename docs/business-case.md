@@ -1,6 +1,7 @@
 # Business case and deployment plan
 
-What TriVerity could be worth to Ryde, and how it would be rolled out safely. The ROI below is a model:
+What TriVerity could be worth to a ride-hailing platform such as Ryde, and how it would be rolled out safely.
+This is an illustrative model from a hackathon team, not a plan agreed with Ryde. The ROI below is a model:
 **every input marked *assumption* is ours, not Ryde's**, and should be replaced with Ryde's own numbers.
 The measured inputs come from [simulation.md](simulation.md) and the live evaluation in the README.
 
