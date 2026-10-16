@@ -18,3 +18,11 @@ These views use synthetic dispute data. Existing review captures are copied unch
 Total curated image size: **1,696,915 bytes**. Every image is below 600 KB.
 
 The live-progress view is a still: the available narrow stepper GIF does not show the live agent timeline. The Notify view includes a reviewer note; the closed-case view shows the closed banner and sent history. The mobile and dark images retain their original viewport sizes. All ten images were checked for sensitive content; the historical live-progress header has an empty access-code field, with no code entered.
+
+## Repository cover
+
+[cover.jpg](cover.jpg) is an optimised copy of the cover artwork supplied by the team on 16 October 2026.
+It is separate from the ten synthetic UI screenshots above: 1280 × 731 px, **66,709 bytes**, resized
+proportionally from 2016 × 1152 px and exported as JPEG at quality 85 with 4:4:4 chroma sampling.
+No crop or new artwork was applied; embedded metadata is stripped. The original file is unchanged.
+The original PNG was 2,242,934 bytes, so this export reduces the download by **97.0%**.

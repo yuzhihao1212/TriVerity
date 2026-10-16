@@ -1,6 +1,4 @@
-<!-- [CHECK: add the 1280-px cover image at docs/screenshots/cover.png]
-![TriVerity](docs/screenshots/cover.png)
--->
+![TriVerity cover: an owl holding balanced scales with a car and phone beside the TriVerity name](docs/screenshots/cover.jpg)
 
 # TriVerity: Multi-Agent Autonomous Dispute Resolution System
 
