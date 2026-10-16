@@ -267,3 +267,23 @@ Developed with Tencent Cloud **CodeBuddy** (LLM client, advocate agents, hardeni
 Fraud & Bad-Faith detector), with **WorkBuddy** for the submission text, a docs consistency review and judge Q&A
 preparation, and **Miora** for the cover image. The AI coding assistants **Claude Code**, **OpenAI Codex** and
 **Kiro** helped build and review features. Every change went through a pull request, automated tests and CI.
+
+### How we built it: reflection and tips
+
+**Our approach:** we decided early that the AI would argue and explain, but never decide. That one rule shaped
+everything: facts are computed in code, policy rules make the ruling, and every AI output is checked before use,
+so a bad model reply can only make the wording worse, never the outcome. We built in small pull requests, each
+with tests and CI, and measured on live Hy3 before claiming any number.
+
+**Tips for building with AI coding tools**
+- **Be specific.** Name the files, the function and the tests that must pass. Our best CodeBuddy results came from
+  prompts like that; vague prompts produced plausible code in the wrong place.
+- **Turn failures into rules.** Every rule in our prompts and output checks exists because live Hy3 output broke
+  it once. For example, advocates cited rules that favoured the other side (9 times in 14 cases) until a prompt
+  change cut it to 2 ([prompts.md](docs/prompts.md)).
+- **Verify everything.** We checked every AI change with tests (979 in total) and every AI-written claim against
+  the code. WorkBuddy's consistency review of our own docs found facts that had drifted between files.
+- **Use tools for what they're good at.** CodeBuddy for the AI core, WorkBuddy as a reviewer of our writing,
+  Miora for visuals, and coding assistants for refactors and code review, all through one PR process.
+- **Ship the safe version.** We left image evidence out rather than ship it without authenticity and privacy
+  safeguards (see [What's next](#whats-next)).
