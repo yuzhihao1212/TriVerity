@@ -77,8 +77,9 @@ export function fileAppeal(body: { case: DisputeCase; party: "rider" | "driver";
 }
 
 /** The reviewer's queue for one dispute. */
-export function listAppeals(disputeId: string) {
-  return request<Appeal[]>(`/appeals?dispute_id=${encodeURIComponent(disputeId)}`);
+/** The appeals queue, for one dispute or (no ID) all of them. 403 in the public demo. */
+export function listAppeals(disputeId?: string) {
+  return request<Appeal[]>(disputeId ? `/appeals?dispute_id=${encodeURIComponent(disputeId)}` : "/appeals");
 }
 
 /** The reviewer's final decision on an appeal; it becomes a precedent. */

@@ -15,7 +15,7 @@ export function reviewKey(disputeId: string, resolution: Pick<Resolution, "agent
 /**
  * Whether opening a step counts as reviewing it. Evidence and Hearing: yes. Ruling
  * needs an accepted/overridden decision, unless recording is unavailable (public demo,
- * 403), when opening it is all the reviewer can do. Notify needs both phones seen.
+ * 403), when opening it is all the reviewer can do. Notify needs "Approve & send".
  */
 export function openCounts(tab: WorkflowTab, { decisionsUnavailable = false } = {}): boolean {
   if (tab === "evidence" || tab === "hearing") return true;

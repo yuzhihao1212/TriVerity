@@ -32,6 +32,12 @@ const PATHS: Record<string, ReactNode> = {
   warning: <><path d="M12 4 2.8 19.5h18.4Z" /><path d="M12 10v4.5M12 17.2v.1" /></>,
   info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v5.5M12 7.8v.1" /></>,
   history: <><circle cx="12" cy="12" r="8" /><path d="M12 8v4l3 2" /></>,
+  // Navigation and review
+  home: <><path d="M4 11 12 4l8 7" /><path d="M6 9.5V20h12V9.5" /><path d="M10 20v-5h4v5" /></>,
+  queue: <><path d="M8 6h12M8 12h12M8 18h12" /><path d="M4 6h.01M4 12h.01M4 18h.01" /></>,
+  send: <><path d="M21 3 10 14" /><path d="M21 3 14.5 21l-4.5-7-7-4.5Z" /></>,
+  appeal: <><path d="M4 20V8a2 2 0 0 1 2-2h9l5 5v9Z" /><path d="M9 13h6M12 10v6" /></>,
+  edit: <><path d="M4 20h4L19 9l-4-4L4 16Z" /><path d="m13.5 6.5 4 4" /></>,
 };
 
 export function Icon({ name, className }: { name: string; className?: string }) {

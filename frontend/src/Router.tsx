@@ -9,6 +9,8 @@ import { focusSection, parseRoute, type Route } from "./routes";
 
 export default function Router() {
   const [route, setRoute] = useState(() => parseRoute(window.location.hash));
+  // Bumped on every navigation, so following a link to the case already in the URL still opens it.
+  const [navigation, setNavigation] = useState(0);
   // Mount the console only on first entry; retain its saved results when the
   // presenter visits home, so returning never discards a token-paid result.
   const [consoleRoute, setConsoleRoute] = useState<Extract<Route, { page: "console" }> | null>(
@@ -21,6 +23,7 @@ export default function Router() {
     function navigate() {
       const next = parseRoute(window.location.hash);
       setRoute(next);
+      setNavigation(n => n + 1);
       if (next.page === "console") setConsoleRoute(next);
     }
     window.addEventListener("hashchange", navigate);
@@ -74,7 +77,7 @@ export default function Router() {
   return <>
     {route.page === "landing" && <Landing presentation={presentation} onTogglePresentation={togglePresentation} theme={theme} onToggleTheme={toggleTheme} onOpenConsole={openConsole} />}
     {consoleRoute && <div hidden={route.page !== "console"}>
-      <App active={route.page === "console"} sampleId={consoleRoute.sampleId}
+      <App active={route.page === "console"} sampleId={consoleRoute.sampleId} navigation={navigation}
         presentation={presentation} onTogglePresentation={togglePresentation} theme={theme} onToggleTheme={toggleTheme} />
     </div>}
     {intro && <ConsoleIntro onNavigate={() => { window.location.hash = "#/console"; }} onDone={endIntro} />}
