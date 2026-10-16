@@ -945,3 +945,29 @@ article[tabindex="-1"] { scroll-margin-block: var(--space-4); }
   .landing-stage h3 { margin: 0; }
   .landing-stage:not(:last-child)::after { content: "↓"; top: auto; bottom: calc(-1 * var(--space-8) + 4px); right: auto; left: 18px; }
 }
+
+/* Trust tiles: independent of .landing-card, which also styles Try these cases. */
+.landing-trust { grid-auto-rows: 1fr; }
+.trust-tile { position: relative; display: block; width: 100%; height: 100%; min-height: 270px; padding: var(--space-6); border: 1px solid var(--border); border-radius: 16px; background: var(--surface); color: var(--text); text-align: left; overflow: hidden; }
+.trust-tile-front { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4); min-height: 220px; opacity: 1; transition: opacity 180ms ease; }
+.trust-tile-title { font-size: 26px; font-weight: 600; line-height: 1.25; letter-spacing: -.025em; text-wrap: balance; margin-block: auto; }
+.trust-tile-proof { display: block; color: var(--accent-text); font-size: 13px; font-weight: 600; line-height: 1.6; }
+.trust-tile-front .trust-tile-proof { padding-right: var(--space-5); }
+.trust-tile-hint { position: absolute; right: var(--space-4); bottom: var(--space-3); color: var(--muted); font-size: 17px; line-height: 1.4; pointer-events: none; }
+.trust-tile-detail { position: absolute; inset: var(--space-6) var(--space-6) var(--space-10); display: flex; flex-direction: column; gap: var(--space-3); overflow: hidden; font-size: 14px; line-height: 1.65; color: var(--text); opacity: 0; clip-path: inset(50%); pointer-events: none; transition: opacity 180ms ease; }
+.trust-tile-back-title { display: block; flex: none; color: var(--text); font-size: 18px; font-weight: 600; line-height: 1.4; }
+.trust-tile-detail > span { flex: none; }
+.trust-tile-detail .trust-tile-detail-body { display: block; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.trust-tile-note { display: block; margin-top: var(--space-3); color: var(--muted); font-size: 12px; }
+.trust-tile.is-open .trust-tile-front { opacity: 0; pointer-events: none; }
+.trust-tile.is-open .trust-tile-detail { opacity: 1; clip-path: none; pointer-events: auto; }
+.trust-tile:focus-visible { outline: 3px solid var(--accent-text); outline-offset: 3px; }
+.landing.presentation-mode .trust-tile { min-height: 300px; }
+.landing.presentation-mode .trust-tile-front { min-height: 250px; }
+.landing.presentation-mode .trust-tile-title { font-size: 28px; }
+.landing.presentation-mode .trust-tile-back-title { font-size: 20px; }
+.landing.presentation-mode .trust-tile-detail { font-size: 16px; }
+.landing.presentation-mode .trust-tile-proof, .landing.presentation-mode .trust-tile-note { font-size: 14px; }
+@media (max-width: 1100px) { .landing-trust { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .landing-trust { grid-template-columns: minmax(0, 1fr); } .trust-tile-title { font-size: 25px; } }
+@media (prefers-reduced-motion: reduce) { .trust-tile-front, .trust-tile-detail { transition: none; } }

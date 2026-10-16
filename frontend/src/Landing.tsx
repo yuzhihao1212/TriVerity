@@ -1,4 +1,5 @@
-import { useEffect, useState, type MouseEvent } from "react";
+import { useEffect, useReducer, useState, type MouseEvent } from "react";
+import { CLOSED_TRUST_TILE, trustTileState } from "./trustTileState";
 import { Chip } from "./Chip";
 import { Icon } from "./Icon";
 import { focusSection } from "./routes";
@@ -37,13 +38,21 @@ const STAGES = [
   ] },
 ] as const;
 
-const TRUST = [
-  ["Rules decide. AI explains.", "Decisions and amounts come from code. The same facts produce the same ruling, whoever argues the case."],
-  ["Arguments checked, not just heard", "Every argument cites evidence IDs and policy rules, and the Judge checks each cited rule against the facts: it holds for that side, favours the other, or doesn’t apply."],
-  ["What would change this ruling?", "Every decision includes the facts it turns on and the outcome a different fact would give."],
-  ["Safety first, humans in control", "Uncertain or high-risk cases go to a human with a priority tier. Safety cases come first."],
-  ["Appeals become precedents", "A human reviewer’s appeal decision becomes a precedent for future cases. This feedback loop is disabled in the public demo."],
-  ["Tested against prompt injection", "23 attack scenarios tested offline. Across 17 attacks and 68 live Hy3 runs, no injection changed a ruling."],
+interface TrustTile {
+  icon: "scales" | "magnifier" | "person" | "shield" | "books" | "lock";
+  title: string;
+  proof?: string;
+  detail: string;
+  note?: string;
+}
+
+export const TRUST_TILES: readonly TrustTile[] = [
+  { icon: "scales", title: "Rules decide, AI explains", detail: "Decisions and amounts come from code. The same facts produce the same ruling, whoever argues the case." },
+  { icon: "magnifier", title: "Every argument fact-checked", detail: "Every argument cites evidence and policy rules, and the Judge checks each cited rule against the facts: it holds for that side, favours the other, or doesn't apply." },
+  { icon: "person", title: "Fair to both sides", proof: "500/500 fairness checks", detail: "Party history never changed a policy ruling: 500 of 500 simulated disputes got the same decision with histories removed or swapped. History is only used to check for bad-faith patterns." },
+  { icon: "shield", title: "Humans for risky cases", detail: "Uncertain or high-risk cases go to a human reviewer with a priority tier. Safety cases come first." },
+  { icon: "books", title: "Appeals teach the system", detail: "A reviewer's appeal decision becomes a precedent for similar future cases.", note: "Disabled in the public demo." },
+  { icon: "lock", title: "Tested against prompt injection", proof: "0 of 68 live runs swayed", detail: "23 attack scenarios tested offline. Across 17 attacks and 68 live Hy3 runs, no injection changed a ruling." },
 ];
 
 const CASES = [
@@ -72,7 +81,7 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
       <section className="landing-hero" aria-labelledby="landing-title">
         <div className="landing-wrap landing-hero-grid">
           <div className="landing-hero-copy">
-          <p className="landing-kicker">Multi-agent dispute resolution for Ryde</p>
+          <p className="landing-kicker">Multi-Agent Autonomous Dispute Resolution System</p>
           <h1 id="landing-title" tabIndex={-1}>TriVerity<span className="landing-dot" aria-hidden="true">.</span></h1>
           <p className="landing-byline">By OeroAI</p>
           <p className="landing-lead">AI agents argue both sides;<br className="landing-desktop-break" /> policy rules decide fairly.</p>
@@ -109,8 +118,8 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
           </li>)}</ol>
         </section>
         <section aria-labelledby="trust-title">
-          <div className="landing-section-head"><p className="eyebrow">What makes it trustworthy</p><h2 id="trust-title">A ruling you can question, inspect and appeal.</h2></div>
-          <div className="landing-trust">{TRUST.map(([title, detail]) => <article className="landing-card" key={title}><h3>{title}</h3><p className="muted">{detail}</p></article>)}</div>
+          <div className="landing-section-head"><p className="eyebrow">What makes it trustworthy</p><h2 id="trust-title">A ruling you can question, inspect and appeal.</h2><p className="muted">Select a card for details.</p></div>
+          <TrustTiles />
         </section>
         <section className="landing-results" aria-labelledby="results-title">
           <div className="landing-section-head"><p className="eyebrow">Measured results</p><h2 id="results-title">Small sample. Clear benchmarks.</h2></div>
@@ -129,6 +138,47 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
       <nav aria-label="Documentation"><a href={`${GITHUB}/blob/main/docs/architecture.md`}>Architecture</a><a href={`${GITHUB}/blob/main/docs/security.md`}>Security</a><a href={`${GITHUB}/blob/main/docs/evaluation.md`}>Evaluation</a></nav>
     </div></footer>
   </div>;
+}
+
+function TrustTiles() {
+  const [state, dispatch] = useReducer(trustTileState, CLOSED_TRUST_TILE);
+  return <div className="landing-trust">{TRUST_TILES.map(tile => {
+    const id = `trust-${tile.icon}`, open = state.openId === id;
+    return <button type="button" key={id} className={`trust-tile${open ? " is-open" : ""}`}
+      aria-expanded={open} aria-controls={`${id}-detail`} aria-describedby={`${id}-detail`} aria-labelledby={`${id}-title`}
+      onPointerEnter={event => { if (event.pointerType === "mouse" && window.matchMedia("(hover: hover)").matches) dispatch({ type: "hover", id }); }}
+      onPointerLeave={() => dispatch({ type: "leave", id })}
+      onFocus={event => { if (event.currentTarget.matches(":focus-visible")) dispatch({ type: "focus", id }); }}
+      onBlur={() => dispatch({ type: "blur", id })}
+      onClick={() => dispatch({ type: "toggle", id })}
+      onKeyDown={event => {
+        if (event.key === "Escape") { event.preventDefault(); dispatch({ type: "escape" }); }
+        // The description can scroll inside the tile without adding a nested
+        // focus target to this button. Touch/wheel scrolling works natively.
+        const detail = event.currentTarget.querySelector<HTMLElement>(".trust-tile-detail-body");
+        if (open && detail && detail.scrollHeight > detail.clientHeight && ["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+          event.preventDefault();
+          if (event.key === "Home") detail.scrollTop = 0;
+          else if (event.key === "End") detail.scrollTop = detail.scrollHeight;
+          else detail.scrollTop += event.key === "ArrowDown" ? 40 : -40;
+        }
+      }}>
+      <span className="sr-only" id={`${id}-title`}>{tile.title}</span>
+      <span className="trust-tile-front" aria-hidden="true">
+        <span className="landing-stage-icon trust-tile-icon"><Icon name={tile.icon} /></span>
+        <span className="trust-tile-title">{tile.title}</span>
+        {tile.proof && <span className="trust-tile-proof">{tile.proof}</span>}
+      </span>
+      <span className="trust-tile-detail" id={`${id}-detail`}>
+        <span className="trust-tile-back-title" aria-hidden="true">{tile.title}</span>
+        {tile.proof && <span className="trust-tile-proof">{tile.proof}</span>}
+        <span className="trust-tile-detail-body"><span>{tile.detail}</span>
+          {tile.note && <span className="trust-tile-note"><span aria-hidden="true">ⓘ </span>{tile.note}</span>}
+        </span>
+      </span>
+      <span className="trust-tile-hint" aria-hidden="true">{open ? "✕" : "ⓘ"}</span>
+    </button>;
+  })}</div>;
 }
 
 /** The people a dispute is about, with real rulings TriVerity gave on the sample cases, rotating. */
