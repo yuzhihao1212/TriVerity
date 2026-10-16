@@ -284,6 +284,9 @@ with tests and CI, and measured on live Hy3 before claiming any number.
 - **Verify everything.** We checked every AI change with tests (979 in total) and every AI-written claim against
   the code. WorkBuddy's consistency review of our own docs found facts that had drifted between files.
 - **Use tools for what they're good at.** CodeBuddy for the AI core, WorkBuddy as a reviewer of our writing,
-  Miora for visuals, and coding assistants for refactors and code review, all through one PR process.
+  Miora for visuals, and Claude Code, OpenAI Codex and Kiro for features, refactors and code review, all
+  through the same pull-request process, so every change was reviewed and tested whichever tool wrote it.
+- **Write hand-off-ready prompts.** Give each task a self-contained spec (goal, files, constraints, tests). When
+  one assistant hit its usage limit mid-feature, another picked up from the same spec and the open branch.
 - **Ship the safe version.** We left image evidence out rather than ship it without authenticity and privacy
   safeguards (see [What's next](#whats-next)).
