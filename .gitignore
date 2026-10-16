@@ -25,3 +25,8 @@ dist/
 *.db
 *.sqlite3
 logs/
+
+# Local AI tools and submission working copy
+.kiro/
+.workbuddy-ai/
+docs/submission-polished.md

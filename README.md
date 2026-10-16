@@ -1,27 +1,51 @@
-# TriVerity
+<!-- [CHECK: add the 1280-px cover image at docs/screenshots/cover.png]
+![TriVerity](docs/screenshots/cover.png)
+-->
 
-**Digital Native Track (Ryde): Multi-Agent Autonomous Dispute Resolution System**
+# TriVerity: Multi-Agent Autonomous Dispute Resolution System
 
-**Live demo:** [CHECK: link after the final redeploy] · **Demo video:** [CHECK: link] ·
-[Ryde requirements, where to see each](#ryde-requirements-where-to-see-each)
+**AI agents argue both sides; policy rules decide fairly.**
+
+**▶ Live demo** [CHECK: live link] · **🎬 Demo video** [CHECK: video link] ·
+**📄 AI tool usage evidence** [CHECK: link] · **📋 [Ryde requirements →](#ryde-requirements-where-to-see-each)**
 
 *A hackathon prototype by OeroAI, built for Ryde's challenge at the Tencent Cloud AI Hackathon Singapore 2026.
 Not affiliated with or endorsed by Ryde. All dispute data is synthetic.*
 
-TriVerity resolves rider–driver disputes with a team of agents. A Rider Advocate and a Driver Advocate
-each build their side's case from verified trip data, a Fraud detector checks both parties for bad-faith
-patterns, and a Judge applies the platform's policy (a mock Ryde policy) to issue a ruling with a recommended action, a confidence
-score and an explanation for each party.
+| Speed and accuracy | Automation and fairness |
+| --- | --- |
+| **16–18 s** to a ruling, vs 24–72 h in the brief | **78%** resolved without a human (500 simulated disputes) |
+| **9/9** sample rulings correct | **500/500** fairness checks: history removed or swapped |
 
-**The AI argues and explains; policy rules decide.** Facts are computed in code, the decision comes from
-the policy rules, and Tencent Hy3 writes each side's argument and the explanation of the outcome. So the
-same facts always give the same ruling, and every ruling is explained.
+Live sample measurements and offline simulation results; [measurement context below](#results).
+Digital Native Track (Ryde).
 
-| Evidence that explains itself | The ruling, ready to accept or override |
-|---|---|
-| ![Evidence step: route sketch against the planned route, trip timeline, fare checks](docs/review/evidence-clarity/after/d001-evidence-light-1280.png) | ![Ruling step: outcome first, reason, what would change it, accept or override](docs/review/console-polish/after/ruling-light-1280.png) |
+## A quick look
 
-![TriVerity architecture](docs/architecture.svg)
+Select an image to view it full size. [All ten screenshots and their provenance](docs/screenshots/README.md).
+
+<table width="100%">
+<tr>
+<td width="50%"><a href="docs/screenshots/01-landing.png"><img src="docs/screenshots/01-landing.png" alt="Landing page introduces the product and leads into the reviewer console" width="100%"></a><br><strong>Meet TriVerity</strong></td>
+<td width="50%"><a href="docs/screenshots/02-reviewer-home.png"><img src="docs/screenshots/02-reviewer-home.png" alt="Reviewer home with queue counts and a summary of each synthetic dispute" width="100%"></a><br><strong>Pick the next case</strong></td>
+</tr>
+<tr>
+<td width="50%"><a href="docs/screenshots/04-evidence.png"><img src="docs/screenshots/04-evidence.png" alt="D001 evidence with the GPS route, stop timeline, fare checks and source facts" width="100%"></a><br><strong>Check the evidence</strong></td>
+<td width="50%"><a href="docs/screenshots/05-hearing.png"><img src="docs/screenshots/05-hearing.png" alt="Rider and driver arguments with key facts, evidence categories and rebuttals" width="100%"></a><br><strong>Hear both sides</strong></td>
+</tr>
+<tr>
+<td width="50%"><a href="docs/screenshots/06-ruling.png"><img src="docs/screenshots/06-ruling.png" alt="Ruling with the outcome, confidence, explanation and accept or override controls" width="100%"></a><br><strong>Review the ruling</strong></td>
+<td width="50%"><a href="docs/screenshots/07-notify.png"><img src="docs/screenshots/07-notify.png" alt="Delivered rider and driver phone messages with an optional reviewer note" width="100%"></a><br><strong>Approve the party messages</strong></td>
+</tr>
+</table>
+
+## Architecture
+
+[![TriVerity architecture: computed facts, per-side evidence collection and debate, rule-based judging, reviewer workflow and feedback](docs/architecture.svg)](docs/architecture.svg)
+
+[Read the architecture](docs/architecture.md) · [Watch live progress](docs/screenshots/03-live-progress.png) · [Closed review and correction history](docs/screenshots/08-closed-case.png)
+
+**On this page:** [Results](#results) · [What it does](#what-it-does) · [Ryde requirements](#ryde-requirements-where-to-see-each) · [Documentation](#documentation) · [Run it locally](#run-it-locally) · [What's next](#whats-next) · [Built with](#built-with)
 
 ## Results
 
@@ -45,6 +69,15 @@ with a triage tier, and party history never changed a policy decision (500/500 w
 hours ([business case](docs/business-case.md), with its assumptions stated).
 
 ## What it does
+
+TriVerity resolves rider–driver disputes with a team of agents. A Rider Advocate and a Driver Advocate
+each build their side's case from verified trip data, a Fraud detector checks both parties for bad-faith
+patterns, and a Judge applies the platform's policy (a mock Ryde policy) to issue a ruling with a recommended action, a confidence
+score and an explanation for each party.
+
+**The AI argues and explains; policy rules decide.** Facts are computed in code, the decision comes from
+the policy rules, and Tencent Hy3 writes each side's argument and the explanation of the outcome. So the
+same facts always give the same ruling, and every ruling is explained.
 
 - **Six agents**: an **Evidence Collection agent** (each advocate requests its own evidence), Rider Advocate, Driver Advocate and Judge, powered by
   Tencent **Hy3** via Tencent Cloud TokenHub, plus a deterministic **Fraud & Bad-Faith detector** and a
@@ -74,6 +107,10 @@ hours ([business case](docs/business-case.md), with its assumptions stated).
   confidence or reviewer precedents against the rules, with the proposed action attached for the reviewer
 - **Observable**: the demo UI shows the evidence, each agent's argument and citations, the fraud risk, and
   whether the AI or the fallback produced each step
+- **Reviewer workflow**: home queue → Evidence → Hearing → Ruling (accept or override) → Notify
+  (optional reviewer note and privacy check). Sending closes the case; a deliberate reopen permits a
+  correction, while history keeps every sent message. Parties can appeal after delivery. Review state
+  is kept in the browser session.
 
 ## Responsible AI and security
 
@@ -100,32 +137,40 @@ The full threat model is in [docs/security.md](docs/security.md).
   gitleaks pre-commit hook and CI job), pinned Python dependencies, dependency audits in CI, and logs that
   record error types but never error text or personal data.
 
-## Docs
+## Ryde requirements, where to see each
 
-- [Architecture](docs/architecture.md): flow, design principles, checks on LLM output
-- [Prompts](docs/prompts.md): how the prompts drive each agent, and what testing changed
-- [Responsible AI scorecard](docs/responsible-ai.md): mapped to AI Verify and IMDA's Model AI Governance Framework
-- [System card](docs/system-card.md): intended use, data, evaluation and known limits
-- [Business case](docs/business-case.md): ROI model with stated assumptions, and the deployment plan
-- [Scale test](docs/simulation.md): 500 synthetic disputes through the full pipeline, offline
-- [Submission](docs/submission.md): title, blurb and project description for the hackathon form
-- [Security](docs/security.md): threat model, red-team results, API hardening, residual risks
-- [Evaluation](docs/evaluation.md): how rulings, AI rate and citations are measured
-- [Demo deployment](docs/demo-deployment.md): running the public demo safely
-- [API contract](docs/api-contract.md): request and response format
-- [Milestones](docs/milestones.md): progress against the brief and the submission checklist
+| Ryde brief | Where to see it |
+| --- | --- |
+| **Rider Advocate, Driver Advocate and Judge agents** | [Hearing](docs/screenshots/05-hearing.png), [Ruling](docs/screenshots/06-ruling.png), [agent source](backend/app/agents/) |
+| **GPS and telemetry**: actual vs optimal route, unexpected stops, duration vs estimate | [Evidence: route sketch, timeline and GPS card](docs/screenshots/04-evidence.png) |
+| **Chat logs**: sentiment, agreements, disagreements, threats | [Evidence](docs/screenshots/04-evidence.png); [computed chat facts and SAFE-1](docs/architecture.md#flow) |
+| **Payment and fare data**: breakdown validation, surge, promo codes | [Evidence: Fare card verdict and checks](docs/screenshots/04-evidence.png) |
+| **Historical behaviour**: dispute history, ratings, account age | [Evidence: History card](docs/screenshots/04-evidence.png); [500/500 policy fairness checks](docs/simulation.md) |
+| **Advocates gather their own evidence and cite policy** | [Per-side collection tools](docs/architecture.md#flow); [Hearing key facts and cited rules](docs/screenshots/05-hearing.png) |
+| **Ruling with a confidence score and a plain-language explanation** | [Ruling: outcome, confidence, reason, what would change it](docs/screenshots/06-ruling.png) |
+| **Recommended action and an explanation to both parties** | [Ruling: e.g. partial refund $6.30](docs/screenshots/06-ruling.png); [Notify: reviewer-approved party messages](docs/screenshots/07-notify.png) |
+| **At least two dispute categories, end to end** | [Sample data](data/disputes/): route deviation (D001, D003, D004, D007, D008), no-show charge (D002, D005, D006); [organisers' DISP-002](data/organiser/disp_002.json) |
+| **Observable inter-agent communication** | [Live progress](docs/screenshots/03-live-progress.png), [Hearing](docs/screenshots/05-hearing.png), [streamed agent log](docs/api-contract.md#post-apidisputesresolvestream); “How this step was decided” on every console step |
+| **Architecture diagram** | [Diagram](docs/architecture.svg), [design explanation](docs/architecture.md) |
+| **Stretch: Evidence Collection agent** | [Per-side tool calls over mock Ryde data APIs](docs/architecture.md#flow) |
+| **Stretch: Fraud & Bad-Faith detection** | [Deterministic risk from history and contradicted claims](docs/architecture.md#flow); [Ruling](docs/screenshots/06-ruling.png). Risk scores feed the Judge; the History card flags high risk. |
+| **Stretch: Policy & Precedent agent** | [Retrieval and reviewer feedback](docs/architecture.md#flow); [Ruling](docs/screenshots/06-ruling.png) |
+| **Stretch: Escalation protocol** | [Priority tiers](docs/architecture.md#review-triage-and-the-queue-and-sla-layer-it-feeds): low confidence, threats, missing data or high risk → human review |
+| **Stretch: Learning feedback loop** | [Reviewer decisions and appeals become precedents](docs/architecture.md#flow); [closed-case corrections and history](docs/screenshots/08-closed-case.png) |
+| **Stretch: SLA and routing** | [Triage and production SLA extension](docs/architecture.md#review-triage-and-the-queue-and-sla-layer-it-feeds); [reviewer queue](docs/screenshots/02-reviewer-home.png). Tiers are safety, high, standard and low; cases needing a decision come first. Persistent routing and SLA clocks are not built. |
+| **Stretch: Image analysis** | Not built, on purpose; see [What's next](#whats-next) |
 
-## Repository layout
+## Documentation
 
-```text
-backend/        FastAPI API, agents, orchestration, models, tests
-frontend/       React + TypeScript demo UI
-data/           Sample disputes, the organisers' cases, expected rulings and the mock Ryde policy
-docs/           Architecture, prompts, security, evaluation, deployment, API contract, milestones
-scripts/        evaluate.py, run_sample.py, red-team and demo setup scripts
-```
+[Documentation index](docs/README.md): architecture, responsible AI, security, evaluation, business case,
+API, deployment, submission and milestones, each with a short description.
 
-## Getting started
+**Verified on 16 Oct 2026:** 810 backend tests and 169 frontend tests pass. Tests never call a real LLM.
+
+## Run it locally
+
+<details>
+<summary>Run it locally — prerequisites, setup, environment and checks</summary>
 
 ### Prerequisites
 
@@ -187,28 +232,17 @@ python scripts/evaluate.py --runs 3
 
 Optional: `pip install pre-commit && pre-commit install` adds the gitleaks secret check to every commit.
 
-## Ryde requirements, where to see each
+## Repository layout
 
-| Ryde brief | Where to see it |
-|---|---|
-| **Rider Advocate, Driver Advocate and Judge agents** | Console → Hearing (both arguments and replies) and Ruling; `backend/app/agents/` |
-| **GPS and telemetry**: actual vs optimal route, unexpected stops, duration vs estimate | Console → Evidence → GPS card (route sketch against the planned route, timeline, stops) |
-| **Chat logs**: sentiment, agreements, disagreements, threats | Evidence → Chat card; threats escalate (SAFE-1) |
-| **Payment and fare data**: breakdown validation, surge, promo codes | Evidence → Fare card (verdict and checks) |
-| **Historical behaviour**: dispute history, ratings, account age | Evidence → History card (used only for bad-faith checks; never changes a ruling, 500/500) |
-| **Advocates gather their own evidence and cite policy** | Evidence → "How the evidence was gathered" (each side's lookups); Hearing → key facts and cited rules |
-| **Ruling with a confidence score and a plain-language explanation** | Ruling step (outcome, confidence, reason, what would change it) |
-| **Recommended action and an explanation to both parties** | Ruling (e.g. partial refund $6.30) and Notify parties (each party's message, approved by the reviewer) |
-| **At least two dispute categories, end to end** | Route deviation (D001, D003, D004, D007, D008) and no-show charge (D002, D005, D006, DISP-002) |
-| **Observable inter-agent communication** | Live progress while agents run; "How this step was decided" on every step; the agent log |
-| **Architecture diagram** | [docs/architecture.svg](docs/architecture.svg), [docs/architecture.md](docs/architecture.md) |
-| **Stretch: Evidence Collection agent** | Per-side tool calls over mock Ryde data APIs |
-| **Stretch: Fraud & Bad-Faith detection** | Risk scores feed the Judge; History card flags high risk |
-| **Stretch: Policy & Precedent agent** | Ruling → precedents; reviewer decisions and appeals become precedents |
-| **Stretch: Escalation protocol** | Low confidence, threats, missing data or high risk → human review with a priority tier |
-| **Stretch: Learning feedback loop** | Accept or override on the Ruling step; appeals; repeated reviewer disagreement escalates similar cases |
-| **Stretch: SLA and routing** | Triage tiers (safety, high, standard, low); the reviewer queue shows cases needing a decision first |
-| **Stretch: Image analysis** | Not built, on purpose; see [What's next](#whats-next) |
+```text
+backend/        FastAPI API, agents, orchestration, models, tests
+frontend/       React + TypeScript demo UI
+data/           Sample disputes, the organisers' cases, expected rulings and the mock Ryde policy
+docs/           Architecture, prompts, security, evaluation, deployment, API contract, milestones
+scripts/        evaluate.py, run_sample.py, red-team and demo setup scripts
+```
+
+</details>
 
 ## What's next
 

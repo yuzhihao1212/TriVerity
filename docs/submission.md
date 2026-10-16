@@ -5,8 +5,7 @@ Ryde challenge), polished with WorkBuddy (Hy4 preview) and checked against the r
 [evaluation.md](evaluation.md), [simulation.md](simulation.md) and the README.
 
 **For the form:** paste the fields below. Drop the relative doc links (they won't work in a form) and give
-the repository URL https://github.com/yuzhihao1212/TriVerity instead. Items marked **[CHECK]** must be
-confirmed on the final build.
+the repository URL https://github.com/yuzhihao1212/TriVerity instead. Remaining link placeholders must be confirmed on the final build.
 
 ## Project title
 
@@ -121,8 +120,8 @@ TriVerity targets each of these:
   favour the other side (9 wrong-side citations in 14 cases, down to 2 after the prompt change).
 
 **Technology:** Tencent Hy3 through Tencent Cloud TokenHub; Python FastAPI backend; React + TypeScript
-frontend; **[CHECK]** 810 backend and 169 frontend tests; a Docker image and Render Blueprint for the live
-demo (**[CHECK]** live link after the final redeploy). **Built with:** Tencent Cloud **CodeBuddy**
+frontend; 810 backend and 169 frontend tests (verified on 16 Oct 2026); a Docker image and Render Blueprint for the live
+demo ([CHECK: live link]). **Built with:** Tencent Cloud **CodeBuddy**
 (the LLM client, advocate agents, hardening, UI badges and the Fraud & Bad-Faith detector); **WorkBuddy**
 (Hy4 preview) to polish this submission text, review the docs for consistency, prepare judge Q&A and
 summarise the build history; **Miora** for the cover image; and the AI coding assistants **Claude Code**,
