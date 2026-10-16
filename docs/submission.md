@@ -122,9 +122,12 @@ TriVerity targets each of these:
 
 **Technology:** Tencent Hy3 through Tencent Cloud TokenHub; Python FastAPI backend; React + TypeScript
 frontend; **[CHECK]** 810 backend and 169 frontend tests; a Docker image and Render Blueprint for the live
-demo (**[CHECK]** live link after the final redeploy). Built with CodeBuddy **[CHECK: describe how the team
-used CodeBuddy / WorkBuddy, matching the screenshots, and list any other AI tools used]**, plus Miora for
-the cover image.
+demo (**[CHECK]** live link after the final redeploy). **Built with:** Tencent Cloud **CodeBuddy**
+(the LLM client, advocate agents, hardening, UI badges and the Fraud & Bad-Faith detector); **WorkBuddy**
+(Hy4 preview) to polish this submission text, review the docs for consistency, prepare judge Q&A and
+summarise the build history; **Miora** for the cover image; and the AI coding assistants **Claude Code**,
+**OpenAI Codex** and **Kiro** for features, refactors and code review. Every change went through a pull
+request, automated tests and CI before merging.
 
 **Security and responsible AI:** a threat model; we catalogued 23 prompt-injection attacks and ran 17 of
 them in 68 live Hy3 runs, and none changed a ruling; input and rate limits; a daily token budget; a
