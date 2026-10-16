@@ -5,6 +5,7 @@
 // back to the original sentence.
 
 import type { EvidenceItem } from "./presentation";
+import { trimDecimal } from "./numberFormat";
 
 /** warn: needs attention (deviations, stops); danger: real problems only (threats). */
 export type Tone = "danger" | "warn" | "ok" | "neutral";
@@ -119,14 +120,18 @@ const TILE_PATTERNS: { key: string; re: RegExp; label: string; detail: string }[
 export function parseTile(text: string): Tile | null {
   for (const pattern of TILE_PATTERNS) {
     const match = pattern.re.exec(text);
-    if (match) return { key: pattern.key, label: pattern.label, value: match[1], detail: pattern.detail, tone: factTone(text) };
+    if (match) return { key: pattern.key, label: pattern.label, value: trimDecimalIn(match[1]), detail: pattern.detail, tone: factTone(text) };
   }
   return null;
+}
+/** "6.0 min" -> "6 min"; the unit and sign are kept. */
+function trimDecimalIn(value: string): string {
+  return value.replace(/[+-]?\d[\d,]*\.\d+/, number => trimDecimal(number));
 }
 /** "Trip record: distance expected 10.2 km, actual 14.7 km" -> the matching tile key and "10.2 → 14.7 km". */
 export function parseTripRecord(text: string): { key: string; detail: string } | null {
   const match = /^Trip record: (distance|duration) expected ([\d.]+) (km|min), actual ([\d.]+) (?:km|min)$/.exec(text);
-  return match ? { key: match[1], detail: `Expected ${match[2]} → actual ${match[4]} ${match[3]}` } : null;
+  return match ? { key: match[1], detail: `Expected ${trimDecimal(match[2])} → actual ${trimDecimal(match[4])} ${match[3]}` } : null;
 }
 
 // ---- Chat ---------------------------------------------------------------

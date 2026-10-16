@@ -83,7 +83,7 @@ test('tool names map to friendly names and fall back to sentence case', () => {
   assert.equal(sv.toolName('constructor'), 'Constructor', 'no prototype lookups');
   assert.equal(sv.toolIcon('gps_window'), 'pin');
   assert.equal(sv.toolIcon('mystery'), 'generic');
-  assert.equal(sv.toolTooltip({ reason: 'default plan', results: ['a', 'b'] }), 'default plan · 2 results');
+  assert.equal(sv.toolTooltip({ reason: 'default plan', results: ['a', 'b'] }), 'Standard lookup (AI off) · 2 results');
   assert.equal(sv.toolTooltip({ reason: '', results: ['a'] }), 'No reason recorded. · 1 result');
 });
 

@@ -76,16 +76,16 @@ export const SEEN_KEY = "triverity.chartIntroSeen";
  * Uses sessionStorage when it is available, and always an in-memory set, so a
  * blocked storage still prevents replays for this page load.
  */
-export function createSeenCases(storage?: SeenStore | null) {
+export function createSeenCases(storage?: SeenStore | null, key: string = SEEN_KEY) {
   const memory = new Set<string>();
   const read = (): string[] => {
-    try { const raw = storage?.getItem(SEEN_KEY); const parsed = raw ? JSON.parse(raw) : []; return Array.isArray(parsed) ? parsed : []; }
+    try { const raw = storage?.getItem(key); const parsed = raw ? JSON.parse(raw) : []; return Array.isArray(parsed) ? parsed : []; }
     catch { return []; }
   };
   const has = (id: string) => memory.has(id) || read().includes(id);
   const mark = (id: string) => {
     memory.add(id);
-    try { const ids = read(); if (!ids.includes(id)) storage?.setItem(SEEN_KEY, JSON.stringify([...ids, id].slice(-200))); }
+    try { const ids = read(); if (!ids.includes(id)) storage?.setItem(key, JSON.stringify([...ids, id].slice(-200))); }
     catch { /* Storage may be blocked or full; the in-memory set still holds. */ }
   };
   return {

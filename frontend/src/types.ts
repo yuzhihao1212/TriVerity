@@ -16,13 +16,27 @@ export interface PartyHistory {
   disputes_last_90d?: number | null;
 }
 
+export interface Trip {
+  expected_distance_km?: number | null;
+  actual_distance_km?: number | null;
+  expected_duration_min?: number | null;
+  actual_duration_min?: number | null;
+  pickup_lat?: number | null;
+  pickup_lng?: number | null;
+  driver_arrival_lat?: number | null;
+  driver_arrival_lng?: number | null;
+  driver_wait_min?: number | null;
+  /** The planned route, when the backend has one (e.g. D001, D004): drawn as a dashed line. */
+  planned_route?: { lat: number; lng: number }[];
+}
+
 export interface DisputeCase {
   dispute_id: string;
   type: DisputeType;
   label?: string | null; // Display-only navigation text; not evidence for the agents.
   rider_claim: string;
   driver_statement?: string | null;
-  trip: Record<string, number | null>;
+  trip: Trip;
   fare: {
     expected?: number | null;
     actual?: number | null;

@@ -30,6 +30,21 @@ const PREFIX_SOURCE: Record<string, string> = { TRIP: "trip", GPS: "gps", FARE: 
 
 export interface EvidenceItem { text: string; id?: string; source: string }
 
+// Sentence starts of the computed facts (backend/app/services/evidence.py and the evidence
+// collector), for facts cited without an ID. "case" is kept for leftovers such as party claims.
+const SOURCE_STARTS: [string, RegExp][] = [
+  ["trip", /^(Trip record:|Route was|Trip took|Driver arrived|Driver waited)/],
+  ["gps", /^(GPS |Unexpected stop:|Off the planned route|Driver stopped)/],
+  ["fare", /^(Fare[ :]|Fare line:|Charged fare|Surge |Promo )/],
+  ["chat", /^(Rider tone:|Driver tone:|Threatening message:|Agreement in chat:|Disagreement in chat:|Driver contacted|No driver contact|App event|Chat \d{2}:\d{2})/],
+  ["history", /^(Rider history:|Driver history:)/],
+];
+
+/** The source category of a fact sentence with no ID prefix. */
+export function sentenceSource(text: string): string {
+  return SOURCE_STARTS.find(([, re]) => re.test(text))?.[0] ?? "case";
+}
+
 export function evidenceItems(texts: string[], ids: string[] = []): EvidenceItem[] {
   return texts.map((text, index) => {
     // The API sometimes includes an extra party claim in fallback evidence. Do
@@ -37,14 +52,7 @@ export function evidenceItems(texts: string[], ids: string[] = []): EvidenceItem
     const candidate = ids.length === texts.length ? ids[index] : undefined;
     const prefix = candidate?.match(/^(TRIP|GPS|FARE|CHAT|HIST)-[1-9]\d*$/)?.[1];
     const id = prefix ? candidate : undefined;
-    let source = prefix ? PREFIX_SOURCE[prefix] : "case";
-    if (!prefix) {
-      if (/^(Route was|Trip took|Driver arrived|Driver waited)/.test(text)) source = "trip";
-      else if (/^(GPS |Unexpected stop:|Driver stopped)/.test(text)) source = "gps";
-      else if (/^(Fare |Charged fare|Surge |Promo )/.test(text)) source = "fare";
-      else if (/^(Threatening message:|Agreement in chat:|Disagreement in chat:|Driver contacted|No driver contact)/.test(text)) source = "chat";
-      else if (/^(Rider|Driver) history:/.test(text)) source = "history";
-    }
+    const source = prefix ? PREFIX_SOURCE[prefix] : sentenceSource(text);
     return { text, id, source };
   });
 }
