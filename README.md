@@ -2,7 +2,8 @@
 
 # TriVerity: Multi-Agent Autonomous Dispute Resolution System
 
-**AI agents argue both sides; policy rules decide fairly.**
+**Ride disputes resolved fairly in seconds, not days.**
+AI agents argue both sides; policy rules decide fairly.
 
 **▶ Live demo** [CHECK: live link] · **🎬 Demo video** [CHECK: video link] ·
 **📄 [AI tool usage evidence](docs/submission/ai-tool-evidence.pdf)** · **📋 [Ryde requirements →](#ryde-requirements-where-to-see-each)**

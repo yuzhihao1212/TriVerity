@@ -15,7 +15,7 @@ TriVerity: Multi-Agent Autonomous Dispute Resolution System
 
 **Ride disputes resolved fairly in seconds, not days.** (8 words; use this one in the form)
 
-The tagline on the landing page and README stays "AI agents argue both sides; policy rules decide fairly."
+The same line leads the landing page and README, followed by "AI agents argue both sides; policy rules decide fairly."
 
 ## Project description
 
