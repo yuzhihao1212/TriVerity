@@ -81,8 +81,8 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
           <p className="landing-kicker">Multi-Agent Autonomous Dispute Resolution System</p>
           <h1 id="landing-title" tabIndex={-1}>TriVerity<span className="landing-dot" aria-hidden="true">.</span></h1>
           <p className="landing-byline">By OeroAI</p>
-          <p className="landing-lead">AI agents argue both sides;<br className="landing-desktop-break" /> policy rules decide fairly.</p>
-          <p className="landing-intro muted">From disputed trip to an explained ruling. Follow the evidence, hear both sides and see why the decision holds.</p>
+          <p className="landing-lead">Ride disputes resolved fairly<br className="landing-desktop-break" /> in seconds, not days.</p>
+          <p className="landing-intro muted">AI agents argue both sides; policy rules decide fairly. Follow the evidence and see why each ruling holds.</p>
           <div className="landing-actions"><a className="landing-primary" href="#/console" onClick={onOpenConsole}>Open the reviewer console <span aria-hidden="true">↗</span></a>
             <a href={GITHUB}>View the source on GitHub <span aria-hidden="true">↗</span></a></div>
           <p className="landing-provider muted">Built on Tencent Hy3 via Tencent Cloud TokenHub.</p>
