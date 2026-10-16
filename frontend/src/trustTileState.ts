@@ -8,7 +8,10 @@ export const CLOSED_TRUST_TILE: TrustTileState = { openId: null, trigger: null }
 /** A single open tile, with an explicit close that wins over lingering hover/focus. */
 export function trustTileState(state: TrustTileState, action: TrustTileAction): TrustTileState {
   if (action.type === "escape") return CLOSED_TRUST_TILE;
-  if (action.type === "toggle") return state.openId === action.id ? CLOSED_TRUST_TILE : { openId: action.id, trigger: "pinned" };
+  // A click on a tile that hover or focus already opened pins it (mouse users hover, then
+  // click); only a click on a pinned tile closes it.
+  if (action.type === "toggle") return state.openId === action.id && state.trigger === "pinned"
+    ? CLOSED_TRUST_TILE : { openId: action.id, trigger: "pinned" };
   if (action.type === "focus") return { openId: action.id, trigger: "focus" };
   if (action.type === "hover") return state.openId === action.id && state.trigger !== "hover"
     ? state : { openId: action.id, trigger: "hover" };

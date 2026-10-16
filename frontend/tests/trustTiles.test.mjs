@@ -28,12 +28,17 @@ test('click/tap toggles a single pinned tile, remains open after leaving and clo
   assert.deepEqual(reduce(state, action('toggle', 'b')), closed);
 });
 
-test('explicit close beats current hover/focus; a fresh interaction can reveal it again', () => {
+test('Escape closes from any state; a click pins a hovered or focused tile, a second click closes it', () => {
   for (const type of ['hover', 'focus', 'toggle']) {
     const state = reduce(closed, action(type));
     assert.deepEqual(reduce(state, action('escape')), closed);
-    assert.deepEqual(reduce(state, action('toggle')), closed);
     assert.equal(reduce(reduce(state, action('escape')), action('focus', 'b')).openId, 'b');
+  }
+  for (const type of ['hover', 'focus']) {
+    const pinned = reduce(reduce(closed, action(type)), action('toggle'));
+    assert.deepEqual(pinned, { openId: 'a', trigger: 'pinned' });
+    assert.deepEqual(reduce(pinned, action('leave')), pinned);
+    assert.deepEqual(reduce(pinned, action('toggle')), closed);
   }
   const focused = reduce(closed, action('focus'));
   assert.deepEqual(reduce(focused, action('hover')), focused);
