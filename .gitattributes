@@ -1,0 +1,2 @@
+# Preserve submission documents byte-for-byte; PDF streams are not source text.
+*.pdf binary

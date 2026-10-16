@@ -13,6 +13,7 @@ A judge's route: [product and results](../README.md) → [architecture](architec
 | [500-dispute simulation](simulation.md) | Synthetic scale results, fairness checks, triage distribution and assumptions. |
 | [Business case](business-case.md) | Reviewer hours, cost arithmetic, deployment stages and the assumptions behind them. |
 | [Submission](submission.md) | Project title, blurb and the hackathon-form narrative, with final-link placeholders. |
+| [AI-tool usage evidence (PDF)](submission/ai-tool-evidence.pdf) | Seven CodeBuddy and three WorkBuddy captures, Miora cover-design evidence and a development-session appendix. |
 | [Milestones](milestones.md) | Required and stretch coverage, security work and remaining submission tasks. |
 
 ## Trust and implementation
