@@ -10,11 +10,19 @@ export function parseRoute(hash: string): Route {
   }
 }
 
-// IDs are checked against the samples actually returned by the server. A stale
-// or unknown link still opens the console, using its usual first selection.
+// IDs are checked against the samples actually returned by the server. No ID shows the
+// reviewer's home (the queue); an unknown ID shows home too, with a "not found" note.
 export function selectSample<T extends { dispute_id: string }>(samples: T[], sampleId?: string): T | null {
-  return samples.find(sample => sample.dispute_id === sampleId) ?? samples[0] ?? null;
+  return sampleId ? samples.find(sample => sample.dispute_id === sampleId) ?? null : null;
 }
+
+/** The ID of a case link that matches no case (for the home page's note), else null. */
+export function missingCase<T extends { dispute_id: string }>(samples: T[], sampleId?: string): string | null {
+  return sampleId && !samples.some(sample => sample.dispute_id === sampleId) ? sampleId : null;
+}
+
+export const HOME_HASH = "#/console";
+export const caseHash = (id: string) => `#/console/${encodeURIComponent(id)}`;
 
 /** Smooth, unless the viewer asked for reduced motion. */
 export function scrollBehavior(reducedMotion: boolean): ScrollBehavior {

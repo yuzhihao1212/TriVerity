@@ -13,7 +13,9 @@ import { Debate } from "./Debate";
 import { EvidenceList, EvidenceText, type FactLinks } from "./EvidenceList";
 import { VerdictSummary } from "./VerdictSummary";
 import { computedFacts, disputeLabel, filterDisputes, money } from "./presentation";
-import { focusSection, reveal, selectSample } from "./routes";
+import { caseHash, focusSection, HOME_HASH, missingCase, reveal, selectSample } from "./routes";
+import { caseStatus, nextCase, STATUS_WORDS, type CaseStatus } from "./caseQueue";
+import { Home, type HomeRow } from "./Home";
 import { AppealsPanel } from "./Appeals";
 import { DecisionBar, ReviewerDecision, useReviewerDecision } from "./ReviewerDecision";
 import { DECISION_LABELS, decisionTone, riskTone } from "./outcomeTone";
@@ -27,12 +29,13 @@ import { readSidebarOpen, writeSidebarOpen } from "./sidebar";
 import { Term } from "./Term";
 import { PresentationToggle, ThemeToggle } from "./ThemeToggle";
 import type { Theme } from "./theme";
-import { PartyPreview } from "./PartyPreview";
+import { PartyPreview, sentRecords } from "./PartyPreview";
+import { DELIVERED_ANNOUNCEMENT } from "./notifyState";
 import { DisputeForm } from "./DisputeForm";
-import { ApiError, getSamples, resolveDisputeLive } from "./services/api";
+import { ApiError, getSamples, listAppeals, resolveDisputeLive } from "./services/api";
 import { AccessCodeField } from "./AccessCodeField";
 import { ACCESS_CODE_FIELD_ID, accessCodeMessage, accessCodeProblem, needsAccessCode } from "./consoleHeader";
-import { disputeItemName, filterLabel, filterShortLabel, STATUS_LABELS, TYPE_LABELS, type DisputeFilter } from "./disputeList";
+import { disputeItemName, filterLabel, filterShortLabel, TYPE_LABELS, type DisputeFilter } from "./disputeList";
 import { FilterMenu } from "./FilterMenu";
 import { Icon } from "./Icon";
 import type { AgentLogEntry, ArgumentReview, Counterfactual, Decision, DisputeCase, PartyHistory, PrecedentReport, Resolution, RiskLevel, Triage, TriageTier } from "./types";
@@ -72,8 +75,8 @@ function saveAccessCode(code: string) {
   }
 }
 
-export default function App({ active, sampleId, presentation, onTogglePresentation, theme, onToggleTheme }: {
-  active: boolean; sampleId?: string; presentation: boolean; onTogglePresentation: () => void;
+export default function App({ active, sampleId, navigation = 0, presentation, onTogglePresentation, theme, onToggleTheme }: {
+  active: boolean; sampleId?: string; navigation?: number; presentation: boolean; onTogglePresentation: () => void;
   theme: Theme; onToggleTheme: () => void;
 }) {
   const [filter, setFilter] = useState<DisputeFilter>("all");
@@ -131,13 +134,20 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
       .finally(() => setLoadingSamples(false));
   }, []);
 
+  // "#/console" is the reviewer's home (the queue); "#/console/D001" opens that case; an
+  // unknown ID shows home with a note. `navigation` re-runs this for a link to the same ID.
+  const [missing, setMissing] = useState<string | null>(null);
   useEffect(() => {
     if (active && samples.length) {
-      setSelected(selectSample(samples, sampleId));
+      const cases = [...own, ...samples];
+      const next = selectSample(cases, sampleId);
+      if (next?.dispute_id !== selected?.dispute_id) leaveCase();
+      setSelected(next);
+      setMissing(missingCase(cases, sampleId));
       setForm(null);
       setActiveFact(null);
     }
-  }, [active, samples, sampleId]);
+  }, [active, samples, sampleId, navigation]);
 
   function select(dispute: DisputeCase) {
     if (dispute.dispute_id !== selected?.dispute_id) leaveCase();
@@ -145,6 +155,9 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
     setSelected(dispute);
     setForm(null);
     setError(null);
+    setMissing(null);
+    // Keep the address in step (no hashchange), so links to this case and home always work.
+    try { window.history.replaceState(null, "", caseHash(dispute.dispute_id)); } catch { /* Sandboxed: the view still changes. */ }
   }
 
   function addOwn(dispute: DisputeCase) {
@@ -222,6 +235,34 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
   const decision = useReviewerDecision({ runKey: reviewId, dispute: selected, resolution,
     onDecided: () => markReviewed("ruling"), onUnavailable: onDecisionsUnavailable });
 
+  // One status per case, the same wording on the home page and in the sidebar.
+  const [sentVersion, setSentVersion] = useState(0);
+  // Announced once through the polite status region when the phones switch to delivered.
+  const [deliveredFor, setDeliveredFor] = useState<string | null>(null);
+  const allCases = useMemo(() => [...own, ...samples], [own, samples]);
+  const queueRows: HomeRow[] = useMemo(() => allCases.map(d => {
+    const result = results[d.dispute_id];
+    const key = result ? reviewKey(d.dispute_id, result) : null;
+    const saved = decision.savedFor(key);
+    const status: CaseStatus = caseStatus(result, !!saved, !!(key && sentRecords().get(key)));
+    // The outcome dot follows the final decision: an override replaces the ruling's outcome.
+    return { id: d.dispute_id, dispute: d, status, tier: result?.triage?.tier ?? null, decision: saved?.decision ?? result?.decision ?? null };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [allCases, results, decision.savedFor, sentVersion]);
+  const statusOf = (id: string) => queueRows.find(row => row.id === id)?.status ?? "not_run";
+  const following = selected ? nextCase(queueRows, selected.dispute_id) : null;
+
+  // Appeals waiting, for the home tile; hidden when the queue is unavailable (public demo).
+  const [appealsWaiting, setAppealsWaiting] = useState<number | null>(null);
+  const onHome = active && !form && !selected && !loadingSamples;
+  useEffect(() => {
+    if (!onHome) return;
+    let live = true;
+    listAppeals().then(list => { if (live) setAppealsWaiting(list.filter(item => item.status === "queued").length); })
+      .catch(() => { if (live) setAppealsWaiting(null); });
+    return () => { live = false; };
+  }, [onHome, appealsVersion]);
+
   function changeTab(tab: WorkflowTab) {
     if (!selected) return;
     visit(activeTab, tab);
@@ -262,13 +303,14 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
     const current = !form && selected?.dispute_id === d.dispute_id;
     const summary = disputeLabel(d);
     const decision = results[d.dispute_id]?.decision;
+    const status = statusOf(d.dispute_id);
     return <li key={d.dispute_id}>
       <button type="button" className={`dispute-item${current ? " active" : ""}`} aria-current={current ? "true" : undefined}
-        aria-label={disputeItemName(d, summary, decision)} title={summary} onClick={() => select(d)}>
+        aria-label={`${disputeItemName(d, summary, decision)}${status !== "not_run" ? `. Status: ${STATUS_WORDS[status]}` : ""}`} title={summary} onClick={() => select(d)}>
         <span className="dispute-line"><TypeIcon type={d.type} /><span className="dispute-label">{summary}</span></span>
         <span className="dispute-sub">
           <span className="dispute-id">{d.dispute_id}</span>
-          {decision && <Chip size="sm" dot tone={decisionTone(decision)}>{STATUS_LABELS[decision]}</Chip>}
+          {decision && <Chip size="sm" dot tone={decisionTone(decision)} title={DECISION_LABELS[decision]}>{STATUS_WORDS[status]}</Chip>}
         </span>
       </button>
     </li>;
@@ -299,10 +341,12 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
         </div>
       </header>
 
-      <div className={`layout${sidebarOpen ? "" : " sidebar-collapsed"}`}>
-        <nav className="sidebar" aria-label="Disputes">
+      <div className={`layout${onHome ? " no-sidebar" : sidebarOpen ? "" : " sidebar-collapsed"}`}>
+        {/* On the home page the queue is the list, so the sidebar returns only in the case view. */}
+        {!onHome && <nav className="sidebar" aria-label="Disputes">
           <div className="sidebar-head">
             <SidebarToggle open={sidebarOpen} onToggle={toggleSidebar} />
+            <a className="icon-button home-button" href={HOME_HASH} aria-label="Back to queue" title="Back to queue"><Icon name="home" /></a>
             {sidebarOpen
               ? <div className="sidebar-actions">
                   <FilterMenu value={filter} onChange={setFilter} />
@@ -328,20 +372,27 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
           {showGroups && <h2 className="sidebar-group">Samples</h2>}
           {samplesShown.length > 0 && <ul className="dispute-list">{samplesShown.map(disputeButton)}</ul>}
           </div>
-        </nav>
+        </nav>}
 
         <main className="content" id="main-content" tabIndex={-1}>
           <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-            {loadingSamples ? "Loading sample disputes…" : resolving ? `Agents working on ${resolving}.` : resolution ? `Saved ruling ready. ${progress?.text}.${decision.saved ? ` ${savedText(decision.saved)}.` : ""}` : ""}
+            {loadingSamples ? "Loading sample disputes…" : resolving ? `Agents working on ${resolving}.`
+              : resolution && deliveredFor === reviewId ? `${DELIVERED_ANNOUNCEMENT}.`
+              : resolution ? `Saved ruling ready. ${progress?.text}.${decision.saved ? ` ${savedText(decision.saved)}.` : ""}` : ""}
           </p>
           <ProgressAnnouncements steps={liveSteps} />
           <div role="alert" aria-atomic="true">{error && <p className="error">{error}</p>}</div>
           {!form && loadingSamples && <section className="card empty-state"><h2>Loading disputes…</h2><p className="muted">The sample list is loading. No agents have run.</p></section>}
-          {!form && !loadingSamples && !selected && <section className="card empty-state"><h2>No dispute selected</h2><p className="muted">Choose a sample or add a new dispute to begin.</p></section>}
+          {onHome && <Home rows={queueRows} appealsWaiting={appealsWaiting} showStart={Object.keys(results).length === 0}
+            missing={missing} onDismissMissing={() => setMissing(null)} onNew={newDispute} typeIcon={type => <TypeIcon type={type} />} />}
           {!form && resolving && resolving !== selected?.dispute_id && <p className="small muted">Agents are working on {resolving}. This case remains available.</p>}
           {form && <DisputeForm key={form.template?.dispute_id ?? "blank"} template={form.template} onSubmit={addOwn} onCancel={() => setForm(null)}
             accessCode={accessCode} onAccessCodeChange={changeAccessCode} />}
           {!form && selected && <section className="case-file" aria-labelledby="case-title">
+            <nav className="breadcrumb" aria-label="Breadcrumb"><ol>
+              <li><a href={HOME_HASH}>Console</a></li>
+              <li aria-current="page">{selected.dispute_id}</li>
+            </ol></nav>
             <CaseHeader dispute={selected} resolution={resolution} busy={resolving === selected.dispute_id} streaming={streaming} progress={progress} />
             <WorkflowTabs active={activeTab} resolution={resolution} busy={resolving === selected.dispute_id}
               liveSteps={resolving === selected.dispute_id ? liveSteps : undefined} reviewed={reviewed} onChange={changeTab}
@@ -384,8 +435,13 @@ export default function App({ active, sampleId, presentation, onTogglePresentati
                   </RulingSection>
                   <details className="raw"><summary>Raw API response · internal record</summary><pre>{JSON.stringify(resolution, null, 2)}</pre></details>
                 </>}
-                {tab === "notify" && resolution && <PartyPreview key={reviewId ?? ""} resolution={resolution} dispute={selected} onAppealed={() => setAppealsVersion(v => v + 1)}
-                  onSeen={() => markReviewed("notify")} />}
+                {tab === "notify" && resolution && reviewId && <PartyPreview key={reviewId} reviewKey={reviewId} resolution={resolution} dispute={selected}
+                  saved={decision.saved} unavailable={decisionsUnavailable} rulingVisited={reviewed.has("ruling")}
+                  onGoToRuling={() => changeTab("ruling")} onAppealed={() => setAppealsVersion(v => v + 1)}
+                  progress={progress}
+                  onSent={() => { markReviewed("notify"); setSentVersion(v => v + 1); setDeliveredFor(reviewId); }}
+                  next={following?.id ?? null} onNext={() => { if (following) window.location.hash = caseHash(following.id); }}
+                  onBack={() => { window.location.hash = HOME_HASH; }} />}
                 <AgentsStrip tab={tab} resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
                 {tab === "ruling" && resolution && <DecisionBar resolution={resolution} controller={decision} unavailable={decisionsUnavailable} />}
               </>} />

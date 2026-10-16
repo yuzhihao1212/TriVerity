@@ -50,6 +50,8 @@ export function useReviewerDecision({ runKey, dispute, resolution, onDecided, on
     ...entry,
     escalated,
     overrideRequest,
+    /** The saved decision for any ruling (by review key), for the queue and the sidebar. */
+    savedFor: (key: string | null): SavedDecision | null => (key && entries[key]?.saved) || null,
     setChoice: (choice: FinalDecision) => runKey && patch(runKey, { choice }),
     setReason: (reason: string) => runKey && patch(runKey, { reason }),
     setMode: (mode: Entry["mode"]) => runKey && patch(runKey, { mode }),

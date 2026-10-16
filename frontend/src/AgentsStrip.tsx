@@ -47,7 +47,7 @@ export function AgentsStrip({ tab, resolution, availableIds, onSelectFact }: { t
     </div>
     <div id={`${id}-body`}>
     {entries.length === 0 ? <p className="small muted">{tab === "intake" ? "Manual intake. No agents run in this step."
-      : tab === "notify" ? "No additional agent run. These messages come from the saved Judge’s ruling."
+      : tab === "notify" ? "No agent runs in this step. The suggested wording comes from the Judge’s ruling; you approve what is sent."
       : "No agent log entries were returned for this step."}</p>
     : !open ? <ul className="agent-lines">{entries.map((entry, index) => <AgentLine key={`${entry.step}-${entry.agent}-${index}`} entry={entry} resolution={resolution} />)}</ul>
     : flow ? <ol className="agent-flow" aria-label="Agents in order, with what each passes on">
