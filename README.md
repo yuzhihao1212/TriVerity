@@ -6,6 +6,7 @@
 AI agents argue both sides; policy rules decide fairly.
 
 **▶ [Live demo](https://triverity-demo.onrender.com)** · **🎬 [Demo video](https://www.youtube.com/watch?v=z3-8uuPBPAw)** ·
+**🏆 [Tencent Cloud project gallery](https://tch.tencentcloud.com/works/398)** ·
 **📄 [AI tool usage evidence](docs/submission/ai-tool-evidence.pdf)** · **📋 [Ryde requirements →](#ryde-requirements-where-to-see-each)**
 
 *A hackathon prototype by OeroAI, built for Ryde's challenge at the Tencent Cloud AI Hackathon Singapore 2026.
