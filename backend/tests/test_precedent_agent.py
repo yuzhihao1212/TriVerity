@@ -182,7 +182,7 @@ def test_feedback_rules(monkeypatch):
     body = {"case": D001.model_dump(), "decision": "no_action"}
 
     def post(payload):
-        limiter.reset()   # feedback shares the resolve rate limits; not under test here
+        limiter.reset()   # feedback has its own write rate limits; not under test here
         return client.post(FEEDBACK, json=payload).status_code
 
     assert post({**body, "decision": "needs_review"}) == 422
@@ -196,8 +196,9 @@ def test_feedback_rules(monkeypatch):
 def test_feedback_is_rate_limited():
     client = TestClient(create_app())
     body = {"case": D001.model_dump(), "decision": "no_action"}
-    # One more request than the effective limit, which a developer's backend/.env may raise.
-    attempts = min(store.limits.PER_IP_PER_MINUTE, store.limits.GLOBAL_PER_MINUTE) + 1
+    limiter.reset()
+    # Feedback has its own write limits (it never calls the LLM): one more request than that.
+    attempts = store.limits.WRITES_PER_IP_PER_MINUTE + 1
     codes = [client.post(FEEDBACK, json=body).status_code for _ in range(attempts)]
     assert 429 in codes
 

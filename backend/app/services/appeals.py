@@ -50,6 +50,10 @@ class AlreadyDecided(Exception):
     pass
 
 
+class AlreadyAppealed(Exception):
+    """This party already appealed this dispute: one appeal each, and a decided appeal is final."""
+
+
 _appeals: dict[str, tuple[Appeal, DisputeCase]] = {}
 _lock = threading.Lock()
 
@@ -57,6 +61,8 @@ _lock = threading.Lock()
 def file_appeal(case: DisputeCase, party: str, reason: str, original_decision: str) -> Appeal:
     facts = compute_facts(case)
     with _lock:
+        if any(a.dispute_id == case.dispute_id and a.party == party for a, _ in _appeals.values()):
+            raise AlreadyAppealed
         if len(_appeals) >= limits.MAX_APPEALS:
             raise AppealsFull
         appeal = Appeal(

@@ -49,6 +49,13 @@ PER_IP_PER_DAY = 30
 # account, so keep everyone together well under 20 resolves per minute.
 GLOBAL_PER_MINUTE = 10
 
+# -- Rate limits on reviewer and party writes (appeals, appeal decisions, feedback) --
+# They never call the LLM, so they have their own counters instead of spending the
+# resolve limits (a reviewer could otherwise be blocked mid-review). These only stop
+# flooding the in-memory stores, which are capped too. All are off in the public demo.
+WRITES_PER_IP_PER_MINUTE = 20
+WRITES_PER_IP_PER_DAY = 300
+
 # -- Daily LLM budget (degrades to the deterministic fallbacks, never fails) --
 # One resolve is about 4,000 tokens, so 300,000 tokens is about 75 resolves.
 DAILY_TOKEN_BUDGET = 300_000
