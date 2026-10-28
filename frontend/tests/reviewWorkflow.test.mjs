@@ -194,7 +194,7 @@ test('next case: the next not-done case in queue order, none when all are closed
 test('tile counts', () => {
   assert.deepEqual(q.tileCounts(rows), { queue: 7, ready: 2, decide: 2, done: 1, appeals: 0 });
   assert.deepEqual(q.tileCounts([]), { queue: 0, ready: 0, decide: 0, done: 0, appeals: 0 });
-  assert.deepEqual(q.START_HERE.map(s => [s.id, s.title]), [['D001', 'Detour caught'], ['D006', 'Fee upheld'], ['D007', 'Escalated']]);
+  assert.deepEqual(q.START_HERE.map(s => [s.id, s.title]), [['D001', 'Detour caught'], ['D006', 'Fee upheld'], ['D007', 'Knows when to stop']]);
 });
 
 test('an appeal from a phone gets a reviewer line, flagged when it is a safety appeal', () => {

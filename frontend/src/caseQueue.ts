@@ -60,9 +60,9 @@ export function tileCounts(rows: Pick<QueueRow, "status">[]): Tiles {
   return { queue: rows.length, ready: count("ready"), decide: count("decide"), done: count("closed"), appeals: count("appeal_waiting") };
 }
 
-/** "Start here" picks, shown only until the first case has been run this session. */
-export const START_HERE: { id: string; title: string; icon: string }[] = [
-  { id: "D001", title: "Detour caught", icon: "route" },
-  { id: "D006", title: "Fee upheld", icon: "receipt" },
-  { id: "D007", title: "Escalated", icon: "warning" },
+/** The three cases in the guided demo, in presentation order. */
+export const START_HERE: { id: string; title: string; blurb: string; icon: string }[] = [
+  { id: "D001", title: "Detour caught", blurb: "Refund for a detour", icon: "route" },
+  { id: "D006", title: "Fee upheld", blurb: "A fair no-show fee", icon: "receipt" },
+  { id: "D007", title: "Knows when to stop", blurb: "Goes to a human", icon: "warning" },
 ];
