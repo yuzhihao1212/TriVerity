@@ -4,7 +4,10 @@ import { focusSection } from "./routes";
 import { Chip } from "./Chip";
 import { sourceTone } from "./chipStyle";
 import { EvidenceList, EvidenceText, type FactLinks } from "./EvidenceList";
+import { riskTone } from "./outcomeTone";
+import { checkSummary, checksFor, VERDICT } from "./ruleChecks";
 import { FALLBACK_TOOLTIP } from "./stepVisuals";
+import { Term } from "./Term";
 import type { AgentCase, DisputeCase, Resolution } from "./types";
 
 /** AI (accent, sparkle), Fallback (amber, explained in its tooltip) or Code (neutral). */
@@ -17,13 +20,18 @@ export function SourceBadge({ source, explain = false }: { source: "llm" | "fall
 export function Debate({ resolution, dispute, availableIds, onSelectFact }: { resolution: Resolution; dispute?: DisputeCase } & FactLinks) {
   const id = useId();
   const otherCase = (side: "rider" | "driver") => side === "rider" ? resolution.driver_case : resolution.rider_case;
+  const checks = (side: "rider" | "driver") => checksFor(resolution.argument_review, side);
   const argument = (side: "rider" | "driver", item: AgentCase) => (
     <article className={`advocate ${side}`} id={`${id}-${side}-argument`} tabIndex={-1}>
       <h4>{side === "rider" ? "Rider advocate" : "Driver advocate"} <SourceBadge source={item.source} /></h4>
       <p><EvidenceText text={item.summary || "No opening argument returned."} availableIds={availableIds} onSelectFact={onSelectFact} /></p>
       <h5 className="section-label">Policy cited</h5>
-      {item.policy_refs.length ? <ul className="small">{item.policy_refs.map(ref => <li key={ref}>{ref}</li>)}</ul>
+      {item.policy_refs.length ? <ul className="small policy-checks">{item.policy_refs.map(ref => {
+        const check = checks(side).get(ref);
+        return <li key={ref}><Term rule={ref} />{check && <>{" "}<Chip size="sm" tone={riskTone(VERDICT[check.verdict].level)}>{VERDICT[check.verdict].label}</Chip></>}</li>;
+      })}</ul>
         : <p className="small muted">No policy rules cited.</p>}
+      {checkSummary(checks(side)) && <p className="small muted check-summary">{checkSummary(checks(side))}</p>}
       <h5 className="section-label">Evidence</h5>
       <EvidenceList texts={item.evidence} ids={item.evidence_ids} mention={item.summary} dispute={dispute}
         compare={{ party: side, otherTexts: otherCase(side).evidence, otherIds: otherCase(side).evidence_ids }}
