@@ -1,0 +1,35 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+
+import { load } from './_load.mjs';
+
+const { VERDICT, checkSummary, checksFor } = await load('ruleChecks');
+
+const reviews = [
+  { party: 'rider', rules: [
+    { rule: 'RD-1', verdict: 'supports', decisive: true },
+    { rule: 'RD-3', verdict: 'supports', decisive: false },
+    { rule: 'NS-2', verdict: 'does_not_apply', decisive: false },
+  ], evidence_cited: 3, summary: '' },
+  { party: 'driver', rules: [{ rule: 'RD-2', verdict: 'favours_other_side', decisive: false }], evidence_cited: 1, summary: '' },
+];
+
+test('checks are looked up per party and rule', () => {
+  assert.equal(checksFor(reviews, 'rider').get('RD-3').verdict, 'supports');
+  assert.equal(checksFor(reviews, 'driver').get('RD-2').verdict, 'favours_other_side');
+  assert.equal(checksFor(reviews, 'driver').get('RD-1'), undefined);
+});
+
+test('a missing review gives no checks and no summary line', () => {
+  assert.equal(checksFor(undefined, 'rider').size, 0);
+  assert.equal(checkSummary(checksFor(undefined, 'rider')), null);
+});
+
+test('the summary counts the rules that hold', () => {
+  assert.equal(checkSummary(checksFor(reviews, 'rider')), "Judge's check: 2 of 3 cited rules hold");
+  assert.equal(checkSummary(checksFor(reviews, 'driver')), "Judge's check: 0 of 1 cited rule holds");
+});
+
+test('every verdict has a label', () => {
+  for (const verdict of ['supports', 'favours_other_side', 'does_not_apply']) assert.ok(VERDICT[verdict].label);
+});

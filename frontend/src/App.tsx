@@ -27,6 +27,7 @@ import { AiToggle } from "./AiToggle";
 import { readAiMode, writeAiMode, type AiMode } from "./aiMode";
 import { NewDisputeIcon, SidebarToggle } from "./SidebarToggle";
 import { readSidebarOpen, writeSidebarOpen } from "./sidebar";
+import { VERDICT } from "./ruleChecks";
 import { Term } from "./Term";
 import { PresentationToggle, ThemeToggle } from "./ThemeToggle";
 import type { Theme } from "./theme";
@@ -645,13 +646,6 @@ function TriagePanel({ triage }: { triage: Triage }) {
     </div>
   );
 }
-
-const VERDICT: Record<ArgumentReview["rules"][number]["verdict"], { label: string; level: RiskLevel }> = {
-  supports: { label: "Holds for this side", level: "low" },
-  // Attention, not danger: danger is kept for threats and high bad-faith risk.
-  favours_other_side: { label: "Favours the other side", level: "medium" },
-  does_not_apply: { label: "Does not apply", level: "medium" },
-};
 
 function ArgumentReviewPanel({ reviews }: { reviews: ArgumentReview[] }) {
   return (
