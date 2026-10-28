@@ -10,8 +10,10 @@ const FINAL: Record<FinalDecision, string> = {
 };
 
 /** A party contests the ruling; the appeal joins the human review queue. */
-export function AppealForm({ dispute, party, decision, onFiled, available = true, unavailableNote }: {
-  dispute: DisputeCase; party: "rider" | "driver"; decision: Decision; onFiled?: () => void;
+export function AppealForm({ dispute, party, decision, onFiled, available = true, unavailableNote, waiting = null }: {
+  dispute: DisputeCase; party: "rider" | "driver"; decision: Decision; onFiled?: (appeal: Appeal) => void;
+  /** An appeal this party already filed that is still waiting for a reviewer: shown instead of the form. */
+  waiting?: Appeal | null;
   /** False while the reviewer is still drafting: the button is disabled and cannot open the form. */
   available?: boolean;
   /** Shown under the disabled button and linked to it, e.g. "Available to the rider after sending". */
@@ -25,10 +27,12 @@ export function AppealForm({ dispute, party, decision, onFiled, available = true
   const [error, setError] = useState<string | null>(null);
 
   if (decision === "needs_review") return null;   // already with a human reviewer
-  if (filed) {
-    return <p className="small appeal-status" role="status">
-      Appeal {filed.id} sent. A human reviewer will look at it{filed.priority === "safety" ? " first" : ""} and follow up.
-    </p>;
+  const shown = filed ?? waiting;
+  if (shown) {
+    return <div className="appeal-status" role="status">
+      <p className="small appeal-quote"><span className="section-label">Your appeal</span>“{shown.reason}”</p>
+      <p className="small">Appeal {shown.id} sent. A human reviewer will look at it{shown.priority === "safety" ? " first" : ""} and follow up.</p>
+    </div>;
   }
   if (!available) {
     return <div className="appeal-unavailable">
@@ -43,7 +47,7 @@ export function AppealForm({ dispute, party, decision, onFiled, available = true
     setSending(true);
     setError(null);
     fileAppeal({ case: dispute, party, reason: reason.trim(), original_decision: decision })
-      .then((appeal) => { setFiled(appeal); onFiled?.(); })
+      .then((appeal) => { setFiled(appeal); onFiled?.(appeal); })
       .catch((e: Error) => setError(e.message))
       .finally(() => setSending(false));
   }
