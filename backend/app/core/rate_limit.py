@@ -1,4 +1,4 @@
-"""Sliding-window rate limits for POST /api/disputes/resolve.
+"""Sliding-window rate limits for POST /api/disputes/resolve, and separately for reviewer/party writes.
 
 Per IP (minute and day) plus a global per-minute limit across all callers.
 Over a limit: 429 with ``Retry-After``. A rejected request does not count.
@@ -84,3 +84,22 @@ def enforce_resolve_rate_limit(request: Request) -> str | None:
             headers={"Retry-After": str(max(1, math.ceil(wait)))},
         )
     return code_id
+
+
+def enforce_write_rate_limit(request: Request) -> None:
+    """FastAPI dependency for reviewer and party writes (appeals, appeal decisions, feedback).
+
+    Separate counters from resolve: these writes never call the LLM, so they must not use up
+    the resolve limits, but they are still limited per IP so the in-memory stores can't be flooded.
+    """
+    ip = request.client.host if request.client else "unknown"
+    wait = limiter.hit([
+        (f"writes-ip:{ip}", limits.WRITES_PER_IP_PER_MINUTE, _MINUTE),
+        (f"writes-ip:{ip}", limits.WRITES_PER_IP_PER_DAY, _DAY),
+    ])
+    if wait is not None:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many requests; try again later.",
+            headers={"Retry-After": str(max(1, math.ceil(wait)))},
+        )

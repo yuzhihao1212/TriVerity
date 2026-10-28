@@ -13,18 +13,18 @@ from pydantic import BaseModel, Field
 
 from app.core import limits
 from app.core.config import settings
-from app.core.rate_limit import enforce_resolve_rate_limit
+from app.core.rate_limit import enforce_write_rate_limit
 from app.models.dispute import DisputeCase
 from app.models.resolution import Decision
 from app.services.appeals import (
-    AlreadyDecided, Appeal, AppealNotFound, AppealsFull, FinalDecision, decide, file_appeal, list_appeals,
+    AlreadyAppealed, AlreadyDecided, Appeal, AppealNotFound, AppealsFull, FinalDecision, decide, file_appeal, list_appeals,
 )
 from app.services.precedents import FeedbackFull
 from app.services.text_safety import contains_link_or_markup, normalise, sanitise
 
-# Writes share the resolve rate limits; reading the queue costs nothing and isn't limited.
+# Writes have their own rate limits (they never call the LLM); reading the queue isn't limited.
 router = APIRouter(tags=["appeals"])
-_LIMITED = [Depends(enforce_resolve_rate_limit)]
+_LIMITED = [Depends(enforce_write_rate_limit)]
 
 
 class AppealRequest(BaseModel):
@@ -61,6 +61,8 @@ def create_appeal(body: AppealRequest) -> Appeal:
         raise HTTPException(status_code=422, detail="This dispute is already with a human reviewer.")
     try:
         return file_appeal(body.case, body.party, _plain(body.reason, "reason"), body.original_decision)
+    except AlreadyAppealed:
+        raise HTTPException(status_code=409, detail="This decision has already been appealed by this party.") from None
     except AppealsFull:
         raise HTTPException(status_code=409, detail="The appeals queue is full.") from None
 

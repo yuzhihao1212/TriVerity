@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 
 from app.core import limits
 from app.core.config import settings
-from app.core.rate_limit import enforce_resolve_rate_limit
+from app.core.rate_limit import enforce_write_rate_limit
 from app.models.dispute import DisputeCase
 from app.services.evidence import compute_facts
 from app.services.precedents import FeedbackFull, add_feedback
@@ -40,7 +40,7 @@ class FeedbackRecorded(BaseModel):
     "/precedents/feedback",
     response_model=FeedbackRecorded,
     status_code=201,
-    dependencies=[Depends(enforce_resolve_rate_limit)],   # shares the resolve rate limits
+    dependencies=[Depends(enforce_write_rate_limit)],   # own write limits: never calls the LLM
 )
 def record_feedback(body: ReviewerDecision) -> FeedbackRecorded:
     """Record a human reviewer's decision as a precedent (internal reviewer console).

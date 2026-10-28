@@ -10,10 +10,10 @@ const FINAL: Record<FinalDecision, string> = {
 };
 
 /** A party contests the ruling; the appeal joins the human review queue. */
-export function AppealForm({ dispute, party, decision, onFiled, available = true, unavailableNote, waiting = null }: {
+export function AppealForm({ dispute, party, decision, onFiled, available = true, unavailableNote, existing = null }: {
   dispute: DisputeCase; party: "rider" | "driver"; decision: Decision; onFiled?: (appeal: Appeal) => void;
-  /** An appeal this party already filed that is still waiting for a reviewer: shown instead of the form. */
-  waiting?: Appeal | null;
+  /** This party's appeal on this dispute (waiting or decided): shown instead of the form. One appeal per party. */
+  existing?: Appeal | null;
   /** False while the reviewer is still drafting: the button is disabled and cannot open the form. */
   available?: boolean;
   /** Shown under the disabled button and linked to it, e.g. "Available to the rider after sending". */
@@ -27,11 +27,14 @@ export function AppealForm({ dispute, party, decision, onFiled, available = true
   const [error, setError] = useState<string | null>(null);
 
   if (decision === "needs_review") return null;   // already with a human reviewer
-  const shown = filed ?? waiting;
+  // A decided appeal from the queue wins over the copy filed in this session, which is still "queued".
+  const shown = existing?.status === "decided" ? existing : filed ?? existing;
   if (shown) {
     return <div className="appeal-status" role="status">
       <p className="small appeal-quote"><span className="section-label">Your appeal</span>“{shown.reason}”</p>
-      <p className="small">Appeal {shown.id} sent. A human reviewer will look at it{shown.priority === "safety" ? " first" : ""} and follow up.</p>
+      {shown.status === "decided" && shown.reviewer_decision
+        ? <p className="small">Appeal {shown.id} decided: <strong>{FINAL[shown.reviewer_decision]}</strong>. This decision is final.</p>
+        : <p className="small">Appeal {shown.id} sent. A human reviewer will look at it{shown.priority === "safety" ? " first" : ""} and follow up.</p>}
     </div>;
   }
   if (!available) {

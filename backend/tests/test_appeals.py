@@ -6,6 +6,7 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core import limits
 from app.core.config import settings
 from app.core.rate_limit import limiter
 from app.main import create_app
@@ -32,7 +33,7 @@ def client():
 
 
 def call(client, method, path, **kwargs):
-    limiter.reset()   # appeals share the resolve rate limits; not under test here
+    limiter.reset()   # appeals have their own write rate limits; not under test here
     return getattr(client, method)(path, **kwargs)
 
 
@@ -53,7 +54,9 @@ def test_the_full_loop_appeals_become_precedents_that_shape_similar_disputes(cli
     case = detour("LOOP-1", 0.35, 0.45)
     assert resolve_dispute(case).decision == "partial_refund"
     for i in range(2):
-        filed = appeal(client, case, party="driver", reason=f"Road closure, appeal {i}").json()
+        # Two similar disputes, one appeal each: a party can appeal a dispute only once.
+        similar = case.model_copy(update={"dispute_id": f"LOOP-1{chr(97 + i)}"})
+        filed = appeal(client, similar, party="driver", reason=f"Road closure, appeal {i}").json()
         assert (filed["status"], filed["priority"]) == ("queued", "standard")
         decided = call(client, "post", f"/api/appeals/{filed['id']}/decision",
                        json={"decision": "no_action", "note": "Road closure confirmed."}).json()
@@ -97,7 +100,18 @@ def test_decision_rules(client):
 def test_appeals_queue_is_capped(client, monkeypatch):
     monkeypatch.setattr(appeals.limits, "MAX_APPEALS", 1)
     assert appeal(client).status_code == 201
-    assert appeal(client).status_code == 409
+    full = appeal(client, party="driver")
+    assert full.status_code == 409 and "full" in full.json()["detail"]
+
+
+def test_one_appeal_per_party_and_a_decided_appeal_is_final(client):
+    filed = appeal(client).json()
+    again = appeal(client, reason="Second try.")
+    assert again.status_code == 409 and "already been appealed" in again.json()["detail"]
+    assert appeal(client, party="driver").status_code == 201   # the other party may still appeal
+    call(client, "post", f"/api/appeals/{filed['id']}/decision", json={"decision": "no_action"})
+    assert appeal(client, reason="After the decision.").status_code == 409
+    assert len(call(client, "get", "/api/appeals", params={"dispute_id": "D001"}).json()) == 2
 
 
 def test_appeals_are_off_in_the_public_demo(client, monkeypatch):
@@ -127,8 +141,20 @@ def test_reading_the_queue_is_not_rate_limited_but_filing_is(client):
     limiter.reset()
     for _ in range(20):
         assert client.get("/api/appeals").status_code == 200
-    codes = [appeal_without_reset(client).status_code for _ in range(10)]
+    codes = [appeal_without_reset(client).status_code for _ in range(limits.WRITES_PER_IP_PER_MINUTE + 5)]
     assert 429 in codes
+
+
+def test_reviewer_writes_do_not_spend_the_resolve_limits(client):
+    """A reviewer who just ran the agents can still record an appeal decision (it never calls the LLM)."""
+    limiter.reset()
+    for _ in range(limits.PER_IP_PER_MINUTE):   # use up this minute's resolves, as a live demo would
+        limiter.hit([("ip:testclient", limits.PER_IP_PER_MINUTE, 60)])
+    filed = client.post("/api/appeals", json={"case": D001.model_dump(mode="json"), "party": "rider",
+                                              "reason": "Wrong.", "original_decision": "partial_refund"})
+    assert filed.status_code == 201
+    decided = client.post(f"/api/appeals/{filed.json()['id']}/decision", json={"decision": "no_action"})
+    assert decided.status_code == 200
 
 
 def appeal_without_reset(client):
