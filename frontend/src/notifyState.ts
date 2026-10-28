@@ -277,6 +277,11 @@ export interface PhoneState { delivered: boolean; tag: string; canAppeal: boolea
  * Before "Approve & send" the phones are a preview and the appeal button is disabled; after it,
  * they are delivered and the parties can appeal.
  */
+/** The reviewer's line for an appeal filed from a party's phone, e.g. "Rider appealed · safety, review first". */
+export function appealSummary(appeal: { party: Party; priority: "safety" | "standard" }): string {
+  return `${appeal.party === "rider" ? "Rider" : "Driver"} appealed${appeal.priority === "safety" ? " · safety, review first" : ""}`;
+}
+
 export function phoneState(party: Party, sent: Pick<SentRecord, "at"> | null): PhoneState {
   if (sent) return { delivered: true, tag: `Delivered ${sent.at}`, canAppeal: true, caption: null };
   return { delivered: false, tag: "Preview", canAppeal: false, caption: `Available to the ${party} after sending` };

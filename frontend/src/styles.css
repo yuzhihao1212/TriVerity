@@ -461,6 +461,11 @@ textarea { width: 100%; resize: vertical; }
 .appeal-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .appeal-list { display: grid; gap: var(--space-4); list-style: none; padding: 0; }
 .appeal-status { margin-top: var(--space-3); }
+.appeal-quote { margin: 0 0 var(--space-1); }
+.appeal-quote .section-label { display: block; }
+.notify-appeal { display: grid; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.notify-appeal p { margin: 0; display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.notify-appeal .icon { flex: none; width: 18px; height: 18px; color: var(--warn-text); }
 .argument-checks { display: grid; gap: var(--space-2); list-style: none; padding: 0; }
 
 /* Landing page: shared console tokens, scoped layout and typography. */

@@ -196,3 +196,8 @@ test('tile counts', () => {
   assert.deepEqual(q.tileCounts([]), { queue: 0, ready: 0, decide: 0, done: 0, appeals: 0 });
   assert.deepEqual(q.START_HERE.map(s => [s.id, s.title]), [['D001', 'Detour caught'], ['D006', 'Fee upheld'], ['D007', 'Escalated']]);
 });
+
+test('an appeal from a phone gets a reviewer line, flagged when it is a safety appeal', () => {
+  assert.equal(ns.appealSummary({ party: 'rider', priority: 'standard' }), 'Rider appealed');
+  assert.equal(ns.appealSummary({ party: 'driver', priority: 'safety' }), 'Driver appealed · safety, review first');
+});
