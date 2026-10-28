@@ -22,7 +22,8 @@ export function sentRecords() {
   return store;
 }
 
-const WHO: Record<Party, string> = { rider: "Rider", driver: "Driver" };
+/** Shown under each phone: what the party-safety checks keep out of every message. */
+export const PRIVACY_NOTE = "The message never includes fraud signals, party history or internal evidence IDs; your note is checked before sending.";
 const NO_NOTES: Record<Party, string> = { rider: "", driver: "" };
 
 /**
@@ -150,7 +151,7 @@ function Phone({ party, outcome, message, note, sent, dispute, decision, onAppea
 }) {
   const state = phoneState(party, sent);
   return <figure className={`phone-wrap${state.delivered ? " delivered" : " preview"}`} aria-labelledby={`${id}-${party}`}>
-    <figcaption id={`${id}-${party}`} className="section-label">{WHO[party]}’s phone <span className={`phone-tag${state.delivered ? " delivered" : ""}`}>{state.tag}</span></figcaption>
+    <figcaption id={`${id}-${party}`} className="section-label">What the {party} sees <span className={`phone-tag${state.delivered ? " delivered" : ""}`}>{state.tag}</span></figcaption>
     <div className="phone">
       <div className="phone-bar" aria-hidden="true"><span>9:41</span><span className="phone-notch" /><span>●●●</span></div>
       <div className="phone-screen">
@@ -169,5 +170,6 @@ function Phone({ party, outcome, message, note, sent, dispute, decision, onAppea
           decision={decision} onFiled={onAppealed} available={state.canAppeal} unavailableNote={state.caption ?? undefined} />}
       </div>
     </div>
+    <p className="small muted phone-privacy">{PRIVACY_NOTE}</p>
   </figure>;
 }
