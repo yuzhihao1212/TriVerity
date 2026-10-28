@@ -1,14 +1,13 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { Chip, InternalBadge } from "./Chip";
+import { Icon } from "./Icon";
+import { FINAL_LABELS as FINAL } from "./decisionState";
+import { appealLine, decidedAppealLine, originalDecisionText } from "./appealState";
 import { ApiError, decideAppeal, fileAppeal, listAppeals } from "./services/api";
 import type { Appeal, Decision, DisputeCase } from "./types";
 
 type FinalDecision = Exclude<Decision, "needs_review">;
-const FINAL: Record<FinalDecision, string> = {
-  partial_refund: "Partial refund", full_refund: "Full refund", compensation: "Compensation", no_action: "No change to the charge",
-};
-
 /** A party contests the ruling; the appeal joins the human review queue. */
 export function AppealForm({ dispute, party, decision, onFiled, available = true, unavailableNote, existing = null }: {
   dispute: DisputeCase; party: "rider" | "driver"; decision: Decision; onFiled?: (appeal: Appeal) => void;
@@ -80,45 +79,81 @@ export function AppealsPanel({ disputeId, version, onChanged }: { disputeId: str
   }, [disputeId, version]);
   if (!appeals.length && !error) return null;
   return (
-    <section className="card"><div className="risk-panel">
-      <div className="panel-head"><h2>Appeals</h2><InternalBadge detail="Internal review only · learning feedback loop" /></div>
+    <section className="reviewer-appeals" aria-label="Appeal review">
+      <InternalBadge detail="Internal review only · learning feedback loop" />
       <div role="alert">{error && <p className="error small">{error}</p>}</div>
       <ul className="appeal-list">
         {appeals.map((appeal) => <AppealItem key={appeal.id} appeal={appeal} onDecided={onChanged} />)}
       </ul>
-    </div></section>
+    </section>
   );
 }
 
 function AppealItem({ appeal, onDecided }: { appeal: Appeal; onDecided: () => void }) {
   const id = useId();
+  const dialog = useRef<HTMLDialogElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
   const [decision, setDecision] = useState<FinalDecision>(
     appeal.original_decision === "needs_review" ? "no_action" : appeal.original_decision);
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   function record() {
+    if (saving) return;
+    setSaving(true);
     setError(null);
-    decideAppeal(appeal.id, { decision, note: note.trim() }).then(onDecided).catch((e: Error) => setError(e.message));
+    decideAppeal(appeal.id, { decision, note: note.trim() })
+      .then(() => { dialog.current?.close(); onDecided(); })
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setSaving(false));
   }
   return (
-    <li>
-      <p><strong>{appeal.id}</strong> · {appeal.party === "rider" ? "Rider" : "Driver"} appeal
-        {appeal.priority === "safety" && <>{" "}<Chip size="sm" tone="danger">Safety · review first</Chip></>}
-        {appeal.status === "queued" && <>{" "}<Chip size="sm" tone="warn">Pending review</Chip></>}</p>
-      <p className="small muted">“{appeal.reason}”</p>
+    <li className="reviewer-appeal">
+      <p className="reviewer-appeal-head">
+        {appeal.status === "queued" && <Icon name="warning" />}
+        <strong>{appealLine(appeal)}</strong>
+        {appeal.status === "queued" && <Chip size="sm" tone="warn">Pending review</Chip>}
+        {appeal.priority === "safety" && <Chip size="sm" tone="danger">Safety · review first</Chip>}
+      </p>
+      <blockquote className="reviewer-appeal-reason">“{appeal.reason}”</blockquote>
       {appeal.status === "decided" ? (
-        <p className="small">Decided: <strong>{FINAL[appeal.reviewer_decision!]}</strong>. Added to the precedent knowledge base as {appeal.precedent_id}.</p>
+        <p className="reviewer-appeal-result">{decidedAppealLine(appeal)}</p>
       ) : (
-        <div className="appeal-actions">
-          <label className="small" htmlFor={`${id}-decision`}>Reviewer decision</label>
-          <select id={`${id}-decision`} value={decision} onChange={(e) => setDecision(e.target.value as FinalDecision)}>
-            {Object.entries(FINAL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
-          <input aria-label="Reviewer note" placeholder="Note (optional)" maxLength={300} value={note} onChange={(e) => setNote(e.target.value)} />
-          <button type="button" className="run-button" onClick={record}>Record decision</button>
-        </div>
+        <>
+          <button type="button" ref={trigger} className="secondary-button reviewer-appeal-trigger"
+            onClick={() => { setError(null); dialog.current?.showModal(); }}>Decide appeal {appeal.id}</button>
+          <dialog className="closed-dialog appeal-dialog" ref={dialog}
+            aria-labelledby={`${id}-title`} aria-describedby={`${id}-reason ${id}-original`}
+            onClose={() => trigger.current?.focus()}
+            onKeyDown={event => {
+              if (event.key !== "Tab") return;
+              const controls = event.currentTarget.querySelectorAll<HTMLElement>("button:not(:disabled), select:not(:disabled), input:not(:disabled)");
+              const first = controls[0], last = controls[controls.length - 1];
+              if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+              else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+            }}>
+            <h2 id={`${id}-title`}>Decide appeal {appeal.id}</h2>
+            <div id={`${id}-reason`}>
+              <p>{appeal.party === "rider" ? "Rider" : "Driver"} appealed:</p>
+              <blockquote className="reviewer-appeal-reason">“{appeal.reason}”</blockquote>
+            </div>
+            <p id={`${id}-original`}>{originalDecisionText(appeal.original_decision)}</p>
+            <div className="appeal-dialog-fields">
+              <label htmlFor={`${id}-decision`}>Reviewer decision</label>
+              <select id={`${id}-decision`} value={decision} disabled={saving} onChange={(e) => setDecision(e.target.value as FinalDecision)}>
+                {Object.entries(FINAL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+              <label htmlFor={`${id}-note`}>Note (optional)</label>
+              <input id={`${id}-note`} maxLength={300} value={note} disabled={saving} onChange={(e) => setNote(e.target.value)} />
+            </div>
+            <div role="alert">{error && <p className="error">{error}</p>}</div>
+            <div className="closed-dialog-actions">
+              <button type="button" className="secondary-button" autoFocus onClick={() => dialog.current?.close()}>Cancel</button>
+              <button type="button" className="run-button" disabled={saving} onClick={record}>{saving ? "Recording…" : "Record decision"}</button>
+            </div>
+          </dialog>
+        </>
       )}
-      <div role="alert">{error && <p className="error small">{error}</p>}</div>
     </li>
   );
 }
