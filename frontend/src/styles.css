@@ -466,6 +466,29 @@ textarea { width: 100%; resize: vertical; }
 .notify-appeal { display: grid; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
 .notify-appeal p { margin: 0; display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 .notify-appeal .icon { flex: none; width: 18px; height: 18px; color: var(--warn-text); }
+
+/* A continuation of the ruling, with the decision controls in a native dialog. */
+.reviewer-appeals { padding: 0 var(--space-5) var(--space-4); color: var(--text); }
+.reviewer-appeals .appeal-list { margin: var(--space-2) 0 0; }
+.reviewer-appeal { display: grid; gap: var(--space-2); min-width: 0; }
+.reviewer-appeal + .reviewer-appeal { padding-top: var(--space-3); border-top: 1px solid var(--border); }
+.reviewer-appeal-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.reviewer-appeal-head .icon { width: 18px; height: 18px; flex: none; color: var(--warn-text); }
+.reviewer-appeal-head strong, .reviewer-appeal-result { overflow-wrap: anywhere; }
+.reviewer-appeal-reason { color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; }
+.reviewer-appeal-trigger { justify-self: start; }
+.closed-dialog.appeal-dialog::backdrop { background: color-mix(in srgb, var(--text) 35%, transparent); opacity: 1; backdrop-filter: blur(4px); }
+.appeal-dialog-fields { display: grid; gap: var(--space-2); margin-top: var(--space-4); }
+.appeal-dialog-fields label:not(:first-child) { margin-top: var(--space-2); }
+.appeal-dialog .reviewer-appeal-reason { padding: var(--space-3); margin-block: var(--space-2); background: var(--surface); border-radius: 9px; }
+.appeal-dialog h2 { overflow-wrap: anywhere; }
+.presentation-mode .reviewer-appeal, .presentation-mode .appeal-dialog-fields, .presentation-mode .appeal-dialog .reviewer-appeal-reason { font-size: 16px; }
+.presentation-mode .appeal-dialog h2 { font-size: 26px; }
+@media (max-width: 760px) {
+  .reviewer-appeal-trigger { width: 100%; }
+  .appeal-dialog .closed-dialog-actions { flex-direction: column; }
+  .appeal-dialog .closed-dialog-actions > button { width: 100%; }
+}
 .argument-checks { display: grid; gap: var(--space-2); list-style: none; padding: 0; }
 
 /* Landing page: shared console tokens, scoped layout and typography. */
