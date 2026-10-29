@@ -7,7 +7,7 @@ import { AgentsStrip } from "./AgentsStrip";
 import { WorkflowTabs } from "./WorkflowTabs";
 import { savedTab, type WorkflowTab } from "./workflow";
 import { FactLibrary } from "./FactLibrary";
-import { statusPill, type FinalHeaderOutcome } from "./stepVisuals";
+import { AGENT_ICONS, statusPill, type FinalHeaderOutcome } from "./stepVisuals";
 import { createReviewStore, openCounts, reviewKey, reviewSummary, reviewedSteps, REOPENED_STEPS, type ReviewSummary } from "./reviewProgress";
 import { CaseBrief } from "./CaseBriefCard";
 import { caseHeadline, headerFinalOutcome } from "./caseBrief";
@@ -601,7 +601,11 @@ function CasePanel({ dispute, availableIds, onSelectFact }: { dispute: DisputeCa
           <div className="chat">
             {dispute.chat_logs.map((m, i) => (
               <div key={i} className={`bubble ${m.sender}`}>
-                <span className="who">{m.sender === "rider" ? "Rider" : m.sender === "driver" ? "Driver" : m.sender}</span>
+                <span className="who">
+                  {m.sender !== "system" && <Icon name={AGENT_ICONS[m.sender === "rider" ? "rider_advocate" : "driver_advocate"]} />}
+                  {m.sender === "rider" ? "Rider" : m.sender === "driver" ? "Driver" : m.sender}
+                  {m.timestamp && <time dateTime={m.timestamp} title={m.timestamp}>{Number.isFinite(Date.parse(m.timestamp)) ? clockText(new Date(m.timestamp)) : m.timestamp}</time>}
+                </span>
                 {m.message}
               </div>
             ))}

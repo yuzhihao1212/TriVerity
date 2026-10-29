@@ -5,7 +5,7 @@ import {
   introVars, segmentTimings, stopDelay,
 } from "./chartIntro";
 import { comparison, money } from "./presentation";
-import { fareSegments, niceStep, plateaus, polyline, progress, type GpsPoint, type ProgressPoint } from "./tripVisuals";
+import { comparisonRows, differenceLabel, distanceReadout, fareReadout, guideReadout, kmAt, kmTicks, fareSegments, niceStep, plateaus, polyline, progress, type GpsPoint, type ProgressPoint } from "./tripVisuals";
 import type { DisputeCase } from "./types";
 
 const W = 240, H = 104;
@@ -44,31 +44,44 @@ function Charts({ dispute }: { dispute: DisputeCase }) {
   if (!distance && !duration && !fare) return null;
   // The hidden starting states exist only under this class, so without it everything is final.
   return <div className={`comparisons${intro ? " chart-intro" : ""}`}>
-    {distance && <Card label="Distance" percent={distance.percent} unit="km" expected={distance.expected} actual={distance.actual}>
+    {distance && <Card label="Distance" unit="km" expected={distance.expected} actual={distance.actual}>
       <DistanceToScale expected={distance.expected} actual={distance.actual} />
     </Card>}
-    {duration && <Card label="Duration" percent={duration.percent} unit="min" expected={duration.expected} actual={duration.actual}>
+    {duration && <Card label="Duration" unit="min" expected={duration.expected} actual={duration.actual}>
       <ProgressChart expectedMin={duration.expected} actualMin={duration.actual}
         expectedKm={distance?.expected ?? null} actualKm={distance?.actual ?? null} gps={gps} />
     </Card>}
-    {fare && <Card label="Fare" percent={fare.percent} unit="$" expected={fare.expected} actual={fare.actual}>
+    {fare && <Card label="Fare" unit="$" expected={fare.expected} actual={fare.actual} breakdown={dispute.fare.breakdown ?? []}>
       <FareBars expected={fare.expected} actual={fare.actual} breakdown={dispute.fare.breakdown ?? []} />
     </Card>}
   </div>;
 }
 
-function Card({ label, percent, unit, expected, actual, children }: {
-  label: string; percent: number | null; unit: string; expected: number | null; actual: number | null; children: React.ReactNode;
+function Card({ label, unit, expected, actual, breakdown = [], children }: {
+  label: string; unit: string; expected: number | null; actual: number | null;
+  breakdown?: { label: string; amount: number }[]; children: React.ReactNode;
 }) {
-  const format = (value: number | null) => value == null ? "Not provided" : unit === "$" ? money(value) : `${value} ${unit}`;
-  return <div className="comparison">
-    <div className="card-head"><strong>{label}</strong>
-      {percent !== null && <span className="delta">{percent > 0 ? "+" : ""}{Math.round(percent)}%</span>}
+  const [table, setTable] = useState(false);
+  const id = useId();
+  const rows = comparisonRows(expected, actual, unit, breakdown);
+  return <section className="comparison" aria-labelledby={id}>
+    <div className="card-head"><h3 id={id}>{label}</h3>
+      <div className="chart-view-toggle" role="group" aria-label={`${label} view`}>
+        <button type="button" aria-pressed={!table} onClick={() => setTable(false)}>Chart</button>
+        <button type="button" aria-pressed={table} onClick={() => setTable(true)}>Table</button>
+      </div>
     </div>
-    <div className="trip-visual">{children}</div>
-    <div className="comparison-row"><span><i className="key key-expected" aria-hidden="true" />Expected</span><strong>{format(expected)}</strong></div>
-    <div className="comparison-row"><span><i className="key key-actual" aria-hidden="true" />Actual</span><strong>{format(actual)}</strong></div>
-  </div>;
+    <p className="comparison-difference">{differenceLabel(expected, actual, unit)}</p>
+    <table hidden={!table} className="comparison-table"><caption className="sr-only">{label} comparison</caption>
+      <tbody>{rows.map((row, i) => <tr key={i}><th scope="row">{row.label}</th><td>{row.value}</td></tr>)}</tbody>
+    </table>
+    <div hidden={table}>
+      <div className="trip-visual">{children}</div>
+      {rows.slice(0, 2).map(row => <div className="comparison-row" key={row.label}>
+        <span><i className={`key key-${row.label.toLowerCase()}`} aria-hidden="true" />{row.label}</span><strong>{row.value}</strong>
+      </div>)}
+    </div>
+  </section>;
 }
 
 /**
@@ -89,6 +102,7 @@ function Reveal({ id, from, to, delay, duration, linear = false }: {
 /** Both routes unrolled into straight lines drawn to scale, with the difference highlighted. */
 function DistanceToScale({ expected, actual }: { expected: number | null; actual: number | null }) {
   const id = useId().replace(/:/g, "");
+  const [detail, setDetail] = useState(false);
   const left = 10, right = W - 10, yExpected = 26, yActual = 54, yRuler = 82;
   const maxKm = Math.max(expected ?? 0, actual ?? 0, 0.1);
   const x = (km: number) => left + (km / maxKm) * (right - left);
@@ -106,7 +120,7 @@ function DistanceToScale({ expected, actual }: { expected: number | null; actual
   const extraEnd = DISTANCE_EXTRA_START + DISTANCE.extraMs;
   const pinAt = (line: "expected" | "actual") => vars(longer === line ? extraEnd : lineEnd, DISTANCE.pinMs);
   const reveal = (name: string) => `url(#${id}-${name})`;
-  return <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label} className="trip-svg">
+  return <><svg viewBox={`0 0 ${W} ${H}`} role="group" aria-label={label} className="trip-svg">
     <defs>
       {expected != null && <Reveal id={`${id}-expected`} from={x(0)} to={x(longer === "expected" ? shared : expected)} delay={DISTANCE.lineStart} duration={DISTANCE.lineMs} />}
       {actual != null && <Reveal id={`${id}-actual`} from={x(0)} to={x(longer === "actual" ? shared : actual)} delay={DISTANCE.lineStart} duration={DISTANCE.lineMs} />}
@@ -129,7 +143,13 @@ function DistanceToScale({ expected, actual }: { expected: number | null; actual
       <line x1={x(km)} y1={yRuler - 3} x2={x(km)} y2={yRuler + 3} className="axis" />
       <text x={x(km)} y={yRuler + 14} className="svg-label" textAnchor={km === 0 ? "start" : "middle"}>{km === ticks[ticks.length - 1] ? `${km} km` : km}</text>
     </g>)}
-  </svg>;
+    {longer && <rect x={x(shared)} y={(longer === "actual" ? yActual : yExpected) - 12}
+      width={Math.max(1, x(longer === "actual" ? actual! : expected!) - x(shared))} height={24}
+      className="chart-hit" role="button" tabIndex={0} aria-label={distanceReadout(expected!, actual!)} aria-describedby={`${id}-detail`}
+      onPointerEnter={() => setDetail(true)} onPointerLeave={event => { if (event.pointerType === "mouse" && document.activeElement !== event.currentTarget) setDetail(false); }}
+      onFocus={() => setDetail(true)} onBlur={() => setDetail(false)} onClick={() => setDetail(true)}
+      onKeyDown={event => { if (event.key === "Escape") setDetail(false); if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setDetail(true); } }} />}
+  </svg><p id={`${id}-detail`} className="chart-readout">{detail && expected != null && actual != null ? distanceReadout(expected, actual) : diff === 0 ? "Route lengths match." : diff == null ? "A comparison needs both route lengths." : "Focus or tap the extra distance for details."}</p></>;
 }
 
 /** Distance covered over time: expected as a straight line, actual from GPS when available (stops are flat). */
@@ -137,16 +157,17 @@ function ProgressChart({ expectedMin, actualMin, expectedKm, actualKm, gps }: {
   expectedMin: number | null; actualMin: number | null; expectedKm: number | null; actualKm: number | null; gps: GpsPoint[];
 }) {
   const id = useId().replace(/:/g, "");
+  const [guide, setGuide] = useState<number | null>(null);
   const series: ProgressPoint[] | null = progress(gps);
-  const left = 8, right = W - 8, top = 10, bottom = H - 20;
+  const left = 32, right = W - 8, top = 22, bottom = H - 20;
   const maxMin = Math.max(expectedMin ?? 0, actualMin ?? 0, series?.at(-1)?.minutes ?? 0, 1) * 1.04;
   const kmEnd = series?.at(-1)?.km ?? actualKm ?? expectedKm ?? 1;
-  const maxKm = Math.max(expectedKm ?? 0, actualKm ?? 0, kmEnd, 0.1);
+  const yTicks = kmTicks(Math.max(expectedKm ?? 0, actualKm ?? 0, kmEnd, 0.1));
+  const maxKm = yTicks.at(-1) || 1;
   const x = (m: number) => left + (m / maxMin) * (right - left);
   const y = (km: number) => bottom - (km / maxKm) * (bottom - top);
-  // Without distances, show time alone: both lines reach the same height.
   const expectedEnd = { x: x(expectedMin ?? 0), y: y(expectedKm ?? maxKm) };
-  const actual = series ?? (actualMin != null ? [{ minutes: 0, km: 0 }, { minutes: actualMin, km: actualKm ?? maxKm }] : []);
+  const actual = series ?? (actualMin != null && actualKm != null ? [{ minutes: 0, km: 0 }, { minutes: actualMin, km: actualKm }] : []);
   const stops = series ? plateaus(series) : [];
   const stopText = stops.map(s => `${Math.round(s.to - s.from)}-minute stop`).join(", ");
   const label = `Progress over time: expected${expectedKm != null ? ` ${expectedKm} km` : ""} in ${expectedMin ?? "?"} min; actual`
@@ -160,7 +181,25 @@ function ProgressChart({ expectedMin, actualMin, expectedKm, actualKm, gps }: {
     const ends = t.minutes.map(m => m === expectedMin ? expectedDone : traceDone);
     return vars(Math.max(...ends), DURATION.labelMs);
   };
-  return <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label} className="trip-svg">
+  const guideMax = maxMin / 1.04;
+  const pointer = (event: React.PointerEvent<SVGSVGElement>) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const svgX = (event.clientX - bounds.left) / bounds.width * W;
+    setGuide(Math.min(guideMax, Math.max(0, (svgX - left) / (right - left) * maxMin)));
+  };
+  if (!actual.length && expectedKm == null) return <p className="chart-readout">Distance data unavailable. Use the table for trip times.</p>;
+  return <><svg viewBox={`0 0 ${W} ${H}`} role="group" aria-label={`${label} Use Left and Right arrows to explore; Escape hides the guide.`}
+    aria-describedby={`${id}-readout`} tabIndex={0} className="trip-svg duration-chart"
+    onFocus={() => setGuide(previous => previous ?? 0)}
+    onPointerDown={event => { event.currentTarget.setPointerCapture(event.pointerId); pointer(event); }} onPointerMove={pointer}
+    onKeyDown={event => {
+      if (event.key === "Escape") { event.preventDefault(); setGuide(null); }
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") { event.preventDefault(); setGuide(previous => Math.max(0, Math.min(guideMax, (previous ?? 0) + (event.key === "ArrowRight" ? 1 : -1)))); }
+    }}>
+    <text x={left} y={10} className="svg-label">km travelled</text>
+    <line x1={left} y1={top} x2={left} y2={bottom} className="axis" />
+    {yTicks.map(km => <g key={km}><line x1={left - 3} y1={y(km)} x2={right} y2={y(km)} className="axis chart-grid" />
+      <text x={left - 5} y={y(km) + 3} textAnchor="end" className="svg-label">{km}</text></g>)}
     <defs>
       {expectedMin != null && <Reveal id={`${id}-expected`} from={x(0)} to={expectedEnd.x} delay={DURATION.expectedStart} duration={DURATION.expectedMs} />}
       {actual.length > 1 && <Reveal id={`${id}-actual`} from={traceFrom} to={traceTo} delay={DURATION.traceStart} duration={DURATION.traceMs} linear />}
@@ -170,12 +209,17 @@ function ProgressChart({ expectedMin, actualMin, expectedKm, actualKm, gps }: {
       <rect x={x(s.from)} y={top} width={Math.max(x(s.to) - x(s.from), 2)} height={bottom - top} className="stop-band" />
       <text x={(x(s.from) + x(s.to)) / 2} y={top + 9} className="svg-label" textAnchor="middle">{Math.round(s.to - s.from)}-min stop</text>
     </g>)}
-    {expectedMin != null && <path d={`M${x(0)},${y(0)} L${expectedEnd.x},${expectedEnd.y}`} className="line-expected" clipPath={`url(#${id}-expected)`} />}
+    {expectedMin != null && expectedKm != null && <path d={`M${x(0)},${y(0)} L${expectedEnd.x},${expectedEnd.y}`} className="line-expected" clipPath={`url(#${id}-expected)`} />}
     {actual.length > 1 && <path d={polyline(actual.map(p => ({ x: x(p.minutes), y: y(p.km) })))} className="line-actual" clipPath={`url(#${id}-actual)`} />}
     <text x={x(0)} y={H - 6} className="svg-label">0</text>
     {ticks(expectedMin, actualMin, x).map(t =>
       <text key={t.text} x={t.x} y={H - 6} className="svg-label intro-fade" textAnchor={t.anchor} style={tickAt(t)}>{t.text}</text>)}
-  </svg>;
+    {guide != null && <g className="chart-guide" pointerEvents="none">
+      <line x1={x(guide)} x2={x(guide)} y1={top} y2={bottom} />
+      {kmAt(actual, guide) != null && <circle cx={x(guide)} cy={y(kmAt(actual, guide)!)} r={3} />}
+    </g>}
+  </svg><p className="chart-key">Flat line = car not moving</p>
+    <p id={`${id}-readout`} className="chart-readout" aria-live="polite">{guide == null ? "Point, tap or use ← / → for details." : guideReadout(actual, guide, expectedMin, expectedKm)}</p></>;
 }
 
 /** End-time labels for the chart; close times share one label so they never overlap. */
@@ -191,6 +235,8 @@ function ticks(expectedMin: number | null, actualMin: number | null, x: (m: numb
 
 /** Two slim bars: expected vs charged, the charge split into its itemised lines; the extra is marked. */
 function FareBars({ expected, actual, breakdown }: { expected: number | null; actual: number | null; breakdown: { label: string; amount: number }[] }) {
+  const [detail, setDetail] = useState<number | null>(null);
+  const readoutId = useId();
   const max = Math.max(expected ?? 0, actual ?? 0, 0.01);
   const pct = (v: number) => `${(v / max) * 100}%`;
   const segments = actual != null ? fareSegments(breakdown, actual) : [];
@@ -200,14 +246,18 @@ function FareBars({ expected, actual, breakdown }: { expected: number | null; ac
     + `${segments.length > 1 ? `; charged fare made up of ${segments.map(s => `${s.label} ${money(s.amount)}`).join(", ")}` : ""}.`;
   // The charged segments fill one after another at one speed, so the track reads left to right.
   const timings = segmentTimings(segments.map(s => s.amount), FARE.chargedStart, FARE.chargedMs);
-  return <div className="fare-bars" role="img" aria-label={label}>
+  return <div className="fare-bars" role="group" aria-label={label}>
     <div className="fare-track"><div className="fare-expected intro-grow" style={{ width: pct(expected ?? 0), ...vars(FARE.expectedStart, FARE.expectedMs) }} /></div>
     <div className="fare-track">
-      {segments.map((s, i) => <div key={i} className="fare-segment intro-grow linear" title={`${s.label}: ${money(s.amount)}`}
-        style={{ width: pct(s.amount), opacity: 1 - (i % 4) * 0.2, ...vars(timings[i].delay, timings[i].duration) }} />)}
+      {segments.map((s, i) => <button type="button" key={i} className="fare-segment intro-grow linear" aria-label={fareReadout(s)} aria-describedby={readoutId}
+        onPointerEnter={() => setDetail(i)} onPointerLeave={event => { if (event.pointerType === "mouse" && document.activeElement !== event.currentTarget) setDetail(null); }}
+        onFocus={() => setDetail(i)} onBlur={() => setDetail(null)} onClick={() => setDetail(i)}
+        onKeyDown={event => { if (event.key === "Escape") setDetail(null); }}
+        style={{ width: pct(s.amount), background: `color-mix(in srgb, var(--accent) ${100 - (i % 4) * 20}%, var(--surface))`, ...vars(timings[i].delay, timings[i].duration) }} />)}
       {expected != null && extra != null && extra > 0 && <div className="fare-marker intro-fade" style={{ left: pct(expected), ...vars(FARE_MARKER_START, FARE.markerMs) }} />}
     </div>
     {extra != null && extra > 0 && <p className="fare-extra intro-rise" style={vars(FARE_EXTRA_START, FARE.extraMs)}>+{money(extra)} above expected</p>}
+    <p id={readoutId} className="chart-readout">{detail != null ? fareReadout(segments[detail]) : segments.length ? "Focus or tap a fare segment for details." : "Charged fare not provided."}</p>
     {segments.length > 1 && <p className="fare-legend">{segments.map(s => `${s.label} ${money(s.amount)}`).join(" · ")}</p>}
   </div>;
 }

@@ -32,3 +32,60 @@ test('the km ruler uses round steps with about four ticks', () => {
   assert.equal(v.niceStep(3.2), 1);
   assert.equal(v.niceStep(40), 10);
 });
+
+test('duration readout interpolates plotted distances and clamps at the endpoints', () => {
+  const series = [{ minutes: 0, km: 0 }, { minutes: 10, km: 6 }, { minutes: 16, km: 6 }, { minutes: 30, km: 12 }];
+  assert.equal(v.guideReadout(series, 5, 20, 8), '5 min · 3.0 km travelled · expected 2.0 km');
+  assert.equal(v.kmAt(series, 23), 9);
+  assert.equal(v.kmAt(series, -1), 0);
+  assert.equal(v.kmAt(series, 99), 12);
+  assert.equal(v.kmAt([], 5), null);
+});
+
+test('duration readout identifies a stop and does not extend the expected route past its end', () => {
+  const series = [{ minutes: 0, km: 0 }, { minutes: 10, km: 6 }, { minutes: 16, km: 6 }, { minutes: 30, km: 12 }];
+  assert.equal(v.guideReadout(series, 14, 20, 8), '14 min · 6.0 km travelled · expected 5.6 km · Stopped 6 min');
+  assert.equal(v.guideReadout(series, 30, 20, 8), '30 min · 12.0 km travelled · expected 8.0 km');
+  assert.equal(v.guideReadout([], 5, null, null), '5 min');
+  assert.equal(v.guideReadout(series, 5, 0, null), '5 min · 3.0 km travelled');
+});
+
+test('fare and extra-distance readouts retain labels and use case amounts', () => {
+  assert.equal(v.fareReadout({ label: 'Distance (14.7 km)', amount: 14.7 }), 'Distance (14.7 km): $14.70');
+  assert.equal(v.distanceReadout(10.2, 14.7), '+4.5 km beyond the expected route');
+  assert.equal(v.distanceReadout(10, 8.5), '1.5 km shorter than the expected route');
+});
+
+test('table rows and headlines expose comparison values including signed differences', () => {
+  assert.deepEqual(v.comparisonRows(10.2, 14.7, 'km'), [
+    { label: 'Expected', value: '10.2 km' }, { label: 'Actual', value: '14.7 km' },
+    { label: 'Difference', value: '+4.5 km (+44%)' },
+  ]);
+  assert.equal(v.differenceLabel(22, 35, 'min'), '+13 min (+59%)');
+  assert.equal(v.differenceLabel(18.5, 24.8, '$'), '+$6.30 (+34%)');
+  assert.equal(v.differenceLabel(10, 8, 'km'), '−2 km (-20%)');
+  assert.equal(v.differenceLabel(10, 10, 'km'), '0 km (0%)');
+  assert.equal(v.differenceLabel(0, 4, 'km'), '+4 km');
+  assert.equal(v.differenceLabel(10, 16.29, '$'), '+$6.29 (+63%)');
+  assert.equal(v.comparisonRows(1.234, 2.345, 'km')[0].value, '1.234 km');
+  assert.equal(v.differenceLabel(null, 4, 'km'), 'Difference unavailable');
+  assert.equal(v.comparisonRows(null, 4, 'km')[0].value, 'Not provided');
+});
+
+test('fare table includes every segment at exactly the amounts plotted', () => {
+  const lines = [{ label: 'Base', amount: 3 }, { label: 'Distance', amount: 7 }];
+  const rows = v.comparisonRows(8, 12, '$', lines);
+  assert.deepEqual(rows.slice(3), v.fareSegments(lines, 12).map(s => ({ label: s.label, value: `$${s.amount.toFixed(2)}` })));
+  assert.deepEqual(v.comparisonRows(8, null, '$', lines).map(row => row.label), ['Expected', 'Actual', 'Difference']);
+  assert.deepEqual(v.comparisonRows(8, 12, '$').at(-1), { label: 'Charged fare', value: '$12.00' });
+});
+
+test('km axis ticks include zero and a round ceiling at or above the data maximum', () => {
+  assert.deepEqual(v.kmTicks(14.7), [0, 5, 10, 15]);
+  assert.deepEqual(v.kmTicks(6), [0, 2, 4, 6]);
+  assert.deepEqual(v.kmTicks(0), [0]);
+  assert.deepEqual(v.kmTicks(NaN), [0]);
+  const ticks = v.kmTicks(0.14);
+  assert.ok(ticks.every(Number.isFinite));
+  assert.ok(ticks.at(-1) >= 0.14);
+});
