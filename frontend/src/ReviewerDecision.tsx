@@ -2,7 +2,6 @@ import { useEffect, useId, useRef, useState } from "react";
 
 import { decisionBar, decisionErrors, FINAL_LABELS, REASON_PLACEHOLDER, savedText, type FinalDecision, type SavedDecision } from "./decisionState";
 import { ButtonLoader } from "./OeroAI";
-import { reveal } from "./routes";
 import { Term } from "./Term";
 import { ApiError, recordReviewerDecision } from "./services/api";
 import type { DisputeCase, Resolution } from "./types";
@@ -23,9 +22,8 @@ export function useReviewerDecision({ runKey, dispute, resolution, onDecided, on
 }) {
   const [entries, setEntries] = useState<Record<string, Entry>>({});
   const inFlight = useRef(new Set<string>());
-  const [overrideRequest, setOverrideRequest] = useState(0);
   const escalated = resolution?.decision === "needs_review";
-  const blank: Entry = { mode: escalated ? "override" : "idle", choice: null, reason: "", busy: false, saved: null, error: null };
+  const blank: Entry = { mode: "idle", choice: null, reason: "", busy: false, saved: null, error: null };
   const entry = (runKey && entries[runKey]) || blank;
   const patch = (key: string, change: Partial<Entry>) =>
     setEntries(prev => ({ ...prev, [key]: { ...(prev[key] ?? blank), ...change } }));
@@ -51,7 +49,6 @@ export function useReviewerDecision({ runKey, dispute, resolution, onDecided, on
     ...entry,
     reopen() { if (runKey && !entry.busy) patch(runKey, { ...blank }); },
     escalated,
-    overrideRequest,
     /** The saved decision for any ruling (by review key), for the queue and the sidebar. */
     savedFor: (key: string | null): SavedDecision | null => (key && entries[key]?.saved) || null,
     setChoice: (choice: FinalDecision) => runKey && patch(runKey, { choice }),
@@ -61,16 +58,18 @@ export function useReviewerDecision({ runKey, dispute, resolution, onDecided, on
       if (resolution && !escalated) record(resolution.decision as FinalDecision, "Accepted the policy ruling.", "accepted");
     },
     submit(choice: FinalDecision, reason: string) { record(choice, reason, escalated ? "decided" : "overridden"); },
-    /** Open the override form; the card scrolls to it and focuses its first field. */
+    /** Open the decision dialog ("Make decision" or "Override…"); it focuses the outcome. */
     startOverride() {
-      if (locked) return;
-      if (runKey) patch(runKey, { mode: "override" });
-      setOverrideRequest(n => n + 1);
+      if (!locked && runKey) patch(runKey, { mode: "override" });
     },
   };
 }
 
-/** The human in the loop: accept the ruling or override it. Either way it becomes a precedent. */
+/**
+ * The human in the loop: accept the ruling or override it. Either way it becomes a precedent.
+ * The outcome and reason are asked in a modal dialog, opened by "Make decision" (escalated) or
+ * "Override…", here or in the decision bar, so the card itself stays a single clear action.
+ */
 export function ReviewerDecision({ resolution, controller }: { resolution: Resolution; controller: DecisionController }) {
   const id = useId();
   const { escalated, mode, busy, saved, error } = controller;
@@ -78,56 +77,83 @@ export function ReviewerDecision({ resolution, controller }: { resolution: Resol
   const options = (Object.keys(FINAL_LABELS) as FinalDecision[]).filter(d => escalated || d !== resolution.decision || d === "partial_refund");
   // Nothing preselected: the reviewer picks the outcome themselves (no nudge towards the AI's proposal).
   const choice = controller.choice && options.includes(controller.choice) ? controller.choice : null;
+  const dialog = useRef<HTMLDialogElement>(null);
   const first = useRef<HTMLSelectElement>(null);
   const [tried, setTried] = useState(false);
   const errors = decisionErrors(choice, controller.reason);
+  const open = mode === "override" && !saved;
 
-  // "Override" / "Decide" in the decision bar: bring the form into view and focus it.
+  // Open on request (from the card or the bar) with the outcome focused; close once saved.
   useEffect(() => {
-    if (controller.overrideRequest) reveal(first.current, "center");
-  }, [controller.overrideRequest]);
+    const box = dialog.current;
+    if (!box) return;
+    if (open && !box.open) {
+      setTried(false);
+      box.showModal();
+      first.current?.focus();
+    } else if (!open && box.open) box.close();
+  }, [open]);
 
   return (
     <section className="card reviewer-decision" id="reviewer-decision" aria-labelledby={`${id}-title`}>
       <h2 id={`${id}-title`}>Your decision</h2>
       {saved ? <p className="reviewer-done">{savedText(saved)}. Similar disputes are now checked against it.</p> : <>
         <p className="small muted">
-          {escalated
-            ? "The rules sent this dispute to you. Choose the outcome and give a reason."
-            : "Accept the policy ruling, or override it with a reason."}{" "}
+          {escalated ? "The rules sent this dispute to you." : "Accept the policy ruling, or override it with a reason."}{" "}
           Your decision becomes a <Term term="precedent">precedent</Term> for similar disputes.
         </p>
-        {mode === "idle" && <div className="reviewer-actions">
-          <button type="button" className="secondary-button" disabled={busy} onClick={() => controller.accept()}><ButtonLoader busy={busy} />{busy ? "Recording…" : "Accept ruling"}</button>
-          <button type="button" className="secondary-button" disabled={busy} onClick={() => controller.startOverride()}>Override…</button>
-        </div>}
-        {mode === "override" && <div className="reviewer-form">
+        <div className="reviewer-actions">
+          {escalated
+            ? <button type="button" className="run-button" disabled={busy} onClick={() => controller.startOverride()}>Make decision</button>
+            : <>
+              <button type="button" className="secondary-button" disabled={busy} onClick={() => controller.accept()}><ButtonLoader busy={busy && !open} />{busy && !open ? "Recording…" : "Accept ruling"}</button>
+              <button type="button" className="secondary-button" disabled={busy} onClick={() => controller.startOverride()}>Override…</button>
+            </>}
+        </div>
+        <div role="alert">{!open && error && <p className="error small">{error}</p>}</div>
+      </>}
+      <dialog className="closed-dialog decision-dialog" ref={dialog} aria-labelledby={`${id}-dialog-title`} aria-describedby={`${id}-dialog-intro`}
+        onClose={() => controller.setMode("idle")}
+        onCancel={event => { if (busy) event.preventDefault(); }}
+        onKeyDown={event => {
+          if (event.key !== "Tab") return;
+          const controls = event.currentTarget.querySelectorAll<HTMLElement>("button:not(:disabled), select:not(:disabled), textarea:not(:disabled)");
+          const firstControl = controls[0], last = controls[controls.length - 1];
+          if (event.shiftKey && document.activeElement === firstControl) { event.preventDefault(); last?.focus(); }
+          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); firstControl?.focus(); }
+        }}>
+        <h2 id={`${id}-dialog-title`}>{escalated ? "Make your decision" : "Override the ruling"}</h2>
+        <p id={`${id}-dialog-intro`} className="muted">
+          {escalated ? "The rules sent this dispute to you. Choose the outcome and give a reason." : "Choose a different outcome and give a reason."}{" "}
+          It becomes a precedent for similar disputes.
+        </p>
+        <div className="reviewer-form">
           <label className="section-label" htmlFor={`${id}-decision`}>{escalated ? "Outcome" : "Change the outcome to"}</label>
-          <select id={`${id}-decision`} ref={first} value={choice ?? ""} onChange={e => controller.setChoice(e.target.value as FinalDecision)}
+          <select id={`${id}-decision`} ref={first} value={choice ?? ""} disabled={busy} onChange={e => controller.setChoice(e.target.value as FinalDecision)}
             aria-invalid={tried && !!errors.outcome} aria-describedby={tried && errors.outcome ? `${id}-decision-error` : undefined}>
             <option value="" disabled>Choose an outcome…</option>
             {options.map(d => <option key={d} value={d}>{FINAL_LABELS[d]}</option>)}
           </select>
           {tried && errors.outcome && <p className="field-error small" id={`${id}-decision-error`}>{errors.outcome}</p>}
           <label className="section-label" htmlFor={`${id}-reason`}>Reason</label>
-          <textarea id={`${id}-reason`} rows={2} maxLength={300} value={controller.reason} onChange={e => controller.setReason(e.target.value)}
+          <textarea id={`${id}-reason`} rows={3} maxLength={300} value={controller.reason} disabled={busy} onChange={e => controller.setReason(e.target.value)}
             placeholder={REASON_PLACEHOLDER}
             aria-invalid={tried && !!errors.reason} aria-describedby={tried && errors.reason ? `${id}-reason-error` : undefined} />
           {tried && errors.reason && <p className="field-error small" id={`${id}-reason-error`}>{errors.reason}</p>}
-          <div className="reviewer-actions">
-            <button type="button" className="run-button" disabled={busy}
-              onClick={() => {
-                setTried(true);
-                if (!choice || errors.reason) return;
-                controller.submit(choice, controller.reason.trim());
-              }}>
-              <ButtonLoader busy={busy} />{busy ? "Recording…" : escalated ? "Record decision" : "Record override"}
-            </button>
-            {!escalated && <button type="button" className="secondary-button" disabled={busy} onClick={() => controller.setMode("idle")}>Cancel</button>}
-          </div>
-        </div>}
-        <div role="alert">{error && <p className="error small">{error}</p>}</div>
-      </>}
+        </div>
+        <div role="alert">{open && error && <p className="error small">{error}</p>}</div>
+        <div className="closed-dialog-actions">
+          <button type="button" className="secondary-button" disabled={busy} onClick={() => controller.setMode("idle")}>Cancel</button>
+          <button type="button" className="run-button" disabled={busy}
+            onClick={() => {
+              setTried(true);
+              if (!choice || errors.reason) return;
+              controller.submit(choice, controller.reason.trim());
+            }}>
+            <ButtonLoader busy={busy} />{busy ? "Recording…" : escalated ? "Confirm decision" : "Confirm override"}
+          </button>
+        </div>
+      </dialog>
     </section>
   );
 }
@@ -144,7 +170,7 @@ export function DecisionBar({ resolution, controller, unavailable }: { resolutio
         {view.actions.includes("accept") && <button type="button" className="run-button" disabled={view.disabled} onClick={() => controller.accept()}>
           <ButtonLoader busy={controller.busy} />{controller.busy ? "Recording…" : "Accept ruling"}</button>}
         {view.actions.includes("override") && <button type="button" className="secondary-button" disabled={view.disabled} onClick={() => controller.startOverride()}>Override</button>}
-        {view.actions.includes("decide") && <button type="button" className="run-button" disabled={view.disabled} onClick={() => controller.startOverride()}>Decide</button>}
+        {view.actions.includes("decide") && <button type="button" className="run-button" disabled={view.disabled} onClick={() => controller.startOverride()}>Make decision</button>}
       </div>}
     </section>
   );
