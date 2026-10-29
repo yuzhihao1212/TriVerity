@@ -1409,3 +1409,31 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .presentation-mode .chart-key, .presentation-mode .chart-view-toggle button { font-size: 13px; }
 .presentation-mode .trip-svg .svg-label { font-size: 10px; }
 @media (max-width: 1000px) { .comparisons { grid-template-columns: 1fr; gap: var(--space-4); } }
+
+/* Sidebar toolbar stays above the scrolling groups; its rule spans the full sidebar. */
+.sidebar { --sidebar-inline: 12px; gap: 0; padding-top: 0; }
+.sidebar-head { position: sticky; top: 0; z-index: 30; align-self: stretch; margin: 0 calc(-1 * var(--sidebar-inline)) 12px; padding: 12px var(--sidebar-inline); border-bottom: 1px solid var(--border); background: var(--bg); }
+.sidebar-body { gap: 0; }
+.sidebar-body > .chip-button, .sidebar-body > .sidebar-note { margin-bottom: var(--space-2); }
+.sidebar-group { margin: 0; }
+.sidebar-category .dispute-list { margin-top: 4px; }
+.sidebar-category + .sidebar-category { margin-top: 6px; }
+.sidebar-category[data-open="true"] + .sidebar-category { margin-top: 16px; }
+.sidebar-group-label { display: inline-flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.sidebar-group-label .type-icon { margin: 0; color: inherit; }
+.sidebar-new { position: relative; display: inline-flex; flex: none; }
+.sidebar-new-tooltip { display: none; position: absolute; z-index: 50; top: 100%; right: 0; width: max-content; max-width: 220px; padding: var(--space-2) var(--space-3); border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 12px; line-height: 1.5; }
+.sidebar-new:hover .sidebar-new-tooltip:not([hidden]), .sidebar-new:focus-within .sidebar-new-tooltip:not([hidden]) { display: block; }
+.sidebar-collapsed .sidebar { --sidebar-inline: 8px; }
+.sidebar-collapsed .sidebar-head { align-items: center; }
+.sidebar-collapsed .sidebar-new-tooltip { top: 0; left: 100%; right: auto; }
+.presentation-mode .sidebar-new-tooltip { font-size: 14px; }
+.closed-case-actions { min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.closed-case-actions button { white-space: normal; overflow-wrap: anywhere; }
+.agent-flow-result > button { cursor: pointer; }
+@media (max-width: 760px) {
+  .sidebar { --sidebar-inline: 16px; }
+  .sidebar-collapsed .sidebar-head { position: static; margin: 0; padding: 0; border: 0; background: var(--transparent); }
+  .sidebar-collapsed .sidebar-new-tooltip { top: 100%; left: auto; right: 0; }
+  .closed-case-actions, .closed-case-actions button { width: 100%; }
+}

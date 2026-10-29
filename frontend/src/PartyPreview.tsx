@@ -32,7 +32,7 @@ const NO_NOTES: Record<Party, string> = { rider: "", driver: "" };
  * shown read-only, exactly as they will see it, and the reviewer may add a short note under it.
  * The phones are a preview until "Approve & send"; then they are delivered and can be appealed.
  */
-export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailable, rulingVisited, progress, onGoToRuling, onSent, onAppealed, next, onNext, onBack, reopened = false, previous = null, appealsAvailable = true }: {
+export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailable, rulingVisited, progress, onGoToRuling, onSent, onAppealed, next, nextLabel, onNext, onBack, reopened = false, previous = null, appealsAvailable = true }: {
   resolution: Resolution; dispute: DisputeCase; reviewKey: string;
   reopened?: boolean; previous?: SentRecord | null; appealsAvailable?: boolean;
   saved: SavedDecision | null; unavailable: boolean; rulingVisited: boolean;
@@ -40,7 +40,7 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
   progress: ReviewSummary | null;
   onGoToRuling: () => void; onSent: () => void; onAppealed?: () => void;
   /** The next case still to do, or null when none is left. */
-  next: string | null; onNext: () => void; onBack: () => void;
+  next: string | null; nextLabel?: string; onNext: () => void; onBack: () => void;
 }) {
   const id = useId();
   const [sent, setSent] = useState<SentRecord | null>(() => sentRecords().get(reviewKey));
@@ -147,7 +147,7 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
         <section className="card review-complete" aria-label={closingTitle(dispute.dispute_id, progress)}>
           <p className="review-complete-title"><Icon name="check" />{closingTitle(dispute.dispute_id, progress)}</p>
           <div className="review-complete-actions">
-            {next && <button type="button" className="run-button" onClick={onNext}>Next case: {next} <span aria-hidden="true">→</span></button>}
+            {next && <button type="button" className="run-button" onClick={onNext}>{nextLabel ?? `Next case: ${next} →`}</button>}
             <button type="button" className="secondary-button" onClick={onBack}>Back to queue</button>
           </div>
         </section>

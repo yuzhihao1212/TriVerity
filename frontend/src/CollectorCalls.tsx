@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import { readDetailOpen, writeDetailOpen } from "./detailDisclosure";
 import { Chip } from "./Chip";
 import { sourceTone } from "./chipStyle";
 import {
@@ -15,16 +16,12 @@ export const AUDIT_TITLE_ID = "collector-calls-title";
 export const AUDIT_BODY_ID = "collector-calls-body";
 const OPEN_EVENT = "triverity:open-audit";
 
-function readOpen(): boolean {
-  try { return sessionStorage.getItem(AUDIT_OPEN_KEY) === "open"; } catch { return false; }
-}
-
 /**
- * Opens the audit trail if it is collapsed (the "Full lookup details ↓" link). The component
+ * Opens the audit trail if it is collapsed (the "Full lookup details ↑" link). The component
  * listens for this, so the link and the toggle share one state.
  */
 export function openAuditTrail(): void {
-  try { sessionStorage.setItem(AUDIT_OPEN_KEY, "open"); } catch { /* This session only. */ }
+  writeDetailOpen(AUDIT_OPEN_KEY, true);
   window.dispatchEvent(new Event(OPEN_EVENT));
 }
 
@@ -40,7 +37,7 @@ function useRevealAfterOpen() {
 
 /** "How the evidence was gathered": a plain summary, then the lookups on demand. */
 export function CollectorCalls({ collection }: { collection?: Resolution["evidence_collection"] }) {
-  const [open, setOpen] = useState(readOpen);
+  const [open, setOpen] = useState(() => readDetailOpen(AUDIT_OPEN_KEY));
   const revealHeading = useRevealAfterOpen();
   // The "Full lookup details" link in "How this step was decided" opens it first, then scrolls.
   useOpenEvent(() => { setOpen(true); revealHeading(); });
@@ -49,7 +46,7 @@ export function CollectorCalls({ collection }: { collection?: Resolution["eviden
   const summary = collectionSummary(collection);
   const rounds = mergeLookups(calls);
   const toggle = () => setOpen(previous => {
-    try { sessionStorage.setItem(AUDIT_OPEN_KEY, previous ? "closed" : "open"); } catch { /* This session only. */ }
+    writeDetailOpen(AUDIT_OPEN_KEY, !previous);
     return !previous;
   });
   return <section className="card collector-calls" aria-labelledby={AUDIT_TITLE_ID}>

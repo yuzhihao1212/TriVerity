@@ -16,6 +16,8 @@ import { reveal } from "./routes";
 import { Term } from "./Term";
 import type { DisputeCase, Resolution } from "./types";
 
+export const EVIDENCE_FACTS_ID = "evidence-facts";
+
 type Select = ((id: string) => void) | undefined;
 interface RowContext { activeId: string | null; onSelectFact: Select; dispute?: DisputeCase; resolution?: Resolution; intro: boolean }
 
@@ -45,7 +47,7 @@ export function FactLibrary({ facts, activeId, request, expanded = false, groupe
   const body = grouped ? <SourceGrid facts={facts} context={context} />
     : <ul className="fact-library-list">{facts.map((fact, index) => <FactRow key={fact.id ?? `${fact.source}-${index}`} fact={fact} context={context} />)}</ul>;
 
-  return <section className="card fact-library" aria-labelledby={`${id}-title`}>
+  return <section className="card fact-library" id={grouped ? EVIDENCE_FACTS_ID : undefined} tabIndex={-1} aria-labelledby={`${id}-title`}>
     <div className="panel-head"><h2 id={`${id}-title`}>{grouped ? "Evidence" : "Facts behind the citations"}</h2><InternalBadge detail="Computed facts · internal record" /></div>
     <p className="small muted">{grouped
       ? "Facts are grouped by source. An ID is shown only when this response supplies an unambiguous ID/text pair. Facts that repeat the same value are shown once; open “related” to read each original sentence."
