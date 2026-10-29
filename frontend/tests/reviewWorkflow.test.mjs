@@ -169,7 +169,7 @@ test('caseStatus: not run, ready, decide, reviewed, closed', () => {
   assert.equal(q.caseStatus({ decision: 'needs_review' }, false, false), 'decide');
   assert.equal(q.caseStatus({ decision: 'needs_review' }, true, false), 'reviewed');
   assert.equal(q.caseStatus({ decision: 'no_action' }, true, true), 'closed');
-  assert.deepEqual(Object.values(q.STATUS_WORDS), ['Not run', 'Ready', 'Decide', 'Reviewed', 'Closed', 'Reopened', 'Appeal waiting']);
+  assert.deepEqual(Object.values(q.STATUS_WORDS), ['New', 'Ready', 'Decide', 'Reviewed', 'Closed', 'Reopened', 'Appeal waiting']);
   for (const status of Object.keys(q.STATUS_WORDS)) assert.ok(q.STATUS_ICONS[status], `${status} has an icon (always with its word)`);
 });
 
@@ -194,7 +194,7 @@ test('next case: the next not-done case in queue order, none when all are closed
 test('tile counts', () => {
   assert.deepEqual(q.tileCounts(rows), { queue: 7, ready: 2, decide: 2, done: 1, appeals: 0 });
   assert.deepEqual(q.tileCounts([]), { queue: 0, ready: 0, decide: 0, done: 0, appeals: 0 });
-  assert.deepEqual(q.START_HERE.map(s => [s.id, s.title]), [['D001', 'Detour caught'], ['D006', 'Fee upheld'], ['D007', 'Knows when to stop']]);
+  assert.deepEqual(q.START_HERE.map(s => [s.id, s.title]), [['D001', 'A route dispute'], ['D006', 'A no-show fee'], ['D007', 'A safety flag']]);
 });
 
 test('an appeal from a phone gets a reviewer line, flagged when it is a safety appeal', () => {

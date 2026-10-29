@@ -1204,6 +1204,7 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .home-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
 .home-head h2 { margin-right: auto; }
 .home-head .new-button { flex: none; }
+.home-intro { flex-basis: 100%; margin: 0; color: var(--muted); font-size: 14px; }
 .home-status-line { display: flex; flex-wrap: wrap; column-gap: var(--space-1); margin: 0; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
 .home-status-line > span { white-space: nowrap; }
 .home-status-warning { color: var(--warn-text); font-weight: 600; }
@@ -1214,14 +1215,15 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .home-start h3 { color: var(--accent-text); font-size: 15px; }
 .home-start-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); list-style: none; margin: 0; padding: 0; }
 .home-start-steps > li { min-width: 0; }
-.home-start-step { position: relative; display: flex; align-items: flex-start; gap: var(--space-2); height: 100%; padding: var(--space-3); border: 1px solid var(--transparent); border-radius: 10px; color: var(--text); text-decoration: none; }
-.home-start-step.is-next { border-color: var(--accent-text); background: var(--bg); }
+.home-start-step { position: relative; display: flex; align-items: flex-start; gap: var(--space-2); height: 100%; padding: var(--space-3); border: 1px solid var(--border); border-radius: 10px; color: var(--text); background: var(--bg); text-decoration: none; }
+.home-start-step.is-next { border-color: var(--accent-text); box-shadow: inset 0 0 0 1px var(--accent-text); }
 .home-start-step:hover, .home-start-step:focus-visible { background: var(--bg); border-color: var(--accent-text); }
 .home-start-number { display: grid; place-items: center; flex: none; min-width: 24px; height: 24px; color: var(--accent-text); font-size: 16px; font-weight: 600; }
 .home-start-number .icon { width: 20px; height: 20px; }
 .home-start-copy { display: grid; gap: var(--space-1); min-width: 0; padding-bottom: var(--space-6); overflow-wrap: anywhere; }
 .home-start-copy strong { font-size: 14px; line-height: 1.5; }
 .home-start-id, .home-start-blurb { color: var(--muted); font-size: 12px; }
+.home-start-step:not(.is-next) .home-start-copy { padding-bottom: 0; }
 .home-start-next { position: absolute; bottom: var(--space-2); left: var(--space-3); color: var(--accent-text); font-size: 12px; font-weight: 600; }
 .home-cases { display: grid; gap: var(--space-2); min-width: 0; }
 .home-cases h3 { color: var(--muted); font-size: 13px; font-weight: 500; }
@@ -1241,6 +1243,7 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .home-row-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .home-row-status { display: inline-flex; flex: none; align-items: center; gap: 6px; padding: 3px var(--space-2); border: 1px solid var(--border); border-radius: 999px; color: var(--muted); background: var(--surface); font-size: 13px; font-weight: 600; white-space: nowrap; }
 .home-row-status .icon { width: 16px; height: 16px; flex: none; }
+.home-row-status.status-not_run { border-color: var(--transparent); background: var(--transparent); font-weight: 500; }
 .home-row-status.status-ready { color: var(--ok-text); background: var(--ok-soft); border-color: var(--transparent); }
 .home-row-status.status-decide, .home-row-status.status-appeal_waiting { color: var(--warn-text); background: var(--warn-soft); border-color: var(--transparent); }
 .home-row-chevron { width: 16px; height: 16px; flex: none; color: var(--muted); }
@@ -1252,7 +1255,7 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 @media (max-width: 760px) {
   .home-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
   .home-head .new-button { grid-column: 2; grid-row: 1; }
-  .home-status-line { grid-column: 1 / -1; }
+  .home-status-line, .home-intro { grid-column: 1 / -1; }
   .home-start { padding: var(--space-4); }
   .home-start-steps { grid-template-columns: minmax(0, 1fr); }
   .home-start-copy { padding-bottom: var(--space-5); }

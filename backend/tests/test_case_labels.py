@@ -22,8 +22,8 @@ LABELS = {
     "D004": "Longer route, 4 min faster",
     "D005": "Driver stopped 378 m away",
     "D006": "7-min wait, rider contacted",
-    "D007": "Threat in chat, fraud risk",
-    "D008": "Detour, high bad-faith risk",
+    "D007": "Threat in chat",
+    "D008": "Detour, 3 recent disputes",
     "DISP-002": "Organisers' case: lobby no-show",
 }
 SAMPLES = {case.dispute_id: case for case in load_samples()}
