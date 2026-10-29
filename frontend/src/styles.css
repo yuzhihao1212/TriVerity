@@ -1298,3 +1298,32 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
   .closed-reopen { width: 100%; }
   .closed-dialog-actions > button { flex: 1; }
 }
+
+/* Case orientation: facts stay plain; only the outcome carries a decision tone. */
+.case-headline { color: var(--text); font-size: 14px; line-height: 1.65; overflow-wrap: anywhere; }
+.case-headline-outcome { font-weight: 600; }
+.case-headline-outcome.tone-ok { color: var(--ok-text); }
+.case-headline-outcome.tone-warn { color: var(--warn-text); }
+.case-brief { display: grid; gap: var(--space-3); margin-bottom: var(--space-6); padding: var(--space-4); border: 1px solid var(--border); border-radius: 12px; background: var(--surface); min-width: 0; }
+.case-brief h3 { font-size: 16px; }
+.case-brief dl { display: grid; gap: var(--space-2); margin: 0; min-width: 0; }
+.case-brief-row { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: var(--space-3); font-size: 13px; }
+.case-brief dt { color: var(--muted); }
+.case-brief dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.case-brief-claim { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.case-brief-row ul { padding-left: var(--space-4); }
+.case-brief-note { color: var(--muted); font-size: 12px; }
+.run-cost { position: relative; display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; }
+.run-cost-note { color: var(--muted); font-size: 13px; }
+.run-cost-info { color: var(--muted); flex: none; }
+.run-cost-info .icon { width: 18px; height: 18px; }
+.run-cost-popover { position: absolute; z-index: 30; top: 100%; left: 0; width: min(300px, calc(100vw - 64px)); padding: var(--space-3); border: 1px solid var(--border); border-radius: 9px; background: var(--bg); color: var(--text); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.presentation-mode .case-headline, .presentation-mode .case-brief h3 { font-size: 17px; }
+.presentation-mode .case-brief-row, .presentation-mode .run-cost-note, .presentation-mode .run-cost-popover { font-size: 15px; }
+.presentation-mode .case-brief-note { font-size: 14px; }
+@media (max-width: 760px) {
+  .case-brief-row { grid-template-columns: 115px minmax(0, 1fr); gap: var(--space-2); }
+  .case-run-bar .run-cost { width: 100%; }
+  .case-run-bar > .secondary-button { width: 100%; }
+  .run-cost-popover { max-width: 100%; }
+}

@@ -6,8 +6,11 @@ import { AgentsStrip } from "./AgentsStrip";
 import { WorkflowTabs } from "./WorkflowTabs";
 import { savedTab, type WorkflowTab } from "./workflow";
 import { FactLibrary } from "./FactLibrary";
-import { headerChips, statusPill, type FinalHeaderOutcome } from "./stepVisuals";
+import { statusPill, type FinalHeaderOutcome } from "./stepVisuals";
 import { createReviewStore, openCounts, reviewKey, reviewSummary, reviewedSteps, REOPENED_STEPS, type ReviewSummary } from "./reviewProgress";
+import { CaseBrief } from "./CaseBriefCard";
+import { caseHeadline, headerFinalOutcome } from "./caseBrief";
+import { RunCost } from "./RunCost";
 import { CaseComparison } from "./CaseComparison";
 import { Debate } from "./Debate";
 import { EvidenceList, EvidenceText, type FactLinks } from "./EvidenceList";
@@ -22,7 +25,7 @@ import { DecisionBar, ReviewerDecision, useReviewerDecision } from "./ReviewerDe
 import { DECISION_LABELS, decisionTone, riskTone } from "./outcomeTone";
 import { Chip, InternalBadge } from "./Chip";
 import { chipClass, chipTone, sourceTone } from "./chipStyle";
-import { savedText, type SavedDecision } from "./decisionState";
+import { savedText } from "./decisionState";
 import { AiToggle } from "./AiToggle";
 import { readAiMode, writeAiMode, type AiMode } from "./aiMode";
 import { NewDisputeIcon, SidebarToggle } from "./SidebarToggle";
@@ -32,7 +35,7 @@ import { Term } from "./Term";
 import { PresentationToggle, ThemeToggle } from "./ThemeToggle";
 import type { Theme } from "./theme";
 import { PartyPreview, sentRecords } from "./PartyPreview";
-import { clockText, DELIVERED_ANNOUNCEMENT, finalOutcome, type SentRecord } from "./notifyState";
+import { clockText, DELIVERED_ANNOUNCEMENT } from "./notifyState";
 import { DisputeForm } from "./DisputeForm";
 import { ApiError, getSamples, listAppeals, resolveDisputeLive } from "./services/api";
 import { AccessCodeField } from "./AccessCodeField";
@@ -419,7 +422,8 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
               events={sentRecords().events(reviewId)} earlier={sentRecords().earlier(selected.dispute_id, reviewId)}
               appealWaiting={waitingIds.has(selected.dispute_id)} onReopen={reopenCase} />}
             <CaseHeader dispute={selected} resolution={resolution} busy={resolving === selected.dispute_id} streaming={streaming} progress={progress}
-              final={resolution ? headerFinal(resolution, selected, decision.saved, latestSent) : null} />
+              final={resolution ? headerFinalOutcome(resolution, selected, decision.saved, latestSent) : null} />
+            <CaseBrief dispute={selected} resolution={resolution} showProposal={reviewed.has("ruling")} />
             <WorkflowTabs active={activeTab} resolution={resolution} busy={resolving === selected.dispute_id}
               liveSteps={resolving === selected.dispute_id ? liveSteps : undefined} reviewed={reviewed} onChange={changeTab}
               render={tab => resolving === selected.dispute_id ? <LiveProgress disputeId={selected.dispute_id} steps={liveSteps} startedAt={runStartedAt} streaming={streaming} /> : <>
@@ -428,16 +432,13 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
                   <CasePanel dispute={selected} availableIds={factIds} onSelectFact={selectFact} />
                   {actions.run && needsAccessCode(selected.dispute_id, own) && <AccessCodeField ref={accessCodeInput} id={ACCESS_CODE_FIELD_ID}
                     value={accessCode} onChange={changeAccessCode} />}
-                  {actions.run ? <><div className="run-bar">
+                  {actions.run ? <div className="run-bar case-run-bar">
                     <button className="run-button" onClick={() => resolve(selected)} disabled={resolving !== null}>
                       {resolution ? "Re-run agents" : "Run agents"}
                     </button>
-                    <span className={`token-warning${aiMode === "offline" ? " offline" : ""}`} role="note">{aiMode === "live"
-                      ? "AI live: uses real tokens (about $0.002 per run)"
-                      : "AI offline: free, same ruling; arguments and explanations use template text"}</span>
+                    <RunCost offline={aiMode === "offline"} hasResult={!!resolution} />
                     <button className="secondary-button" onClick={() => { setForm({ template: selected }); setError(null); }}>Edit as new dispute</button>
-                  </div>
-                  {resolution && <p className="small muted">This case has a saved result. Re-running uses tokens again.</p>}</> : <p className="small muted">Closed. Reopen the case to run the agents again.</p>}
+                  </div> : <p className="small muted">Closed. Reopen the case to run the agents again.</p>}
                 </>}
                 {tab === "evidence" && resolution && <><FactLibrary facts={facts} activeId={activeFact} request={factRequest} expanded grouped onSelectFact={selectFact} dispute={selected} resolution={resolution} /><CollectorCalls collection={resolution.evidence_collection} /></>}
                 {tab === "hearing" && resolution && <Debate resolution={resolution} dispute={selected} availableIds={factIds} onSelectFact={selectFact} />}
@@ -480,35 +481,19 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
   );
 }
 
-/**
- * The outcome the header shows: the reviewer's current decision, else the last one sent, else
- * the AI ruling (null). Accepting the ruling keeps the AI outcome without a suffix.
- */
-function headerFinal(resolution: Resolution, dispute: DisputeCase, saved: SavedDecision | null | undefined,
-  latest: SentRecord | null): FinalHeaderOutcome | null {
-  if (saved && saved.kind !== "accepted") {
-    const outcome = finalOutcome(resolution, saved, dispute, null);
-    const amount = outcome.needsAmount && latest?.decision === saved.decision ? latest.amount : outcome.amount;
-    return { decision: saved.decision, amount, by: saved.kind === "decided" ? "decided" : "overridden" };
-  }
-  if (!saved && latest && latest.decision !== resolution.decision) {
-    return { decision: latest.decision, amount: latest.amount, by: latest.reviewer?.kind === "decided" ? "decided" : "overridden" };
-  }
-  return null;
-}
-
 function CaseHeader({ dispute, resolution, busy, streaming, progress, final }: {
   dispute: DisputeCase; resolution?: Resolution; busy: boolean; streaming: boolean; progress: ReviewSummary | null;
   final?: FinalHeaderOutcome | null;
 }) {
-  const chips = headerChips(dispute, resolution, final);
+  const headline = caseHeadline(dispute, resolution, final);
   const status = statusPill({ busy, streaming, hasResult: !!resolution });
   return <header className="case-file-head">
     <div className="case-file-title">
       <h2 id="case-title">{dispute.dispute_id} <Chip>{TYPE_LABELS[dispute.type]}</Chip></h2>
-      {chips.length > 0 && <ul className="chip-row" aria-label="Case summary">
-        {chips.map(chip => <Chip as="li" key={chip.key} tone={chipTone(chip.tone)}>{chip.label}</Chip>)}
-      </ul>}
+      {(headline.facts || headline.outcome) && <p className="case-headline">
+        {headline.facts}{headline.facts && headline.outcome && " · "}
+        {headline.outcome && <span className={`case-headline-outcome tone-${headline.tone}`}>{headline.outcome}</span>}
+      </p>}
     </div>
     <div className="case-status">
       <Chip dot pulse={status.pulse} tone={chipTone(status.tone)} className="case-save-status" title={status.detail}>
