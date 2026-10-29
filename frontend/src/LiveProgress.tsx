@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Chip } from "./Chip";
-import { SourceBadge } from "./Debate";
+import { SourceBadge } from "./SourceBadge";
 import { Icon } from "./Icon";
+import { FlatLoader, useLoaderVisible } from "./OeroAI";
 import { humanizeAgentMessage } from "./agentText";
 import { duration, stepMessage, stepSource } from "./progress";
 import { AGENT_ORDER, isFinished, nearLatest, progressEstimate, progressName, type FinishedTimes } from "./progressEstimate";
@@ -37,6 +38,8 @@ export function LiveProgress({ disputeId, steps, startedAt, finishedAt = {}, end
   const view = progressEstimate({ steps, finishedAt, elapsed: complete ? (endedAt - startedAt) / 1000 : elapsed,
     previousRemaining: previousRemaining.current, complete, streaming });
   useEffect(() => { previousRemaining.current = view.remaining; }, [view.remaining]);
+  // The flat OeroAI loader covers only the wait for the first agent event; then the progress bar takes over.
+  const connectingLoader = useLoaderVisible(!complete && streaming && steps.length === 0);
 
   // Only the reviewer scrolling up pauses following (the app's own scrolls never do);
   // reaching the bottom again resumes it.
@@ -103,7 +106,7 @@ export function LiveProgress({ disputeId, steps, startedAt, finishedAt = {}, end
       <div className="live-progress-track" role="progressbar" aria-label="Agents progress" aria-valuemin={0} aria-valuemax={9} aria-valuenow={view.done}>
         <span className={`live-progress-fill${complete || view.fill === 100 ? " complete" : ""}`} style={{ width: `${view.fill}%` }} />
       </div>
-      <p className="live-running" aria-live="off">{view.runningLabel}</p>
+      <p className="live-running" aria-live="off">{connectingLoader && <FlatLoader className="button-loader" />}{view.runningLabel}</p>
     </div>
     {!complete && <p className="muted small">{streaming
       ? "Results appear as each agent finishes. Times are estimates from typical runs; parallel agents may finish in a different order."
@@ -123,7 +126,7 @@ export function LiveProgress({ disputeId, steps, startedAt, finishedAt = {}, end
             : humanizeAgentMessage(entry.agent, stepMessage(entry)) || stepMessage(entry);
         return <li key={agent}>
           <div className="live-step-head"><span className="live-step-check" aria-hidden="true">✓</span><strong>{progressName(agent)}</strong>
-            {source === "llm" || source === "fallback" ? <SourceBadge source={source} /> : <Chip size="sm" tone="outline">{source === "code" ? "Code" : "Source not supplied"}</Chip>}
+            {source === "llm" || source === "fallback" || source === "code" ? <SourceBadge source={source} /> : <Chip size="sm" tone="outline">Source not supplied</Chip>}
             {time && <span className="step-duration muted">{time}</span>}
           </div><p title={message}>{message}</p>
         </li>;
@@ -140,7 +143,7 @@ export function ProgressAnnouncements({ steps }: { steps: AgentLogEntry[] }) {
   return <div className="sr-only" role="log" aria-label="Live agent progress" aria-live="polite" aria-relevant="additions" aria-atomic="false">
     {steps.filter(isFinished).map(entry => {
       const source = stepSource(entry), time = duration(entry.duration_ms);
-      const badge = source === "llm" ? "AI" : source === "fallback" ? "Fallback" : source === "code" ? "Code" : "";
+      const badge = source === "llm" ? "AI" : source === "fallback" ? "Fallback" : source === "code" ? "Rules" : "";
       return <p key={`${entry.step}-${entry.agent}`}>{agentLabel(entry.agent)} completed. {badge}{time ? ` · ${time}` : ""}</p>;
     })}
   </div>;

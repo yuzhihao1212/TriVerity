@@ -14,9 +14,47 @@
     <script>
       try { var t = localStorage.getItem("triverity.theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
     </script>
+    <style>
+      /* The OeroAI mark and its flat loader (OeroAI.tsx). Here, not in the bundle, so the splash
+         below works before the app loads. The flat loader: separate, orbit 120°, rejoin; the
+         circle heading for the top turns rose mid-orbit, so it always rests with red on top. */
+      :root { --oero-red: #e8365f; --oero-ink: #2b2f36; --oero-web: #fbd3dd; --oero-muted: #606774; background: #ffffff; }
+      :root[data-theme="dark"] { --oero-red: #ff789c; --oero-ink: #f1f2f5; --oero-web: #5a2a3a; --oero-muted: #abb1bb; background: #171b20; }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) { --oero-red: #ff789c; --oero-ink: #f1f2f5; --oero-web: #5a2a3a; --oero-muted: #abb1bb; background: #171b20; }
+      }
+      .oero-web { fill: var(--oero-web); }
+      .oero-top { fill: var(--oero-red); }
+      .oero-left, .oero-right { fill: var(--oero-ink); }
+      .oero-loader .oero-trio { transform-origin: 32px 35.67px; animation: oero-orbit 1.8s ease-in-out infinite; }
+      .oero-loader circle { transform-box: fill-box; transform-origin: center; animation: oero-part 1.8s ease-in-out infinite; }
+      .oero-loader .oero-web { animation: oero-web 1.8s ease-in-out infinite; }
+      .oero-loader .oero-top { animation-name: oero-part, oero-to-ink; }
+      .oero-loader .oero-left { animation-name: oero-part, oero-to-red; }
+      @keyframes oero-orbit { 0% { transform: rotate(0) scale(1); } 20% { transform: rotate(0) scale(1.38); } 80% { transform: rotate(120deg) scale(1.38); } 100% { transform: rotate(120deg) scale(1); } }
+      @keyframes oero-part { 0%, 100% { transform: scale(1); } 20%, 80% { transform: scale(.6); } }
+      @keyframes oero-web { 0%, 100% { opacity: 1; } 15%, 85% { opacity: 0; } }
+      @keyframes oero-to-ink { 0%, 40% { fill: var(--oero-red); } 60%, 100% { fill: var(--oero-ink); } }
+      @keyframes oero-to-red { 0%, 40% { fill: var(--oero-ink); } 60%, 100% { fill: var(--oero-red); } }
+      @keyframes oero-pulse { from { opacity: 1; } to { opacity: .45; } }
+      @media (prefers-reduced-motion: reduce) {
+        .oero-loader, .oero-loader * { animation: none !important; }
+        .oero-loader { animation: oero-pulse .9s ease-in-out infinite alternate !important; }
+      }
+      /* Pre-app splash: only after 300 ms, so a fast load shows nothing. React replaces it on mount. */
+      .app-splash { display: grid; justify-items: center; align-content: center; gap: 12px; min-height: 100vh; margin: 0; color: var(--oero-muted); font: 500 14px Poppins, system-ui, sans-serif; opacity: 0; animation: app-splash-in .2s ease-out .3s forwards; }
+      .app-splash .oero-mark { width: 48px; height: 48px; overflow: visible; }
+      @keyframes app-splash-in { to { opacity: 1; } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div class="app-splash" role="status">
+      <svg class="oero-mark oero-loader" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><g class="oero-trio">
+        <path class="oero-web" d="M32 20 L18 44 L46 44 Z" />
+        <circle class="oero-top" cx="32" cy="17" r="13" /><circle class="oero-left" cx="17" cy="45" r="13" /><circle class="oero-right" cx="47" cy="45" r="13" />
+      </g></svg>
+      <span>Loading TriVerity…</span>
+    </div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

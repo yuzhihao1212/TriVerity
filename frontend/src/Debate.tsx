@@ -1,22 +1,15 @@
-import { useId, useState } from "react";
+import { useId, useState, type CSSProperties } from "react";
 import { focusSection } from "./routes";
 
 import { Chip } from "./Chip";
-import { sourceTone } from "./chipStyle";
 import { EvidenceList, EvidenceText, type FactLinks } from "./EvidenceList";
+import { Icon } from "./Icon";
 import { bottomLine, comparisonGroups } from "./hearingDisplay";
 import { riskTone } from "./outcomeTone";
 import { checkSummary, checksFor, missingReplyText, VERDICT } from "./ruleChecks";
-import { FALLBACK_TOOLTIP } from "./stepVisuals";
+import { SourceBadge } from "./SourceBadge";
 import { Term } from "./Term";
 import type { AgentCase, DisputeCase, Resolution } from "./types";
-
-/** AI (accent, sparkle), Fallback (amber, explained in its tooltip) or Code (neutral). */
-export function SourceBadge({ source, explain = false }: { source: "llm" | "fallback" | "code"; explain?: boolean }) {
-  if (source === "llm") return <Chip size="sm" tone={sourceTone(source)} icon="sparkle">AI</Chip>;
-  if (source === "code") return <Chip size="sm" tone={sourceTone(source)}>Code</Chip>;
-  return <Chip size="sm" tone={sourceTone(source)} className="has-tooltip" title={FALLBACK_TOOLTIP}>Fallback{explain && <span className="sr-only">: {FALLBACK_TOOLTIP}</span>}</Chip>;
-}
 
 function ArgumentSummary({ text, prefix, availableIds, onSelectFact }: { text: string; prefix?: string } & FactLinks) {
   const id = useId();
@@ -26,7 +19,7 @@ function ArgumentSummary({ text, prefix, availableIds, onSelectFact }: { text: s
     <p><strong>{prefix}<EvidenceText text={first} availableIds={availableIds} onSelectFact={onSelectFact} /></strong></p>
     {rest && <>
       <button type="button" className="hearing-read-more" aria-expanded={expanded} aria-controls={id} onClick={() => setExpanded(!expanded)}>
-        {expanded ? "Hide full argument" : "Read full argument"}
+        {expanded ? "Hide full argument" : "Read full argument"}<Icon name="chevron" />
       </button>
       <div id={id} hidden={!expanded}><p><EvidenceText text={rest} availableIds={availableIds} onSelectFact={onSelectFact} /></p></div>
     </>}
@@ -77,7 +70,7 @@ export function Debate({ resolution, dispute, availableIds, onSelectFact }: { re
       <p className="muted">Compare what each side argues and where they disagree.</p>
       {groups.length === 1 && groups[0].title === "Both sides cite"
         ? <p className="small muted hearing-same">Both sides cite the same {groups[0].facts.length + groups[0].more} facts; they disagree on what the facts mean.</p>
-        : groups.length > 0 && <div className="hearing-comparison" role="group" aria-label="Evidence cited by each side">
+        : groups.length > 0 && <div className="hearing-comparison" role="group" aria-label="Evidence cited by each side" style={{ "--groups": groups.length } as CSSProperties}>
         {groups.map(group => <section key={group.title}>
           <h3>{group.title}</h3>
           <ul>{group.facts.map(fact => <li key={fact.id}>

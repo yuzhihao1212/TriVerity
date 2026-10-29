@@ -26,7 +26,9 @@ import { ClosedCase, ClosedSummary } from "./ClosedCase";
 import { DecisionBar, ReviewerDecision, useReviewerDecision } from "./ReviewerDecision";
 import { DECISION_LABELS, decisionTone, riskTone } from "./outcomeTone";
 import { Chip, InternalBadge } from "./Chip";
-import { chipClass, chipTone, sourceTone } from "./chipStyle";
+import { chipClass, chipTone } from "./chipStyle";
+import { SourceBadge } from "./SourceBadge";
+import { Loader3D, useLoaderVisible } from "./OeroAI";
 import { savedText } from "./decisionState";
 import { AiToggle } from "./AiToggle";
 import { readAiMode, writeAiMode, type AiMode } from "./aiMode";
@@ -149,6 +151,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
   const [resolving, setResolving] = useState<string | null>(null);
   const [completedId, setCompletedId] = useState<string | null>(null);
   const [loadingSamples, setLoadingSamples] = useState(true);
+  const samplesLoader = useLoaderVisible(loadingSamples);
   const [error, setError] = useState<string | null>(null);
   // Bumped when an appeal is filed or decided, so the reviewer's appeal list reloads.
   const [appealsVersion, setAppealsVersion] = useState(0);
@@ -463,7 +466,10 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
           </p>
           <ProgressAnnouncements steps={liveSteps} />
           <div role="alert" aria-atomic="true">{error && <p className="error">{error}</p>}</div>
-          {!form && loadingSamples && <section className="card empty-state"><h2>Loading disputes…</h2><p className="muted">The sample list is loading. No agents have run.</p></section>}
+          {!form && (loadingSamples || samplesLoader) && <section className="card empty-state loading-disputes">
+            {samplesLoader && <Loader3D size={112} />}
+            <div><h2>Loading disputes…</h2><p className="muted">The sample list is loading. No agents have run.</p></div>
+          </section>}
           {onHome && <Home rows={queueRows} appealsWaiting={appeals === null ? null : waitingIds.size} showStart={Object.keys(results).length === 0}
             missing={missing} onDismissMissing={() => setMissing(null)} onNew={newDispute} typeIcon={type => <TypeIcon type={type} />} />}
           {!form && resolving && resolving !== selected?.dispute_id && <p className="small muted">Agents are working on {resolving}. This case remains available.</p>}
@@ -795,9 +801,7 @@ function RulingPanel({ resolution, dispute, availableIds, onSelectFact }: { reso
       <div className="card-head">
         <h2>
           Why the Judge ruled this way
-          <Chip size="sm" tone={sourceTone(source)} icon={source === "llm" ? "sparkle" : undefined}>
-            {source === "llm" ? "AI" : "Fallback"}
-          </Chip>
+          <SourceBadge source={source} />
         </h2>
         <Chip tone={decisionTone(resolution.decision)}>{DECISION_LABELS[resolution.decision]}</Chip>
       </div>

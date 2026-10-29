@@ -3,6 +3,7 @@ import { CLOSED_TRUST_TILE, trustTileState } from "./trustTileState";
 import { Chip } from "./Chip";
 import { CASES } from "./landingCases";
 import { Icon } from "./Icon";
+import { HunyuanMark } from "./SourceBadge";
 import { focusSection } from "./routes";
 import { PresentationToggle, ThemeToggle } from "./ThemeToggle";
 import type { Theme } from "./theme";
@@ -10,6 +11,11 @@ import heroLarge from "./assets/hero-ride-1536.webp";
 import heroSmall from "./assets/hero-ride-768.webp";
 import problemLarge from "./assets/problem-rider-1400.webp";
 import problemSmall from "./assets/problem-rider-760.webp";
+import hunyuanLockup from "./assets/logos/tencent-hunyuan-lockup.webp";
+import hunyuanLockupDark from "./assets/logos/tencent-hunyuan-lockup-dark.webp";
+import cloudLockup from "./assets/logos/tencent-cloud.webp";
+import cloudLockupDark from "./assets/logos/tencent-cloud-dark.webp";
+import { OeroMark } from "./OeroAI";
 import { HERO_ROTATE_MS, HERO_RULINGS, nextHeroIndex } from "./heroRulings";
 import { AUTOMATION_RING, REPEAT_DOTS, RESULTS_BOX, SAMPLE_TICKS, STOPWATCH } from "./resultsVisuals";
 
@@ -27,14 +33,14 @@ export const LANDING_RESULTS = [
 // Three stages people can grasp at a glance; the six real steps sit under them as chips.
 const STAGES = [
   { icon: "magnifier", verb: "Gather", rest: "the evidence", line: "GPS · chat · fares · history", steps: [
-    { title: "Evidence collection", ai: true, code: true, detail: "Code verifies GPS, chat, fares and history; each advocate’s AI requests the records it needs." },
+    { title: "Evidence collection", ai: true, code: true, detail: "Rules verify GPS, chat, fares and history; each advocate’s AI requests the records it needs." },
   ] },
   { icon: "bubbles", verb: "Argue", rest: "both sides", line: "Rider AI vs driver AI, one reply each", steps: [
     { title: "Advocates", ai: true, detail: "Each side builds its case from the same verified evidence." },
     { title: "Rebuttal", ai: true, detail: "Each advocate answers the other side once." },
   ] },
   { icon: "scales", verb: "Decide", rest: "fairly", line: "Rules decide, AI explains", steps: [
-    { title: "Fraud & precedent checks", code: true, detail: "Code checks bad-faith signals and retrieves similar past rulings." },
+    { title: "Fraud & precedent checks", code: true, detail: "Rules check bad-faith signals and retrieve similar past rulings." },
     { title: "Policy rules", code: true, detail: "A refund, compensation or no action, with confidence; uncertain or risky cases go to a human." },
     { title: "Judge explains", ai: true, detail: "AI explains the ruling and prepares a separate message for each party." },
   ] },
@@ -49,7 +55,7 @@ interface TrustTile {
 }
 
 export const TRUST_TILES: readonly TrustTile[] = [
-  { icon: "scales", title: "Rules decide, AI explains", detail: "Decisions and amounts come from code. The same facts produce the same ruling, whoever argues the case." },
+  { icon: "scales", title: "Rules decide, AI explains", detail: "Decisions and amounts come from fixed rules. The same facts produce the same ruling, whoever argues the case." },
   { icon: "magnifier", title: "Every argument fact-checked", detail: "Every argument cites evidence and policy rules, and the Judge checks each cited rule against the facts: it holds for that side, favours the other, or doesn't apply." },
   { icon: "person", title: "Fair to both sides", proof: "500/500 fairness checks", detail: "Party history never changed a policy ruling: 500 of 500 simulated disputes got the same decision with histories removed or swapped. History is only used to check for bad-faith patterns." },
   { icon: "shield", title: "Humans for risky cases", detail: "Uncertain or high-risk cases go to a human reviewer with a priority tier. Safety cases come first." },
@@ -80,12 +86,12 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
           <div className="landing-hero-copy">
           <p className="landing-kicker">Multi-Agent Autonomous Dispute Resolution System</p>
           <h1 id="landing-title" tabIndex={-1}>TriVerity<span className="landing-dot" aria-hidden="true">.</span></h1>
-          <p className="landing-byline">By OeroAI</p>
+          <p className="landing-byline"><OeroMark />By OeroAI</p>
           <p className="landing-lead">Ride disputes resolved fairly<br className="landing-desktop-break" /> in seconds, not days.</p>
           <p className="landing-intro muted">AI agents argue both sides; policy rules decide fairly. Follow the evidence and see why each ruling holds.</p>
           <div className="landing-actions"><a className="landing-primary" href="#/console" onClick={onOpenConsole}>Open the reviewer console <span aria-hidden="true">↗</span></a>
             <a href={GITHUB}>View the source on GitHub <span aria-hidden="true">↗</span></a></div>
-          <p className="landing-provider muted">Built on Tencent Hy3 via Tencent Cloud TokenHub.</p>
+          <BuiltOn />
           </div>
           <HeroVisual />
         </div>
@@ -98,14 +104,15 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
           <ProblemVisual />
         </section>
         <section aria-labelledby="flow-title">
-          <div className="landing-section-head"><p className="eyebrow">How it works</p><h2 id="flow-title">Two sides heard. One accountable decision.</h2><p className="muted">AI handles language. Code verifies facts and applies policy.</p></div>
+          <div className="landing-section-head"><p className="eyebrow">How it works</p><h2 id="flow-title">Two sides heard. One accountable decision.</h2><p className="muted">AI handles language. Rules verify the facts and apply policy.</p></div>
           <ol className="landing-stages">{STAGES.map((stage, index) => <li key={stage.verb} className="landing-stage">
             <span className="landing-stage-icon" aria-hidden="true"><Icon name={stage.icon} /></span>
             <h3><span className="sr-only">Stage {index + 1}: </span><span className="landing-stage-verb">{stage.verb}</span> {stage.rest}</h3>
             <p className="landing-stage-line">{stage.line}</p>
             <ul className="chip-row landing-stage-steps" aria-label={`Steps in ${stage.verb}`}>{stage.steps.map(step => <li key={step.title}>
-              <Chip size="sm" tone={"ai" in step ? "brand" : "outline"} icon={"ai" in step ? "sparkle" : undefined} title={step.detail}>
-                {step.title}{"ai" in step && "code" in step && " · AI + code"}<span className="sr-only">{"ai" in step ? ", AI" : ", code"}</span>
+              <Chip size="sm" tone={"ai" in step ? "ai" : "neutral"} icon={"ai" in step ? undefined : "function"} title={step.detail}>
+                {"ai" in step && <HunyuanMark />}
+                {step.title}{"ai" in step && "code" in step && " · AI + rules"}<span className="sr-only">{"ai" in step ? ", Hunyuan AI" : ", rules"}</span>
               </Chip>
             </li>)}</ul>
             <details className="landing-stage-more">
@@ -249,6 +256,29 @@ function TrustTiles() {
 }
 
 /** The people a dispute is about, with real rulings TriVerity gave on the sample cases, rotating. */
+/**
+ * The model and the cloud it is served on, as the official lockups (never redrawn or recoloured).
+ * Both theme versions are rendered and CSS shows one: the app's theme toggle sets data-theme,
+ * which a <picture> media query can't see. The dark Cloud file has a larger icon, so it is
+ * shown taller to keep the two wordmarks the same size.
+ */
+function BuiltOn() {
+  return <div className="landing-built-on">
+    <span className="landing-built-on-label">Built on</span>
+    <span className="landing-built-on-item">
+      <img className="logo-light built-on-hunyuan" src={hunyuanLockup} alt="Tencent Hunyuan" width={88} height={28} />
+      <img className="logo-dark built-on-hunyuan" src={hunyuanLockupDark} alt="Tencent Hunyuan" width={88} height={28} />
+      <span className="landing-built-on-caption">Hy3 model</span>
+    </span>
+    <span className="landing-built-on-divider" aria-hidden="true" />
+    <span className="landing-built-on-item">
+      <img className="logo-light built-on-cloud" src={cloudLockup} alt="Tencent Cloud" width={139} height={21} />
+      <img className="logo-dark built-on-cloud-dark" src={cloudLockupDark} alt="Tencent Cloud" width={146} height={26} />
+      <span className="landing-built-on-caption">Served on TokenHub</span>
+    </span>
+  </div>;
+}
+
 function HeroVisual() {
   return <figure className="landing-hero-visual">
     <img src={heroLarge} srcSet={`${heroSmall} 768w, ${heroLarge} 1536w`} sizes="(max-width: 760px) 100vw, 560px"

@@ -1,7 +1,7 @@
 import { useId } from "react";
 
 import { Chip } from "./Chip";
-import { SourceBadge } from "./Debate";
+import { SourceBadge } from "./SourceBadge";
 import { partyView, PARTY_DECISION_LABELS } from "./partyView";
 import { confidenceNote } from "./decisionState";
 import { money, outputSources, policyIds } from "./presentation";

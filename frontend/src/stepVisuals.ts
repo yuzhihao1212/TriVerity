@@ -147,6 +147,8 @@ export function agentBadge(agent: string, source: "llm" | "fallback" | null): Ag
 }
 
 export const FALLBACK_TOOLTIP = "Template text: AI was off or unavailable. The ruling is unaffected.";
+export const AI_TOOLTIP = "Written by Tencent Hy3 (Hunyuan), checked against the records before it's shown.";
+export const RULES_TOOLTIP = "Calculated by fixed code, no AI. Same input, same answer.";
 
 export function statusBadge(status: string): { label: string; tone: Tone; icon: "check" | "cross" | null } {
   const normal = status.trim().toLowerCase();

@@ -20,11 +20,11 @@ test('chip classes: one base class, a size, and exactly one tone', () => {
     const classes = chip.chipClass({ tone: t, size: 'sm' }).split(' ');
     assert.deepEqual(classes, ['chip', 'sm', `tone-${t}`], t);
   }
-  assert.deepEqual([...chip.CHIP_TONES], ['neutral', 'ok', 'warn', 'danger', 'brand', 'outline']);
+  assert.deepEqual([...chip.CHIP_TONES], ['neutral', 'ok', 'warn', 'danger', 'brand', 'outline', 'ai']);
 });
 
 test('existing helper tones map onto chip tones without changing their meaning', () => {
-  for (const t of ['neutral', 'ok', 'warn', 'danger', 'brand', 'outline']) assert.equal(chip.chipTone(t), t);
+  for (const t of ['neutral', 'ok', 'warn', 'danger', 'brand', 'outline', 'ai']) assert.equal(chip.chipTone(t), t);
   assert.equal(chip.chipTone('accent'), 'brand');   // "Agents working" stays brand
   assert.equal(chip.chipTone('high'), 'danger');
   assert.equal(chip.chipTone('medium'), 'warn');
@@ -33,10 +33,10 @@ test('existing helper tones map onto chip tones without changing their meaning',
   assert.equal(chip.chipTone('something-new'), 'neutral');
 });
 
-test('source badges: AI brand, Fallback warn, Code outline', () => {
-  assert.equal(chip.sourceTone('llm'), 'brand');
-  assert.equal(chip.sourceTone('fallback'), 'warn');
-  assert.equal(chip.sourceTone('code'), 'outline');
+test('source badges: AI blue, Rules and Fallback neutral grey', () => {
+  assert.equal(chip.sourceTone('llm'), 'ai');
+  assert.equal(chip.sourceTone('fallback'), 'neutral');
+  assert.equal(chip.sourceTone('code'), 'neutral');
 });
 
 test('fact value chips: plain or within tolerance is an outline, deviations warn, threats danger', () => {

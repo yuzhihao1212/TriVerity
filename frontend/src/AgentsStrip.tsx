@@ -3,15 +3,16 @@ import { Fragment, useId, useState } from "react";
 import { AGENT_OPEN_KEY, readDetailOpen, writeDetailOpen } from "./detailDisclosure";
 import { EVIDENCE_FACTS_ID } from "./FactLibrary";
 import { reveal } from "./routes";
-import { agentActionLine, SOURCE_KEY, stepHeading } from "./agentDisplay";
+import { agentLineParts, SOURCE_KEY, stepHeading } from "./agentDisplay";
 import { humanizeAgentMessage } from "./agentText";
 
 import { EvidenceText, type FactLinks } from "./EvidenceList";
 import { openAuditTrail } from "./CollectorCalls";
 import { Chip } from "./Chip";
 import { chipClass, chipTone } from "./chipStyle";
-import { SourceBadge } from "./Debate";
 import { Icon } from "./Icon";
+import { SourceBadge } from "./SourceBadge";
+import { CLOSED_TRUST_TILE, trustTileState } from "./trustTileState";
 import {
   agentBadge, agentIcon, callColumns, durationShare, durationText, statusBadge, stepFlow, toolIcon, toolName, toolTooltip,
 } from "./stepVisuals";
@@ -39,12 +40,11 @@ export function AgentsStrip({ tab, resolution, availableIds, onSelectFact }: { t
     resolution={resolution} tab={tab} availableIds={availableIds} onSelectFact={onSelectFact} />;
   return <section className="agents-strip" aria-labelledby={`${id}-title`}>
     <div className="agents-head">
-      <h3 className="section-label" id={`${id}-title`}>{stepHeading(tab)}</h3>
+      <div className="agents-title"><h3 className="section-label" id={`${id}-title`}>{stepHeading(tab)}</h3>{entries.length > 0 && <SourceKey />}</div>
       {entries.length > 0 && <button type="button" className="agents-toggle" aria-expanded={open} aria-controls={`${id}-body`} onClick={toggle}>
         {open ? "Hide details" : "Show details"}<Icon name="arrow" className="agents-toggle-icon" />
       </button>}
     </div>
-    {!!entries.length && <SourceKey />}
     <div id={`${id}-body`}>
     {entries.length === 0 ? <p className="small muted">{tab === "intake" ? "You supplied the case details; no AI was called."
       : tab === "notify" ? "You check the final messages and approve what is sent."
@@ -67,22 +67,35 @@ export function AgentsStrip({ tab, resolution, availableIds, onSelectFact }: { t
   </section>;
 }
 
-/** The action leads; internal agent names stay in the expanded cards. */
+/** Three columns: the source badge, the action (internal agent names stay in the expanded cards), the time. */
 function AgentLine({ entry, resolution }: { entry: AgentLogEntry; resolution?: Resolution }) {
-  const line = agentActionLine(entry, resolution);
-  const [action, ...detail] = line.split(" · ");
-  return <li className="agent-line"><span className="agent-action"><strong>{action}</strong>{detail.length > 0 && <span className="muted"> · {detail.join(" · ")}</span>}</span></li>;
+  const { action, source, how, time } = agentLineParts(entry, resolution);
+  return <li className="agent-line">
+    <span className="agent-line-source">{source && <SourceBadge source={source} />}</span>
+    <span className="agent-action"><strong>{action}</strong>{how && <span className="muted"> {how}</span>}</span>
+    <span className="agent-line-time">{time && <><span className="sr-only">, </span>{time}</>}</span>
+  </li>;
 }
 
+/** ⓘ next to the heading: hover or focus previews what Rules and Hunyuan AI mean; a click or tap pins it; Escape closes. */
 function SourceKey() {
   const id = useId();
-  const [pinned, setPinned] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
-  return <span className={`agent-source-key${pinned ? " pinned" : ""}`}>
-    <button type="button" className="text-button" aria-label="Explain Code and AI" aria-describedby={id}
-      onFocus={() => setDismissed(false)} onMouseEnter={() => setDismissed(false)}
-      onClick={() => { setPinned(!pinned); setDismissed(pinned); }} onKeyDown={event => { if (event.key === "Escape") { setPinned(false); setDismissed(true); } }}>Code / AI</button>
-    <span className="agent-source-tip" id={id} role="tooltip" hidden={dismissed}>{SOURCE_KEY}</span>
+  const [state, setState] = useState(CLOSED_TRUST_TILE);
+  const open = state.openId === id;
+  const dismiss = () => setState(CLOSED_TRUST_TILE);
+  return <span className="agent-source-key" onMouseEnter={() => setState(s => trustTileState(s, { type: "hover", id }))}
+    onMouseLeave={() => setState(s => trustTileState(s, { type: "leave", id }))}
+    onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) dismiss(); }}
+    onKeyDown={event => { if (event.key === "Escape") { event.stopPropagation(); dismiss(); } }}>
+    <button type="button" className="icon-button agent-source-info" aria-label="About Rules and Hunyuan AI"
+      aria-expanded={open} aria-describedby={open ? id : undefined} aria-controls={id}
+      onFocus={() => setState(s => trustTileState(s, { type: "focus", id }))}
+      onClick={() => setState(s => trustTileState(s, { type: "toggle", id }))}>
+      <Icon name="info" />
+    </button>
+    <span id={id} role="tooltip" className="agent-source-tip" hidden={!open}>
+      {SOURCE_KEY.map(line => <span key={line.label} className="agent-source-tip-line"><strong>{line.label}</strong>: {line.text}</span>)}
+    </span>
   </span>;
 }
 
@@ -109,7 +122,7 @@ function AgentCard({ entry, all, resolution, tab, availableIds, onSelectFact }: 
     </div>
     <div className="chip-row">
       <Chip size="sm" tone={chipTone(status.tone)} icon={status.icon ?? undefined}>{status.label}</Chip>
-      {badge ? tab === "evidence" ? <Chip size="sm" tone="outline" title={badge === "fallback" ? "Template text used when AI was off or unavailable." : SOURCE_KEY}>{badge === "llm" ? "AI" : badge === "fallback" ? "Fallback" : "Code"}</Chip> : <SourceBadge source={badge} explain /> : <Chip size="sm" tone="outline">Source not supplied</Chip>}
+      {badge ? <SourceBadge source={badge} explain /> : <Chip size="sm" tone="outline">Source not supplied</Chip>}
     </div>
     {time && <div className="agent-duration">
       <span className="agent-duration-track" aria-hidden="true"><span style={{ width: `${Math.max(share * 100, share > 0 ? 3 : 0)}%` }} /></span>

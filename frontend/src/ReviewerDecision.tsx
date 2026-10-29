@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 
 import { decisionBar, decisionErrors, FINAL_LABELS, REASON_PLACEHOLDER, savedText, type FinalDecision, type SavedDecision } from "./decisionState";
+import { ButtonLoader } from "./OeroAI";
 import { reveal } from "./routes";
 import { Term } from "./Term";
 import { ApiError, recordReviewerDecision } from "./services/api";
@@ -97,7 +98,7 @@ export function ReviewerDecision({ resolution, controller }: { resolution: Resol
           Your decision becomes a <Term term="precedent">precedent</Term> for similar disputes.
         </p>
         {mode === "idle" && <div className="reviewer-actions">
-          <button type="button" className="secondary-button" disabled={busy} onClick={() => controller.accept()}>Accept ruling</button>
+          <button type="button" className="secondary-button" disabled={busy} onClick={() => controller.accept()}><ButtonLoader busy={busy} />{busy ? "Recording…" : "Accept ruling"}</button>
           <button type="button" className="secondary-button" disabled={busy} onClick={() => controller.startOverride()}>Override…</button>
         </div>}
         {mode === "override" && <div className="reviewer-form">
@@ -120,7 +121,7 @@ export function ReviewerDecision({ resolution, controller }: { resolution: Resol
                 if (!choice || errors.reason) return;
                 controller.submit(choice, controller.reason.trim());
               }}>
-              {escalated ? "Record decision" : "Record override"}
+              <ButtonLoader busy={busy} />{busy ? "Recording…" : escalated ? "Record decision" : "Record override"}
             </button>
             {!escalated && <button type="button" className="secondary-button" disabled={busy} onClick={() => controller.setMode("idle")}>Cancel</button>}
           </div>
@@ -140,7 +141,8 @@ export function DecisionBar({ resolution, controller, unavailable }: { resolutio
         {view.note ?? <><span className="decision-bar-dot" aria-hidden="true" />{view.label}{view.amount && <> · <strong>{view.amount}</strong></>}</>}
       </p>
       {controller.mode !== "override" && view.actions.length > 0 && <div className="decision-bar-actions">
-        {view.actions.includes("accept") && <button type="button" className="run-button" disabled={view.disabled} onClick={() => controller.accept()}>Accept ruling</button>}
+        {view.actions.includes("accept") && <button type="button" className="run-button" disabled={view.disabled} onClick={() => controller.accept()}>
+          <ButtonLoader busy={controller.busy} />{controller.busy ? "Recording…" : "Accept ruling"}</button>}
         {view.actions.includes("override") && <button type="button" className="secondary-button" disabled={view.disabled} onClick={() => controller.startOverride()}>Override</button>}
         {view.actions.includes("decide") && <button type="button" className="run-button" disabled={view.disabled} onClick={() => controller.startOverride()}>Decide</button>}
       </div>}

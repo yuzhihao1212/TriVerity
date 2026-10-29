@@ -1,10 +1,14 @@
 import { computedFacts, factIndex } from "./presentation";
 import type { AgentCase, Resolution } from "./types";
 
+/** Abbreviations whose full stop doesn't end the sentence. */
+const ABBREVIATION = /\b(?:e\.g|i\.e|vs|approx)$/i;
+
 /** Keep the whole first sentence, including closing quotes and any inline citations. */
 export function bottomLine(text: string): { first: string; rest: string } {
   const trimmed = text.trim();
-  const end = /[.!?](?:["'”’)]*)(?:\s*\((?:TRIP|GPS|FARE|CHAT|HIST)-[^)]*\))?(?=\s|$)/.exec(trimmed);
+  const ends = trimmed.matchAll(/[.!?](?:["'”’)]*)(?:\s*\((?:TRIP|GPS|FARE|CHAT|HIST)-[^)]*\))?(?=\s|$)/g);
+  const end = [...ends].find(match => !(match[0].startsWith(".") && ABBREVIATION.test(trimmed.slice(0, match.index))));
   const split = end ? end.index + end[0].length : trimmed.length;
   return { first: trimmed.slice(0, split), rest: trimmed.slice(split).trim() };
 }

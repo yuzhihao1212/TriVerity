@@ -89,11 +89,13 @@ test('headings are per step and folded agent lines lead with their action', () =
   assert.equal(agents.stepHeading('ruling'), 'Who checked and explained the ruling');
   for (const step of ['intake', 'notify']) assert.ok(agents.stepHeading(step));
   const loader = { agent: 'evidence_loader', status: 'completed', message: 'Computed 15 facts from case data.', duration_ms: 200 };
-  assert.equal(agents.agentActionLine(loader), 'Calculated 15 facts from the trip, GPS and fare records · by code, instant');
-  assert.equal(agents.agentActionLine({ agent: 'evidence_collector', status: 'completed', message: "[llm] rider's request: 7 tool calls; driver's request: 7 tool calls", duration_ms: 4700 }), 'Looked up 7 more records for each side · by AI (Tencent Hy3), 4.7 s');
-  assert.equal(agents.agentActionLine({ ...loader, status: 'skipped' }), 'This step was not run.');
-  assert.doesNotMatch(agents.agentActionLine({ agent: 'unknown', status: 'completed', message: '', duration_ms: null }), /undefined|NaN|unknown/);
-  assert.match(agents.SOURCE_KEY, /Code = calculated by fixed rules, no AI/);
+  assert.deepEqual(agents.agentLineParts(loader), { action: 'Calculated 15 facts from the trip, GPS and fare records', source: 'code', how: 'by rules', time: 'instant' });
+  assert.deepEqual(agents.agentLineParts({ agent: 'evidence_collector', status: 'completed', message: "[llm] rider's request: 7 tool calls; driver's request: 7 tool calls", duration_ms: 4700 }),
+    { action: 'Looked up 7 more records for each side', source: 'llm', how: 'by Tencent Hy3', time: '4.7 s' });
+  assert.deepEqual(agents.agentLineParts({ ...loader, status: 'skipped' }), { action: 'This step was not run.', source: null, how: null, time: null });
+  assert.doesNotMatch(JSON.stringify(agents.agentLineParts({ agent: 'unknown', status: 'completed', message: '', duration_ms: null })), /undefined|NaN|unknown/);
+  assert.deepEqual(agents.SOURCE_KEY.map(line => line.label), ['Rules', 'Hunyuan AI']);
+  assert.match(agents.SOURCE_KEY[0].text, /no AI\. Same input, same answer\./);
 });
 
 test('Evidence display sentences contain no proposed outcome, policy verdict or internal status', () => {
@@ -101,6 +103,6 @@ test('Evidence display sentences contain no proposed outcome, policy verdict or 
   const text = [display.gpsReadingsSentence(coverage), display.gpsFactLine(off), display.gpsSummaryLine(window),
     display.tripTakeaway(trip), display.tripNumberLine(trip, 'distance'), display.tripNumberLine(trip, 'duration'),
     display.chatTakeaway([]), fare.lead, fare.rest, FALLBACK_EXPLANATION,
-    agents.stepHeading('evidence'), agents.agentActionLine({ agent: 'evidence_loader', message: 'Computed 15 facts', status: 'completed' })].join(' ');
+    agents.stepHeading('evidence'), agents.agentLineParts({ agent: 'evidence_loader', message: 'Computed 15 facts', status: 'completed' }).action].join(' ');
   assert.doesNotMatch(text, /refund|ruling|approved|\b(?:RD|NS|REF|SAF|GEN)-\d+\b|status in_trip|15% policy/i);
 });
