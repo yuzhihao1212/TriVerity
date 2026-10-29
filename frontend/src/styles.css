@@ -24,6 +24,8 @@
   --ok-soft: #e6f4ea;
   --warn-text: #8a5200;
   --warn-soft: #fdf1dc;
+  --feedback-selected: #f9e07f;
+  --feedback-ink: #412402;
   --star: #e8a317; /* rating stars: warm gold, visible on white */
   /* Hunyuan AI source badge: blue, so red stays brand and alarm. */
   --ai-text: #1d4f9c;
@@ -45,6 +47,7 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
+  --feedback-selected: #efc94c;
   --bg: #171b20;
   --header: #2e1e26;
   --surface: #222830;
@@ -806,13 +809,6 @@ textarea { width: 100%; resize: vertical; }
 .why-summary { display: grid; gap: var(--space-1); padding: var(--space-3) var(--space-4); border-radius: 12px; background: var(--accent-soft); }
 .why-line { font-size: 15px; line-height: 1.5; }
 .why-change { color: var(--text); }
-.ruling-section { border-top: 1px solid var(--border); }
-.ruling-section > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2) var(--space-3); padding: var(--space-4) 0; list-style: none; cursor: pointer; color: var(--text); }
-.ruling-section > summary::-webkit-details-marker { display: none; }
-.ruling-section > summary::before { content: "▸"; color: var(--accent-text); transition: transform .15s; }
-.ruling-section[open] > summary::before { transform: rotate(90deg); }
-.ruling-section-title { font-size: 16px; font-weight: 600; }
-.ruling-section-body { display: grid; gap: var(--space-4); padding-bottom: var(--space-4); }
 .reviewer-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 
 /* "Your decision" (ReviewerDecision.tsx): one box for the human step. Amber = needs a person.
@@ -987,7 +983,6 @@ html:has(.decision-bar) { scroll-padding-bottom: 96px; }
 .phone-amount strong { font-size: 18px; }
 .phone-text { font-size: 13px; line-height: 1.5; color: var(--text); }
 .phone-screen .secondary-button, .phone-screen .run-button { width: 100%; }
-@media (prefers-reduced-motion: reduce) { .ruling-section > summary::before { transition: none; } }
 
 /* AI live/offline switch */
 /* The one labelled control in the header: a quiet pill, as tall as the icon buttons. */
@@ -1784,3 +1779,130 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 
 /* Inline form errors, linked to their field with aria-describedby. */
 .field-error { margin: var(--space-1) 0 0; color: var(--error); font-weight: 600; }
+
+/* Notify and Customer view share the same fixed phone; long content scrolls inside. */
+.notify-view-tabs { display: flex; gap: var(--space-2); margin-bottom: var(--space-4); border-bottom: 1px solid var(--border); }
+.notify-view-tabs button { min-height: 32px; padding: 6px 12px; background: none; color: var(--muted); border: 0; border-bottom: 2px solid transparent; font: inherit; cursor: pointer; }
+.notify-view-tabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--text); font-weight: 600; }
+.notify-view-tabs button[aria-disabled="true"] { cursor: not-allowed; }
+.notify-change.text-button { color: var(--muted); min-height: 24px; }
+.notify-outcome { margin-left: var(--space-2); }
+.notify-editor { width: min(272px, 100%); justify-self: center; }
+.notify-editor > p:empty { display: none; }
+.note-near-limit { color: var(--warn-text); }
+.quick-notes { display: flex; flex-wrap: wrap; min-height: 96px; align-content: start; gap: 6px; position: relative; }
+.quick-note-wrap { display: contents; }
+.quick-note { min-height: 28px; max-width: 100%; padding: 4px 8px; border: 1px solid var(--border); border-radius: 999px; background: var(--bg); color: var(--muted); font: inherit; font-size: 11px; cursor: pointer; }
+.quick-note[aria-pressed="true"] { color: var(--text); border-color: var(--control-border); background: var(--surface); }
+.quick-note-tooltip { display: none; position: absolute; bottom: calc(100% + 6px); left: 0; width: 100%; z-index: 5; padding: 10px; border: 1px solid var(--control-border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; box-shadow: 0 4px 12px color-mix(in srgb, var(--text) 12%, transparent); }
+.quick-note-wrap:hover .quick-note-tooltip, .quick-note-wrap:focus-within .quick-note-tooltip { display: block; }
+.customer-phone { height: 560px; aspect-ratio: auto; min-width: 0; }
+.customer-phone .phone-bar { flex: none; }
+.phone-page { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 12px; overflow-y: auto; overflow-x: hidden; background: var(--surface); animation: phone-slide-in .3s ease-out; overflow-wrap: anywhere; }
+.phone-page.backwards { animation-name: phone-slide-back; }
+.phone-page > * { flex-shrink: 0; }
+.phone-page p { margin: 0; }
+.phone-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
+.phone-brand { font-size: 10px; font-weight: 600; color: var(--accent-text); }
+.phone-case { padding: 2px 5px; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); background: var(--bg); font-size: 10px; font-variant-numeric: tabular-nums; }
+.phone-result { display: flex; flex-direction: column; align-items: center; gap: 8px; border-radius: 14px; padding: 14px 10px; background: var(--bg); text-align: center; }
+.phone-status-icon { display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border: 1px solid var(--border); border-radius: 50%; color: var(--text); background: var(--neutral-soft); }
+.phone-status-icon .icon { width: 28px; height: 28px; }
+.phone-result .chip { color: var(--muted); }
+.phone-greeting { font-size: 13px; color: var(--muted); }
+.phone-page h3 { font-size: 17px; line-height: 1.3; margin: 0; }
+.phone-next-lines { display: grid; gap: 8px; align-self: stretch; }
+.phone-next-lines p { display: flex; gap: 6px; font-size: 12px; color: var(--muted); line-height: 1.5; text-align: left; }
+.phone-next-lines .icon { width: 14px; height: 14px; flex: none; margin-top: 2px; }
+.phone-more, .phone-back { font: inherit; cursor: pointer; color: var(--muted); background: none; min-height: 28px; padding: 4px 10px; border: 1px solid var(--control-border); border-radius: 999px; font-size: 12px; }
+.phone-more { align-self: center; }
+.phone-back { border: 0; padding-left: 0; }
+.phone-footer { margin-top: auto !important; font-size: 11px; text-align: center; color: var(--muted); }
+.phone-generated { white-space: pre-wrap; font-size: 13px; line-height: 1.55; }
+.phone-actions { margin-top: auto; display: grid; gap: 8px; }
+.phone-actions button { min-height: 32px; max-width: 100%; white-space: normal; }
+.phone-actions .secondary-button, .phone-actions .run-button { width: 100%; font-size: 12px; padding: 8px; display: flex; align-items: center; justify-content: center; gap: 5px; flex-wrap: wrap; }
+.phone-actions button[aria-disabled="true"] { cursor: not-allowed; color: var(--muted); border-color: var(--border); background: var(--surface); }
+.phone-actions .icon { width: 15px; height: 15px; }
+.phone-caption { font-size: 11px; line-height: 1.5; color: var(--muted); text-align: center; }
+.phone-feedback-title { text-align: center; }
+.phone-comment-label { font-size: 12px; color: var(--muted); }
+.phone-comment { width: 100%; min-width: 0; padding: 8px; background: var(--bg); color: var(--text); border: 1px solid var(--control-border); border-radius: 8px; font: inherit; font-size: 12px; resize: vertical; }
+.feedback-faces { display: grid; grid-template-columns: repeat(5, 32px); justify-content: space-between; position: relative; margin: 10px 0 0; padding: 4px 0; }
+.feedback-faces::before { content: ""; position: absolute; left: 16px; right: 16px; top: 20px; border-top: 1px solid var(--control-border); }
+.feedback-choice { min-width: 0; position: relative; text-align: center; }
+/* Deliberately independent of the full-width phone action buttons. */
+.customer-phone .feedback-face { width: 32px; min-width: 32px; max-width: 32px; height: 32px; min-height: 32px; padding: 0; border: 0; border-radius: 50%; background: var(--bg); color: var(--muted); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.feedback-face .icon { width: 28px; height: 28px; }
+.customer-phone .feedback-face[aria-checked="true"] { background: var(--feedback-selected); color: var(--feedback-ink); transform: scale(1.25); }
+.feedback-face-label { display: block; margin: 10px -5px 0; min-height: 30px; font-size: 10px; line-height: 1.3; color: var(--text); }
+.phone-thanks { align-self: center; margin-top: 20px; }
+.phone-rating-summary { display: flex; justify-content: center; }
+.customer-phone .appeal-form { min-width: 0; }
+.customer-phone .appeal-form textarea { width: 100%; min-width: 0; }
+.presentation-mode .phone-page h3 { font-size: 19px; }
+.presentation-mode .phone-generated, .presentation-mode .phone-note-text { font-size: 14px; }
+.presentation-mode .phone-caption, .presentation-mode .phone-next-lines p { font-size: 12px; }
+@keyframes phone-slide-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes phone-slide-back { from { transform: translateX(-30%); } to { transform: translateX(0); } }
+@media (prefers-reduced-motion: reduce) { .phone-page { animation: none; } }
+@media (max-width: 760px) { .notify-outcome { margin-left: 0; } }
+
+/* Ruling: four reviewer questions, with an answer visible before opening the detail. */
+.ruling-checks { padding-top: var(--space-4); border-top: 1px solid var(--border); }
+.ruling-checks-head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2) var(--space-3); }
+.ruling-checks-head h2 { margin: 0; }
+.ruling-checks-tools { margin-left: auto; display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); }
+.ruling-checks-tools .text-button { min-height: 24px; color: var(--muted); }
+.ruling-checks-list { display: grid; gap: var(--space-2); }
+.ruling-check-row { min-width: 0; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
+.ruling-check-row.look-closer { border-color: var(--warn-text); }
+.ruling-check-question { margin: 0; font: inherit; }
+.ruling-check-trigger { width: 100%; min-height: 56px; display: grid; grid-template-columns: 10px 30px minmax(0, 1fr); align-items: center; gap: 10px; padding: 10px 12px; border: 0; border-radius: 12px; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.ruling-check-trigger:hover { background: var(--surface); }
+.ruling-check-trigger:focus-visible { outline-offset: -3px; }
+.ruling-check-marker { font-size: 14px; color: var(--accent-text); transition: transform .2s ease; }
+.ruling-check-trigger[aria-expanded="true"] .ruling-check-marker { transform: rotate(90deg); }
+.ruling-check-status { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+.ruling-check-status .icon { width: 17px; height: 17px; }
+.ruling-check-status.tone-ok { background: var(--ok-soft); color: var(--ok-text); }
+.ruling-check-status.tone-warn { background: var(--warn-soft); color: var(--warn-text); }
+.ruling-check-status.tone-neutral { background: var(--neutral-soft); color: var(--muted); }
+.ruling-check-label { display: grid; gap: 3px; min-width: 0; }
+.ruling-check-title { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; color: var(--muted); font-size: 12px; line-height: 1.3; }
+.ruling-check-answer { font-size: 14px; line-height: 1.4; font-weight: 500; overflow-wrap: anywhere; }
+.ruling-check-detail { display: grid; grid-template-rows: 0fr; visibility: hidden; transition: grid-template-rows .2s ease, visibility 0s .2s; }
+.ruling-check-detail.open { grid-template-rows: 1fr; visibility: visible; transition-delay: 0s; }
+.ruling-check-clip { min-height: 0; overflow: hidden; }
+.ruling-check-detail.open .ruling-check-clip { overflow: visible; }
+.ruling-check-body { display: grid; gap: var(--space-3); padding: 4px 16px 16px 72px; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.ruling-check-body p { margin: 0; }
+.ruling-check-body ul { margin: 0; }
+.ruling-rule-checks, .ruling-precedents, .ruling-counterfactuals { list-style: none; padding: 0; }
+.ruling-rule-checks li { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: start; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.ruling-condition-symbol { color: var(--muted); font-size: 17px; }
+.ruling-condition-symbol.met { color: var(--ok-text); }
+.ruling-applied-rules, .ruling-rule-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.ruling-plain-title { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; margin: 0; font-size: 14px; font-weight: 600; }
+.ruling-plain-text { padding: var(--space-3); border-radius: 8px; background: var(--surface); }
+.ruling-precedents li, .ruling-counterfactuals li { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.ruling-precedents li > span:first-child, .ruling-counterfactuals li > span:first-child { flex: 1 1 240px; min-width: 0; }
+.ruling-checks .term { min-height: 24px; display: inline-flex; align-items: center; }
+.ruling-checks .raw pre { max-width: 100%; overflow: auto; }
+.presentation-mode .ruling-check-title { font-size: 14px; }
+.presentation-mode .ruling-check-answer, .presentation-mode .ruling-check-body { font-size: 16px; }
+.presentation-mode .ruling-plain-title { font-size: 16px; }
+@media (max-width: 760px) {
+  .ruling-checks-tools { margin-left: 0; width: 100%; }
+  .ruling-check-trigger { gap: 8px; padding: 10px; }
+  .ruling-check-body { padding: 4px 12px 16px; }
+  .ruling-rule-checks li { grid-template-columns: 20px minmax(0, 1fr); }
+  .ruling-rule-checks li > .chip { grid-column: 2; justify-self: start; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ruling-check-marker, .ruling-check-detail { transition: none; }
+}
+@media (max-width: 760px) {
+  /* Rule explanations stay inside the viewport, above the existing decision bar. */
+  .ruling-checks .term-tip { position: fixed; top: auto; bottom: 150px; left: 16px; right: 16px; width: auto; max-width: none; transform: none; }
+}

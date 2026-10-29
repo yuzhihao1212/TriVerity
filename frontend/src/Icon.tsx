@@ -9,6 +9,12 @@ const PATHS: Record<string, ReactNode> = {
   bubbles: <><path d="M3 5h11a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H8l-3 2.5V13H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" /><path d="M18 9h3a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2v2.5L16 17h-4a1 1 0 0 1-1-1v-1" /></>,
   scales: <><path d="M12 4v16M8 20h8M5 7h14" /><path d="m5 7-3 6a3 3 0 0 0 6 0Z" /><path d="m19 7-3 6a3 3 0 0 0 6 0Z" /></>,
   phone: <><rect x="7" y="2.5" width="10" height="19" rx="2" /><path d="M11 18.5h2" /></>,
+  // Customer feedback faces: outlined mood icons, with a visible label for every choice.
+  "mood-cry": <><circle cx="12" cy="12" r="9" /><path d="M8 9h.01M16 9h.01M8 17q4-6 8 0M7 11v3M17 11v3" /></>,
+  "mood-sad": <><circle cx="12" cy="12" r="9" /><path d="M8 9h.01M16 9h.01M8 16q4-5 8 0" /></>,
+  "mood-neutral": <><circle cx="12" cy="12" r="9" /><path d="M8 9h.01M16 9h.01M8 15h8" /></>,
+  "mood-smile": <><circle cx="12" cy="12" r="9" /><path d="M8 9h.01M16 9h.01M8 14q4 5 8 0" /></>,
+  "mood-happy": <><circle cx="12" cy="12" r="9" /><path d="M7 9q1-2 2 0M15 9q1-2 2 0M7 13h10q-1 6-5 6t-5-6Z" /></>,
   // State
   check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
   cross: <path d="M6 6l12 12M18 6 6 18" />,

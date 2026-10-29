@@ -1,12 +1,14 @@
 import { useEffect, useId, useState } from "react";
 
-import { AppealForm } from "./Appeals";
+import { CustomerPhone } from "./CustomerPhone";
+import { CUSTOMER_COPY } from "./customerCopy";
+import { quickNotes, toggleQuickNote } from "./customerState";
 import { listAppeals } from "./services/api";
 import type { SavedDecision } from "./decisionState";
 import { Icon } from "./Icon";
 import {
-  appealSummary, cleanNote, clockText, closingTitle, createSentStore, finalOutcome, generatedMessage, maxRefund, NOTE_LIMIT, NOTE_PLACEHOLDER,
-  noteCounter, noteWarnings, notifyGate, PARTIES, phoneState, SEND_TOOLTIP, sendBlock, sentText, sentOutcome, validateAmount,
+  appealSummary, cleanNote, clockText, closingTitle, createSentStore, finalOutcome, generatedMessage, maxRefund, NOTE_LIMIT,
+  noteCounter, noteWarnings, notifyGate, PARTIES, SEND_TOOLTIP, sendBlock, sentText, sentOutcome, validateAmount,
   type FinalOutcome, type Party, type SentRecord,
 } from "./notifyState";
 import type { ReviewSummary } from "./reviewProgress";
@@ -30,7 +32,7 @@ const NO_NOTES: Record<Party, string> = { rider: "", driver: "" };
 /**
  * Notify parties: after the ruling is accepted or overridden, each party's generated message is
  * shown read-only, exactly as they will see it, and the reviewer may add a short note under it.
- * The phones are a preview until "Approve & send"; then they are delivered and can be appealed.
+ * Notify stays a locked preview. After "Approve & send", Customer view opens the delivered phones.
  */
 export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailable, rulingVisited, progress, onGoToRuling, onSent, onAppealed, next, nextLabel, onNext, onBack, reopened = false, previous = null, appealsAvailable = true }: {
   resolution: Resolution; dispute: DisputeCase; reviewKey: string;
@@ -47,6 +49,9 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
   const [notes, setNotes] = useState<Record<Party, string>>(NO_NOTES);
   const [amountText, setAmountText] = useState(previous?.reviewer?.decision === "partial_refund" && previous.reviewer.kind !== "accepted" && previous.amount != null ? previous.amount.toFixed(2) : "");
   const [sendAnyway, setSendAnyway] = useState(false);
+  const [view, setView] = useState<"notify" | "customer">("notify");
+  const [sendAttempted, setSendAttempted] = useState(false);
+  const [chipMessage, setChipMessage] = useState<Record<Party, string>>(NO_NOTES);
   // This dispute's appeals (waiting and decided), read from the queue so they survive a step change or reload.
   const [appeals, setAppeals] = useState<Appeal[]>([]);
   const waitingAppeals = appeals.filter(appeal => appeal.status === "queued");
@@ -73,6 +78,7 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
   const blocked = sendBlock({ amountMissing, warnings, sendAnyway });
 
   function send() {
+    setSendAttempted(true);
     if (blocked || sent || sentRecords().get(reviewKey)) return;
     const record: SentRecord = {
       at: clockText(new Date()), timestamp: new Date().toISOString(), disputeId: dispute.dispute_id, reviewer: saved ?? undefined,
@@ -96,9 +102,23 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
 
   return (
     <section className="card party-preview" aria-labelledby={`${id}-heading`}>
-      <h2 id={`${id}-heading`}>Notify parties</h2>
-      <p className="small muted">{sent ? "These are the exact messages and notes delivered. Reopen the case to make a correction." : "Check what each party will see, add a note if you like, then approve and send."}
-        {!sent && <> <button type="button" className="text-button" onClick={onGoToRuling}>To change the outcome, go back to Ruling</button></>}</p>
+      <div className="notify-view-tabs" role="tablist" aria-label="Message views">
+        {(["notify", "customer"] as const).map((item, index) => <button type="button" key={item} role="tab"
+          id={`${id}-${item}-tab`} aria-controls={`${id}-view-panel`} aria-selected={view === item} aria-disabled={item === "customer" && !sent}
+          tabIndex={view === item ? 0 : -1} onClick={() => { if (item === "notify" || sent) setView(item); }}
+          onKeyDown={event => {
+            if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+            event.preventDefault();
+            const target = !sent ? "notify" : event.key === "Home" ? "notify" : event.key === "End" ? "customer" : index === 0 ? "customer" : "notify";
+            setView(target); document.getElementById(`${id}-${target}-tab`)?.focus();
+          }}>{item === "notify" ? "Notify" : "Customer view"}</button>)}
+      </div>
+      <div id={`${id}-view-panel`} role="tabpanel" aria-labelledby={`${id}-${view}-tab`}>
+      <h2 id={`${id}-heading`}>{view === "customer" ? "Customer view" : "Notify parties"}</h2>
+      <p className="small muted">{view === "customer" ? "Try More info, Rate our support and Appeal case. Feedback is simulated for this browser session."
+        : sent ? "These are the messages and notes delivered. Reopen the case to make a correction."
+        : "Check what each person will see, add a note if you like, then send."}
+        {!sent && <> <span className="notify-outcome">{outcome.label}{outcome.amount != null ? ` · $${outcome.amount.toFixed(2)}` : ""} · </span><button type="button" className="text-button notify-change" onClick={onGoToRuling}>Change outcome</button></>}</p>
       {outcome.needsAmount && !sent && <div className="notify-amount">
         <label className="section-label" htmlFor={`${id}-amount`}>Partial refund amount</label>
         <input id={`${id}-amount`} inputMode="decimal" required aria-required="true" aria-invalid={!amountCheck.ok}
@@ -109,32 +129,45 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
       </div>}
       <div className="notify-rows">
         {PARTIES.map(party => <div className="notify-row" key={party}>
-          <Phone party={party} outcome={outcome} message={message(party)} note={cleanNote(note(party))} sent={sent}
-            dispute={dispute} decision={outcome.decision} appealsAvailable={appealsAvailable} id={id}
+          <CustomerPhone key={`${view}-${party}`} party={party} outcome={outcome} message={message(party)} note={cleanNote(note(party))}
+            live={view === "customer" && !!sent} deliveredAt={sent?.at} dispute={dispute} appealsAvailable={appealsAvailable}
             existing={appeals.find(appeal => appeal.party === party) ?? null}
             onAppealed={appeal => { setAppeals(previous => [...previous.filter(item => item.id !== appeal.id), appeal]); onAppealed?.(); }} />
-          <div className="notify-editor">
+          {view === "notify" && <div className="notify-editor">
             {sent
               ? note(party) && <div className="notify-note-sent"><span className="section-label">Your note to the {party}</span><p>“{note(party)}”</p></div>
               : <>
                 <label className="section-label" htmlFor={`${id}-${party}-note`}>Add a note to the {party}</label>
-                <textarea id={`${id}-${party}-note`} rows={3} maxLength={NOTE_LIMIT} value={notes[party]} placeholder={NOTE_PLACEHOLDER}
+                <div className="quick-notes" aria-label={`Quick notes for the ${party}`}>
+                  {quickNotes(party, outcome, undefined, dispute.type).map(chip => <span className="quick-note-wrap" key={chip.id}>
+                    <button type="button" className="quick-note" aria-pressed={notes[party].includes(chip.text)} aria-describedby={`${id}-${party}-${chip.id}`}
+                      onClick={() => {
+                        const result = toggleQuickNote(notes[party], chip.text);
+                        setChipMessage(previous => ({ ...previous, [party]: result.refused ? "That would go over 280 characters. Shorten the note first." : "" }));
+                        if (!result.refused) setNotes(previous => ({ ...previous, [party]: result.note }));
+                      }}>{chip.label}</button>
+                    <span role="tooltip" className="quick-note-tooltip" id={`${id}-${party}-${chip.id}`}>{chip.text}</span>
+                  </span>)}
+                </div>
+                <p className="small error-text" role="status">{chipMessage[party]}</p>
+                <textarea id={`${id}-${party}-note`} rows={3} maxLength={NOTE_LIMIT} value={notes[party]} placeholder={CUSTOMER_COPY.placeholders[party]}
                   aria-describedby={[`${id}-${party}-count`, warnings[party].length ? `${id}-${party}-warn` : ""].filter(Boolean).join(" ")}
-                  onChange={event => setNotes(previous => ({ ...previous, [party]: event.target.value.slice(0, NOTE_LIMIT) }))} />
+                  onChange={event => { setNotes(previous => ({ ...previous, [party]: event.target.value.slice(0, NOTE_LIMIT) })); setChipMessage(previous => ({ ...previous, [party]: "" })); }} />
                 <div className="notify-note-meta">
-                  <span className="small muted" id={`${id}-${party}-count`} aria-live="off">{noteCounter(notes[party])}</span>
+                  <span className={`small ${notes[party].length >= NOTE_LIMIT - 30 ? "note-near-limit" : "muted"}`} id={`${id}-${party}-count`} aria-live="off">{notes[party] ? noteCounter(notes[party]) : ""}</span>
                   {notes[party] && <button type="button" className="agents-toggle notify-reset"
                     onClick={() => setNotes(previous => ({ ...previous, [party]: "" }))}>Clear note</button>}
                 </div>
                 {warnings[party].length > 0 && <p className="notify-warning" id={`${id}-${party}-warn`} role="status">
                   <Icon name="warning" />Internal wording the {party} must not see: {warnings[party].join(", ")}.</p>}
               </>}
-          </div>
+          </div>}
         </div>)}
       </div>
-      <p className="small muted notify-privacy">{PRIVACY_NOTE}</p>
-      {sent ? <div className="notify-done">
+      {view === "notify" && <p className="small muted notify-privacy">{PRIVACY_NOTE}</p>}
+      {view === "notify" && (sent ? <div className="notify-done">
         <p className="notify-sent">{sentText(sent)}</p>
+        <div><button type="button" className="run-button" onClick={() => { setView("customer"); document.getElementById(`${id}-customer-tab`)?.focus(); }}>Next: Customer view →</button></div>
         {waitingAppeals.map(appeal => <div className="notify-appeal" key={appeal.id} role="status">
           <p><Icon name="warning" /><strong>{appealSummary(appeal)}</strong> · {appeal.id}</p>
           <p className="small">“{appeal.reason}”</p>
@@ -150,39 +183,12 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
       </div> : <div className="notify-actions">
         {flagged && <label className="send-anyway"><input type="checkbox" checked={sendAnyway} onChange={event => setSendAnyway(event.target.checked)} />
           Send anyway: I've checked this note is fine for the parties</label>}
-        <button type="button" className="run-button" disabled={!!blocked} title={SEND_TOOLTIP} aria-describedby={`${id}-send-note`} onClick={send}>
+        <button type="button" className="run-button" title={SEND_TOOLTIP} aria-describedby={`${id}-send-note`} onClick={send}>
           Approve &amp; send <span className="muted-on-accent">(simulated)</span></button>
-        <p className="small muted" id={`${id}-send-note`}>{blocked === "amount" ? "Enter the refund amount first."
+        <p className={`small ${sendAttempted && blocked ? "error-text" : "muted"}`} role={sendAttempted && blocked ? "alert" : undefined} id={`${id}-send-note`}>{blocked === "amount" ? "Enter the refund amount first."
           : blocked === "privacy" ? "Remove the internal wording from the note, or tick “Send anyway”." : SEND_TOOLTIP}</p>
-      </div>}
+      </div>)}
+      </div>
     </section>
   );
-}
-
-function Phone({ party, outcome, message, note, sent, dispute, decision, onAppealed, appealsAvailable, id, existing }: {
-  party: Party; outcome: FinalOutcome; message: string; note: string; sent: SentRecord | null;
-  dispute: DisputeCase; decision: Resolution["decision"]; onAppealed: (appeal: Appeal) => void; appealsAvailable: boolean; id: string; existing: Appeal | null;
-}) {
-  const state = phoneState(party, sent);
-  return <figure className={`phone-wrap${state.delivered ? " delivered" : " preview"}`} aria-labelledby={`${id}-${party}`}>
-    <figcaption id={`${id}-${party}`} className="section-label">What the {party} sees <span className={`phone-tag${state.delivered ? " delivered" : ""}`}>{state.tag}</span></figcaption>
-    <div className="phone">
-      <div className="phone-bar" aria-hidden="true"><span>9:41</span><span className="phone-notch" /><span>●●●</span></div>
-      <div className="phone-screen">
-        <p className="phone-app">Ryde · Dispute update</p>
-        <div className="phone-message">
-          <p className={`phone-decision ${outcome.decision}`}>{outcome.label}</p>
-          {outcome.amount != null && <p className="phone-amount">
-            {outcome.decision === "compensation" ? "Credit" : "Refund"} <strong>${outcome.amount.toFixed(2)}</strong></p>}
-          <p className="phone-text">{message}</p>
-        </div>
-        {note && <div className="phone-note">
-          <p className="phone-note-label">Note from your reviewer</p>
-          <p className="phone-note-text">“{note}”</p>
-        </div>}
-        {appealsAvailable && <AppealForm key={`${dispute.dispute_id}-${party}-${state.delivered ? "delivered" : "preview"}`} dispute={dispute} party={party}
-          decision={decision} onFiled={onAppealed} available={state.canAppeal} unavailableNote={state.caption ?? undefined} existing={state.delivered ? existing : null} />}
-      </div>
-    </div>
-  </figure>;
 }

@@ -14,7 +14,8 @@ import { caseHeadline, headerFinalOutcome } from "./caseBrief";
 import { RunCost } from "./RunCost";
 import { CaseComparison } from "./CaseComparison";
 import { Debate } from "./Debate";
-import { EvidenceList, EvidenceText, type FactLinks } from "./EvidenceList";
+import { EvidenceText, type FactLinks } from "./EvidenceList";
+import { RulingChecks } from "./RulingChecks";
 import { VerdictSummary } from "./VerdictSummary";
 import { computedFacts, disputeLabel, money } from "./presentation";
 import { caseHash, focusSection, HOME_HASH, missingCase, reveal, selectSample } from "./routes";
@@ -24,18 +25,15 @@ import { Home, type HomeRow } from "./Home";
 import { AppealsPanel } from "./Appeals";
 import { ClosedCase, ClosedSummary } from "./ClosedCase";
 import { DecisionBar, ReviewerDecision, useReviewerDecision } from "./ReviewerDecision";
-import { DECISION_LABELS, decisionTone, riskTone } from "./outcomeTone";
-import { Chip, InternalBadge } from "./Chip";
+import { DECISION_LABELS, decisionTone } from "./outcomeTone";
+import { Chip } from "./Chip";
 import { chipClass, chipTone } from "./chipStyle";
-import { SourceBadge } from "./SourceBadge";
 import { Loader3D, OeroMark, useLoaderVisible } from "./OeroAI";
 import { savedText } from "./decisionState";
 import { AiToggle } from "./AiToggle";
 import { readAiMode, writeAiMode, type AiMode } from "./aiMode";
 import { CurrentCaseShortcut, SidebarNewButton, SidebarToggle } from "./SidebarToggle";
 import { readGroupOpen, writeGroupOpen, readSidebarOpen, writeSidebarOpen } from "./sidebar";
-import { VERDICT } from "./ruleChecks";
-import { Term } from "./Term";
 import { PresentationToggle, ThemeToggle } from "./ThemeToggle";
 import type { Theme } from "./theme";
 import { PartyPreview, sentRecords } from "./PartyPreview";
@@ -47,7 +45,7 @@ import { ACCESS_CODE_FIELD_ID, accessCodeMessage, accessCodeProblem, needsAccess
 import { disputeCategory, groupByCategory, type Category, disputeItemName, filterLabel, filterShortLabel, TYPE_LABELS, type DisputeFilter } from "./disputeList";
 import { FilterMenu } from "./FilterMenu";
 import { Icon } from "./Icon";
-import type { AgentLogEntry, Appeal, ArgumentReview, Counterfactual, Decision, DisputeCase, PartyHistory, PrecedentReport, Resolution, RiskLevel, Triage, TriageTier } from "./types";
+import type { AgentLogEntry, Appeal, Decision, DisputeCase, PartyHistory, Resolution } from "./types";
 
 
 // The reviewer's progress per ruling, for this browser session (shared by every mount).
@@ -511,23 +509,10 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
                 {tab === "hearing" && resolution && <Debate resolution={resolution} dispute={selected} availableIds={factIds} onSelectFact={selectFact} />}
                 {tab === "ruling" && resolution && <>
                   <VerdictSummary resolution={resolution} disputeId={selected.dispute_id} />
+                  <RulingChecks key={reviewId} resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
                   {actions.decide ? <ReviewerDecision resolution={resolution} controller={decision} onContinue={() => changeTab("notify")} /> : sent && <ClosedSummary record={sent} />}
                   <AppealsPanel disputeId={selected.dispute_id} version={appealsVersion} onChanged={() => setAppealsVersion(v => v + 1)} />
-                  <RulingSection title="Reasoning" hint="The Judge's explanation, policy and evidence" open>
-                    <RulingPanel resolution={resolution} dispute={selected} availableIds={factIds} onSelectFact={selectFact} />
-                  </RulingSection>
-                  {(resolution.argument_review?.length || resolution.counterfactuals?.length) ? <RulingSection title="How the Judge weighed each side" hint="Cited rules checked against the facts, and what would change the ruling">
-                    {resolution.argument_review && resolution.argument_review.length > 0 && <section className="card"><ArgumentReviewPanel reviews={resolution.argument_review} /></section>}
-                    {resolution.counterfactuals && resolution.counterfactuals.length > 0 && <section className="card"><CounterfactualPanel items={resolution.counterfactuals} /></section>}
-                  </RulingSection> : null}
-                  {(resolution.precedents || resolution.triage) && <RulingSection title="Precedents and review priority" hint="Similar past rulings, and where this sits in the review queue">
-                    {resolution.precedents && <section className="card"><PrecedentPanel report={resolution.precedents} /></section>}
-                    {resolution.triage && <section className="card"><TriagePanel triage={resolution.triage} /></section>}
-                  </RulingSection>}
-                  <RulingSection title="Internal risk" hint="Bad-faith signals; never shown to the rider or driver">
-                    <section className="card"><RiskPanel risk={resolution.risk} /></section>
-                  </RulingSection>
-                  <details className="raw"><summary>Raw API response · internal record</summary><pre>{JSON.stringify(resolution, null, 2)}</pre></details>
+
                 </>}
                 {tab === "notify" && resolution && reviewId && <PartyPreview key={`${reviewId}-${sentRecords().events(reviewId).length}`} reviewKey={reviewId} resolution={resolution} dispute={selected}
                   reopened={reopened} previous={reopened ? latestSent : null} appealsAvailable={appeals !== null}
@@ -648,186 +633,6 @@ function History({ label, history }: { label: string; history: PartyHistory }) {
   );
 }
 
-function RiskPanel({ risk }: { risk: Resolution["risk"] }) {
-  return (
-    <div className="risk-panel">
-      <div className="panel-head"><h2>Fraud &amp; bad-faith risk</h2><InternalBadge detail="Internal review only" /></div>
-      <div className="risk-badges">
-        <div className="risk-row">
-          <span className="risk-party">Rider</span>
-          <RiskBadge level={risk.rider_risk} />
-        </div>
-        <div className="risk-row">
-          <span className="risk-party">Driver</span>
-          <RiskBadge level={risk.driver_risk} />
-        </div>
-      </div>
-      {risk.signals.length === 0 && <p className="small muted">No bad-faith signals detected.</p>}
-      {risk.signals.length > 0 && (
-        <ul className="small risk-signals">
-          {risk.signals.map((s, i) => (
-            <li key={i}>{s}</li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-// Reuses the risk badge colours, so a safety case stands out like a high risk.
-const TRIAGE_BADGE: Record<TriageTier, RiskLevel> = { safety: "high", high: "medium", standard: "low", low: "low" };
-const TRIAGE_LABEL: Record<TriageTier, string> = {
-  safety: "Safety · review first", high: "High", standard: "Standard", low: "Low",
-};
-
-function TriagePanel({ triage }: { triage: Triage }) {
-  return (
-    <div className="risk-panel">
-      <div className="panel-head"><h2><Term term="triage">Review priority</Term></h2><InternalBadge detail="Internal review only" /></div>
-      {triage.tier ? (
-        <>
-          <div className="risk-badges">
-            <div className="risk-row">
-              <Chip tone={riskTone(TRIAGE_BADGE[triage.tier])}>{TRIAGE_LABEL[triage.tier]}</Chip>
-              <span className="risk-party">Score {triage.score} / 100</span>
-            </div>
-          </div>
-          <ul className="small risk-signals">
-            {triage.reasons.map((r, i) => <li key={i}>{r}</li>)}
-          </ul>
-        </>
-      ) : (
-        <p className="small muted">Resolved automatically; no human review needed.</p>
-      )}
-    </div>
-  );
-}
-
-function ArgumentReviewPanel({ reviews }: { reviews: ArgumentReview[] }) {
-  return (
-    <div className="risk-panel">
-      <div className="panel-head"><h2>How the Judge weighed each side</h2><InternalBadge detail="Internal review only · computed from the policy" /></div>
-      <div className="debate-grid">
-        {reviews.map((review) => (
-          <div key={review.party} className={`advocate ${review.party}`}>
-            <h4>{review.party === "rider" ? "Rider advocate" : "Driver advocate"}</h4>
-            {review.rules.length > 0 ? (
-              <ul className="small argument-checks">
-                {review.rules.map((check) => (
-                  <li key={check.rule}>
-                    <strong><Term rule={check.rule} /></strong>{" "}
-                    <Chip size="sm" tone={riskTone(VERDICT[check.verdict].level)}>{VERDICT[check.verdict].label}</Chip>
-                    {check.decisive && <>{" "}<Chip size="sm" tone="outline">Decided the case</Chip></>}
-                  </li>
-                ))}
-              </ul>
-            ) : <p className="small muted">No policy rule cited.</p>}
-            <p className="small muted">{review.summary}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/** A collapsible group in the Ruling tab: essentials first, detail on demand. */
-function RulingSection({ title, hint, open = false, children }: { title: string; hint: string; open?: boolean; children: React.ReactNode }) {
-  return <details className="ruling-section" open={open}>
-    <summary><span className="ruling-section-title">{title}</span><span className="small muted">{hint}</span></summary>
-    <div className="ruling-section-body">{children}</div>
-  </details>;
-}
-
-function CounterfactualPanel({ items }: { items: Counterfactual[] }) {
-  return (
-    <div className="risk-panel">
-      <div className="panel-head"><h2>What would change this ruling</h2><InternalBadge detail="Internal review only · computed from the policy" /></div>
-      <ul className="small counterfactual-list">
-        {items.map((cf, i) => (
-          <li key={i}>
-            If {cf.change}, the outcome would be <strong>{cf.outcome}</strong>
-            {cf.rules.length > 0 && <span className="muted"> ({cf.rules.map((r, j) => <span key={r}>{j > 0 && ", "}<Term rule={r} /></span>)})</span>}.
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-const CONSISTENCY_LABEL: Record<PrecedentReport["consistency"], string> = {
-  consistent: "Consistent with precedent", mixed: "Mixed precedent",
-  overridden: "Reviewers decided differently", no_precedent: "No close precedent",
-};
-
-function PrecedentPanel({ report }: { report: PrecedentReport }) {
-  return (
-    <div className="risk-panel">
-      <div className="panel-head"><h2>Similar past rulings <Term term="precedent">(precedents)</Term></h2><InternalBadge detail="Internal review only · Policy & Precedent agent" /></div>
-      <div className="risk-row">
-        <Chip tone={riskTone(report.consistency === "overridden" ? "high" : report.consistency === "mixed" ? "medium" : "low")}>
-          {CONSISTENCY_LABEL[report.consistency]}
-        </Chip>
-      </div>
-      {report.summary && <p className="small">{report.summary}</p>}
-      {report.matches.length > 0 ? (
-        <ul className="small precedent-list">
-          {report.matches.map((m) => (
-            <li key={m.id}>
-              <strong className="evidence-id">{m.id}</strong>{" "}
-              {DECISION_LABELS[m.decision]} · {Math.round(m.similarity * 100)}% similar ·{" "}
-              {m.decided_by === "human_review" ? "decided by a reviewer" : "decided by the policy rules"}
-              <span className="muted"> — {m.summary}</span>
-              {m.note && <span className="muted"> ({m.note})</span>}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="small muted">No past ruling was similar enough to compare.</p>
-      )}
-    </div>
-  );
-}
-
-function RiskBadge({ level }: { level: RiskLevel }) {
-  return <Chip tone={riskTone(level)}>{level.charAt(0).toUpperCase() + level.slice(1)}</Chip>;
-}
-
-function RulingPanel({ resolution, dispute, availableIds, onSelectFact }: { resolution: Resolution; dispute: DisputeCase } & FactLinks) {
-  const pct = Math.round(resolution.confidence * 100);
-  const source = resolution.explanation_source === "llm" ? "llm" : "fallback";
-  return (
-    <section className="card ruling-detail">
-      <div className="card-head">
-        <h2>
-          Why the Judge ruled this way
-          <SourceBadge source={source} />
-        </h2>
-        <Chip tone={decisionTone(resolution.decision)}>{DECISION_LABELS[resolution.decision]}</Chip>
-      </div>
-
-      <div className="confidence">
-        <span className="small muted">Confidence</span>
-        <div className="meter" role="meter" aria-label="Ruling confidence" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-          <div style={{ width: `${pct}%` }} />
-        </div>
-        <strong>{pct}%</strong>
-      </div>
-
-      <p className="action"><EvidenceText text={resolution.recommended_action} availableIds={availableIds} onSelectFact={onSelectFact} /></p>
-      <p><EvidenceText text={resolution.explanation} availableIds={availableIds} onSelectFact={onSelectFact} /></p>
-
-      <h3 className="section-label">Policy applied</h3>
-      <ul className="small">
-        {resolution.policy_refs.map((p) => (
-          <li key={p}>{p}</li>
-        ))}
-      </ul>
-
-      <h3 className="section-label">Evidence considered</h3>
-      <EvidenceList texts={resolution.judge_evidence} ids={resolution.judge_evidence_ids} mention={resolution.explanation} dispute={dispute} availableIds={availableIds} onSelectFact={onSelectFact} />
-    </section>
-  );
-}
 
 function TypeIcon({ type }: { type: DisputeCase["type"] }) {
   return <svg className="type-icon" viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true" focusable="false">
