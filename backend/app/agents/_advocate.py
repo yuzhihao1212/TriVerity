@@ -39,6 +39,33 @@ logger = logging.getLogger(__name__)
 # Extracts a leading rule ID like "RD-3" or "SAFE-1" from a citation string.
 _RULE_ID_RE = re.compile(r"^([A-Z]+-\d+)")
 _NUMBER_RE = re.compile(r"(\d+(?:\.\d+)?)(\s*%)?")
+# Who sent a chat fact: its line quotes the message after the sender, e.g. 'rider: "Ok, 5 more minutes."'.
+_CHAT_SENDER_RE = re.compile(r'\b(rider|driver):\s*"', re.IGNORECASE)
+# A sentence crediting a party with something said in chat: "the driver agreed", "rider then asked".
+_SPEECH_RE = re.compile(
+    r"\b(rider|driver)(?:'s)?(?:\s+\w+){0,2}?\s+(?:agreed|agrees|said|says|promised|promises|told|tells|wrote|writes|"
+    r"asked|asks|offered|offers|confirmed|confirms|replied|replies|messaged|accepted|accepts|acknowledged|"
+    r"acknowledges|admitted|admits|requested|requests|stated|states)\b",
+    re.IGNORECASE,
+)
+_CHAT_ID_RE = re.compile(r"\bCHAT-\d+\b", re.IGNORECASE)
+_SENTENCE_RE = re.compile(r"(?<=[.!?])\s+")
+# The model echoing its own rules back, e.g. "Only cited facts used. Never concede.": a short
+# directive about facts, rules or conceding, or a phrase that only makes sense as a note to itself.
+_DIRECTIVE_RE = re.compile(
+    r"^\W*(?:only|never|always|do\s+not|don't|must|no)\b.*\b(?:concede\w*|cite[sd]?|facts?|rulings?|rules?|"
+    r"invent\w*|evidence|words?)\b",
+    re.IGNORECASE,
+)
+_META_PHRASE_RE = re.compile(
+    r"\b(?:cited\s+facts\s+used|only\s+(?:the\s+)?(?:cited|provided)\s+facts|as\s+instructed|my\s+instructions|"
+    r"evidence_ids|policy_refs|json)\b",
+    re.IGNORECASE,
+)
+_DIRECTIVE_MAX_WORDS = 6
+_FACT_ID_RE = re.compile(r"\b[A-Z]+-\d+\b", re.IGNORECASE)
+# A "sentence" that is nothing but fact IDs, e.g. "TRIP-4, CHAT-2." or "(GPS-1 and GPS-2)".
+_ID_LIST_RE = re.compile(r"^\W*[A-Z]+-\d+(?:(?:\W|\band\b)+[A-Z]+-\d+)*\W*$", re.IGNORECASE)
 
 
 def advocate_system_prompt(party: str, own_account: str) -> str:
@@ -70,7 +97,9 @@ def advocate_system_prompt(party: str, own_account: str) -> str:
         f"policy_refs must be [] and you argue from the facts alone.\n"
         f"5. evidence_ids: gather your evidence from the sources provided (trip, gps, fare, chat, "
         f"history) and cite the IDs of the facts that support your client, e.g. \"GPS-2\". "
-        f"Use only IDs that appear in the evidence.\n"
+        f"Use only IDs that appear in the evidence. Each chat fact names its sender "
+        f"(rider: or driver:): only say a party said, agreed, asked or promised something if "
+        f"that party sent the message you cite, and never credit one party with the other's words.\n"
         f"6. Write plain text only: no links, email addresses, phone numbers, HTML or markdown.\n"
         f"7. Keep the summary concise: at most 120 words, focused on your strongest points. "
         f"The evidence list carries the detail.\n"
@@ -213,14 +242,17 @@ def build_advocate_case(
     except (json.JSONDecodeError, KeyError, TypeError, ValidationError, AttributeError) as exc:
         return _fallback(agent, claim_line, fallback_summary, facts, f"parse failed: {safe_reason(exc)}")
 
-    problem = _check_output(case, system)
+    summary, listed_ids = strip_id_lists(strip_leaked_rules(case.summary, agent))
+    case = case.model_copy(update={"summary": summary})
+    problem = _check_output(case, system) or misattributed_chat(case.summary, chat_senders(facts))
     if problem:
         return _fallback(agent, claim_line, fallback_summary, facts, problem)
-    if "evidence_ids" in parsed:
+    if "evidence_ids" in parsed or listed_ids:
         # Cited by ID: only facts that exist can be cited, and the text is the computed
-        # fact itself, so nothing the model writes reaches the evidence list.
+        # fact itself, so nothing the model writes reaches the evidence list. IDs the model
+        # listed in the summary instead of the field count as its citations.
         index = evidence_index(facts)
-        ids = _resolve_ids(parsed["evidence_ids"], index)
+        ids = _resolve_ids(parsed.get("evidence_ids") or listed_ids, index)
         if not ids:
             ids = list(index)
         return case.model_copy(update={
@@ -265,6 +297,65 @@ def _check_output(case: AgentCase, system: str) -> str | None:
     return None
 
 
+def strip_leaked_rules(text: str, agent: str) -> str:
+    """Drop sentences where the model repeats its instructions instead of arguing.
+
+    A rebuttal ending "Only cited facts used. Never concede." keeps its argument and loses
+    those two sentences. If nothing is left, the empty-text check rejects it as usual.
+    """
+    kept, dropped = [], 0
+    for sentence in _SENTENCE_RE.split(text.strip()):
+        short_directive = len(sentence.split()) <= _DIRECTIVE_MAX_WORDS and _DIRECTIVE_RE.search(sentence)
+        if short_directive or _META_PHRASE_RE.search(sentence):
+            dropped += 1
+        else:
+            kept.append(sentence)
+    if dropped:
+        logger.warning("%s: dropped %d sentence(s) repeating its instructions", agent, dropped)
+    return " ".join(kept)
+
+
+def strip_id_lists(text: str) -> tuple[str, list[str]]:
+    """Drop sentences that are only fact IDs ("TRIP-4, CHAT-2."), returning the text and those IDs.
+
+    Models sometimes list their citations at the end of the text instead of in evidence_ids;
+    shown as is, they read as stray codes. The caller uses the IDs when the field is empty.
+    """
+    kept, listed = [], []
+    for sentence in _SENTENCE_RE.split(text.strip()):
+        if _ID_LIST_RE.match(sentence):
+            listed += [fact_id.upper() for fact_id in _FACT_ID_RE.findall(sentence)]
+        else:
+            kept.append(sentence)
+    return " ".join(kept), listed
+
+
+def chat_senders(facts: CaseFacts) -> dict[str, str]:
+    """Who sent each quoted chat fact: {"CHAT-8": "rider"}. Lines without a quoted message are left out."""
+    senders: dict[str, str] = {}
+    for fact_id, (source, line) in evidence_index(facts).items():
+        match = _CHAT_SENDER_RE.search(line) if source == "chat" else None
+        if match:
+            senders[fact_id] = match.group(1).lower()
+    return senders
+
+
+def misattributed_chat(text: str, senders: dict[str, str]) -> str | None:
+    """Reject text that credits a party with a chat message the other party sent.
+
+    Checked per sentence: when a sentence cites chat facts with a known sender and says the
+    rider or driver said, agreed, asked (and so on), at least one cited message must be that
+    party's. "The driver agreed to wait (CHAT-8)" fails when CHAT-8 is the rider's message.
+    """
+    for sentence in _SENTENCE_RE.split(text):
+        cited = {senders[i.upper()] for i in _CHAT_ID_RE.findall(sentence) if i.upper() in senders}
+        credited = {m.group(1).lower() for m in _SPEECH_RE.finditer(sentence)}
+        if cited and credited and not credited & cited:
+            party = sorted(credited)[0]
+            return f"attribution: credits the {party} with a chat message the {sorted(cited)[0]} sent"
+    return None
+
+
 def rebuttal_system_prompt(party: str, other: str) -> str:
     """System prompt for the second round: ``party``'s advocate answers ``other``'s case."""
     return (
@@ -280,7 +371,8 @@ def rebuttal_system_prompt(party: str, other: str) -> str:
         f"2. Argue for the {party} only. Never concede, never say the other party should win, "
         f"and never issue a ruling.\n"
         f"3. evidence_ids: cite the IDs of the facts your reply relies on, e.g. \"GPS-2\". "
-        f"Use only IDs that appear in the evidence.\n"
+        f"Use only IDs that appear in the evidence. Each chat fact names its sender "
+        f"(rider: or driver:): never credit one party with the other's words.\n"
         f"4. Write plain text only: no links, email addresses, phone numbers, HTML or markdown.\n"
         f'Respond with a JSON object only: {{"rebuttal": str, "evidence_ids": [str]}}.'
     )
@@ -322,12 +414,13 @@ def build_rebuttal(*, party: str, own_case: AgentCase, other_case: AgentCase,
         logger.warning("%s fell back: parse failed: %s", agent, safe_reason(exc))
         return Rebuttal()
 
-    problem = _check_rebuttal(text, system)
+    text, listed_ids = strip_id_lists(strip_leaked_rules(text, agent))
+    problem = _check_rebuttal(text, system) or misattributed_chat(text, chat_senders(facts))
     if problem:
         logger.warning("%s fell back: %s", agent, problem)
         return Rebuttal()
     index = evidence_index(facts)
-    ids = _resolve_ids(parsed.get("evidence_ids"), index)
+    ids = _resolve_ids(parsed.get("evidence_ids") or listed_ids, index)
     return Rebuttal(text=sanitise(text), evidence=[index[i][1] for i in ids], evidence_ids=ids, source="llm")
 
 
