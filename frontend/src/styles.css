@@ -751,19 +751,40 @@ textarea { width: 100%; resize: vertical; }
 .trip-svg .pin-end { fill: var(--text); }
 .trip-svg .svg-label { font-size: 9px; fill: var(--muted); font-family: inherit; }
 .trip-svg .axis { stroke: var(--border); stroke-width: 1; }
-.trip-svg .stop-band { fill: var(--accent-soft); }
 .key { display: inline-block; width: 14px; height: 0; margin-right: var(--space-2); vertical-align: middle; border-top: 2px solid; }
 .key-expected { border-top: 2px dashed var(--muted); }
 .key-actual { border-color: var(--accent); }
-.fare-bars { display: grid; gap: var(--space-2); padding-block: var(--space-2); }
-.fare-track { position: relative; display: flex; height: 24px; background: var(--surface); border-radius: 999px; overflow: visible; }
-.fare-expected { height: 100%; background: var(--muted); border-radius: 999px; }
-.fare-segment { flex: none; height: 100%; min-width: 0; padding: 0; border: 0; background: var(--accent); }
-.fare-segment:first-child { border-radius: 999px 0 0 999px; }
-.fare-segment:last-of-type { border-radius: 0 999px 999px 0; }
-.fare-marker { pointer-events: none; position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--text); }
-.fare-extra { font-size: 11px; color: var(--accent-text); font-weight: 600; text-align: right; }
-.fare-legend { font-size: 10px; color: var(--muted); overflow-wrap: anywhere; }
+/* Duration dial: the expected trip on the inner ring, the actual one on the outer ring, stops marked on it. */
+.duration-dial { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-4); }
+.dial-svg { flex: none; width: 132px; }
+.dial-svg circle { fill: none; }
+.dial-track { stroke: var(--border); }
+.dial-expected { stroke: var(--muted); stroke-width: 7; stroke-dasharray: 4 2.5; }
+.dial-actual { stroke: var(--accent); stroke-width: 9; }
+.dial-stop { stroke: color-mix(in srgb, var(--accent) 30%, var(--bg)); stroke-width: 9; }
+.trip-svg .dial-value { font-size: 22px; font-weight: 600; fill: var(--text); font-family: inherit; font-variant-numeric: tabular-nums; }
+.dial-key { display: grid; gap: var(--space-1); min-width: 0; margin: 0; padding: 0; list-style: none; color: var(--muted); font-size: 11px; }
+.dial-key-stop { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 3px; background: color-mix(in srgb, var(--accent) 30%, var(--bg)); vertical-align: -1px; }
+.chart-intro .dial-sweep { animation: dial-sweep var(--intro-dur, 400ms) cubic-bezier(.33, 1, .68, 1) var(--intro-delay, 0ms) both; }
+@keyframes dial-sweep { from { stroke-dashoffset: var(--sweep); } to { stroke-dashoffset: 0; } }
+/* Fare meter: the expected fare struck through, the charged fare, a badge for the change, and the overrun. */
+.fare-meter { padding-block: var(--space-1); }
+.fare-was { margin: 0; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.fare-was s { text-decoration-thickness: 1.5px; }
+.fare-meter-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin-top: 2px; }
+.fare-meter-value { font-size: 34px; font-weight: 600; line-height: 1.1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.fare-meter-value.up { color: var(--accent-text); }
+.fare-change { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px 3px 7px; border-radius: 999px; background: var(--neutral-soft); color: var(--text); font-size: 13px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fare-change svg { width: 16px; height: 16px; }
+.fare-change.up { background: var(--accent-soft); color: var(--accent-text); }
+.fare-change.down { background: var(--ok-soft); color: var(--ok-text); }
+.fare-meter-track { position: relative; height: 6px; margin: var(--space-4) 0 var(--space-5); border-radius: 3px; background: var(--border); }
+.fare-meter-base, .fare-meter-over { position: absolute; top: 0; height: 100%; }
+.fare-meter-base { left: 0; border-radius: 3px; background: var(--muted); }
+.fare-meter-over { border-radius: 0 3px 3px 0; background: var(--accent); }
+.fare-meter-tick { position: absolute; top: -5px; width: 0; height: 16px; border-left: 1.5px solid var(--text); }
+.fare-meter-tick > span { position: absolute; top: 18px; left: 0; color: var(--muted); font-size: 10px; white-space: nowrap; transform: translateX(-50%); }
+.chart-intro .fare-meter-base, .chart-intro .fare-meter-over { transform-origin: left center; }
 
 /* Chart intro (CaseComparison.tsx; timings in chartIntro.ts). Plays once per case per session.
    Every hidden starting state lives only under .chart-intro, so without the class (JS off,
@@ -1545,15 +1566,12 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .comparison-table td { text-align: right; }
 .chart-hit { fill: var(--transparent); pointer-events: all; cursor: pointer; }
 .chart-hit:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.duration-chart { touch-action: pan-y; }
-.chart-guide line { stroke: var(--text); stroke-width: 1; }
-.chart-guide circle { fill: var(--text); stroke: var(--surface); stroke-width: 1; }
 .chart-readout { min-height: 3em; margin: var(--space-2) 0 0; font-size: 12px; color: var(--text); line-height: 1.5; overflow-wrap: anywhere; }
-.chart-key { margin: var(--space-2) 0 0; font-size: 11px; color: var(--muted); }
 .presentation-mode .comparison .card-head h3 { font-size: 16px; }
 .presentation-mode .comparison-difference { font-size: 21px; }
 .presentation-mode .chart-readout, .presentation-mode .comparison-table { font-size: 14px; }
-.presentation-mode .chart-key, .presentation-mode .chart-view-toggle button { font-size: 13px; }
+.presentation-mode .dial-key, .presentation-mode .chart-view-toggle button { font-size: 13px; }
+.presentation-mode .fare-meter-value { font-size: 40px; }
 .presentation-mode .trip-svg .svg-label { font-size: 10px; }
 @media (max-width: 1000px) { .comparisons { grid-template-columns: 1fr; gap: var(--space-4); } }
 

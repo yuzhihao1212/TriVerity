@@ -23,10 +23,10 @@ export const DURATION = {
 } as const;
 
 export const FARE = {
-  expectedStart: CHART_STARTS.fare, expectedMs: 300,
-  chargedStart: CHART_STARTS.fare + 50, chargedMs: 350, // segments in order, at one constant speed
-  markerMs: 100,
-  extraMs: 120,
+  expectedStart: CHART_STARTS.fare, expectedMs: 300, // the track fills to the expected fare
+  chargedStart: CHART_STARTS.fare + 50, chargedMs: 500, // the meter ticks up and the overrun grows past it
+  markerMs: 50,
+  extraMs: 100, // the rise badge pops in once the meter lands
 } as const;
 export const FARE_MARKER_START = FARE.chargedStart + FARE.chargedMs;
 export const FARE_EXTRA_START = FARE_MARKER_START + FARE.markerMs;
