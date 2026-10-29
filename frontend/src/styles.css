@@ -577,7 +577,29 @@ textarea { width: 100%; resize: vertical; }
 .live-timeline > li > p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: var(--space-2); font-size: 12px; color: var(--muted); }
 .step-duration { font-size: 11px; font-variant-numeric: tabular-nums; }
 .elapsed-time { font-size: 13px; font-variant-numeric: tabular-nums; }
-.live-pending { display: flex; align-items: center; gap: var(--space-3); font-size: 13px; color: var(--muted); padding-block: var(--space-3); }
+/* Live progress: a sticky bar with an estimate; stripes flow forward only while agents work. */
+.live-progress-head { position: sticky; top: 0; z-index: 5; display: grid; gap: var(--space-2); margin: var(--space-3) 0; padding: var(--space-3) var(--space-4); border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
+.live-progress-summary { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-1) var(--space-3); font-size: 14px; font-variant-numeric: tabular-nums; }
+.live-progress-summary span { color: var(--muted); font-size: 13px; }
+.live-progress-track { height: 10px; border-radius: 999px; background: var(--border); overflow: hidden; }
+.live-progress-fill { display: block; height: 100%; border-radius: 999px; background-color: var(--accent-control); background-image: repeating-linear-gradient(-45deg, var(--accent) 0 8px, var(--accent-control) 8px 16px); background-size: 22.6px 22.6px; transition: width .4s ease; animation: live-flow .7s linear infinite; }
+.live-progress-fill.complete { background-image: none; animation: none; }
+.live-running { margin: 0; color: var(--muted); font-size: 13px; }
+.live-progress-head.complete .live-running { color: var(--ok-text); font-weight: 600; }
+.live-completion { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--ok-text); border-radius: 12px; background: var(--ok-soft); }
+.live-completion h2 { display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--ok-text); font-size: 17px; }
+.live-completion h2 .icon { width: 20px; height: 20px; flex: none; }
+.live-placeholder { border-left-style: dashed !important; }
+.live-step-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--accent-text); border-top-color: var(--transparent); animation: waiting 1s linear infinite; }
+.live-shimmer { display: block; height: 8px; margin-top: var(--space-2); border-radius: 4px; background: linear-gradient(90deg, var(--border) 25%, var(--surface) 50%, var(--border) 75%); background-size: 200% 100%; animation: live-shimmer 1.4s ease-in-out infinite; }
+.live-jump { position: sticky; bottom: var(--space-4); display: block; margin: var(--space-3) auto 0; }
+@keyframes live-flow { to { background-position: 22.6px 0; } }
+@keyframes live-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .live-progress-fill, .live-shimmer, .live-step-dot { animation: none; }
+  .live-progress-fill { transition: none; }
+}
+@media (max-width: 760px) { .live-completion .run-button { width: 100%; } }
 .collector-round { display: grid; gap: var(--space-3); }
 .collector-round > h3 { font-size: 14px; }
 .collector-summary { margin: 0; font-size: 14px; line-height: 1.55; }
@@ -808,6 +830,15 @@ main[tabindex="-1"]:focus { outline: none; }
 .step-name { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; margin-top: var(--space-1); font-size: 13px; font-weight: 600; }
 .step-icon { flex: none; width: 15px; height: 15px; }
 .step.current .step-name { color: var(--accent-text); }
+/* The current step is larger, with a soft halo: size is noticed before colour or text. */
+.step.current .step-circle { transform: scale(1.2); box-shadow: 0 0 0 5px var(--accent-soft); transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease, border-color .2s ease; }
+/* After a run, steps 2-5 unlock one after another. */
+.stepper.unlocking .step:not(:first-child) .step-circle { animation: step-unlock .35s ease-out both; animation-delay: calc((var(--step-index) - 1) * 120ms); }
+@keyframes step-unlock { from { transform: scale(.7); opacity: .4; } to { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .step.current .step-circle { transition: none; }
+  .stepper.unlocking .step .step-circle { animation: none; }
+}
 .label-short { display: none; }
 .step .tab-progress { color: var(--muted); font-size: 11px; }
 .step.locked { cursor: not-allowed; }

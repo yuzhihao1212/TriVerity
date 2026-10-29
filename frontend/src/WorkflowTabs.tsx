@@ -1,4 +1,4 @@
-import { useId, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { useId, useRef, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 
 import { Icon } from "./Icon";
 import { SHORT_TAB_LABELS, stepStates, stepStatusText } from "./stepVisuals";
@@ -9,7 +9,7 @@ const STEP_ICONS: Record<WorkflowTab, string> = {
   intake: "folder", evidence: "magnifier", hearing: "bubbles", ruling: "scales", notify: "phone",
 };
 
-export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, onChange, render }: {
+export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, unlocking = false, onChange, render }: {
   active: WorkflowTab;
   resolution?: Resolution;
   busy: boolean;
@@ -17,6 +17,8 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, on
   liveSteps?: AgentLogEntry[];
   /** Steps the reviewer has completed for this ruling. */
   reviewed?: Iterable<WorkflowTab>;
+  /** A run just finished: steps 2-5 unlock one after another. */
+  unlocking?: boolean;
   onChange: (tab: WorkflowTab) => void;
   render: (tab: WorkflowTab) => ReactNode;
 }) {
@@ -36,7 +38,7 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, on
   }
   return <>
     <div className="workflow-bar">
-      <div className="workflow-tabs stepper" role="tablist" aria-label="Case workflow">
+      <div className={`workflow-tabs stepper${unlocking ? " unlocking" : ""}`} role="tablist" aria-label="Case workflow">
         {WORKFLOW_TABS.map((tab, index) => {
           const state = states[index];
           const locked = state.locked;
@@ -45,7 +47,8 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, on
             state.next && "next", state.joined && "joined"].filter(Boolean).join(" ");
           return <button type="button" role="tab" key={tab.id} className={classes}
             id={`${id}-${tab.id}-tab`} aria-controls={`${id}-${tab.id}-panel`}
-            aria-selected={active === tab.id} aria-disabled={locked}
+            aria-selected={active === tab.id} aria-disabled={locked} aria-current={state.current ? "step" : undefined}
+            style={{ "--step-index": index } as CSSProperties}
             aria-describedby={locked ? `${id}-locked` : undefined}
             tabIndex={active === tab.id && !locked ? 0 : -1}
             data-workflow-tab={tab.id}
