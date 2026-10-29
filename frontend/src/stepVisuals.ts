@@ -2,9 +2,8 @@
 // Everything here derives from data the console already has; nothing is sent
 // to the backend and no ruling, fact or message text is changed.
 
-import { decisionTone } from "./outcomeTone";
 import { WORKFLOW_TABS, type WorkflowTab } from "./workflow";
-import type { AgentLogEntry, Decision, DisputeCase, Resolution, ToolCallRecord } from "./types";
+import type { AgentLogEntry, Decision, Resolution, ToolCallRecord } from "./types";
 
 export type Tone = "ok" | "warn" | "danger" | "accent" | "neutral";
 
@@ -90,27 +89,6 @@ export const SHORT_TAB_LABELS: Record<WorkflowTab, string> = {
 
 // ---- Case header --------------------------------------------------------
 
-export interface HeaderChip { key: string; label: string; tone: Tone }
-
-const money = (amount: number) => `$${amount.toFixed(2)}`;
-
-export function outcomeChip(decision: Decision, refund: number | null): HeaderChip {
-  const amount = refund != null && refund > 0 ? ` ${money(refund)}` : "";
-  // Tones come from the one outcome mapping (outcomeTone.ts), shared with the sidebar and the bar.
-  const tone = decisionTone(decision);
-  switch (decision) {
-    case "partial_refund": return { key: "outcome", label: `Partial refund${amount}`, tone };
-    case "full_refund": return { key: "outcome", label: `Full refund${amount}`, tone };
-    case "compensation": return { key: "outcome", label: `Compensation${amount}`, tone };
-    case "no_action": return { key: "outcome", label: "No action", tone };
-    // A human decides: any proposed amount is not an outcome yet.
-    case "needs_review": return { key: "outcome", label: "Escalated to a human", tone };
-  }
-}
-
-const num = (value: unknown): number | null => typeof value === "number" && Number.isFinite(value) ? value : null;
-
-/** 2-4 chips summarising the case; a chip whose data is missing is skipped. */
 /**
  * Whether the route deviation counted against the driver. Before a ruling the rules
  * have not decided: neutral. Policy refs arrive as "RD-1: A route up to 15% …", so the
@@ -129,27 +107,6 @@ export function distanceTone(resolution?: Pick<Resolution, "decision" | "policy_
 
 /** The outcome a reviewer settled on, when it differs from (or replaces) the AI ruling. */
 export interface FinalHeaderOutcome { decision: Decision; amount: number | null; by: "overridden" | "decided" | null }
-
-export function headerChips(dispute: DisputeCase, resolution?: Resolution, final?: FinalHeaderOutcome | null): HeaderChip[] {
-  const chips: HeaderChip[] = [];
-  const expected = num(dispute.trip.expected_distance_km), actual = num(dispute.trip.actual_distance_km);
-  if (expected && actual != null) {
-    const pct = Math.round((actual / expected - 1) * 100);
-    chips.push({ key: "distance", label: `${pct > 0 ? "+" : ""}${pct}% distance`, tone: pct > 0 ? distanceTone(resolution) : "neutral" });
-  }
-  const wait = num(dispute.trip.driver_wait_min);
-  if (wait != null) chips.push({ key: "wait", label: `Driver waited ${wait} min`, tone: "neutral" });
-  const charged = num(dispute.fare.actual), fee = num(dispute.fare.cancellation_fee);
-  if (charged != null) chips.push({ key: "charged", label: `${money(charged)} charged`, tone: "neutral" });
-  else if (fee != null) chips.push({ key: "charged", label: `${money(fee)} no-show fee`, tone: "neutral" });
-  // The header shows the final outcome: the reviewer's override wins over the AI ruling,
-  // so it never contradicts the closed banner or the parties' messages.
-  if (final) {
-    const chip = outcomeChip(final.decision, final.amount);
-    chips.push(final.by ? { ...chip, label: `${chip.label} · ${final.by === "overridden" ? "overridden" : "decided by reviewer"}` } : chip);
-  } else if (resolution) chips.push(outcomeChip(resolution.decision, resolution.refund_amount));
-  return chips.slice(0, 4);
-}
 
 export interface StatusPill { label: string; tone: Tone; pulse: boolean; /** The exact wording used before this redesign. */ detail: string }
 

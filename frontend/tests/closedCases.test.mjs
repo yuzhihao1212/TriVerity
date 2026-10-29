@@ -125,12 +125,12 @@ test('the current result survives a page refresh so a closed review cannot be re
   assert.deepEqual(n.createSentStore(bad).results(),{});
 });
 
-test('the header outcome chip follows the final decision, marked when the reviewer changed it', async () => {
-  const { headerChips } = await load('stepVisuals');
-  const dispute = { trip: { expected_distance_km: 10.2, actual_distance_km: 14.7 }, fare: { actual: 24.8 } };
+test('the headline follows the final decision, marked when the reviewer changed it', async () => {
+  const { caseHeadline } = await load('caseBrief');
+  const dispute = { type: 'route_deviation', trip: { expected_distance_km: 10.2, actual_distance_km: 14.7 }, fare: { actual: 24.8 } };
   const resolution = { decision: 'partial_refund', refund_amount: 6.3, policy_refs: ['RD-3: …'] };
-  const outcome = chips => chips.find(c => c.key === 'outcome').label;
-  assert.equal(outcome(headerChips(dispute, resolution)), 'Partial refund $6.30');
-  assert.equal(outcome(headerChips(dispute, resolution, { decision: 'full_refund', amount: 24.8, by: 'overridden' })), 'Full refund $24.80 · overridden');
-  assert.equal(outcome(headerChips(dispute, resolution, { decision: 'no_action', amount: null, by: 'decided' })), 'No action · decided by reviewer');
+  assert.equal(caseHeadline(dispute, resolution).outcome, null, 'no AI proposal before a decision');
+  assert.equal(caseHeadline(dispute, resolution, { decision: 'partial_refund', amount: 6.3, by: null }).outcome, 'Decided: partial refund $6.30');
+  assert.equal(caseHeadline(dispute, resolution, { decision: 'full_refund', amount: 24.8, by: 'overridden' }).outcome, 'Decided: full refund $24.80 (overridden)');
+  assert.equal(caseHeadline(dispute, resolution, { decision: 'no_action', amount: null, by: 'decided' }).outcome, 'Decided: fare stands, no refund');
 });

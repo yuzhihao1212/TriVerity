@@ -103,25 +103,8 @@ test('a leading [fallback] or [llm] tag is stripped, and only a leading one', ()
   assert.equal(sv.stripSourceTag('Quote: [fallback] stays'), 'Quote: [fallback] stays');
 });
 
-const D001 = {
-  dispute_id: 'D001', type: 'route_deviation', rider_claim: '', chat_logs: [], rider_history: {}, driver_history: {},
-  trip: { expected_distance_km: 10.2, actual_distance_km: 14.7 },
-  fare: { expected: 18.5, actual: 24.8, breakdown: [] },
-};
-
-test('header chips come from the case, and are skipped when their data is missing', () => {
-  assert.deepEqual(sv.headerChips(D001).map(c => c.label), ['+44% distance', '$24.80 charged']);
-  const ruled = sv.headerChips(D001, { decision: 'partial_refund', refund_amount: 6.3, policy_refs: ['RD-3: A route more than 15% longer…'] });
-  assert.deepEqual(ruled.map(c => [c.label, c.tone]), [['+44% distance', 'warn'], ['$24.80 charged', 'neutral'], ['Partial refund $6.30', 'ok']]);
-  const noShow = { ...D001, type: 'no_show_charge', trip: { driver_wait_min: 7 }, fare: { cancellation_fee: 4, breakdown: [] } };
-  assert.deepEqual(sv.headerChips(noShow).map(c => c.label), ['Driver waited 7 min', '$4.00 no-show fee']);
-  assert.deepEqual(sv.headerChips({ ...D001, trip: {}, fare: { breakdown: [] } }), []);
-  assert.deepEqual(sv.headerChips({ ...D001, trip: { expected_distance_km: 0, actual_distance_km: 3 } }).map(c => c.key), ['charged'], 'no divide by zero');
-  assert.equal(sv.headerChips({ ...D001, trip: { expected_distance_km: 10, actual_distance_km: 9.2 } })[0].label, '-8% distance');
-});
-
-test('the distance chip is a warning only when the deviation counted against the driver', () => {
-  const tone = resolution => sv.headerChips(D001, resolution)[0].tone;
+test('distance tone is a warning only when the deviation counted against the driver', () => {
+  const tone = resolution => sv.distanceTone(resolution);
   // Before a ruling the rules have not decided.
   assert.equal(tone(undefined), 'neutral');
   // D001-like: +44%, partial refund under RD-3.
@@ -135,19 +118,6 @@ test('the distance chip is a warning only when the deviation counted against the
   // RD-1 is matched as a rule ID, not a prefix of RD-10.
   assert.equal(sv.distanceTone({ decision: 'needs_review', policy_refs: ['RD-10: hypothetical'] }), 'warn');
   assert.equal(sv.distanceTone({ decision: 'needs_review', policy_refs: ['SAFE-1: threat'] }), 'neutral');
-});
-
-test('the outcome label for each decision', () => {
-  const cases = [
-    ['partial_refund', 6.3, 'Partial refund $6.30', 'ok'],
-    ['full_refund', 4, 'Full refund $4.00', 'ok'],
-    ['compensation', 5, 'Compensation $5.00', 'ok'],
-    ['partial_refund', null, 'Partial refund', 'ok'],
-    ['no_action', null, 'No action', 'neutral'],
-    // An escalated case's proposed amount is not an outcome yet.
-    ['needs_review', 6.9, 'Escalated to a human', 'warn'],
-  ];
-  for (const [decision, refund, label, tone] of cases) assert.deepEqual(sv.outcomeChip(decision, refund), { key: 'outcome', label, tone }, decision);
 });
 
 test('status pill keeps the previous exact wording as its detail', () => {
