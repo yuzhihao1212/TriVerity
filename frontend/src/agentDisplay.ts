@@ -26,6 +26,7 @@ export function agentLineParts(entry: AgentLogEntry, resolution?: Resolution): A
       const requests = [...entry.message.matchAll(/(rider|driver)'s request: (\d+) tool calls?/g)];
       const calls = resolution?.evidence_collection?.calls;
       if (requests.length === 2 && requests[0][2] === requests[1][2]) action = `Looked up ${requests[0][2]} more records for each side`;
+      else if (requests.length === 2) action = `Looked up ${Number(requests[0][2]) + Number(requests[1][2])} more records for both sides`;
       else if (calls?.length) action = `Looked up ${calls.length} more records for the review`;
       else action = "Looked up additional records for the review";
       break;
