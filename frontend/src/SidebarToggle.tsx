@@ -22,6 +22,18 @@ export function NewDisputeIcon() {
   );
 }
 
+/** The sidebar uses an icon; the home page keeps its labelled New button. */
+export function SidebarNewButton({ onClick }: { onClick: () => void }) {
+  const id = useId();
+  const [dismissed, setDismissed] = useState(false);
+  return <span className="sidebar-new">
+    <button type="button" className="icon-button" aria-label="New dispute" aria-describedby={dismissed ? undefined : id}
+      onClick={onClick} onFocus={() => setDismissed(false)} onMouseEnter={() => setDismissed(false)}
+      onKeyDown={event => { if (event.key === "Escape") setDismissed(true); }}><NewDisputeIcon /></button>
+    <span id={id} role="tooltip" className="sidebar-new-tooltip" hidden={dismissed}>New dispute</span>
+  </span>;
+}
+
 /** The collapsed sidebar's current case: its category icon (same as the list), named on hover, focus and tap. */
 export function CurrentCaseShortcut({ id, summary, type, icon, onOpen }: {
   id: string; summary: string; type: string; icon: ReactNode; onOpen: () => void;

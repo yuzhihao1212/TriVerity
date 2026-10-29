@@ -18,7 +18,8 @@ import { EvidenceList, EvidenceText, type FactLinks } from "./EvidenceList";
 import { VerdictSummary } from "./VerdictSummary";
 import { computedFacts, disputeLabel, money } from "./presentation";
 import { caseHash, focusSection, HOME_HASH, missingCase, reveal, selectSample } from "./routes";
-import { allowedActions, caseStatus, nextCase, pendingAppealIds, sortQueue, STATUS_WORDS, type CaseStatus } from "./caseQueue";
+import { allowedActions, caseStatus, pendingAppealIds, sortQueue, STATUS_WORDS, type CaseStatus } from "./caseQueue";
+import { nextAfterClose } from "./homeState";
 import { Home, type HomeRow } from "./Home";
 import { AppealsPanel } from "./Appeals";
 import { ClosedCase, ClosedSummary } from "./ClosedCase";
@@ -29,7 +30,7 @@ import { chipClass, chipTone, sourceTone } from "./chipStyle";
 import { savedText } from "./decisionState";
 import { AiToggle } from "./AiToggle";
 import { readAiMode, writeAiMode, type AiMode } from "./aiMode";
-import { CurrentCaseShortcut, NewDisputeIcon, SidebarToggle } from "./SidebarToggle";
+import { CurrentCaseShortcut, SidebarNewButton, SidebarToggle } from "./SidebarToggle";
 import { readGroupOpen, writeGroupOpen, readSidebarOpen, writeSidebarOpen } from "./sidebar";
 import { VERDICT } from "./ruleChecks";
 import { Term } from "./Term";
@@ -256,6 +257,10 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
   const latestSent = reviewId ? sentRecords().latest(reviewId) : null;
   const reopened = !!reviewId && sentRecords().reopened(reviewId);
   const closed = !!sent;
+  useEffect(() => {
+    // Older closed cases have no known start: never start a timer after the send.
+    if (active && !form && reviewId && !sent) reviews().markOpened(reviewId, Date.now());
+  }, [active, form, reviewId, sent]);
   const reviewed = useMemo(() => reviewedSteps(reviewId ? reviews().get(reviewId) : [], closed),
     [reviewId, reviewVersion, closed]);
   const progress: ReviewSummary | null = resolution ? reviewSummary(reviewed) : null;
@@ -296,7 +301,8 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [allCases, results, decision.savedFor, sentVersion, waitingIds]);
   const statusOf = (id: string) => queueRows.find(row => row.id === id)?.status ?? "not_run";
-  const following = selected ? nextCase(queueRows, selected.dispute_id) : null;
+  const following = selected ? nextAfterClose(queueRows, selected.dispute_id) : null;
+  const goToFollowing = () => { window.location.hash = following ? caseHash(following.row.id) : HOME_HASH; };
 
   // One appeal list feeds the queue and case banner; unavailable (403) shows neither.
   const onHome = active && !form && !selected && !loadingSamples;
@@ -421,13 +427,9 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
             {sidebarOpen
               ? <div className="sidebar-actions">
                   <FilterMenu value={filter} onChange={setFilter} />
-                  <button type="button" className="new-button" aria-label="New dispute" title="New dispute" onClick={newDispute}>
-                    <NewDisputeIcon /><span aria-hidden="true">New</span>
-                  </button>
+                  <SidebarNewButton onClick={newDispute} />
                 </div>
-              : <button type="button" className="icon-button" aria-label="New dispute" title="New dispute" onClick={newDispute}>
-                  <NewDisputeIcon />
-                </button>}
+              : <SidebarNewButton onClick={newDispute} />}
           </div>
           {!sidebarOpen && selected && <CurrentCaseShortcut id={selected.dispute_id} summary={disputeLabel(selected)} type={selected.type}
             icon={<TypeIcon type={selected.type} />} onOpen={openCurrentCase} />}
@@ -438,12 +440,12 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
           </button>}
           {selected && filter !== "all" && selected.type !== filter && <p className="sidebar-note">The selected case is outside this filter.</p>}
           {!loadingSamples && !sidebarGroups.length && <p className="sidebar-note">No disputes match this filter.</p>}
-          {sidebarGroups.map(group => <section className="sidebar-category" key={group.id} aria-labelledby={`sidebar-group-${group.id}`}>
+          {sidebarGroups.map(group => <section className="sidebar-category" data-open={groupOpen[group.id]} key={group.id} aria-labelledby={`sidebar-group-${group.id}`}>
             <h2 className="sidebar-group">
               <button type="button" id={`sidebar-group-${group.id}`} className={`sidebar-group-button sidebar-category-${group.id}`}
                 aria-expanded={groupOpen[group.id]} aria-controls={`sidebar-cases-${group.id}`}
                 onClick={() => setCategoryOpen(group.id, !groupOpen[group.id])}>
-                <span>{group.label} · {group.count}</span><Icon name="chevron" />
+                <span className="sidebar-group-label">{group.id !== "other" && <TypeIcon type={group.id === "route" ? "route_deviation" : "no_show_charge"} />}{group.label} · {group.count}</span><Icon name="chevron" />
               </button>
             </h2>
             <ul id={`sidebar-cases-${group.id}`} className="dispute-list" hidden={!groupOpen[group.id]}>
@@ -474,11 +476,13 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
             </ol></nav>
             {reviewId && <ClosedCase disputeId={selected.dispute_id} sent={sent} latest={latestSent}
               events={sentRecords().events(reviewId)} earlier={sentRecords().earlier(selected.dispute_id, reviewId)}
-              appealWaiting={waitingIds.has(selected.dispute_id)} onReopen={reopenCase} />}
+              appealWaiting={waitingIds.has(selected.dispute_id)} openedAt={reviews().openedAt(reviewId)}
+              nextLabel={following?.label ?? "Back to queue"} onNext={goToFollowing} nextPrimary={activeTab !== "notify" || !following} onReopen={reopenCase} />}
             <CaseHeader dispute={selected} resolution={resolution} busy={resolving === selected.dispute_id} streaming={streaming} progress={progress}
               final={resolution ? headerFinalOutcome(resolution, selected, decision.saved, latestSent) : null} />
             <CaseBrief dispute={selected} resolution={resolution} showProposal={reviewed.has("ruling")} />
             <WorkflowTabs active={activeTab} resolution={resolution} busy={resolving === selected.dispute_id}
+              closed={closed} decisionRecorded={!!decision.saved}
               unlocking={completion?.id === selected.dispute_id}
               liveSteps={resolving === selected.dispute_id ? liveSteps : undefined} reviewed={reviewed} onChange={changeTab}
               render={tab => resolving === selected.dispute_id || completion?.id === selected.dispute_id
@@ -491,7 +495,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
                   {actions.run && needsAccessCode(selected.dispute_id, own) && <AccessCodeField ref={accessCodeInput} id={ACCESS_CODE_FIELD_ID}
                     value={accessCode} onChange={changeAccessCode} />}
                   {actions.run ? <div className="run-bar case-run-bar">
-                    <button className="run-button" onClick={() => resolve(selected)} disabled={resolving !== null}>
+                    <button className={resolution ? "secondary-button" : "run-button"} onClick={() => resolve(selected)} disabled={resolving !== null}>
                       {resolution ? "Re-run agents" : "Run agents"}
                     </button>
                     <RunCost offline={aiMode === "offline"} hasResult={!!resolution} />
@@ -526,7 +530,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
                   onGoToRuling={() => changeTab("ruling")} onAppealed={() => setAppealsVersion(v => v + 1)}
                   progress={progress}
                   onSent={() => { markReviewed("notify"); setSentVersion(v => v + 1); setDeliveredFor(reviewId); }}
-                  next={following?.id ?? null} onNext={() => { if (following) window.location.hash = caseHash(following.id); }}
+                  next={following?.row.id ?? null} nextLabel={following?.label} onNext={goToFollowing}
                   onBack={() => { window.location.hash = HOME_HASH; }} />}
                 <AgentsStrip tab={tab} resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
                 {tab === "ruling" && resolution && actions.decide && <DecisionBar resolution={resolution} controller={decision} unavailable={decisionsUnavailable} />}

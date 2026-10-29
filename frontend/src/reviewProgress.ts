@@ -75,7 +75,7 @@ export function createReviewStore(storage?: ReviewStoreBackend | null) {
     memory.set(key, next);
     try { const all = readAll(); all[key] = [...next]; storage?.setItem(REVIEW_KEY, JSON.stringify(all)); } catch { /* Memory still holds. */ }
   };
-  return { get, add, set };
+  return { get, add, set, ...createReviewTiming(storage) };
 }
 
 /** Closed reviews count as fully reviewed; reopening deliberately clears the last two ticks. */
@@ -83,3 +83,46 @@ export function reviewedSteps(tabs: Iterable<WorkflowTab>, closed: boolean): Set
   return new Set(closed ? WORKFLOW_TABS.map(t => t.id) : tabs);
 }
 export const REOPENED_STEPS: WorkflowTab[] = ["intake", "evidence", "hearing"];
+
+export const REVIEW_OPENED_KEY = "triverity.reviewOpened";
+
+/** Longer than this is not one sitting (e.g. opened on one day, closed on another): say nothing. */
+export const REVIEWED_IN_MAX_MIN = 60;
+
+/** The elapsed review time uses real instants, never the display-only HH:MM string. */
+export function reviewedIn(openedAt: number | null, sentTimestamp?: string | null): string | null {
+  const sentAt = sentTimestamp ? Date.parse(sentTimestamp) : NaN;
+  if (openedAt == null || openedAt < 0 || !Number.isFinite(openedAt) || !Number.isFinite(sentAt) || sentAt < openedAt) return null;
+  const minutes = (sentAt - openedAt) / 60_000;
+  if (minutes > REVIEWED_IN_MAX_MIN) return null;
+  return `Reviewed in ${minutes < 1 ? "under 1 min" : `${Math.round(minutes)} min`}`;
+}
+
+/** Timing requires persisted storage; a blocked browser must not imply a known start. */
+export function createReviewTiming(storage?: ReviewStoreBackend | null) {
+  const readAll = (): Record<string, number> => {
+    const parsed = JSON.parse(storage?.getItem(REVIEW_OPENED_KEY) ?? "{}");
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  };
+  const openedAt = (key: string): number | null => {
+    try {
+      const value = readAll()[key];
+      return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
+    } catch { return null; }
+  };
+  return {
+    openedAt,
+    markOpened(key: string, now: number): number | null {
+      if (!storage || !Number.isFinite(now) || now < 0) return null;
+      try {
+        const existing = openedAt(key);
+        if (existing != null) return existing;
+        const all = readAll();
+        all[key] = now;
+        for (const old of Object.keys(all).slice(0, -100)) delete all[old];
+        storage.setItem(REVIEW_OPENED_KEY, JSON.stringify(all));
+        return now;
+      } catch { return null; }
+    },
+  };
+}

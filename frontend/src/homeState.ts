@@ -1,4 +1,4 @@
-import { START_HERE, tileCounts, type QueueRow } from "./caseQueue";
+import { START_HERE, nextCase, tileCounts, type QueueRow } from "./caseQueue";
 
 /** Separate parts let the header highlight only actionable counts. Zero counts are left out. */
 export function queueSummary(rows: Pick<QueueRow, "status">[], appealsAvailable: boolean) {
@@ -32,4 +32,18 @@ export function guidedDemoSteps(rows: Pick<QueueRow, "id" | "status">[]) {
     next: index === nextIndex,
     label: index === nextIndex ? (index === 0 ? "Start here" : "Next") : null,
   }));
+}
+
+/** Continue the guided sequence when possible; otherwise resume the usual queue. */
+export function nextAfterClose<T extends QueueRow>(rows: T[], currentId: string) {
+  const steps = guidedDemoSteps(rows);
+  const current = steps.findIndex(step => step.id === currentId);
+  if (current >= 0) {
+    for (const step of steps.slice(current + 1)) {
+      const row = rows.find(row => row.id === step.id && row.status !== "closed");
+      if (row) return { row, label: `Next: Case ${step.number} · ${step.title} →` };
+    }
+  }
+  const row = nextCase(rows, currentId);
+  return row ? { row, label: `Next case: ${row.id} →` } : null;
 }

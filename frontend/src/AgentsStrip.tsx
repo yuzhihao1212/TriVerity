@@ -1,5 +1,8 @@
 import { Fragment, useId, useState } from "react";
 
+import { AGENT_OPEN_KEY, readDetailOpen, writeDetailOpen } from "./detailDisclosure";
+import { EVIDENCE_FACTS_ID } from "./FactLibrary";
+import { reveal } from "./routes";
 import { humanizeAgentMessage } from "./agentText";
 
 import { EvidenceText, type FactLinks } from "./EvidenceList";
@@ -14,11 +17,6 @@ import {
 import { agentLabel, agentRole, agentsForTab, agentSource, type WorkflowTab } from "./workflow";
 import type { AgentLogEntry, Resolution } from "./types";
 
-const OPEN_KEY = "triverity.agentDetails";
-function readOpen(): boolean {
-  try { return sessionStorage.getItem(OPEN_KEY) === "open"; } catch { return false; }
-}
-
 /**
  * "How this step was decided", shown after the step's own content. Collapsed (the default):
  * one line per agent. Expanded: the full cards, the flow between them and the tool chips.
@@ -26,10 +24,10 @@ function readOpen(): boolean {
  */
 export function AgentsStrip({ tab, resolution, availableIds, onSelectFact }: { tab: WorkflowTab; resolution?: Resolution } & FactLinks) {
   const id = useId();
-  const [open, setOpen] = useState(readOpen);
+  const [open, setOpen] = useState(() => readDetailOpen(AGENT_OPEN_KEY));
   function toggle() {
     setOpen(previous => {
-      try { sessionStorage.setItem(OPEN_KEY, previous ? "closed" : "open"); } catch { /* Storage blocked: this session only. */ }
+      writeDetailOpen(AGENT_OPEN_KEY, !previous);
       return !previous;
     });
   }
@@ -55,7 +53,12 @@ export function AgentsStrip({ tab, resolution, availableIds, onSelectFact }: { t
         {card(entry, index)}
         {index < flow.edges.length && <FlowEdge label={flow.edges[index]} />}
       </Fragment>)}
-      {flow.result && <li className="agent-flow-result"><Chip tone="brand"><strong>{flow.result}</strong></Chip></li>}
+      {flow.result && <li className="agent-flow-result"><button type="button" className={chipClass({ tone: "brand" })} onClick={() => {
+        const target = document.getElementById(EVIDENCE_FACTS_ID);
+        const disclosure = target?.querySelector<HTMLDetailsElement>("details.disclosure");
+        if (disclosure) disclosure.open = true;
+        reveal(target, "start", { flash: true });
+      }}><strong>{flow.result} ↑</strong></button></li>}
     </ol>
     : <ul className="agent-entries">{entries.map(card)}</ul>}
     </div>
@@ -128,6 +131,6 @@ function ToolCalls({ calls }: { calls: NonNullable<NonNullable<Resolution["evide
       event.preventDefault();
       // Opens the audit trail first; it then scrolls to its heading and flashes it.
       openAuditTrail();
-    }}>Full lookup details <span aria-hidden="true">↓</span></a>
+    }}>Full lookup details <span aria-hidden="true">↑</span></a>
   </div>;
 }

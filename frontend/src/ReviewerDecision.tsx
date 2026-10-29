@@ -94,7 +94,7 @@ export function ReviewerDecision({ resolution, controller }: { resolution: Resol
           Your decision becomes a <Term term="precedent">precedent</Term> for similar disputes.
         </p>
         {mode === "idle" && <div className="reviewer-actions">
-          <button type="button" className="run-button" disabled={busy} onClick={() => controller.accept()}>Accept ruling</button>
+          <button type="button" className="secondary-button" disabled={busy} onClick={() => controller.accept()}>Accept ruling</button>
           <button type="button" className="secondary-button" disabled={busy} onClick={() => controller.startOverride()}>Override…</button>
         </div>}
         {mode === "override" && <div className="reviewer-form">
@@ -127,7 +127,7 @@ export function DecisionBar({ resolution, controller, unavailable }: { resolutio
       <p className="decision-bar-outcome">
         {view.note ?? <><span className="decision-bar-dot" aria-hidden="true" />{view.label}{view.amount && <> · <strong>{view.amount}</strong></>}</>}
       </p>
-      {view.actions.length > 0 && <div className="decision-bar-actions">
+      {controller.mode !== "override" && view.actions.length > 0 && <div className="decision-bar-actions">
         {view.actions.includes("accept") && <button type="button" className="run-button" disabled={view.disabled} onClick={() => controller.accept()}>Accept ruling</button>}
         {view.actions.includes("override") && <button type="button" className="secondary-button" disabled={view.disabled} onClick={() => controller.startOverride()}>Override</button>}
         {view.actions.includes("decide") && <button type="button" className="run-button" disabled={view.disabled} onClick={() => controller.startOverride()}>Decide</button>}

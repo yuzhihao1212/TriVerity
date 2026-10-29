@@ -9,7 +9,7 @@ const STEP_ICONS: Record<WorkflowTab, string> = {
   intake: "folder", evidence: "magnifier", hearing: "bubbles", ruling: "scales", notify: "phone",
 };
 
-export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, unlocking = false, onChange, render }: {
+export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, decisionRecorded = false, closed = false, unlocking = false, onChange, render }: {
   active: WorkflowTab;
   resolution?: Resolution;
   busy: boolean;
@@ -19,6 +19,8 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, un
   reviewed?: Iterable<WorkflowTab>;
   /** A run just finished: steps 2-5 unlock one after another. */
   unlocking?: boolean;
+  decisionRecorded?: boolean;
+  closed?: boolean;
   onChange: (tab: WorkflowTab) => void;
   render: (tab: WorkflowTab) => ReactNode;
 }) {
@@ -79,8 +81,8 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, un
       hidden={active !== tab.id} tabIndex={0} className="workflow-panel">
       {active === tab.id && <>
         {render(tab.id)}
-        {!busy && index < WORKFLOW_TABS.length - 1 && <div className="next-step">
-          <button type="button" className="secondary-button"
+        {!busy && !unlocking && index < WORKFLOW_TABS.length - 1 && <div className="next-step">
+          <button type="button" className={resolution && !closed && (tab.id !== "ruling" || decisionRecorded) ? "run-button" : "secondary-button"}
             aria-disabled={tabLocked(WORKFLOW_TABS[index + 1].id, !!resolution)}
             disabled={tabLocked(WORKFLOW_TABS[index + 1].id, !!resolution)}
             onClick={() => { const next = WORKFLOW_TABS[index + 1].id; activate(next); refs.current[next]?.focus(); }}>
