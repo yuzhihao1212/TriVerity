@@ -1,3 +1,4 @@
+from app.agents._advocate import evidence_index
 from app.agents.judge_narration import narrate
 from app.agents.precedent_agent import check_consistency
 from app.models.dispute import DisputeCase
@@ -39,7 +40,19 @@ def judge_with_precedents(
     ruling = _apply_precedent(ruling, overrides, policy["precedent"])
     ruling = _apply_escalation(ruling, policy["escalation"])
     ruling = _cap_refund(ruling, case, policy["refund"])
+    ruling = ruling.model_copy(update={"judge_evidence_ids": evidence_ids_for(ruling.judge_evidence, facts)})
     return narrate(case, _explain_to_parties(ruling), rider_case, driver_case, report), report
+
+def evidence_ids_for(lines: list[str], facts: CaseFacts) -> list[str]:
+    """The fact ID of each evidence line, so every fact shows its ID, not only the ones an advocate cited.
+
+    The lines come from facts.describe(), which lists the facts in evidence_index's order. If the two
+    ever disagree, send no IDs rather than pair a line with the wrong ID.
+    """
+    index = evidence_index(facts)
+    if [line for _, line in index.values()] != lines:
+        return []
+    return list(index)
 
 def base_ruling(case: DisputeCase, facts: CaseFacts) -> Ruling:
     """The dispute-type rules alone, before any escalation (also builds the precedent set)."""

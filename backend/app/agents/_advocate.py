@@ -105,6 +105,7 @@ def advocate_system_prompt(party: str, own_account: str) -> str:
         f"The evidence list carries the detail.\n"
         f"Respond with a JSON object only: "
         f'{{"summary": str, "evidence_ids": [str], "policy_refs": [str]}}. '
+        f"All three keys are required: always include evidence_ids and policy_refs, as [] if empty. "
         f'Each policy_ref is the rule ID, then ": ", then the rule text.'
     )
 
@@ -146,6 +147,11 @@ def _resolve_ids(ids: object, index: dict[str, tuple[str, str]]) -> list[str]:
         if isinstance(fact_id, str) and fact_id.strip().upper() in index and fact_id.strip().upper() not in seen:
             seen.append(fact_id.strip().upper())
     return seen[:limits.ADVOCATE_MAX_EVIDENCE_ITEMS]
+
+
+def _inline_ids(text: str, index: dict[str, tuple[str, str]]) -> list[str]:
+    """Fact IDs written in the text itself, e.g. "the longer route (TRIP-1)", that exist in the index."""
+    return _resolve_ids([fact_id.upper() for fact_id in _FACT_ID_RE.findall(text)], index)
 
 
 def _sources_of(ids: list[str], index: dict[str, tuple[str, str]]) -> list[str]:
@@ -247,14 +253,15 @@ def build_advocate_case(
     problem = _check_output(case, system) or misattributed_chat(case.summary, chat_senders(facts))
     if problem:
         return _fallback(agent, claim_line, fallback_summary, facts, problem)
-    if "evidence_ids" in parsed or listed_ids:
+    index = evidence_index(facts)
+    inline_ids = _inline_ids(case.summary, index)
+    if "evidence_ids" in parsed or listed_ids or inline_ids or not case.evidence:
         # Cited by ID: only facts that exist can be cited, and the text is the computed
-        # fact itself, so nothing the model writes reaches the evidence list. IDs the model
-        # listed in the summary instead of the field count as its citations.
-        index = evidence_index(facts)
-        ids = _resolve_ids(parsed.get("evidence_ids") or listed_ids, index)
-        if not ids:
-            ids = list(index)
+        # fact itself, so nothing the model writes reaches the evidence list. When the field
+        # is missing or empty, IDs the model listed or wrote in the summary count as its
+        # citations. With none at all the case cites no evidence: every fact is never shown
+        # as if cited.
+        ids = _resolve_ids(parsed.get("evidence_ids") or listed_ids or inline_ids, index)
         return case.model_copy(update={
             "summary": sanitise(case.summary),
             "evidence": [index[i][1] for i in ids],
@@ -374,7 +381,8 @@ def rebuttal_system_prompt(party: str, other: str) -> str:
         f"Use only IDs that appear in the evidence. Each chat fact names its sender "
         f"(rider: or driver:): never credit one party with the other's words.\n"
         f"4. Write plain text only: no links, email addresses, phone numbers, HTML or markdown.\n"
-        f'Respond with a JSON object only: {{"rebuttal": str, "evidence_ids": [str]}}.'
+        f'Respond with a JSON object only: {{"rebuttal": str, "evidence_ids": [str]}}. '
+        f"Both keys are required: always include evidence_ids, as [] if empty."
     )
 
 
@@ -420,7 +428,7 @@ def build_rebuttal(*, party: str, own_case: AgentCase, other_case: AgentCase,
         logger.warning("%s fell back: %s", agent, problem)
         return Rebuttal()
     index = evidence_index(facts)
-    ids = _resolve_ids(parsed.get("evidence_ids") or listed_ids, index)
+    ids = _resolve_ids(parsed.get("evidence_ids") or listed_ids or _inline_ids(text, index), index)
     return Rebuttal(text=sanitise(text), evidence=[index[i][1] for i in ids], evidence_ids=ids, source="llm")
 
 

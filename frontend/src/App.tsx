@@ -824,7 +824,7 @@ function RulingPanel({ resolution, dispute, availableIds, onSelectFact }: { reso
       </ul>
 
       <h3 className="section-label">Evidence considered</h3>
-      <EvidenceList texts={resolution.judge_evidence} mention={resolution.explanation} dispute={dispute} availableIds={availableIds} onSelectFact={onSelectFact} />
+      <EvidenceList texts={resolution.judge_evidence} ids={resolution.judge_evidence_ids} mention={resolution.explanation} dispute={dispute} availableIds={availableIds} onSelectFact={onSelectFact} />
     </section>
   );
 }

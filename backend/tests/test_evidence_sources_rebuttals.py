@@ -4,6 +4,7 @@ The LLM is mocked throughout; no test calls a real model.
 """
 
 import json
+import re
 from pathlib import Path
 from unittest.mock import patch
 
@@ -13,7 +14,7 @@ from app.agents._advocate import build_rebuttal, evidence_index, evidence_payloa
 from app.agents.judge_narration import _user_prompt
 from app.agents.rider_agent import build_rider_case
 from app.models.dispute import DisputeCase
-from app.models.resolution import AgentCase, Rebuttal
+from app.models.resolution import AgentCase, PartyResolution, Rebuttal
 from app.services.evidence import compute_facts
 from app.services.orchestrator import resolve_dispute
 
@@ -56,12 +57,58 @@ def test_advocate_cites_by_id_and_server_supplies_the_text():
     assert result.sources == ["trip", "gps", "fare"]
 
 
-def test_invented_ids_are_dropped_and_none_left_shows_all_facts():
+def test_invented_ids_are_dropped_and_none_left_cites_nothing():
+    # Showing every fact would claim the advocate cited facts it never named.
     reply = {"summary": "Argument.", "evidence_ids": ["GPS-99", "Route was +90%", 7], "policy_refs": []}
     with patch("app.agents._advocate.complete", return_value=json.dumps(reply)):
         result = build_rider_case(D001, FACTS)
-    assert result.evidence_ids == list(evidence_index(FACTS))
-    assert "Route was +90%" not in " ".join(result.evidence)
+    assert result.source == "llm"
+    assert result.evidence_ids == [] and result.evidence == []
+
+
+def test_missing_evidence_ids_uses_the_ids_written_in_the_text():
+    # Seen live on D001: no evidence_ids key at all, but the argument names its facts inline.
+    index = evidence_index(FACTS)
+    reply = {"summary": "The route was far longer than planned (TRIP-1), fitting RD-3, and GPS-2 shows "
+                        "no closure. GPS-99 doesn't exist.", "policy_refs": []}
+    with patch("app.agents._advocate.complete", return_value=json.dumps(reply)):
+        result = build_rider_case(D001, FACTS)
+    assert result.source == "llm"
+    assert result.evidence_ids == ["TRIP-1", "GPS-2"]  # rule IDs and unknown IDs are not facts
+    assert result.evidence == [index[i][1] for i in result.evidence_ids]
+    assert result.policy_refs == []                    # a rule named in the text is not cited
+
+
+def test_missing_evidence_ids_and_no_ids_in_the_text_cites_nothing():
+    reply = {"summary": "The driver took a longer route without any reason."}
+    with patch("app.agents._advocate.complete", return_value=json.dumps(reply)):
+        result = build_rider_case(D001, FACTS)
+    assert result.source == "llm"
+    assert result.evidence_ids == [] and result.evidence == []
+    assert result.policy_refs == []
+
+
+def test_prompts_say_the_citation_keys_are_required():
+    from app.agents._advocate import advocate_system_prompt, rebuttal_system_prompt
+    assert "All three keys are required" in advocate_system_prompt("rider", "claim")
+    assert "evidence_ids and policy_refs, as [] if empty" in advocate_system_prompt("driver", "account")
+    assert "always include evidence_ids, as [] if empty" in rebuttal_system_prompt("rider", "driver")
+
+
+def test_every_judge_evidence_line_carries_its_id():
+    # The Evidence tab labels every fact, not only the ones an advocate cited.
+    result = resolve_dispute(D001)  # the pipeline collects more facts than FACTS, so check the pairing itself
+    ids = result.judge_evidence_ids
+    assert len(ids) == len(result.judge_evidence) == len(set(ids)) > 0
+    assert all(re.fullmatch(r"(TRIP|GPS|FARE|CHAT|HIST)-[1-9]\d*", i) for i in ids)
+    assert ids[0] == "TRIP-1" and result.judge_evidence[0] == FACTS.describe()[0]
+    assert "judge_evidence_ids" not in PartyResolution.of(result, "D001", "rider").model_dump()
+
+
+def test_judge_evidence_ids_are_left_out_if_the_lines_disagree():
+    from app.agents.judge_agent import evidence_ids_for
+    assert evidence_ids_for(FACTS.describe(), FACTS) == list(evidence_index(FACTS))
+    assert evidence_ids_for(FACTS.describe()[1:], FACTS) == []
 
 
 def test_fallback_case_lists_every_source():
@@ -84,6 +131,13 @@ def test_rebuttal_accepted_with_cited_evidence():
     result, _ = rebut(json.dumps({"rebuttal": "The rider ignores the congestion.", "evidence_ids": ["CHAT-2"]}))
     assert result.source == "llm" and result.text == "The rider ignores the congestion."
     assert result.evidence_ids == ["CHAT-2"] and result.evidence == [evidence_index(FACTS)["CHAT-2"][1]]
+
+
+def test_rebuttal_without_evidence_ids_uses_the_ids_in_its_text():
+    result, _ = rebut(json.dumps({"rebuttal": "The rider ignores the traffic report (CHAT-2)."}))
+    assert result.source == "llm" and result.evidence_ids == ["CHAT-2"]
+    result, _ = rebut(json.dumps({"rebuttal": "The rider ignores the traffic report."}))
+    assert result.source == "llm" and result.evidence_ids == [] and result.evidence == []
 
 
 def test_rebuttal_skipped_without_llm_when_a_case_fell_back():

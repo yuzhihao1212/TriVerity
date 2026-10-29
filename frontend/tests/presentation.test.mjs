@@ -96,6 +96,19 @@ test('computed evidence preserves unlabelled facts and matches only exact unique
   assert.ok(computedFacts({...result,judge_evidence:[]}).some(f=>f.id==='GPS-1'));
 });
 
+test('computed evidence labels every fact when the backend pairs IDs, and falls back without them', async () => {
+  const { computedFacts } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`);
+  const argument={evidence:['GPS path 14.7 km'],evidence_ids:['GPS-1'],rebuttal:null};
+  const judge_evidence=['Route was +44%','GPS path 14.7 km','rider: "please go the usual way"'];
+  const paired=computedFacts({judge_evidence,judge_evidence_ids:['TRIP-1','GPS-1','CHAT-3'],rider_case:argument,driver_case:argument});
+  assert.deepEqual(paired.map(f=>f.id),['TRIP-1','GPS-1','CHAT-3']); // uncited facts get their IDs too
+  assert.deepEqual(paired.map(f=>f.source),['trip','gps','chat']);
+  const old=computedFacts({judge_evidence,rider_case:argument,driver_case:argument}); // saved before the field existed
+  assert.deepEqual(old.map(f=>f.id),[undefined,'GPS-1',undefined]);
+  const misaligned=computedFacts({judge_evidence,judge_evidence_ids:['TRIP-1'],rider_case:argument,driver_case:argument});
+  assert.deepEqual(misaligned.map(f=>f.id),[undefined,'GPS-1',undefined]);
+});
+
 test('sidebar uses a curated label or the original claim when no label is supplied', async () => {
   const { disputeLabel } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`);
   const claim = 'The driver took a longer route.';
