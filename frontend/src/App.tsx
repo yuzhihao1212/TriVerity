@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { LiveProgress, ProgressAnnouncements } from "./LiveProgress";
+import type { FinishedTimes } from "./progressEstimate";
 import { CollectorCalls } from "./CollectorCalls";
 import { AgentsStrip } from "./AgentsStrip";
 import { WorkflowTabs } from "./WorkflowTabs";
@@ -62,6 +63,8 @@ const REVIEWER_CONSOLE_NOTE = "Internal reviewer view: it shows fraud signals an
 // The judge types their access code; it is kept for this browser tab only and is
 // never part of the built bundle.
 const ACCESS_CODE_KEY = "triverity.accessCode";
+/** A result faster than this came from the cache: there was no run to watch. */
+const INSTANT_RESULT_MS = 1500;
 
 function loadAccessCode(): string {
   try {
@@ -123,6 +126,10 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
   const [results, setResults] = useState<Record<string, Resolution>>(() => sentRecords().results());
   const [liveSteps, setLiveSteps] = useState<AgentLogEntry[]>([]);
   const [runStartedAt, setRunStartedAt] = useState(0);
+  // When each agent's result arrived (seconds after the run started), for the time estimate.
+  const [finishedAt, setFinishedAt] = useState<FinishedTimes>({});
+  // A finished live run keeps its progress panel, with a completion card, until the reviewer moves on.
+  const [completion, setCompletion] = useState<{ id: string; endedAt: number } | null>(null);
   const [streaming, setStreaming] = useState(true);
   const [resolving, setResolving] = useState<string | null>(null);
   const [completedId, setCompletedId] = useState<string | null>(null);
@@ -182,21 +189,31 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
     if (previous && sentRecords().get(reviewKey(dispute.dispute_id, previous))) return;
     setError(null);
     setResolving(dispute.dispute_id);
+    const started = performance.now();
     setLiveSteps([]);
-    setRunStartedAt(performance.now());
+    setFinishedAt({});
+    setCompletion(null);
+    setRunStartedAt(started);
     setStreaming(true);
     // Samples never send the code: they are served from the server's cache and
     // don't use up the judge's quota.
     const isOwn = own.some((d) => d.dispute_id === dispute.dispute_id);
     resolveDisputeLive(dispute, entry => {
       setLiveSteps(previous => previous.some(item => item.step === entry.step) ? previous : [...previous, entry]);
+      const at = (performance.now() - started) / 1000;
+      setFinishedAt(previous => entry.agent in previous ? previous : { ...previous, [entry.agent]: at });
     }, () => setStreaming(false), isOwn ? accessCode.trim() || undefined : undefined, aiMode)
       .then((r) => {
         setActiveFact(null);
         sentRecords().saveResult(dispute.dispute_id, r);
         setResults((prev) => ({ ...prev, [dispute.dispute_id]: r }));
-        setActiveTabs(prev => ({ ...prev, [dispute.dispute_id]: "evidence" }));
-        setCompletedId(dispute.dispute_id);
+        const ended = performance.now();
+        // An instant (cached) result has no run to watch: go straight to Evidence as before.
+        // A real run ends on a completion card; the reviewer chooses when to move on.
+        if (ended - started < INSTANT_RESULT_MS) {
+          setActiveTabs(prev => ({ ...prev, [dispute.dispute_id]: "evidence" }));
+          setCompletedId(dispute.dispute_id);
+        } else setCompletion({ id: dispute.dispute_id, endedAt: ended });
       })
       .catch((e: Error) => {
         if (accessCodeProblem(e, isOwn)) {
@@ -290,10 +307,16 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
 
   function changeTab(tab: WorkflowTab) {
     if (!selected) return;
+    setCompletion(null);
     visit(activeTab, tab);
     setActiveFact(null);
     setActiveTabs(prev => ({ ...prev, [selected.dispute_id]: tab }));
   }
+
+  // The completion card belongs to the case that ran; another case shows its own steps.
+  useEffect(() => {
+    if (completion && completion.id !== selected?.dispute_id) setCompletion(null);
+  }, [completion, selected?.dispute_id]);
 
   function selectFact(id: string) {
     if (!factIds.has(id)) return;
@@ -425,8 +448,12 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
               final={resolution ? headerFinalOutcome(resolution, selected, decision.saved, latestSent) : null} />
             <CaseBrief dispute={selected} resolution={resolution} showProposal={reviewed.has("ruling")} />
             <WorkflowTabs active={activeTab} resolution={resolution} busy={resolving === selected.dispute_id}
+              unlocking={completion?.id === selected.dispute_id}
               liveSteps={resolving === selected.dispute_id ? liveSteps : undefined} reviewed={reviewed} onChange={changeTab}
-              render={tab => resolving === selected.dispute_id ? <LiveProgress disputeId={selected.dispute_id} steps={liveSteps} startedAt={runStartedAt} streaming={streaming} /> : <>
+              render={tab => resolving === selected.dispute_id || completion?.id === selected.dispute_id
+                ? <LiveProgress disputeId={selected.dispute_id} steps={liveSteps} startedAt={runStartedAt} finishedAt={finishedAt}
+                  endedAt={completion?.id === selected.dispute_id ? completion.endedAt : null} streaming={streaming}
+                  onReviewEvidence={() => changeTab("evidence")} /> : <>
                 {/* Outcome first: each step's content, then how it was decided. */}
                 {tab === "intake" && <>
                   <CasePanel dispute={selected} availableIds={factIds} onSelectFact={selectFact} />
