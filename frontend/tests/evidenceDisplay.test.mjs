@@ -92,6 +92,8 @@ test('headings are per step and folded agent lines lead with their action', () =
   assert.deepEqual(agents.agentLineParts(loader), { action: 'Calculated 15 facts from the trip, GPS and fare records', source: 'code', how: 'by rules', time: 'instant' });
   assert.deepEqual(agents.agentLineParts({ agent: 'evidence_collector', status: 'completed', message: "[llm] rider's request: 7 tool calls; driver's request: 7 tool calls", duration_ms: 4700 }),
     { action: 'Looked up 7 more records for each side', source: 'llm', how: 'by Tencent Hy3', time: '4.7 s' });
+  assert.equal(agents.agentLineParts({ agent: 'evidence_collector', status: 'completed', message: "[llm] rider's request: 3 tool calls; driver's request: 4 tool calls", duration_ms: 4800 }).action,
+    'Looked up 7 more records for both sides');
   assert.deepEqual(agents.agentLineParts({ ...loader, status: 'skipped' }), { action: 'This step was not run.', source: null, how: null, time: null });
   assert.doesNotMatch(JSON.stringify(agents.agentLineParts({ agent: 'unknown', status: 'completed', message: '', duration_ms: null })), /undefined|NaN|unknown/);
   assert.deepEqual(agents.SOURCE_KEY.map(line => line.label), ['Rules', 'Hunyuan AI']);

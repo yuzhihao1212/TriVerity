@@ -628,12 +628,6 @@ textarea { width: 100%; resize: vertical; }
   .landing-footer nav { gap: var(--space-4); }
 }
 /* Live progress and the internal evidence-collector record. */
-.live-timeline { list-style: none; padding: 0; display: grid; gap: var(--space-4); }
-.live-timeline > li { border-left: 2px solid var(--border); padding: var(--space-3) var(--space-4); background: var(--surface); border-radius: 0 10px 10px 0; min-width: 0; }
-.live-step-head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); font-size: 13px; }
-.live-step-check { color: var(--accent-text); }
-.live-timeline > li > p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: var(--space-2); font-size: 12px; color: var(--muted); }
-.step-duration { font-size: 11px; font-variant-numeric: tabular-nums; }
 .elapsed-time { font-size: 13px; font-variant-numeric: tabular-nums; }
 /* Live progress: a sticky bar with an estimate; stripes flow forward only while agents work. */
 .live-progress-head { position: sticky; top: 0; z-index: 5; display: grid; gap: var(--space-2); margin: var(--space-3) 0; padding: var(--space-3) var(--space-4); border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
@@ -647,9 +641,34 @@ textarea { width: 100%; resize: vertical; }
 .live-completion { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--ok-text); border-radius: 12px; background: var(--ok-soft); }
 .live-completion h2 { display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--ok-text); font-size: 17px; }
 .live-completion h2 .icon { width: 20px; height: 20px; flex: none; }
-.live-placeholder { border-left-style: dashed !important; }
 /* A running agent: the flat OeroAI loader (AgentRunningLoader). */
-.live-step-head .live-step-loader { flex: none; width: 16px; height: 16px; }
+/* Live run: four stages on a rail (LiveProgress.tsx). Stages scroll in below the pinned head. */
+.live-headline { display: flex; align-items: center; font-size: 15px; }
+.live-rail { list-style: none; margin: var(--space-4) 0 0; padding: 0; }
+.live-stage { display: grid; grid-template-columns: 24px minmax(0, 1fr); column-gap: var(--space-3); scroll-margin-top: calc(var(--live-head, 0px) + var(--space-4)); scroll-margin-bottom: var(--space-8); }
+.live-stage-marker { display: flex; flex-direction: column; align-items: center; padding-top: 2px; }
+.live-stage:not(:last-child) .live-stage-marker::after { content: ""; flex: 1; width: 2px; margin-top: var(--space-1); border-radius: 1px; background: var(--border); }
+.live-stage.done:not(:last-child) .live-stage-marker::after { background: var(--ok-text); opacity: .45; }
+.live-stage-done { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--ok-soft); color: var(--ok-text); }
+.live-stage-done .icon { width: 14px; height: 14px; }
+.live-stage-dot { width: 12px; height: 12px; margin: 5px 0; border: 2px solid var(--control-border); border-radius: 50%; }
+.live-stage .live-step-loader { flex: none; width: 22px; height: 22px; }
+.live-stage-body { min-width: 0; padding-bottom: var(--space-5); }
+.live-stage-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); min-height: 24px; }
+.live-stage-head h3 { font-size: 15px; }
+.live-stage.pending .live-stage-head h3 { color: var(--muted); font-weight: 500; }
+.live-stage-time, .live-time { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.live-sides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin-top: var(--space-2); }
+.live-side { min-width: 0; padding: var(--space-2) var(--space-3); border: 1px solid var(--border); border-radius: 10px; background: var(--bg); }
+.live-side.working { border-style: dashed; }
+.live-side-name { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: 12px; font-weight: 600; }
+.live-side-name .live-time { margin-left: auto; font-weight: 400; }
+.live-side p { margin-top: var(--space-1); font-size: 13px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.live-lines { display: grid; grid-template-columns: minmax(0, 1fr) max-content max-content; column-gap: var(--space-3); margin-top: var(--space-2); padding: 0; list-style: none; font-size: 13px; }
+.live-lines > li { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; padding-block: 3px; }
+.live-lines > li.working > span { grid-column: 1 / -1; }
+.live-others { margin: 0 0 var(--space-4) 36px; }
+@media (max-width: 760px) { .live-sides { grid-template-columns: minmax(0, 1fr); } }
 .live-shimmer { display: block; height: 8px; margin-top: var(--space-2); border-radius: 4px; background: linear-gradient(90deg, var(--border) 25%, var(--surface) 50%, var(--border) 75%); background-size: 200% 100%; animation: live-shimmer 1.4s ease-in-out infinite; }
 .live-jump { position: sticky; bottom: var(--space-4); display: block; margin: var(--space-3) auto 0; }
 @keyframes live-flow { to { background-position: 22.6px 0; } }
@@ -686,9 +705,9 @@ textarea { width: 100%; resize: vertical; }
 .evidence-category { display: grid; gap: var(--space-2); padding: var(--space-3); border-left: 2px solid var(--border); }
 .category-summary { margin: 0; color: var(--muted); }
 .presentation-mode .category-toggle, .presentation-mode .story-headline, .presentation-mode .collector-summary { font-size: 15px; }
-.presentation-mode .live-step-head, .presentation-mode .live-timeline > li > p, .presentation-mode .live-pending,
+.presentation-mode .live-lines, .presentation-mode .live-side p, .presentation-mode .live-stage-head h3, .presentation-mode .live-pending,
 .presentation-mode .collector-call-list code, .presentation-mode .collector-args, .presentation-mode .elapsed-time { font-size: 15px; }
-.presentation-mode .step-duration { font-size: 13px; }
+.presentation-mode .live-time, .presentation-mode .live-stage-time, .presentation-mode .live-side-name { font-size: 13px; }
 /* Judge access code: only where it is used (own disputes: run panel and new-dispute form). */
 .access-code-field { display: grid; gap: var(--space-1); max-width: 360px; margin-top: var(--space-4); }
 .access-code-field label { font-size: 12px; font-weight: 600; }
