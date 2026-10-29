@@ -1,4 +1,4 @@
-import type { ArgumentReview, RiskLevel, RuleCheck } from "./types";
+import type { AgentCase, ArgumentReview, RiskLevel, RuleCheck } from "./types";
 
 /** How the Judge read one cited rule, shared by the Hearing and the Ruling tab. */
 export const VERDICT: Record<RuleCheck["verdict"], { label: string; level: RiskLevel }> = {
@@ -21,4 +21,12 @@ export function checkSummary(checks: Map<string, RuleCheck>): string | null {
   const noun = checks.size === 1 ? "rule" : "rules";
   const verb = checks.size === 1 ? "holds" : "hold";
   return `Judge's check: ${holding} of ${checks.size} cited ${noun} ${verb}`;
+}
+
+/** Why a reply is missing: the round was skipped (an opening was not AI), or the AI's reply was dropped by the output checks. */
+export function missingReplyText(own: Pick<AgentCase, "source">, other: Pick<AgentCase, "source">): string {
+  if (own.source === "llm" && other.source === "llm") {
+    return "The AI's reply didn't pass our output checks or arrive in time, so it was left out rather than shown unchecked.";
+  }
+  return "No reply generated. The rebuttal round runs only when both opening arguments use AI.";
 }
