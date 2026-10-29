@@ -1,6 +1,6 @@
 import { sortQueue, STATUS_ICONS, STATUS_WORDS, type QueueRow } from "./caseQueue";
 import { Chip } from "./Chip";
-import { guidedDemoSteps, queueSummary } from "./homeState";
+import { amountAtStake, guidedDemoSteps, queueSummary } from "./homeState";
 import { Icon } from "./Icon";
 import { NewDisputeIcon } from "./SidebarToggle";
 import { decisionTone, DECISION_LABELS } from "./outcomeTone";
@@ -31,6 +31,7 @@ export function Home({ rows, appealsWaiting, missing, onDismissMissing, onNew }:
         <span key={index}>{index > 0 && <span aria-hidden="true"> · </span>}<span className={part.warning ? "home-status-warning" : undefined}>{part.text}</span></span>
       )}</p>
       <button type="button" className="new-button" aria-label="New dispute" title="New dispute" onClick={onNew}><NewDisputeIcon /><span aria-hidden="true">New</span></button>
+      <p className="home-intro">Ride disputes waiting for review. Agents gather evidence and argue both sides, policy rules decide, and you approve.</p>
     </div>
     <section className="home-start" aria-labelledby="home-start-title">
       <h3 id="home-start-title">Guided demo · 3 cases</h3>
@@ -51,11 +52,12 @@ export function Home({ rows, appealsWaiting, missing, onDismissMissing, onNew }:
       <ul className="home-queue" aria-label="Cases, most urgent first">{queue.map(row => {
         const summary = disputeLabel(row.dispute);
         const outcome = row.decision ? DECISION_LABELS[row.decision] : null;
+        const stake = amountAtStake(row.dispute.fare);
         return <li key={row.id}>
           <a className="home-row" href={caseHash(row.id)}
-            aria-label={`${row.id}: ${summary}. ${STATUS_WORDS[row.status]}${outcome ? `, ${outcome}` : ""}`}>
+            aria-label={`${row.id}: ${summary}${stake ? `, ${stake}` : ""}. ${STATUS_WORDS[row.status]}${outcome ? `, ${outcome}` : ""}`}>
             <span className={`home-category category-${row.dispute.type === "route_deviation" ? "route" : "no-show"}`}>{row.dispute.type === "route_deviation" ? "Route" : "No-show"}</span>
-            <span className="home-row-main"><span className="home-row-summary">{summary}</span><span className="home-row-id">{row.id}</span></span>
+            <span className="home-row-main"><span className="home-row-summary">{summary}</span><span className="home-row-id">{row.id}{stake && <> · {stake}</>}</span></span>
             <span className="home-row-meta">
               {row.tier === "safety" && <Chip size="sm" tone="danger">Safety</Chip>}
               <span className={`home-row-status status-${row.status}`}>

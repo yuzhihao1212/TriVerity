@@ -6,7 +6,7 @@ import type { Decision, TriageTier } from "./types";
 export type CaseStatus = "not_run" | "ready" | "decide" | "reviewed" | "closed" | "reopened" | "appeal_waiting";
 
 export const STATUS_WORDS: Record<CaseStatus, string> = {
-  not_run: "Not run", ready: "Ready", decide: "Decide", reviewed: "Reviewed", closed: "Closed", reopened: "Reopened", appeal_waiting: "Appeal waiting",
+  not_run: "New", ready: "Ready", decide: "Decide", reviewed: "Reviewed", closed: "Closed", reopened: "Reopened", appeal_waiting: "Appeal waiting",
 };
 /** Icon.tsx names; always shown with the word. */
 export const STATUS_ICONS: Record<CaseStatus, string> = {
@@ -14,7 +14,7 @@ export const STATUS_ICONS: Record<CaseStatus, string> = {
 };
 
 /**
- * Not run (no ruling) · Ready (ruled, not decided) · Decide (escalated, not decided) ·
+ * New (no ruling yet) · Ready (ruled, not decided) · Decide (escalated, not decided) ·
  * Reviewed (decided, not closed) · Closed.
  */
 export function caseStatus(result: { decision: Decision } | null | undefined, decided: boolean, closed: boolean,
@@ -60,9 +60,9 @@ export function tileCounts(rows: Pick<QueueRow, "status">[]): Tiles {
   return { queue: rows.length, ready: count("ready"), decide: count("decide"), done: count("closed"), appeals: count("appeal_waiting") };
 }
 
-/** The three cases in the guided demo, in presentation order. */
+/** The three cases in the guided demo, in presentation order. Titles say what each case is, never its outcome. */
 export const START_HERE: { id: string; title: string; blurb: string; icon: string }[] = [
-  { id: "D001", title: "Detour caught", blurb: "Refund for a detour", icon: "route" },
-  { id: "D006", title: "Fee upheld", blurb: "A fair no-show fee", icon: "receipt" },
-  { id: "D007", title: "Knows when to stop", blurb: "Goes to a human", icon: "warning" },
+  { id: "D001", title: "A route dispute", blurb: "Rider says the trip was too long", icon: "route" },
+  { id: "D006", title: "A no-show fee", blurb: "Rider disputes a $4.00 fee", icon: "receipt" },
+  { id: "D007", title: "A safety flag", blurb: "Threat in the chat", icon: "warning" },
 ];

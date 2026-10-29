@@ -1,18 +1,24 @@
 import { START_HERE, tileCounts, type QueueRow } from "./caseQueue";
 
-/** Separate parts let the header highlight only actionable counts. */
+/** Separate parts let the header highlight only actionable counts. Zero counts are left out. */
 export function queueSummary(rows: Pick<QueueRow, "status">[], appealsAvailable: boolean) {
   const counts = tileCounts(rows);
-  const parts = [
-    { text: `${counts.queue} ${counts.queue === 1 ? "case" : "cases"}`, warning: false },
-    { text: `${counts.decide} to decide`, warning: counts.decide > 0 },
-    { text: `${counts.ready} ready`, warning: false },
-    { text: `${counts.done} closed`, warning: false },
-  ];
+  const parts = [{ text: `${counts.queue} ${counts.queue === 1 ? "case" : "cases"}`, warning: false }];
+  if (counts.decide > 0) parts.push({ text: `${counts.decide} to decide`, warning: true });
+  if (counts.ready > 0) parts.push({ text: `${counts.ready} ready`, warning: false });
+  if (counts.done > 0) parts.push({ text: `${counts.done} closed`, warning: false });
   if (appealsAvailable && counts.appeals > 0) {
     parts.push({ text: `${counts.appeals} ${counts.appeals === 1 ? "appeal" : "appeals"} waiting`, warning: true });
   }
   return parts;
+}
+
+/** What is at stake in one row, e.g. "$24.80 fare" or "$4.00 fee"; null when the case has no amount. */
+export function amountAtStake(fare: { actual?: number | null; cancellation_fee?: number | null }): string | null {
+  const ok = (value: number | null | undefined): value is number => typeof value === "number" && Number.isFinite(value) && value > 0;
+  if (ok(fare.actual)) return `$${fare.actual.toFixed(2)} fare`;
+  if (ok(fare.cancellation_fee)) return `$${fare.cancellation_fee.toFixed(2)} fee`;
+  return null;
 }
 
 /** Only closing a case completes a demo step; reopening makes it next again. */
