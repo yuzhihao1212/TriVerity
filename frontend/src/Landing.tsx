@@ -73,7 +73,6 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
     <a className="skip-link" href="#landing-main" onClick={event => { event.preventDefault(); focusSection("landing-main"); }}>Skip to content</a>
     <header className="landing-header">
       <div className="landing-wrap landing-nav">
-        <span className="brand">TriVerity</span>
         <nav aria-label="Project"><a href={`${GITHUB}#readme`}>Project docs</a>
           <ThemeToggle theme={theme} onToggle={onToggleTheme} />
           <PresentationToggle presentation={presentation} onToggle={onTogglePresentation} />
@@ -87,7 +86,7 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
           <p className="landing-kicker">Multi-Agent Autonomous Dispute Resolution System</p>
           <h1 id="landing-title" tabIndex={-1}>TriVerity<span className="landing-dot" aria-hidden="true">.</span></h1>
           <p className="landing-byline"><OeroMark />By OeroAI</p>
-          <p className="landing-lead">Ride disputes resolved fairly<br className="landing-desktop-break" /> in seconds, not days.</p>
+          <p className="landing-lead"><span>Ride disputes resolved fairly</span> <span>in seconds, not days.</span></p>
           <p className="landing-intro muted">AI agents argue both sides; policy rules decide fairly. Follow the evidence and see why each ruling holds.</p>
           <div className="landing-actions"><a className="landing-primary" href="#/console" onClick={onOpenConsole}>Open the reviewer console <span aria-hidden="true">↗</span></a>
             <a href={GITHUB}>View the source on GitHub <span aria-hidden="true">↗</span></a></div>
