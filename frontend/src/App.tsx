@@ -238,7 +238,11 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
           // Point at the field (shown above Run agents for own disputes) and move focus to it.
           setError(`${dispute.dispute_id}: ${accessCodeMessage((e as ApiError).status)}`);
           setFocusAccessCode(true);
-        } else setError(`${dispute.dispute_id}: ${e.message}`);
+        } else if (e instanceof ApiError) setError(`${dispute.dispute_id}: ${e.message}`);
+        // A network failure (WiFi drop, DNS blip) rejects with the browser's own raw wording
+        // ("Failed to fetch", "Load failed"), not an ApiError: show the same friendly line the
+        // sample list uses instead of that technical text.
+        else setError(`${dispute.dispute_id}: Can't reach the server. Check your connection and try again.`);
       })
       .finally(() => setResolving(null));
   }
