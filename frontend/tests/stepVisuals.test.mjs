@@ -173,3 +173,12 @@ test('while Notify waits for a decision, the stepper points to Ruling, not the f
   const usual = sv.stepStates({ active: 'notify', hasResult: true, busy: false, reviewed: ['evidence'] });
   assert.deepEqual(usual.filter(s => s.next).map(s => s.tab), ['hearing']);
 });
+
+test('step footer: on an open Ruling with no decision, a hint replaces "Next: Notify parties"', () => {
+  assert.equal(sv.nextStepMode({ tab: 'ruling', hasResult: true, decisionRecorded: false }), 'hint');
+  assert.equal(sv.nextStepMode({ tab: 'ruling', hasResult: true, decisionRecorded: true }), 'primary');
+  assert.equal(sv.nextStepMode({ tab: 'ruling', hasResult: true, closed: true }), 'secondary');
+  assert.equal(sv.nextStepMode({ tab: 'hearing', hasResult: true }), 'primary');
+  assert.equal(sv.nextStepMode({ tab: 'intake', hasResult: false }), 'secondary');
+  assert.match(sv.DECIDE_FIRST, /Accept or override the ruling/);
+});
