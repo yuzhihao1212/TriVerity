@@ -1093,39 +1093,28 @@ main[tabindex="-1"]:focus { outline: none; }
   .tool-columns.two { grid-template-columns: 1fr; }
 }
 
-/* Console intro: transform/opacity only. Timings come from consoleIntroTiming.ts via custom properties. */
-.console-intro { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; overflow: hidden; background: var(--bg); color: var(--text); cursor: pointer; }
-.console-intro.leaving { animation: console-intro-fade var(--intro-fade-ms) ease-in forwards; }
+/* Console intro (ConsoleIntro.tsx): an animation loop drives every moving part from
+   consoleIntroTiming.ts; these rules only set the starting state. */
+.console-intro { position: fixed; inset: 0; z-index: 1000; overflow: hidden; color: var(--text); cursor: pointer; }
+.console-intro-bg { position: absolute; inset: 0; background: var(--bg); }
 /* Matches the landing h1 wordmark. */
-.intro-wordmark { display: flex; align-items: baseline; font-size: clamp(60px, 7.5vw, 100px); font-weight: 600; line-height: 1.15; letter-spacing: -.065em; white-space: nowrap; user-select: none; }
-.intro-orbit, .intro-arm, .intro-letter, .intro-verity, .intro-dot { display: inline-block; }
-/* Each letter orbits its own slot: the wrapper rotates, the arm shrinks the radius to 0, the letter spins about itself. */
-.intro-orbit { animation: intro-orbit var(--intro-letter-ms) cubic-bezier(.22, 1, .36, 1) var(--intro-delay) both; }
-.intro-arm { animation: intro-radius var(--intro-letter-ms) cubic-bezier(.33, 1, .68, 1) var(--intro-delay) both; }
-.intro-letter { animation: intro-spin var(--intro-letter-ms) cubic-bezier(.22, 1, .36, 1) var(--intro-delay) both; }
-.intro-verity { animation: intro-slide var(--intro-verity-ms) cubic-bezier(.22, 1, .36, 1) var(--intro-verity-start) both; }
-.intro-dot { color: var(--accent-text); transform-origin: 50% 75%; animation: intro-dot var(--intro-dot-ms) ease-out var(--intro-dot-start) both; }
-@keyframes intro-orbit { from { transform: rotate(calc(var(--intro-angle) - 360deg)); } to { transform: rotate(0deg); } }
-@keyframes intro-radius { from { transform: translateX(1.2em); } to { transform: translateX(0); } }
-@keyframes intro-spin { from { opacity: 0; transform: rotate(-360deg); } 15% { opacity: 1; } to { opacity: 1; transform: rotate(0deg); } }
-@keyframes intro-slide { from { transform: translateX(100vw); } to { transform: translateX(0); } }
-@keyframes intro-dot { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: scale(1); } }
-/* The credit sits under the wordmark without moving it; the flying dots land on the mark slot. */
-.intro-wordmark { position: relative; grid-area: 1 / 1; }
+.intro-wordmark { position: absolute; left: 50%; top: 44%; display: flex; align-items: baseline; font-size: clamp(60px, 7.5vw, 100px); font-weight: 600; line-height: 1.15; letter-spacing: -.065em; white-space: nowrap; user-select: none; transform: translate(-50%, -50%); }
+.intro-wordmark > span { display: inline-block; }
 .intro-ghost { visibility: hidden; }
-.intro-ghost * { animation: none !important; }
-.intro-credit { position: absolute; top: calc(100% + .35em); left: 50%; display: flex; align-items: center; gap: .18em; font-size: .24em; font-weight: 500; letter-spacing: 0; transform: translateX(-50%); }
-.intro-credit-mark { width: 2.2em; height: 2.2em; flex: none; }
-.intro-credit-mark svg { display: block; width: 100%; height: 100%; animation: intro-fade-in var(--intro-credit-ms) ease-out var(--intro-credit-start) both; }
-.intro-credit-text { color: var(--muted); animation: intro-credit-in var(--intro-credit-ms) cubic-bezier(.22, 1, .36, 1) var(--intro-credit-start) both; }
+.intro-letter { opacity: 0; will-change: transform, opacity, filter; }
+.intro-stop-space { color: transparent; }
+.intro-credit { position: absolute; left: 50%; top: 72%; display: flex; align-items: center; gap: .6em; font-size: clamp(15px, 1.6vw, 20px); font-weight: 500; color: var(--muted); white-space: nowrap; transform: translateX(-50%); }
+.intro-credit-mark { width: 2.5em; height: 2.5em; flex: none; opacity: 0; transform-origin: 0 0; }
+.intro-credit-mark svg { display: block; width: 100%; height: 100%; }
+.intro-credit-text { opacity: 0; }
 .intro-credit-text strong { color: var(--text); font-weight: 600; }
-.intro-fly { position: absolute; border-radius: 50%; background: var(--oero-ink); animation: intro-fly var(--intro-mark-ms) cubic-bezier(.65, 0, .35, 1) var(--fly-delay) both; }
-.intro-fly.red { background: var(--accent-text); animation-name: intro-fly, intro-fly-rose; }
-@keyframes intro-fly { 0% { transform: none; } 30% { transform: translate(calc(var(--fly-x) * .12), calc(var(--fly-y) * .12 - .6em)) scale(1.15); } 100% { transform: translate(var(--fly-x), var(--fly-y)) scale(var(--fly-scale)); } }
-@keyframes intro-fly-rose { to { background: var(--oero-red); } }
-@keyframes intro-fade-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes intro-credit-in { from { opacity: 0; transform: translateX(-.6em); } to { opacity: 1; transform: none; } }
-@keyframes console-intro-fade { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(1.04); } }
+/* The dots fly above the mark's triangle. */
+.intro-flying-dot { position: absolute; z-index: 1; border-radius: 50%; background: var(--oero-ink); opacity: 0; will-change: transform; }
+.intro-flying-dot.stop { background: var(--accent-text); transition: background-color .4s ease; }
+.intro-flying-dot.stop.rose { background: var(--oero-red); }
+/* The top bar's byline waits for the flying mark, then fades in under it. */
+.topbar .byline { transition: opacity .3s ease; }
+.intro-byline-hidden .topbar .byline { opacity: 0; }
 /* The CTA navigates natively under reduced motion; this is a backstop. */
 @media (prefers-reduced-motion: reduce) { .console-intro { display: none; } }
 
