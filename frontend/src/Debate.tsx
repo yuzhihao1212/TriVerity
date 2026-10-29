@@ -5,7 +5,7 @@ import { Chip } from "./Chip";
 import { sourceTone } from "./chipStyle";
 import { EvidenceList, EvidenceText, type FactLinks } from "./EvidenceList";
 import { riskTone } from "./outcomeTone";
-import { checkSummary, checksFor, VERDICT } from "./ruleChecks";
+import { checkSummary, checksFor, missingReplyText, VERDICT } from "./ruleChecks";
 import { FALLBACK_TOOLTIP } from "./stepVisuals";
 import { Term } from "./Term";
 import type { AgentCase, DisputeCase, Resolution } from "./types";
@@ -50,7 +50,7 @@ export function Debate({ resolution, dispute, availableIds, onSelectFact }: { re
           <EvidenceList texts={item.rebuttal.evidence} ids={item.rebuttal.evidence_ids} mention={item.rebuttal.text} dispute={dispute}
             compare={otherCase(side).rebuttal?.text ? { party: side, otherTexts: otherCase(side).rebuttal!.evidence, otherIds: otherCase(side).rebuttal!.evidence_ids } : undefined}
             availableIds={availableIds} onSelectFact={onSelectFact} />
-        </> : <p className="small muted">No reply generated. The rebuttal round runs only when both opening arguments use AI.</p>}
+        </> : <p className="small muted">{missingReplyText(item, otherCase(side))}</p>}
       </article>
     );
   };

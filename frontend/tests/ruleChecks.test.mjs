@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import { load } from './_load.mjs';
 
-const { VERDICT, checkSummary, checksFor } = await load('ruleChecks');
+const { VERDICT, checkSummary, checksFor, missingReplyText } = await load('ruleChecks');
 
 const reviews = [
   { party: 'rider', rules: [
@@ -32,4 +32,10 @@ test('the summary counts the rules that hold', () => {
 
 test('every verdict has a label', () => {
   for (const verdict of ['supports', 'favours_other_side', 'does_not_apply']) assert.ok(VERDICT[verdict].label);
+});
+
+test('a missing reply says whether the round was skipped or the AI reply was dropped', () => {
+  assert.match(missingReplyText({ source: 'llm' }, { source: 'llm' }), /didn't pass our output checks/);
+  assert.match(missingReplyText({ source: 'llm' }, { source: 'fallback' }), /runs only when both opening arguments use AI/);
+  assert.match(missingReplyText({ source: 'fallback' }, { source: 'llm' }), /runs only when both opening arguments use AI/);
 });
