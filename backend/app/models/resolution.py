@@ -122,6 +122,8 @@ class Ruling(BaseModel):
     rider_explanation: str = ""
     driver_explanation: str = ""
     judge_evidence: list[str] = Field(default_factory=list)
+    # Each judge_evidence line's fact ID ("TRIP-1"), in the same order; empty if they can't be paired.
+    judge_evidence_ids: list[str] = Field(default_factory=list)
     policy_refs: list[str] = Field(default_factory=list)
     # Whether the LLM wrote the three explanations or the rule templates were kept.
     explanation_source: CaseSource = "fallback"

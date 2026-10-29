@@ -108,7 +108,10 @@ export function computedFacts(resolution: Resolution): EvidenceItem[] {
   const byText = new Map<string, EvidenceItem[]>();
   for (const fact of referenced) byText.set(fact.text, [...(byText.get(fact.text) ?? []), fact]);
   const usedIds = new Set<string>();
-  const computed = evidenceItems(resolution.judge_evidence).map(fact => {
+  // The backend pairs every fact with its ID; older saved results only have the IDs advocates cited.
+  const paired = resolution.judge_evidence_ids?.length === resolution.judge_evidence.length
+    ? evidenceItems(resolution.judge_evidence, resolution.judge_evidence_ids) : null;
+  const computed = paired ?? evidenceItems(resolution.judge_evidence).map(fact => {
     const matches = byText.get(fact.text) ?? [];
     if (matches.length !== 1 || !matches[0].id || usedIds.has(matches[0].id)) return fact;
     usedIds.add(matches[0].id);
@@ -116,6 +119,7 @@ export function computedFacts(resolution: Resolution): EvidenceItem[] {
   });
   const texts = new Set(computed.map(fact => fact.text));
   // Keep explicitly paired reference facts even if the Judge's evidence subset
-  // did not include them. Never derive IDs from position or source counters.
+  // did not include them. Never derive IDs from position or source counters:
+  // only the backend's own pairing (judge_evidence_ids) labels facts by position.
   return [...computed, ...referenced.filter(fact => !texts.has(fact.text))];
 }

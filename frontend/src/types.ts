@@ -169,6 +169,8 @@ export interface Resolution {
   driver_explanation: string;
   explanation_source: "llm" | "fallback";
   judge_evidence: string[];
+  // Each judge_evidence line's fact ID, in order; missing from results saved before it existed.
+  judge_evidence_ids?: string[];
   policy_refs: string[];
   rider_case: AgentCase;
   driver_case: AgentCase;

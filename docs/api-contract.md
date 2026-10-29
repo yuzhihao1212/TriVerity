@@ -132,6 +132,7 @@ See `backend/app/models/resolution.py`.
   "driver_explanation": "string",
   "explanation_source": "llm | fallback",
   "judge_evidence": ["string"],
+  "judge_evidence_ids": ["TRIP-1", "GPS-1"],
   "policy_refs": ["RD-3: A route more than 15% longer ..."],
   "rider_case": {"agent": "rider_advocate", "summary": "string", "evidence": [], "evidence_ids": ["TRIP-1", "GPS-2"],
                 "sources": ["trip", "gps"], "policy_refs": [], "source": "llm | fallback",
@@ -187,6 +188,11 @@ See `backend/app/models/resolution.py`.
 - An advocate's `evidence_ids` are the IDs of the computed facts it cited (prefixes `TRIP`, `GPS`, `FARE`,
   `CHAT`, `HIST`), `evidence` their exact text, and `sources` the evidence sources used. `rebuttal` is its
   reply to the other side; an empty `text` with `source: "fallback"` means no rebuttal was made.
+  If the model leaves `evidence_ids` out or empty, IDs written in its text count as its citations;
+  with none, the case cites no evidence (it never lists every fact as if cited).
+- `judge_evidence_ids` gives each `judge_evidence` line its fact ID, in the same order, so every fact can
+  show its ID, not only the ones an advocate cited. It is empty if the two can't be paired (and absent
+  from results saved before it existed).
 - `precedents` is the Policy & Precedent agent's report: the closest past rulings (`P-…` from the seed set,
   `R-…` from reviewer feedback), the majority decision among close ones, and whether the rules' decision
   agrees with them. `overridden` means reviewers decided close cases differently and `PREC-1` escalated
