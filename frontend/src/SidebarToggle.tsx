@@ -1,3 +1,6 @@
+import { useId, useState, type ReactNode } from "react";
+import { disputeCategory } from "./disputeList";
+
 /** Opens or collapses the dispute list, like the side panel in chat apps. Stays in place so focus never jumps. */
 export function SidebarToggle({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   const label = open ? "Hide dispute list" : "Show dispute list";
@@ -17,4 +20,23 @@ export function NewDisputeIcon() {
       <path d="M12 5v14M5 12h14" />
     </svg>
   );
+}
+
+/** The collapsed sidebar's current case: its category icon (same as the list), named on hover, focus and tap. */
+export function CurrentCaseShortcut({ id, summary, type, icon, onOpen }: {
+  id: string; summary: string; type: string; icon: ReactNode; onOpen: () => void;
+}) {
+  const tooltipId = useId();
+  const [dismissed, setDismissed] = useState(false);
+  const category = disputeCategory(type);
+  const label = `Current case: ${id} · ${summary}`;
+  return <div className="sidebar-current">
+    <button type="button" className={`sidebar-current-button category-${category}`} aria-label={label}
+      aria-describedby={dismissed ? undefined : tooltipId} aria-controls="dispute-list" aria-expanded={false}
+      onClick={onOpen} onMouseEnter={() => setDismissed(false)} onFocus={() => setDismissed(false)}
+      onKeyDown={event => { if (event.key === "Escape") setDismissed(true); }}>
+      {icon}
+    </button>
+    <span id={tooltipId} role="tooltip" className="sidebar-current-tooltip" hidden={dismissed}>{label}</span>
+  </div>;
 }

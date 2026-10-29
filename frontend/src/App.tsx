@@ -16,9 +16,9 @@ import { CaseComparison } from "./CaseComparison";
 import { Debate } from "./Debate";
 import { EvidenceList, EvidenceText, type FactLinks } from "./EvidenceList";
 import { VerdictSummary } from "./VerdictSummary";
-import { computedFacts, disputeLabel, filterDisputes, money } from "./presentation";
+import { computedFacts, disputeLabel, money } from "./presentation";
 import { caseHash, focusSection, HOME_HASH, missingCase, reveal, selectSample } from "./routes";
-import { allowedActions, caseStatus, nextCase, pendingAppealIds, STATUS_WORDS, type CaseStatus } from "./caseQueue";
+import { allowedActions, caseStatus, nextCase, pendingAppealIds, sortQueue, STATUS_WORDS, type CaseStatus } from "./caseQueue";
 import { Home, type HomeRow } from "./Home";
 import { AppealsPanel } from "./Appeals";
 import { ClosedCase, ClosedSummary } from "./ClosedCase";
@@ -29,8 +29,8 @@ import { chipClass, chipTone, sourceTone } from "./chipStyle";
 import { savedText } from "./decisionState";
 import { AiToggle } from "./AiToggle";
 import { readAiMode, writeAiMode, type AiMode } from "./aiMode";
-import { NewDisputeIcon, SidebarToggle } from "./SidebarToggle";
-import { readSidebarOpen, writeSidebarOpen } from "./sidebar";
+import { CurrentCaseShortcut, NewDisputeIcon, SidebarToggle } from "./SidebarToggle";
+import { readGroupOpen, writeGroupOpen, readSidebarOpen, writeSidebarOpen } from "./sidebar";
 import { VERDICT } from "./ruleChecks";
 import { Term } from "./Term";
 import { PresentationToggle, ThemeToggle } from "./ThemeToggle";
@@ -41,7 +41,7 @@ import { DisputeForm } from "./DisputeForm";
 import { ApiError, getSamples, listAppeals, resolveDisputeLive } from "./services/api";
 import { AccessCodeField } from "./AccessCodeField";
 import { ACCESS_CODE_FIELD_ID, accessCodeMessage, accessCodeProblem, needsAccessCode } from "./consoleHeader";
-import { disputeItemName, filterLabel, filterShortLabel, TYPE_LABELS, type DisputeFilter } from "./disputeList";
+import { disputeCategory, groupByCategory, type Category, disputeItemName, filterLabel, filterShortLabel, TYPE_LABELS, type DisputeFilter } from "./disputeList";
 import { FilterMenu } from "./FilterMenu";
 import { Icon } from "./Icon";
 import type { AgentLogEntry, Appeal, ArgumentReview, Counterfactual, Decision, DisputeCase, PartyHistory, PrecedentReport, Resolution, RiskLevel, Triage, TriageTier } from "./types";
@@ -90,6 +90,20 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
   const [filter, setFilter] = useState<DisputeFilter>("all");
   const [aiMode, setAiMode] = useState<AiMode>(() => readAiMode(localStorage));
   const [sidebarOpen, setSidebarOpen] = useState(() => readSidebarOpen(localStorage));
+  const [groupOpen, setGroupOpen] = useState<Record<Category, boolean>>(() => ({
+    route: readGroupOpen("route"), "no-show": readGroupOpen("no-show"), other: readGroupOpen("other"),
+  }));
+  const [revealCurrent, setRevealCurrent] = useState(false);
+  const currentCaseButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!sidebarOpen || !revealCurrent) return;
+    reveal(currentCaseButton.current, "nearest", { instant: true });
+    setRevealCurrent(false);
+  }, [sidebarOpen, revealCurrent]);
+  function setCategoryOpen(category: Category, open: boolean) {
+    setGroupOpen(previous => ({ ...previous, [category]: open }));
+    writeGroupOpen(category, open);
+  }
   function toggleSidebar() {
     setSidebarOpen(open => { writeSidebarOpen(localStorage, !open); return !open; });
   }
@@ -353,19 +367,28 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
     const decision = results[d.dispute_id]?.decision;
     const status = statusOf(d.dispute_id);
     return <li key={d.dispute_id}>
-      <button type="button" className={`dispute-item${current ? " active" : ""}`} aria-current={current ? "true" : undefined}
+      <button type="button" className={`dispute-item${current ? " active" : ""}`} ref={current ? currentCaseButton : undefined} aria-current={current ? "true" : undefined}
         aria-label={`${disputeItemName(d, summary, decision)}${status !== "not_run" ? `. Status: ${STATUS_WORDS[status]}` : ""}`} title={summary} onClick={() => select(d)}>
-        <span className="dispute-line"><TypeIcon type={d.type} /><span className="dispute-label">{summary}</span></span>
+        <span className="dispute-line"><span className="dispute-label">{summary}</span></span>
         <span className="dispute-sub">
           <span className="dispute-id">{d.dispute_id}</span>
+          {results[d.dispute_id]?.triage?.tier === "safety" && <Chip size="sm" tone="danger">Safety</Chip>}
           {decision && <Chip size="sm" dot tone={status === "appeal_waiting" ? "warn" : status === "closed" ? "ok" : decisionTone(decision)} title={DECISION_LABELS[decision]}>{STATUS_WORDS[status]}</Chip>}
         </span>
       </button>
     </li>;
   };
   const newDispute = () => { setForm({}); setError(null); };
-  const ownShown = filterDisputes(own, filter), samplesShown = filterDisputes(samples, filter);
-  const showGroups = ownShown.length > 0 && samplesShown.length > 0;
+  const sidebarGroups = groupByCategory(sortQueue(queueRows).map(row => row.dispute), filter);
+  function openCurrentCase() {
+    if (!selected) return;
+    select(selected);
+    if (filter !== "all" && selected.type !== filter) setFilter("all");
+    setCategoryOpen(disputeCategory(selected.type), true);
+    writeSidebarOpen(localStorage, true);
+    setSidebarOpen(true);
+    setRevealCurrent(true);
+  }
 
   return (
     <div className={`app${presentation ? " presentation-mode" : ""}`}>
@@ -406,19 +429,27 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
                   <NewDisputeIcon />
                 </button>}
           </div>
-          {!sidebarOpen && selected && <span className="sidebar-current" title={`Open: ${selected.dispute_id}`}>{selected.dispute_id}</span>}
+          {!sidebarOpen && selected && <CurrentCaseShortcut id={selected.dispute_id} summary={disputeLabel(selected)} type={selected.type}
+            icon={<TypeIcon type={selected.type} />} onOpen={openCurrentCase} />}
           <div className="sidebar-body" id="dispute-list" hidden={!sidebarOpen}>
           {filter !== "all" && <button type="button" className={chipClass({ tone: "brand", className: "chip-button" })} aria-label={`Clear filter: ${filterLabel(filter)}`} onClick={() => setFilter("all")}>
             {filterShortLabel(filter)}
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7 7 17" /></svg>
           </button>}
           {selected && filter !== "all" && selected.type !== filter && <p className="sidebar-note">The selected case is outside this filter.</p>}
-          {!loadingSamples && !ownShown.length && !samplesShown.length && <p className="sidebar-note">No disputes match this filter.</p>}
-          {/* Group labels only when both groups have visible items; otherwise one label would stand alone. */}
-          {showGroups && <h2 className="sidebar-group">Yours</h2>}
-          {ownShown.length > 0 && <ul className="dispute-list">{ownShown.map(disputeButton)}</ul>}
-          {showGroups && <h2 className="sidebar-group">Samples</h2>}
-          {samplesShown.length > 0 && <ul className="dispute-list">{samplesShown.map(disputeButton)}</ul>}
+          {!loadingSamples && !sidebarGroups.length && <p className="sidebar-note">No disputes match this filter.</p>}
+          {sidebarGroups.map(group => <section className="sidebar-category" key={group.id} aria-labelledby={`sidebar-group-${group.id}`}>
+            <h2 className="sidebar-group">
+              <button type="button" id={`sidebar-group-${group.id}`} className={`sidebar-group-button sidebar-category-${group.id}`}
+                aria-expanded={groupOpen[group.id]} aria-controls={`sidebar-cases-${group.id}`}
+                onClick={() => setCategoryOpen(group.id, !groupOpen[group.id])}>
+                <span>{group.label} · {group.count}</span><Icon name="chevron" />
+              </button>
+            </h2>
+            <ul id={`sidebar-cases-${group.id}`} className="dispute-list" hidden={!groupOpen[group.id]}>
+              {group.items.map(disputeButton)}
+            </ul>
+          </section>)}
           </div>
         </nav>}
 
