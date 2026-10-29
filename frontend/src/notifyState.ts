@@ -80,9 +80,9 @@ export function generatedMessage(party: Party, resolution: Pick<Resolution, "rid
   if (outcome.source === "ruling") return party === "rider" ? resolution.rider_explanation : resolution.driver_explanation;
   const amount = outcome.amount != null ? money(outcome.amount) : "the approved amount";
   const rider: Record<string, string> = {
-    partial_refund: `A reviewer looked at your dispute and approved a partial refund of ${amount}. It goes back to your original payment method.`,
-    full_refund: `A reviewer looked at your dispute and approved a full refund of ${amount}. It goes back to your original payment method.`,
-    compensation: `A reviewer looked at your dispute and approved a ${amount} credit for the lost time.`,
+    partial_refund: `We're sorry for the trouble. A reviewer looked at your dispute and approved a partial refund of ${amount}. It goes back to your original payment method.`,
+    full_refund: `We're sorry for the trouble. A reviewer looked at your dispute and approved a full refund of ${amount}. It goes back to your original payment method.`,
+    compensation: `We're sorry for the inconvenience. A reviewer looked at your dispute and approved a ${amount} credit for the lost time.`,
     no_action: "A reviewer looked at your dispute. The charge was correct, so it stays as it is.",
   };
   const driver: Record<string, string> = {
@@ -272,6 +272,15 @@ export function sentText(record: Pick<SentRecord, "at" | "notes" | "correction">
 // ---- Phones: preview, then delivered ----------------------------------------------------
 
 export interface PhoneState { delivered: boolean; tag: string; canAppeal: boolean; caption: string | null }
+
+/**
+ * Shown to both parties as soon as a case is escalated (needs_review), before a reviewer
+ * decides: they are not left waiting silently for the final outcome.
+ */
+export const PENDING_REVIEW_MESSAGE: Record<Party, string> = {
+  rider: "We're sorry for the wait. Your dispute needs a closer look from a reviewer before we can give you a final answer. We'll let you know as soon as it's decided.",
+  driver: "This trip's dispute needs a closer look from a reviewer before a final decision is made. We'll let you know as soon as it's decided.",
+};
 
 /**
  * Before "Approve & send" the phones are a preview and the appeal button is disabled; after it,

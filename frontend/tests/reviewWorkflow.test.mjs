@@ -64,6 +64,22 @@ test('the generated message is read-only wording: the ruling when accepted, plai
   }
 });
 
+test('an overridden refund or compensation message apologises to the rider; no action does not', () => {
+  for (const decision of ['partial_refund', 'full_refund', 'compensation']) {
+    const outcome = ns.finalOutcome(ruling, saved('overridden', decision), D001, 2.5);
+    assert.match(ns.generatedMessage('rider', ruling, outcome), /sorry/i, decision);
+  }
+  const none = ns.finalOutcome(ruling, saved('overridden', 'no_action'), D001);
+  assert.doesNotMatch(ns.generatedMessage('rider', ruling, none), /sorry/i);
+});
+
+test('a case needing human review has a party-safe wording both parties can be told right away', () => {
+  for (const party of ['rider', 'driver']) {
+    assert.doesNotMatch(ns.PENDING_REVIEW_MESSAGE[party], /\$|refund|fraud|risk/i, party);
+    assert.deepEqual(ns.privacyWarnings(ns.PENDING_REVIEW_MESSAGE[party]), [], party);
+  }
+});
+
 // ---- 1. Reviewer notes ---------------------------------------------------------------------
 
 test('reviewer notes: at most 280 characters, a live counter, empty by default', () => {

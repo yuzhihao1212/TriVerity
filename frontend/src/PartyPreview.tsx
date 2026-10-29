@@ -4,9 +4,10 @@ import { AppealForm } from "./Appeals";
 import { listAppeals } from "./services/api";
 import type { SavedDecision } from "./decisionState";
 import { Icon } from "./Icon";
+import { PARTY_DECISION_LABELS } from "./partyView";
 import {
   appealSummary, cleanNote, clockText, closingTitle, createSentStore, finalOutcome, generatedMessage, maxRefund, NOTE_LIMIT, NOTE_PLACEHOLDER,
-  noteCounter, noteWarnings, notifyGate, PARTIES, phoneState, SEND_TOOLTIP, sendBlock, sentText, sentOutcome, validateAmount,
+  noteCounter, noteWarnings, notifyGate, PARTIES, PENDING_REVIEW_MESSAGE, phoneState, SEND_TOOLTIP, sendBlock, sentText, sentOutcome, validateAmount,
   type FinalOutcome, type Party, type SentRecord,
 } from "./notifyState";
 import type { ReviewSummary } from "./reviewProgress";
@@ -84,6 +85,23 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
     setSent(sentRecords().get(reviewKey));
     onSent();
   }
+
+  if (gate === "locked" && !sent && resolution.decision === "needs_review") return (
+    <section className="card party-preview notify-locked notify-pending" aria-labelledby={`${id}-heading`}>
+      <h2 id={`${id}-heading`}>Notify parties</h2>
+      <p className="notify-gate"><Icon name="warning" /><strong>This case needs a closer look</strong></p>
+      <p className="small muted">No need to make them wait in silence: the rider and driver can see that it's under review right now. The final outcome opens here once you decide on the Ruling step.</p>
+      <div className="notify-rows">
+        {PARTIES.map(party => <div className="notify-row" key={party}>
+          <Phone party={party} id={id}
+            outcome={{ decision: "needs_review", label: PARTY_DECISION_LABELS.needs_review, amount: null, needsAmount: false, source: "ruling" }}
+            message={PENDING_REVIEW_MESSAGE[party]} note="" sent={null} dispute={dispute} decision="needs_review"
+            appealsAvailable={false} existing={null} onAppealed={() => {}} />
+        </div>)}
+      </div>
+      <div><button type="button" className="run-button" onClick={onGoToRuling}>Go decide on the Ruling step</button></div>
+    </section>
+  );
 
   if (gate === "locked" && !sent) return (
     <section className="card party-preview notify-locked" aria-labelledby={`${id}-heading`}>
