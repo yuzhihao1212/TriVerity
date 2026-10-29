@@ -3,8 +3,9 @@ import { useId } from "react";
 import { Chip } from "./Chip";
 import { SourceBadge } from "./Debate";
 import { partyView, PARTY_DECISION_LABELS } from "./partyView";
+import { confidenceNote } from "./decisionState";
 import { money, outputSources, policyIds } from "./presentation";
-import { decisionTone } from "./outcomeTone";
+import { DECISION_LABELS, decisionTone } from "./outcomeTone";
 import { Term } from "./Term";
 import type { Resolution } from "./types";
 
@@ -23,10 +24,10 @@ export function VerdictSummary({ resolution, disputeId }: { resolution: Resoluti
       <WhySummary resolution={resolution} />
       <div className="verdict-metrics">
         <div><span className="section-label">{view.refund_amount != null ? "Amount approved" : "Next step"}</span>
-          <p className={`verdict-value tone-text-${tone}`}>{view.refund_amount != null ? money(view.refund_amount) : resolution.decision === "needs_review" ? "Human review" : "Charge stands"}</p>
+          <p className={`verdict-value tone-text-${tone}`}>{view.refund_amount != null ? money(view.refund_amount) : DECISION_LABELS[resolution.decision]}</p>
         </div>
         <div><span className="section-label"><Term term="confidence">Confidence</Term></span><p className="verdict-value">{percent}%</p>
-          <p className="small muted">{percent >= 60 ? "Clear enough to decide automatically" : "Below 60%: a human decides"}</p></div>
+          <p className="small muted">{confidenceNote(resolution.decision, percent, resolution.policy_refs)}</p></div>
         <div><span className="section-label">Policy applied</span><div className="chip-row">
           {policyIds(resolution.policy_refs).map(ref => <Chip key={ref}><Term rule={ref} /></Chip>)}
           {!resolution.policy_refs.length && <span className="small muted">None returned</span>}
@@ -54,3 +55,4 @@ function WhySummary({ resolution }: { resolution: Resolution }) {
       if {change.change}, the outcome would be {change.outcome}.</p>}
   </div>;
 }
+

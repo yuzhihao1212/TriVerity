@@ -28,8 +28,9 @@ export const DECISION_LABELS: Record<Decision, string> = {
   partial_refund: "Partial refund",
   full_refund: "Full refund",
   compensation: "Compensation",
-  no_action: "No action",
-  needs_review: "Needs human review",
+  // One wording per outcome everywhere (ruling, Judge, header, lists, agent log).
+  no_action: "No change to the charge",
+  needs_review: "A human reviewer will decide",
 };
 
 export function decisionLabel(decision: string): string {

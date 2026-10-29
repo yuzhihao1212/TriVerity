@@ -36,14 +36,14 @@ test('the judge line reads "Partial refund · 80% confident"', () => {
   const text = humanizeAgentMessage('judge', '[fallback] partial_refund (80% confidence)', D001);
   assert.equal(text, 'Partial refund · 80% confident');
   // During a live run there is no result yet: the same facts come from the message.
-  assert.equal(humanizeAgentMessage('judge', 'needs_review (62% confidence)'), 'Needs human review · 62% confident');
-  assert.equal(humanizeAgentMessage('judge', '[llm] no_action (91% confidence)', { ...D001, decision: 'no_action', confidence: 0.912 }), 'No action · 91% confident');
+  assert.equal(humanizeAgentMessage('judge', 'needs_review (62% confidence)'), 'A human reviewer will decide · 62% confident');
+  assert.equal(humanizeAgentMessage('judge', '[llm] no_action (91% confidence)', { ...D001, decision: 'no_action', confidence: 0.912 }), 'No change to the charge · 91% confident');
 });
 
 test('the precedent agent lists matches as percentages and labels, or says there are none', () => {
   const message = 'Consistent with 3 similar past rulings (P-063, P-056, P-070). Retrieved: P-063 (0.88, partial_refund), P-056 (0.70, partial_refund), P-070 (0.66, no_action).';
   const text = humanizeAgentMessage('precedent_agent', message, D001);
-  assert.equal(text, 'Consistent with 3 similar past rulings (P-063, P-056, P-070). 3 similar past rulings: P-063 (88% match, partial refund), P-056 (70% match, partial refund), P-070 (66% match, no action).');
+  assert.equal(text, 'Consistent with 3 similar past rulings (P-063, P-056, P-070). 3 similar past rulings: P-063 (88% match, partial refund), P-056 (70% match, partial refund), P-070 (66% match, no change to the charge).');
   clean(text);
   // Without a report (live progress), the message itself is parsed.
   const live = humanizeAgentMessage('precedent_agent', message);
@@ -65,7 +65,7 @@ test('the collector shows no raw text beside its chips, otherwise "N lookups for
 test('advocates, rebuttals and the rest: the tag goes, snake_case becomes words', () => {
   assert.equal(humanizeAgentMessage('rider_advocate', '[llm] Rider disputes the charge: the route was longer.'), 'Rider disputes the charge: the route was longer.');
   assert.equal(humanizeAgentMessage('rider_rebuttal', '[fallback] no rebuttal'), 'no rebuttal');
-  assert.equal(humanizeAgentMessage('driver_advocate', '[fallback] Driver argues no_action under RD-2; see trip_record.'), 'Driver argues no action under RD-2; see trip record.');
+  assert.equal(humanizeAgentMessage('driver_advocate', '[fallback] Driver argues no_action under RD-2; see trip_record.'), 'Driver argues no change to the charge under RD-2; see trip record.');
   assert.equal(humanizeAgentMessage('fraud_detector', 'Rider: low risk; Driver: high risk (2 signals)'), 'Rider: low risk; Driver: high risk (2 signals)');
   assert.equal(humanizeAgentMessage('evidence_loader', 'Computed 15 facts from case data.'), 'Computed 15 facts from case data.');
   assert.equal(humanizeAgentMessage('mystery_agent', 'similarity 0.88 to past_case'), 'similarity 88% to past case');

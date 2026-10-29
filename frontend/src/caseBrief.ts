@@ -1,6 +1,6 @@
 import { FINAL_LABELS, type SavedDecision } from "./decisionState";
 import { finalOutcome, type SentRecord } from "./notifyState";
-import { decisionTone } from "./outcomeTone";
+import { DECISION_LABELS, decisionTone } from "./outcomeTone";
 import type { FinalHeaderOutcome } from "./stepVisuals";
 import type { Decision, DisputeCase, Resolution } from "./types";
 
@@ -9,11 +9,13 @@ const number = (value: unknown): number | null =>
 const money = (value: number) => `$${value.toFixed(2)}`;
 
 /** Explicit wording shared by the headline and the saved proposal in the brief. */
-export function caseOutcome(type: DisputeCase["type"], decision: Decision, amount: number | null): string {
-  if (decision === "no_action") return `${type === "no_show_charge" ? "fee" : "fare"} stands, no refund`;
-  if (decision === "needs_review") return "escalated to a human reviewer";
+export function caseOutcome(_type: DisputeCase["type"], decision: Decision, amount: number | null): string {
+  // The shared outcome wording (DECISION_LABELS), lower-cased to sit inside a sentence.
+  const label = DECISION_LABELS[decision];
+  const text = label.charAt(0).toLowerCase() + label.slice(1);
+  if (decision === "no_action" || decision === "needs_review") return text;
   const value = number(amount);
-  return `${FINAL_LABELS[decision].toLowerCase()}${value == null ? "" : ` ${money(value)}`}`;
+  return `${text}${value == null ? "" : ` ${money(value)}`}`;
 }
 
 /**
@@ -24,22 +26,23 @@ export function caseHeadline(dispute: DisputeCase, _resolution?: Resolution, fin
   const facts: string[] = [];
   const noShow = dispute.type === "no_show_charge";
   const charged = number(noShow ? dispute.fare.cancellation_fee : dispute.fare.actual);
-  if (charged != null) facts.push(`Rider disputes a ${money(charged)} ${noShow ? "no-show fee" : "fare"}`);
+  // Two sentences that keep the party's claim apart from what the data shows.
+  if (charged != null) facts.push(`The rider disputes a ${money(charged)} ${noShow ? "no-show fee" : "fare"}.`);
   if (noShow) {
     const wait = number(dispute.trip.driver_wait_min);
-    if (wait != null) facts.push(`driver waited ${wait} min`);
+    if (wait != null) facts.push(`The driver waited ${wait} ${wait === 1 ? "minute" : "minutes"} at pickup.`);
   } else {
     const expected = number(dispute.trip.expected_distance_km), actual = number(dispute.trip.actual_distance_km);
     if (expected != null && expected > 0 && actual != null) {
       const percent = Math.round((actual / expected - 1) * 100);
-      facts.push(percent === 0 ? "route matched the expected distance"
-        : `route ${Math.abs(percent)}% ${percent > 0 ? "longer" : "shorter"} than expected`);
+      facts.push(percent === 0 ? "Trip data shows the route matched the expected distance."
+        : `Trip data shows the route was ${Math.abs(percent)}% ${percent > 0 ? "longer" : "shorter"} than expected.`);
     }
   }
   const suffix = final?.by === "overridden" ? " (overridden)" : "";
   return {
-    facts: facts.join(" · "),
-    outcome: final ? `Decided: ${caseOutcome(dispute.type, final.decision, final.amount)}${suffix}` : null,
+    facts: facts.join(" "),
+    outcome: final ? `Decided: ${caseOutcome(dispute.type, final.decision, final.amount)}${suffix}.` : null,
     tone: final ? decisionTone(final.decision) : "neutral" as const,
   };
 }

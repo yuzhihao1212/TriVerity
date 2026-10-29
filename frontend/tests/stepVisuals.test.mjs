@@ -166,3 +166,10 @@ test('Evidence flow counts come from the loader message and the facts list', () 
     { edges: ['Risk: rider low, driver high', '3 past rulings retrieved'], result: null });
   assert.equal(sv.stepFlow('hearing', [log('rider_advocate'), log('driver_advocate')], resolution), null);
 });
+
+test('while Notify waits for a decision, the stepper points to Ruling, not the first unreviewed step', () => {
+  const states = sv.stepStates({ active: 'notify', hasResult: true, busy: false, reviewed: ['evidence'], nextTab: 'ruling' });
+  assert.deepEqual(states.filter(s => s.next).map(s => s.tab), ['ruling']);
+  const usual = sv.stepStates({ active: 'notify', hasResult: true, busy: false, reviewed: ['evidence'] });
+  assert.deepEqual(usual.filter(s => s.next).map(s => s.tab), ['hearing']);
+});
