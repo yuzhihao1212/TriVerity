@@ -5,31 +5,31 @@ import ts from 'typescript';
 
 const source = await readFile(new URL('../src/consoleIntroTiming.ts', import.meta.url), 'utf8');
 const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } });
-const { INTRO_STEPS, INTRO_TOTAL_MS, REDUCED_MOTION_MS, TRI_LETTERS, TRI_LETTER_MS, triLetterDelay, shouldPlayIntro, introPlayed, markIntroPlayed } =
+const { INTRO_STEPS, INTRO_TOTAL_MS, INTRO_WORD, LETTER_MS, REDUCED_MOTION_MS, letterDelay, shouldPlayIntro, introPlayed, markIntroPlayed } =
   await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`);
 
-test('the intro lasts 3-4 s in total and ends with the fade', () => {
-  assert.ok(INTRO_TOTAL_MS >= 3000 && INTRO_TOTAL_MS <= 4000, `total ${INTRO_TOTAL_MS} ms`);
-  assert.equal(INTRO_TOTAL_MS, INTRO_STEPS.fade.end);
+test('the intro lasts 4-5 s in total and ends with the flight into the top bar', () => {
+  assert.ok(INTRO_TOTAL_MS >= 4000 && INTRO_TOTAL_MS <= 5000, `total ${INTRO_TOTAL_MS} ms`);
+  assert.ok(INTRO_TOTAL_MS >= INTRO_STEPS.fly.end);
 });
 
 test('steps run in order, each with a positive duration', () => {
-  const { tri, verity, dot, mark, credit, fade } = INTRO_STEPS;
-  for (const step of [tri, verity, dot, mark, credit, fade]) assert.ok(step.start >= 0 && step.end > step.start);
-  // "Verity" overlaps the end of "Tri", but never starts before it or ends before it.
-  assert.ok(verity.start > tri.start && verity.start < tri.end && verity.end >= tri.end);
-  assert.ok(dot.start >= verity.end);
-  // The dots fly only once "TriVerity." has formed; the credit holds before the fade.
-  assert.ok(mark.start >= dot.end);
-  assert.ok(credit.start > mark.start && credit.end >= mark.end);
-  assert.ok(fade.start - credit.end >= 500, 'the finished credit holds for at least 0.5 s');
+  const { letters, stop, swirl, dissolve, credit, fly, fade } = INTRO_STEPS;
+  for (const step of [letters, stop, swirl, dissolve, credit, fly, fade]) assert.ok(step.start >= 0 && step.end > step.start);
+  // The full stop lands once the word has formed; the dots leave only after it.
+  assert.ok(stop.start >= letters.end && swirl.start >= stop.end);
+  // The letters dissolve only once the dots have started to leave, so the word never shows without them.
+  assert.ok(dissolve.start > swirl.start && dissolve.end < swirl.end);
+  assert.ok(credit.start > swirl.start && credit.end >= swirl.end);
+  assert.ok(fly.start - credit.end >= 300, 'the finished credit holds for at least 0.3 s');
+  assert.equal(fade.start, fly.start, 'the console appears as the mark starts to fly');
+  assert.ok(fade.end <= fly.end);
 });
 
-test('the staggered "Tri" letters all land by the end of their step', () => {
-  const delays = TRI_LETTERS.map((_, i) => triLetterDelay(i));
+test('the letters fade in one after another and all land by the end of their step', () => {
+  const delays = [...INTRO_WORD].map((_, i) => letterDelay(i));
   assert.deepEqual([...delays].sort((a, b) => a - b), delays);
-  assert.ok(delays[1] > delays[0]);
-  assert.equal(delays.at(-1) + TRI_LETTER_MS, INTRO_STEPS.tri.end);
+  assert.equal(delays.at(-1) + LETTER_MS, INTRO_STEPS.letters.end);
 });
 
 test('reduced motion takes 150 ms or less and skips the intro', () => {

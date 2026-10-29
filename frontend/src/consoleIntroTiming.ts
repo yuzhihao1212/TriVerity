@@ -1,38 +1,41 @@
 // Timing for the landing -> console intro (ConsoleIntro.tsx). Times are ms
-// from the click. The CSS reads these through custom properties, so this
-// module is the single source for the sequence and its tests.
+// from the click. ConsoleIntro's animation loop reads them, so this module is
+// the single source for the sequence and its tests.
 
-export const TRI_LETTERS = ["T", "r", "i"] as const;
-export const TRI_STAGGER_MS = 80;
-export const TRI_LETTER_MS = 640;
+export const INTRO_WORD = "TriVerity";
+// Letters fade and rise in one after another.
+export const LETTER_STAGGER_MS = 45;
+export const LETTER_MS = 550;
+// The three dots leave one after another, each on a circular path into the OeroAI mark.
+export const SWIRL_STAGGER_MS = 110;
+export const SWIRL_MS = 1600;
 
 export const INTRO_STEPS = {
-  // Each letter starts TRI_STAGGER_MS after the previous one; the last lands at 800.
-  tri: { start: 0, end: (TRI_LETTERS.length - 1) * TRI_STAGGER_MS + TRI_LETTER_MS },
-  // Overlaps the end of "Tri" so the sequence reads as one motion.
-  verity: { start: 600, end: 1200 },
-  dot: { start: 1200, end: 1500 },
-  // Copies of the three dots (two i dots and the full stop) peel off and fly into the OeroAI mark.
-  mark: { start: 1650, end: 2350 },
-  // The mark's triangle and "Created by OeroAI" fade in once the dots land.
-  credit: { start: 2250, end: 2650 },
-  // The hash changes at fade.start, so the console mounts under the overlay.
-  fade: { start: 3300, end: 3650 },
+  letters: { start: 0, end: (INTRO_WORD.length - 1) * LETTER_STAGGER_MS + LETTER_MS },
+  // The full stop arrives last, with a soft pop.
+  stop: { start: 950, end: 1250 },
+  // The two i dots and the full stop swirl into the mark; the credit row rises to the centre with them.
+  swirl: { start: 1400, end: 1400 + 2 * SWIRL_STAGGER_MS + SWIRL_MS },
+  // As the dots leave, the letters dissolve left to right.
+  dissolve: { start: 1550, end: 1550 + (INTRO_WORD.length - 1) * 35 + 600 },
+  // The mark's triangle and "Created by OeroAI" fade in as the dots settle.
+  credit: { start: 2900, end: 3400 },
+  // The hash changes at fly.start, so the console mounts under the overlay; the mark then shrinks
+  // into the top bar's "by OeroAI" while the background fades.
+  fly: { start: 3800, end: 4500 },
+  fade: { start: 3800, end: 4250 },
 } as const;
 
-// Each flying dot starts this long after the previous one.
-export const MARK_STAGGER_MS = 60;
+export const INTRO_TOTAL_MS = INTRO_STEPS.fly.end + 100;
 
-export const INTRO_TOTAL_MS = INTRO_STEPS.fade.end;
+export function letterDelay(index: number): number {
+  return INTRO_STEPS.letters.start + index * LETTER_STAGGER_MS;
+}
 
 // Reduced motion skips the animation and navigates through the link itself.
 export const REDUCED_MOTION_MS = 0;
 
 export type IntroStep = keyof typeof INTRO_STEPS;
-
-export function triLetterDelay(index: number): number {
-  return INTRO_STEPS.tri.start + index * TRI_STAGGER_MS;
-}
 
 /** Plain left-click only: modified or non-primary clicks keep native link behaviour. */
 export function shouldPlayIntro(
