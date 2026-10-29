@@ -224,3 +224,31 @@ export function sketchLabel(offMinutes: number, stops: StopFact[], hasPlan: bool
 export function totalOffMinutes(facts: string[]): number {
   return facts.map(parseOffRoute).reduce((sum, off) => sum + (off?.minutes ?? 0), 0);
 }
+
+/** Prefer the recorded episode boundaries for labels; geometry remains display-only. */
+export function labelledTimeline(points: GpsPoint[], planned: LatLng[], facts: string[]): Timeline | null {
+  const timeline = gpsTimeline(points, offRouteFlags(points, planned.length >= 2 ? planned : []), stopFacts(facts), gapMinutes(facts));
+  if (!timeline) return null;
+  const start = clockMinutes(timeline.start);
+  const at = (clock: string) => Math.max(0, Math.min(1, (clockMinutes(clock) - start) / timeline.totalMinutes));
+  const episodes = facts.map(parseOffRoute).filter((off): off is OffRoute => !!off)
+    .map(off => ({ from: at(off.from), to: at(off.to) })).filter(off => off.to > off.from);
+  if (!episodes.length) return timeline;
+  const edges = [...new Set([0, 1, ...episodes.flatMap(off => [off.from, off.to])])].sort((a, b) => a - b);
+  const segments: Timeline["segments"] = [];
+  for (let i = 1; i < edges.length; i++) {
+    const from = edges[i - 1], to = edges[i];
+    const off = episodes.some(episode => (from + to) / 2 >= episode.from && (from + to) / 2 <= episode.to);
+    const last = segments.at(-1);
+    if (last && last.off === off) last.to = to; else segments.push({ from, to, off });
+  }
+  return { ...timeline, segments };
+}
+export function timelineClock(timeline: Timeline, fraction: number): string {
+  const minutes = Math.round(clockMinutes(timeline.start) + fraction * timeline.totalMinutes);
+  return `${String(Math.floor(minutes / 60) % 24).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+}
+export function timelineTicks(timeline: Timeline) {
+  return [...new Set([0, 1, ...timeline.segments.filter(s => s.off).flatMap(s => [s.from, s.to])])]
+    .sort((a, b) => a - b).map(at => ({ at, label: timelineClock(timeline, at) }));
+}

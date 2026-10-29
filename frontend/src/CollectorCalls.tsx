@@ -63,19 +63,23 @@ export function CollectorCalls({ collection }: { collection?: Resolution["eviden
       {open ? "Hide the lookups" : `Show the ${calls.length} lookups`}<Icon name="arrow" className="agents-toggle-icon" />
     </button>}
     <div id={AUDIT_BODY_ID} hidden={!open}>
-      {rounds.map((round, index) => <section className="collector-round" key={round.round} aria-label={roundLabel(index, rounds.length) ?? "Lookups"}>
+      {rounds.map((round, index) => {
+        // Group headings sit one level under the round heading, or directly under the card's h2.
+        const Group = roundLabel(index, rounds.length) ? "h4" : "h3";
+        return <section className="collector-round" key={round.round} aria-label={roundLabel(index, rounds.length) ?? "Lookups"}>
         {roundLabel(index, rounds.length) && <h3>{roundLabel(index, rounds.length)}</h3>}
         {!!round.both.length && <div className="lookup-group">
-          <h4 className="section-label">Both sides</h4>
+          <Group className="section-label">Both sides</Group>
           <ul className="lookup-list">{round.both.map(row => <LookupItem key={row.key} row={row} />)}</ul>
         </div>}
         {!!(round.rider.length || round.driver.length) && <div className="lookup-columns">
           {(["rider", "driver"] as const).map(party => round[party].length > 0 && <div className="lookup-group" key={party}>
-            <h4 className="section-label">{party === "rider" ? "Rider's side" : "Driver's side"}</h4>
+            <Group className="section-label">{party === "rider" ? "Rider's side" : "Driver's side"}</Group>
             <ul className="lookup-list">{round[party].map(row => <LookupItem key={row.key} row={row} only />)}</ul>
           </div>)}
         </div>}
-      </section>)}
+      </section>;
+      })}
     </div>
   </section>;
 }

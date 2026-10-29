@@ -1,25 +1,28 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 
 import {
-  centsToMoney, factParts, fareReceipt, groupFacts, parseChat, parseStop, parseTile, parseTripRecord,
+  centsToMoney, factParts, fareReceipt, groupFacts, parseStop, parseTile,
   SOURCE_ORDER, type FactGroup, type Tone,
 } from "./factVisuals";
 import { Chip, InternalBadge } from "./Chip";
 import { valueChipTone } from "./chipStyle";
-import { CountUp, GpsTimeline, RouteSketch, useEvidenceIntro } from "./EvidenceStories";
-import { fareChecks, fareHeadline, fareRulingLink, fareTotalLine } from "./fareStory";
-import { coverageSummary, gpsHeadline, parseOffRoute, offRouteDetail } from "./gpsStory";
-import { FAIRNESS_NOTE, historyRisk, parseHistory, profile } from "./historyStory";
+import { GpsTimeline, RouteSketch } from "./EvidenceStories";
+import { fareChecks, fareHeadline, fareTotalLine } from "./fareStory";
+import { coverageSummary, gpsHeadline, parseOffRoute } from "./gpsStory";
+import { parseHistory, profile } from "./historyStory";
 import { Icon } from "./Icon";
 import { SOURCE_LABELS, type EvidenceItem } from "./presentation";
 import { reveal } from "./routes";
-import { Term } from "./Term";
+import {
+  chatExchange, chatFactsForMessages, chatTakeaway, chatTime, gpsFactLine, gpsReadingsSentence, isChatAnalysis,
+  relatedFactsLabel, tripFactLine, tripTakeaway,
+} from "./evidenceDisplay";
 import type { DisputeCase, Resolution } from "./types";
 
 export const EVIDENCE_FACTS_ID = "evidence-facts";
 
 type Select = ((id: string) => void) | undefined;
-interface RowContext { activeId: string | null; onSelectFact: Select; dispute?: DisputeCase; resolution?: Resolution; intro: boolean }
+interface RowContext { activeId: string | null; onSelectFact: Select; dispute?: DisputeCase; resolution?: Resolution; neutral: boolean }
 
 export function FactLibrary({ facts, activeId, request, expanded = false, grouped = false, onSelectFact, dispute, resolution }: {
   facts: EvidenceItem[]; activeId: string | null; request: number;
@@ -28,26 +31,24 @@ export function FactLibrary({ facts, activeId, request, expanded = false, groupe
 }) {
   const id = useId();
   const disclosure = useRef<HTMLDetailsElement>(null);
-  // The Trip tiles count up once per case per session, the first time Evidence is shown.
-  const intro = useEvidenceIntro(grouped ? dispute?.dispute_id : undefined);
   useEffect(() => {
     if (!activeId) return;
     if (disclosure.current) disclosure.current.open = true;
     const frame = requestAnimationFrame(() => {
       const target = document.getElementById(`fact-${activeId}`);
-      // A merged fact sits inside its row's "+N related" disclosure: open it first.
+      // A merged fact sits inside its row's related-facts disclosure: open it first.
       const related = target?.closest<HTMLDetailsElement>("details.fact-related");
       if (related) related.open = true;
-      reveal(target, "center");
+      reveal(target, "center", { flash: grouped });
     });
     return () => cancelAnimationFrame(frame);
-  }, [activeId, request]);
+  }, [activeId, request, grouped]);
 
-  const context: RowContext = { activeId, onSelectFact, dispute, resolution, intro };
+  const context: RowContext = { activeId, onSelectFact, dispute, resolution, neutral: grouped };
   const body = grouped ? <SourceGrid facts={facts} context={context} />
     : <ul className="fact-library-list">{facts.map((fact, index) => <FactRow key={fact.id ?? `${fact.source}-${index}`} fact={fact} context={context} />)}</ul>;
 
-  return <section className="card fact-library" id={grouped ? EVIDENCE_FACTS_ID : undefined} tabIndex={-1} aria-labelledby={`${id}-title`}>
+  return <section className={`card fact-library${grouped ? " evidence-display" : ""}`} id={grouped ? EVIDENCE_FACTS_ID : undefined} tabIndex={-1} aria-labelledby={`${id}-title`}>
     <div className="panel-head"><h2 id={`${id}-title`}>{grouped ? "Evidence" : "Facts behind the citations"}</h2><InternalBadge detail="Computed facts · internal record" /></div>
     <p className="small muted">{grouped
       ? "Facts are grouped by source. An ID is shown only when this response supplies an unambiguous ID/text pair. Facts that repeat the same value are shown once; open “related” to read each original sentence."
@@ -89,7 +90,12 @@ function SourceCard({ source, groups, wide, context }: { source: string; groups:
       : source === "fare" ? <FareBody groups={groups} context={context} />
       : source === "chat" ? <ChatBody groups={groups} context={context} />
       : source === "history" ? <HistoryBody groups={groups} context={context} />
-      : <Rows groups={groups} context={context} />}
+      : <><p className="story-headline">The recorded case details are shown below.</p>
+        {context.dispute && texts(groups).some(text => /^(Rider claim|Driver statement):/.test(text)) && <dl className="evidence-statements">
+          <div><dt>Rider says</dt><dd>{context.dispute.rider_claim || "Rider statement not recorded."}</dd></div>
+          <div><dt>Driver says</dt><dd>{context.dispute.driver_statement || "Driver statement not recorded."}</dd></div>
+        </dl>}
+        <Rows groups={groups} context={context} /></>}
   </section>;
 }
 
@@ -97,17 +103,12 @@ function TripBody({ groups, context }: { groups: FactGroup[]; context: RowContex
   const tiles = groups.filter(group => parseTile(group.primary.text));
   const rest = groups.filter(group => !tiles.includes(group));
   return <>
-    {!!tiles.length && <ul className="fact-tiles">{tiles.map(group => {
-      const tile = parseTile(group.primary.text)!;
-      const record = group.related.map(fact => parseTripRecord(fact.text)).find(Boolean);
-      // Only the two headline deviations count up; arrival and wait tiles stay still.
-      const counts = tile.key === "distance" || tile.key === "duration";
-      return <FactShell key={key(group.primary)} fact={group.primary} related={group.related} context={context} className={`fact-tile ${tile.tone}`}>
-        <span className="fact-tile-label">{tile.label}</span>
-        <strong className="fact-tile-value">{counts ? <CountUp value={tile.value} play={context.intro} /> : tile.value}</strong>
-        <span className="fact-tile-detail">{record ? record.detail : tile.detail}</span>
-      </FactShell>;
-    })}</ul>}
+    <p className="story-headline"><PlainSentence text={tripTakeaway(context.dispute?.trip)} /></p>
+    {!!tiles.length && <ul className="fact-library-list evidence-trip-comparison" aria-label="Recorded trip compared with expected trip">{tiles.map(group =>
+      <FactShell key={key(group.primary)} fact={group.primary} related={group.related} context={context} className="fact-plain">
+        <PlainSentence text={tripFactLine(group.primary.text, context.dispute?.trip)} />
+      </FactShell>)}
+    </ul>}
     {!!rest.length && <Rows groups={rest} context={context} />}
   </>;
 }
@@ -125,20 +126,18 @@ function GpsBody({ groups, context }: { groups: FactGroup[]; context: RowContext
   const points = dispute?.gps_points ?? [];
   const planned = dispute?.trip.planned_route ?? [];
   return <>
-    {headline && <p className="story-headline">{headline}</p>}
+    <p className="story-headline"><PlainSentence text={headline ?? "The GPS records for this trip are shown below."} /></p>
     {dispute && <RouteSketch caseId={dispute.dispute_id} points={points} planned={planned} facts={all} />}
     {dispute && <GpsTimeline points={points} planned={planned} facts={all} />}
     {!!(offRoute.length || coverage.length || stops.length) && <ul className="fact-library-list story-details">
       {offRoute.map(group => {
-        const detail = offRouteDetail(parseOffRoute(group.primary.text)!);
         return <FactShell key={key(group.primary)} fact={group.primary} related={group.related} context={context} className="fact-plain">
-          <span>Off route <strong>{detail.range}</strong>: <strong>{detail.driven}</strong> driven, up to <strong>{detail.away}</strong> from the planned path.</span>
+          <PlainSentence text={gpsFactLine(group.primary.text)} />
         </FactShell>;
       })}
       {coverage.map(group => {
-        const line = coverageSummary(group.primary.text)!;
         return <FactShell key={key(group.primary)} fact={group.primary} related={group.related} context={context} className="fact-plain">
-          <span><strong>{line.offPercent}%</strong> of GPS readings were off the planned route ({line.onRoute} of {line.total} within {line.metres} m).</span>
+          <PlainSentence text={gpsReadingsSentence(group.primary.text) ?? group.primary.text} />
         </FactShell>;
       })}
       {stops.map(group => {
@@ -159,7 +158,6 @@ function FareBody({ groups, context }: { groups: FactGroup[]; context: RowContex
   const relatedOf = (fact: EvidenceItem) => groups.find(group => group.primary === fact)?.related ?? [];
   const headline = context.dispute ? fareHeadline(context.dispute, all) : null;
   const checks = context.dispute ? fareChecks(context.dispute, all) : [];
-  const link = headline ? fareRulingLink(context.resolution, headline.differenceCents) : null;
   // The facts behind the checks stay reachable (and linkable) in one disclosure under them.
   const checkTexts = new Set(checks.flatMap(check => check.sources));
   const behindChecks = groups.filter(group => receipt.others.includes(group.primary)
@@ -180,29 +178,28 @@ function FareBody({ groups, context }: { groups: FactGroup[]; context: RowContex
     <FactShell key={key(fact)} fact={fact} related={[...relatedOf(fact), ...extra]} context={context} className={className}>{children}</FactShell>;
   const hasTotal = receipt.totalCents !== null || !!receipt.charged;
   return <>
-    {headline && <p className="story-headline"><strong>{headline.lead}</strong>{headline.rest}</p>}
+    <p className="story-headline">{headline ? <PlainSentence text={`${headline.lead}${headline.rest}`} />
+      : context.dispute?.fare.cancellation_fee != null ? <PlainSentence text={`The recorded no-show fee was $${context.dispute.fare.cancellation_fee.toFixed(2)}.`} /> : "The recorded fare items and checks are shown below."}</p>
+    {(receipt.lines.length || hasTotal || receipt.difference) && <ul className="fact-receipt">
+      {receipt.lines.map(line => shell(line.fact, "receipt-line", <><span><PlainSentence text={line.label} /></span><strong className="receipt-amount">{centsToMoney(line.cents)}</strong></>))}
+      {receipt.discount && shell(receipt.discount.fact, "receipt-line",
+        <><span>Promo {receipt.discount.code}</span><strong className="receipt-amount">−{centsToMoney(receipt.discount.cents)}</strong></>)}
+      {receipt.charged && (chargedMatches || receipt.totalCents === null)
+        ? shell(receipt.charged.fact, "receipt-total", totalRow(receipt.charged.cents), differenceGroup)
+        : receipt.totalCents !== null && <li className="fact-row receipt-total"><div className="fact-row-main"><div className="fact-row-body">{totalRow(receipt.totalCents)}</div></div></li>}
+      {receipt.charged && !chargedMatches && receipt.totalCents !== null && shell(receipt.charged.fact, "receipt-line",
+        <><span>Charged (trip record)</span><strong className="receipt-amount">{centsToMoney(receipt.charged.cents)}</strong></>, differenceGroup)}
+      {receipt.difference && !receipt.charged && shell(receipt.difference.fact, "receipt-difference",
+        <><span>Difference</span><strong className="receipt-amount">{receipt.difference.text}</strong></>)}
+    </ul>}
     {!!checks.length && <ul className="chip-row fare-checks" aria-label="Fare checks">{checks.map(check =>
       <Chip as="li" key={check.key} tone={check.tone} icon={check.icon ?? undefined} title={check.title}>
         {check.label}<span className="sr-only"> ({check.title})</span>
       </Chip>)}</ul>}
     {!!sources.length && <details className="fact-related fare-check-sources">
-      <summary>{sources.length === 1 ? "The sentence behind the checks" : `The ${sources.length} sentences behind the checks`}</summary>
+      <summary>See how these were checked</summary>
       <ul className="fact-library-list">{sources.map(group => <FactRow key={key(group.primary)} fact={group.primary} related={group.related} context={context} />)}</ul>
     </details>}
-    {(receipt.lines.length || hasTotal || receipt.difference) && <ul className="fact-receipt">
-      {receipt.lines.map(line => shell(line.fact, "receipt-line", <><span>{line.label}</span><span className="receipt-amount">{centsToMoney(line.cents)}</span></>))}
-      {receipt.discount && shell(receipt.discount.fact, "receipt-line",
-        <><span>Promo {receipt.discount.code}</span><span className="receipt-amount">−{centsToMoney(receipt.discount.cents)}</span></>)}
-      {receipt.charged && (chargedMatches || receipt.totalCents === null)
-        ? shell(receipt.charged.fact, "receipt-total", totalRow(receipt.charged.cents), differenceGroup)
-        : receipt.totalCents !== null && <li className="fact-row receipt-total"><div className="fact-row-main"><div className="fact-row-body">{totalRow(receipt.totalCents)}</div></div></li>}
-      {receipt.charged && !chargedMatches && receipt.totalCents !== null && shell(receipt.charged.fact, "receipt-line",
-        <><span>Charged (trip record)</span><span className="receipt-amount">{centsToMoney(receipt.charged.cents)}</span></>, differenceGroup)}
-      {receipt.difference && !receipt.charged && shell(receipt.difference.fact, `receipt-difference ${receipt.difference.tone}`,
-        <><span>Difference</span><strong className="receipt-amount">{receipt.difference.text}</strong></>)}
-    </ul>}
-    {link && <p className={`fare-ruling-link ${link.kind}`}><span aria-hidden="true">→ </span>{link.before}{link.strong && <strong>{link.strong}</strong>}{link.after}
-      {link.rule && <> (<Term rule={link.rule} />)</>}{link.kind !== "review" && "."}</p>}
     {!!others.length && <Rows groups={others} context={context} />}
   </>;
 }
@@ -211,36 +208,54 @@ function HistoryBody({ groups, context }: { groups: FactGroup[]; context: RowCon
   const profiles = groups.filter(group => parseHistory(group.primary.text));
   const rest = groups.filter(group => !profiles.includes(group));
   return <>
+    <p className="story-headline">The account records provide context for both parties.</p>
     <ul className="history-profiles">{profiles.map(group => {
       const fact = parseHistory(group.primary.text)!;
       const shown = profile({ days: fact.days, rating: fact.rating, trips: fact.trips, disputes: fact.disputes });
-      const risk = historyRisk(context.resolution?.risk, fact.party);
-      return <FactShell key={key(group.primary)} fact={group.primary} related={group.related} context={context} className={`history-profile tone-${risk.tone}`}>
-        <span className="history-who">{fact.party === "rider" ? "Rider" : "Driver"}
-          {risk.label && <Chip size="sm" tone={risk.tone}>{risk.label}</Chip>}</span>
+      return <FactShell key={key(group.primary)} fact={group.primary} related={group.related} context={context} className="history-profile">
+        <span className="history-who">{fact.party === "rider" ? "Rider" : "Driver"}</span>
         <span className="history-line">{shown.tenure}</span>
         <span className="history-line"><span className="rating-star" aria-hidden="true">★</span> <span aria-hidden="true">{shown.rating}</span>
           <span className="sr-only">{shown.ratingLabel}</span> / {shown.trips}</span>
         <span className="history-line">{shown.disputes}</span>
-        {!!risk.signals.length && <ul className="history-signals">{risk.signals.map(signal => <li key={signal}>{signal}</li>)}</ul>}
       </FactShell>;
     })}</ul>
-    <p className="fairness-note"><Icon name="info" />{FAIRNESS_NOTE}</p>
+    <p className="fairness-note"><Icon name="info" />{"Context only: account history does not establish what happened on this trip."}</p>
     {!!rest.length && <Rows groups={rest} context={context} />}
   </>;
 }
 
 function ChatBody({ groups, context }: { groups: FactGroup[]; context: RowContext }) {
-  return <ul className="fact-library-list">{groups.map(group => {
-    const bubble = parseChat(group.primary.text);
-    if (!bubble) return <FactRow key={key(group.primary)} fact={group.primary} related={group.related} context={context} />;
-    return <FactShell key={key(group.primary)} fact={group.primary} related={group.related} context={context} className={`fact-bubble-row ${bubble.tone}`}>
-      <span className="fact-bubble">
-        <span className="fact-bubble-meta">{bubble.label} · {bubble.sender}</span>
-        <q>{bubble.message}</q>
-      </span>
-    </FactShell>;
-  })}</ul>;
+  const messages = chatExchange(context.dispute?.chat_logs, groups);
+  const analyses = groups.filter(group => isChatAnalysis(group.primary.text) || /^Chat \d{2}:/.test(group.primary.text));
+  const rest = groups.filter(group => !analyses.includes(group));
+  const audit = analyses.flatMap(group => [group.primary, ...group.related]);
+  const messageFacts = chatFactsForMessages(messages, audit);
+  const originals = audit.filter(fact => !messageFacts.includes(fact));
+  const topic = originals.every(fact => isChatAnalysis(fact.text)) ? "automated tone checks"
+    : originals.some(fact => isChatAnalysis(fact.text)) ? "chat and automated tone checks" : "chat records";
+  return <>
+    <p className="story-headline">{chatTakeaway(messages)}</p>
+    {!!messages.length && <div className="chat evidence-chat" aria-label="Recorded chat exchange">{messages.map((message, i) =>
+      <div className={`bubble ${message.sender}`} key={i} title={messageFacts[i]?.text}
+        id={messageFacts[i]?.id ? `fact-${messageFacts[i]!.id}` : undefined} tabIndex={messageFacts[i]?.id ? -1 : undefined}>
+        <span className="who"><Icon name={message.sender === "rider" ? "person" : message.sender === "driver" ? "wheel" : "info"} />
+          {message.sender === "rider" ? "Rider" : message.sender === "driver" ? "Driver" : "System"}
+          {chatTime(message.timestamp) && <time dateTime={message.timestamp ?? undefined}>{chatTime(message.timestamp)}</time>}
+        </span>{message.message}
+        {messageFacts[i]?.id && <IdBadge id={messageFacts[i]!.id!} onSelectFact={context.onSelectFact} />}
+      </div>)}
+    </div>}
+    {messages.length > 0 && (["rider", "driver"] as const).filter(party => !messages.some(message => message.sender === party)).map(party =>
+      <p className="small muted" key={party}>{party === "rider" ? "Rider" : "Driver"} message not recorded in this exchange.</p>)}
+    {!!rest.length && <Rows groups={rest} context={context} />}
+    {!!originals.length && <details className="fact-related"><summary>{relatedFactsLabel(originals, topic)}</summary>
+      <ul>{originals.map(fact => <li className="fact-original" key={key(fact)} id={fact.id ? `fact-${fact.id}` : undefined} tabIndex={fact.id ? -1 : undefined}>
+        <span>{isChatAnalysis(fact.text) ? "Automated tone check: " : ""}{fact.text}</span>
+        {fact.id && <IdBadge id={fact.id} onSelectFact={context.onSelectFact} />}
+      </li>)}</ul>
+    </details>}
+  </>;
 }
 
 function Rows({ groups, context }: { groups: FactGroup[]; context: RowContext }) {
@@ -258,15 +273,15 @@ function FactShell({ fact, related = [], context, className = "", children }: {
 }) {
   const active = !!fact.id && context.activeId === fact.id;
   return <li id={fact.id ? `fact-${fact.id}` : undefined} tabIndex={fact.id ? -1 : undefined}
-    className={`fact-row ${className}${active ? " highlighted-fact" : ""}`}>
-    <div className="fact-row-main">{fact.id && <IdBadge id={fact.id} onSelectFact={context.onSelectFact} />}<div className="fact-row-body">{children}</div></div>
+    className={`fact-row ${className}${active && !context.neutral ? " highlighted-fact" : ""}`}>
+    <div className="fact-row-main" title={context.neutral ? fact.text : undefined}>{!context.neutral && fact.id && <IdBadge id={fact.id} onSelectFact={context.onSelectFact} />}<div className="fact-row-body">{children}</div>{context.neutral && fact.id && <IdBadge id={fact.id} onSelectFact={context.onSelectFact} />}</div>
     {!!related.length && <details className="fact-related">
-      <summary>+{related.length} related<span className="sr-only"> {related.length === 1 ? "fact" : "facts"}</span></summary>
+      <summary>{relatedFactsLabel(related)}</summary>
       <ul>
         <li className="fact-original">{fact.text}</li>
         {related.map(item => <li key={key(item)} id={item.id ? `fact-${item.id}` : undefined} tabIndex={item.id ? -1 : undefined}
-          className={`fact-original${item.id && context.activeId === item.id ? " highlighted-fact" : ""}`}>
-          {item.id && <IdBadge id={item.id} onSelectFact={context.onSelectFact} />}{item.text}
+          className={`fact-original${!context.neutral && item.id && context.activeId === item.id ? " highlighted-fact" : ""}`}>
+          <span>{item.text}</span>{item.id && <IdBadge id={item.id} onSelectFact={context.onSelectFact} />}
         </li>)}
       </ul>
     </details>}
@@ -275,9 +290,18 @@ function FactShell({ fact, related = [], context, className = "", children }: {
 
 function FactRow({ fact, related, context }: { fact: EvidenceItem; related?: EvidenceItem[]; context: RowContext }) {
   const { tone, parts } = factParts(fact.text);
+  if (context.neutral) return <FactShell fact={fact} related={related} context={context} className="fact-plain">
+    <PlainSentence text={gpsFactLine(tripFactLine(fact.text, context.dispute?.trip))} />
+  </FactShell>;
   return <FactShell fact={fact} related={related} context={context} className={`fact-plain ${tone}`}>
     <FactText parts={parts} />
   </FactShell>;
+}
+
+function PlainSentence({ text }: { text: string }) {
+  // Numbers are emphasis, never a verdict colour. Quoted originals stay unchanged in audit details.
+  return <span>{text.split(/(\d{2}:\d{2}(?:[–-]\d{2}:\d{2})?|[+−-]?\$?\d[\d,]*(?:\.\d+)?(?:%| km\/h\b| km\b| minutes?\b| min\b| m\b)?)/g).map((part, i) =>
+    i % 2 ? <strong key={i}>{part}</strong> : part)}</span>;
 }
 
 function FactText({ parts }: { parts: ReturnType<typeof factParts>["parts"] }) {
@@ -288,7 +312,7 @@ function FactText({ parts }: { parts: ReturnType<typeof factParts>["parts"] }) {
 function IdBadge({ id, onSelectFact }: { id: string; onSelectFact: Select }) {
   return <span className="fact-reference">{onSelectFact
     ? <button type="button" className="evidence-link" onClick={() => onSelectFact(id)} aria-label={`Find evidence ${id}`}>{id}</button>
-    : <strong className="evidence-id">{id}</strong>}</span>;
+    : <a className="evidence-link" href={`#fact-${id}`} onClick={event => { event.preventDefault(); reveal(document.getElementById(`fact-${id}`), "center", { flash: true }); }} aria-label={`Find evidence ${id}`}>{id}</a>}</span>;
 }
 
 // ---- Icons (stroke, 1.75, like the select chevron) ------------------------

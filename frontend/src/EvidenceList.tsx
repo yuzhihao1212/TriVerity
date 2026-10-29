@@ -39,7 +39,7 @@ export function EvidenceList({ texts, ids = [], mention = "", dispute, compare, 
   return <div className="evidence-group">
     {comparison?.same && <p className="small evidence-same"><strong>Both sides cite the same {comparison.count} facts.</strong></p>}
     {!!key.length && <>
-      <h5 className="section-label">Key facts</h5>
+      <p className="section-label">Key facts</p>
       <ul className="small evidence-list key-facts">{key.map((item, index) =>
         <EvidenceRow key={`${item.text}-${index}`} item={item} only={isOnly(item) ? onlyLabel : ""} {...links} />)}</ul>
     </>}
