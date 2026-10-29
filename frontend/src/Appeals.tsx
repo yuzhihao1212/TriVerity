@@ -10,10 +10,11 @@ import type { Appeal, Decision, DisputeCase } from "./types";
 
 type FinalDecision = Exclude<Decision, "needs_review">;
 /** A party contests the ruling; the appeal joins the human review queue. */
-export function AppealForm({ dispute, party, decision, onFiled, available = true, unavailableNote, existing = null }: {
+export function AppealForm({ dispute, party, decision, onFiled, available = true, unavailableNote, existing = null, buttonLabel = "Appeal this decision" }: {
   dispute: DisputeCase; party: "rider" | "driver"; decision: Decision; onFiled?: (appeal: Appeal) => void;
   /** This party's appeal on this dispute (waiting or decided): shown instead of the form. One appeal per party. */
   existing?: Appeal | null;
+  buttonLabel?: string;
   /** False while the reviewer is still drafting: the button is disabled and cannot open the form. */
   available?: boolean;
   /** Shown under the disabled button and linked to it, e.g. "Available to the rider after sending". */
@@ -39,12 +40,12 @@ export function AppealForm({ dispute, party, decision, onFiled, available = true
   }
   if (!available) {
     return <div className="appeal-unavailable">
-      <button type="button" className="secondary-button" disabled aria-describedby={unavailableNote ? `${id}-note` : undefined}>Appeal this decision</button>
+      <button type="button" className="secondary-button" disabled aria-describedby={unavailableNote ? `${id}-note` : undefined}>{buttonLabel}</button>
       {unavailableNote && <p className="small muted appeal-note" id={`${id}-note`}>{unavailableNote}</p>}
     </div>;
   }
   if (!open) {
-    return <button type="button" className="secondary-button" onClick={() => setOpen(true)}>Appeal this decision</button>;
+    return <button type="button" className="secondary-button" onClick={() => setOpen(true)}>{buttonLabel}</button>;
   }
   function submit() {
     setSending(true);
