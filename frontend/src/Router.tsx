@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import App from "./App";
 import { ConsoleIntro } from "./ConsoleIntro";
-import { shouldPlayIntro } from "./consoleIntroTiming";
+import { introPlayed, markIntroPlayed, shouldPlayIntro } from "./consoleIntroTiming";
 import { Landing } from "./Landing";
 import { readPresentationPreference, writePresentationPreference } from "./presentation";
 import { applyTheme, readTheme, resolveTheme, writeTheme, type Theme } from "./theme";
@@ -62,12 +62,18 @@ export default function Router() {
   // the overlay keeps fading over the freshly mounted console.
   const [intro, setIntro] = useState(false);
   const introActive = useRef(false);
+  const introSeen = useRef(false);
   function openConsole(event: MouseEvent<HTMLAnchorElement>) {
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     if (!shouldPlayIntro(event, reducedMotion)) return; // Native link: new tab, reduced motion, etc.
+    let storage: Storage | null = null;
+    try { storage = window.sessionStorage; } catch { /* Blocked storage: memory only. */ }
+    if (introSeen.current || introPlayed(storage)) return; // Once per tab: the link navigates natively.
     event.preventDefault();
     if (introActive.current) return; // One intro at a time.
     introActive.current = true;
+    introSeen.current = true;
+    markIntroPlayed(storage);
     setIntro(true);
   }
   function endIntro() {

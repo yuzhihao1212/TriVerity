@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { load } from './_load.mjs';
 
-const { amountAtStake, queueSummary, guidedDemoSteps } = await load('homeState');
+const { amountAtStake, queueSummary, queueSegments, guidedDemoSteps } = await load('homeState');
 
 test('queue summary counts cases, decisions, ready and closed; only decisions warn', () => {
   const rows = ['not_run', 'ready', 'decide', 'closed', 'reviewed', 'reopened'].map(status => ({ status }));
@@ -69,4 +69,19 @@ test('amount at stake prefers the fare, then the no-show fee, and skips missing 
   assert.equal(amountAtStake({ actual: null, cancellation_fee: 4 }), '$4.00 fee');
   assert.equal(amountAtStake({ actual: 0, cancellation_fee: 0 }), null);
   assert.equal(amountAtStake({}), null);
+});
+
+test('queue segments put every case in one segment, most urgent first, and drop empty ones', () => {
+  const rows = ['not_run', 'ready', 'decide', 'closed', 'reviewed', 'reopened', 'not_run', 'appeal_waiting'].map(status => ({ status }));
+  const segments = queueSegments(rows, true);
+  assert.deepEqual(segments.map(s => [s.key, s.count, s.label]), [
+    ['decide', 1, 'to decide'], ['appeals', 1, 'appeal waiting'], ['ready', 1, 'ready'],
+    ['reviewed', 1, 'reviewed'], ['closed', 1, 'closed'], ['new', 3, 'new'],
+  ]);
+  assert.equal(segments.reduce((sum, s) => sum + s.count, 0), rows.length);
+  const hidden = queueSegments(rows, false);
+  assert.ok(!hidden.some(s => s.key === 'appeals'), 'public demo hides unavailable appeals');
+  assert.equal(hidden.reduce((sum, s) => sum + s.count, 0), rows.length, 'the bar still adds up');
+  assert.deepEqual(queueSegments([], true), []);
+  assert.equal(queueSegments([{ status: 'appeal_waiting' }, { status: 'appeal_waiting' }], true)[0].label, 'appeals waiting');
 });

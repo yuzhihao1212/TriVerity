@@ -12,9 +12,16 @@ export const INTRO_STEPS = {
   // Overlaps the end of "Tri" so the sequence reads as one motion.
   verity: { start: 600, end: 1200 },
   dot: { start: 1200, end: 1500 },
+  // Copies of the three dots (two i dots and the full stop) peel off and fly into the OeroAI mark.
+  mark: { start: 1650, end: 2350 },
+  // The mark's triangle and "Created by OeroAI" fade in once the dots land.
+  credit: { start: 2250, end: 2650 },
   // The hash changes at fade.start, so the console mounts under the overlay.
-  fade: { start: 1500, end: 1850 },
+  fade: { start: 3300, end: 3650 },
 } as const;
+
+// Each flying dot starts this long after the previous one.
+export const MARK_STAGGER_MS = 60;
 
 export const INTRO_TOTAL_MS = INTRO_STEPS.fade.end;
 
@@ -34,4 +41,16 @@ export function shouldPlayIntro(
 ): boolean {
   if (reducedMotion || event.defaultPrevented) return false;
   return event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
+}
+
+// The intro plays once per tab: sessionStorage is per tab and survives reloads, so a new tab
+// plays it again. Blocked storage counts as not played (the caller also remembers it in memory).
+export const INTRO_PLAYED_KEY = "triverity.introPlayed";
+
+export function introPlayed(storage: Pick<Storage, "getItem"> | null): boolean {
+  try { return storage?.getItem(INTRO_PLAYED_KEY) === "1"; } catch { return false; }
+}
+
+export function markIntroPlayed(storage: Pick<Storage, "setItem"> | null): void {
+  try { storage?.setItem(INTRO_PLAYED_KEY, "1"); } catch { /* Storage may be blocked. */ }
 }

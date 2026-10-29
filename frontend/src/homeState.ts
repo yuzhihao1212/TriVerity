@@ -13,6 +13,28 @@ export function queueSummary(rows: Pick<QueueRow, "status">[], appealsAvailable:
   return parts;
 }
 
+export type SegmentTone = "warning" | "ready" | "reviewed" | "closed" | "new";
+
+/**
+ * The queue as ordered status segments for the header bar: what needs a person first, then
+ * what is ready, then what is done, then what hasn't run. Every row lands in exactly one segment;
+ * zero counts are left out.
+ */
+export function queueSegments(rows: Pick<QueueRow, "status">[], appealsAvailable: boolean) {
+  const count = (...statuses: QueueRow["status"][]) => rows.filter(row => statuses.includes(row.status)).length;
+  const segments: { key: string; count: number; label: string; tone: SegmentTone }[] = [
+    { key: "decide", count: count("decide"), label: "to decide", tone: "warning" },
+    { key: "appeals", count: appealsAvailable ? count("appeal_waiting") : 0, label: "appeal waiting", tone: "warning" },
+    { key: "ready", count: count("ready"), label: "ready", tone: "ready" },
+    { key: "reviewed", count: count("reviewed", ...(appealsAvailable ? [] : ["appeal_waiting" as const])), label: "reviewed", tone: "reviewed" },
+    { key: "closed", count: count("closed"), label: "closed", tone: "closed" },
+    { key: "new", count: count("not_run", "reopened"), label: "new", tone: "new" },
+  ];
+  return segments
+    .map(segment => segment.key === "appeals" && segment.count > 1 ? { ...segment, label: "appeals waiting" } : segment)
+    .filter(segment => segment.count > 0);
+}
+
 /** What is at stake in one row, e.g. "$24.80 fare" or "$4.00 fee"; null when the case has no amount. */
 export function amountAtStake(fare: { actual?: number | null; cancellation_fee?: number | null }): string | null {
   const ok = (value: number | null | undefined): value is number => typeof value === "number" && Number.isFinite(value) && value > 0;
