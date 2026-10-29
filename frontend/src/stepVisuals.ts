@@ -44,6 +44,22 @@ function liveDone(tab: WorkflowTab, agents: Set<string>): boolean {
   }
 }
 
+/** Text shown on Ruling instead of "Next: Notify parties" until the reviewer decides. */
+export const DECIDE_FIRST = "Accept or override the ruling to continue to Notify.";
+
+/**
+ * The step footer: "primary" when moving on is the next thing to do, "secondary" when
+ * it isn't (no result yet, a closed case being re-read), and "hint" on an open Ruling
+ * with no decision, where the next thing to do is decide, not move on.
+ */
+export function nextStepMode({ tab, hasResult, closed, decisionRecorded }: {
+  tab: WorkflowTab; hasResult: boolean; closed?: boolean; decisionRecorded?: boolean;
+}): "primary" | "secondary" | "hint" {
+  if (!hasResult || closed) return "secondary";
+  if (tab === "ruling" && !decisionRecorded) return "hint";
+  return "primary";
+}
+
 export function stepStates({ active, hasResult, busy, liveSteps = [], reviewed = [], nextTab }: {
   active: WorkflowTab; hasResult: boolean; busy: boolean; liveSteps?: AgentLogEntry[];
   /** Overrides the "next" hint, e.g. Ruling while Notify waits for a decision. */

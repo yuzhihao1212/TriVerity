@@ -1,7 +1,7 @@
 import { useId, useRef, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 
 import { Icon } from "./Icon";
-import { SHORT_TAB_LABELS, stepStates, stepStatusText } from "./stepVisuals";
+import { DECIDE_FIRST, nextStepMode, SHORT_TAB_LABELS, stepStates, stepStatusText } from "./stepVisuals";
 import { navigateTab, tabLocked, tabProgress, WORKFLOW_TABS, type WorkflowTab } from "./workflow";
 import type { AgentLogEntry, Resolution } from "./types";
 
@@ -84,12 +84,14 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, de
       {active === tab.id && <>
         {render(tab.id)}
         {!busy && !unlocking && index < WORKFLOW_TABS.length - 1 && <div className="next-step">
-          <button type="button" className={resolution && !closed && (tab.id !== "ruling" || decisionRecorded) ? "run-button" : "secondary-button"}
+          {nextStepMode({ tab: tab.id, hasResult: !!resolution, closed, decisionRecorded }) === "hint"
+            ? <p className="small muted next-step-hint">{DECIDE_FIRST}</p>
+            : <button type="button" className={nextStepMode({ tab: tab.id, hasResult: !!resolution, closed, decisionRecorded }) === "primary" ? "run-button" : "secondary-button"}
             aria-disabled={tabLocked(WORKFLOW_TABS[index + 1].id, !!resolution)}
             disabled={tabLocked(WORKFLOW_TABS[index + 1].id, !!resolution)}
             onClick={() => { const next = WORKFLOW_TABS[index + 1].id; activate(next); refs.current[next]?.focus(); }}>
             Next: {WORKFLOW_TABS[index + 1].label} →
-          </button>
+          </button>}
         </div>}
       </>}
     </div>)}

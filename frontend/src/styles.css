@@ -170,6 +170,7 @@ textarea { width: 100%; resize: vertical; }
 .workflow-bar > p { margin-top: var(--space-2); font-size: 11px; }
 .workflow-panel { min-width: 0; }
 .next-step { display: flex; justify-content: flex-end; padding-top: var(--space-6); margin-top: var(--space-6); border-top: 1px solid var(--border); }
+.next-step-hint { margin: 0; text-align: right; }
 /* "How this step was decided": after the step's content (outcome first, process second). */
 .agents-strip { border-top: 1px solid var(--border); padding-top: var(--space-5); margin-top: var(--space-8); }
 .agents-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
