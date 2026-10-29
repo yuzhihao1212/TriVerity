@@ -14,6 +14,7 @@ A judge's route: [product and results](../README.md) → [architecture](architec
 | [Business case](business-case.md) | Reviewer hours, cost arithmetic, deployment stages and the assumptions behind them. |
 | [Submission](submission.md) | Project title, blurb and the hackathon-form narrative, with final-link placeholders. |
 | [AI-tool usage evidence (PDF)](submission/ai-tool-evidence.pdf) | Seven CodeBuddy and three WorkBuddy captures, Miora cover-design evidence and a development-session appendix. |
+| [Planned onboarding tour](onboarding-tour.md) · [storyboard](onboarding-storyboard.svg) | A recorded-run spotlight tour for non-technical reviewers, with human controls and isolation from live cases. |
 | [Milestones](milestones.md) | Required and stretch coverage, security work and remaining submission tasks. |
 
 ## Trust and implementation

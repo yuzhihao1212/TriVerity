@@ -258,6 +258,10 @@ rest of the system is built on. The design keeps the same principle, rules decid
   while the dispute is open.
 - **Evaluation first:** a labelled test set and red-team images before any live use.
 
+**Guided onboarding for non-technical reviewers:** a spotlight tour on a recorded run of a
+sample case that explains what each agent contributes and where the human stays in control
+([design and storyboard](docs/onboarding-tour.md)).
+
 Also next: server-side lookup of trip data (instead of trusting submitted facts), persistence and SLA clocks for
 the review queue, and shadow-mode agreement measured against Ryde's reviewers.
 
