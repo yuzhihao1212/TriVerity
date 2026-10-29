@@ -12,7 +12,8 @@ test('a fresh run estimates the sum of its stages, the longest member of each pa
   // 0.5 (loader, minimum) + 4.8 + 3.3 (driver advocate) + 3.1 (driver reply) + 1.2 + 4.4 = 17.3
   assert.equal(view.estimate, 'About 18 s left · 0 s so far');
   assert.equal(view.count, '0 of 9 agents done');
-  assert.equal(view.runningLabel, 'Running: Evidence loader');
+  // Until the first agent event arrives, no agent is named as running.
+  assert.equal(view.runningLabel, 'Connecting to the agents…');
 });
 
 test('mid-run, the running stage counts down from when the previous stage finished', () => {

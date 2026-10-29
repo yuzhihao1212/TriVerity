@@ -60,6 +60,7 @@ export function progressEstimate({ steps, finishedAt = {}, elapsed, previousRema
     done: done.size, running, remaining, fill, overdue, estimate,
     count: `${done.size} of 9 agents done`,
     runningLabel: complete ? "Completed" : !streaming ? "Waiting for the complete result…"
+      : steps.length === 0 ? "Connecting to the agents…"
       : running.length ? `Running: ${running.map(progressName).join(", ")}` : "Finalising result…",
     completionText: `Completed · ${done.size === 9 ? "all 9" : done.size} agents finished in ${elapsedSeconds} s`,
   };

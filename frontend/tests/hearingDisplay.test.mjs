@@ -24,6 +24,10 @@ test('empty and single-sentence arguments need no disclosure', () => {
   assert.deepEqual(bottomLine('  '), { first: '', rest: '' });
   assert.deepEqual(bottomLine(' No terminal punctuation '), { first: 'No terminal punctuation', rest: '' });
   assert.deepEqual(bottomLine('One sentence!'), { first: 'One sentence!', rest: '' });
+  assert.deepEqual(bottomLine('The detour, e.g. via the expressway, added approx. 4 km vs. the quoted route (GPS-1). Then more.'), {
+    first: 'The detour, e.g. via the expressway, added approx. 4 km vs. the quoted route (GPS-1).', rest: 'Then more.',
+  });
+  assert.deepEqual(bottomLine('Only an abbreviation, i.e.'), { first: 'Only an abbreviation, i.e.', rest: '' });
 });
 
 const opening = (ids = [], evidence = [], rebuttal = null) => ({ evidence_ids: ids, evidence, rebuttal });

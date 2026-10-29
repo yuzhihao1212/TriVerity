@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from "react";
 
 import { readDetailOpen, writeDetailOpen } from "./detailDisclosure";
 import { Chip } from "./Chip";
-import { sourceTone } from "./chipStyle";
 import {
   AUDIT_OPEN_KEY, collectionSummary, FALLBACK_EXPLANATION, lookupName, lookupReason, lookupTarget, mergeLookups, roundLabel,
   type LookupRow,
 } from "./collectionStory";
 import { Icon } from "./Icon";
 import { reveal } from "./routes";
+import { SourceBadge } from "./SourceBadge";
 import { toolIcon } from "./stepVisuals";
 import type { Resolution } from "./types";
 
@@ -53,8 +53,7 @@ export function CollectorCalls({ collection }: { collection?: Resolution["eviden
     <div className="card-head">
       <div className="panel-head"><h2 id={AUDIT_TITLE_ID} tabIndex={-1}>How the evidence was gathered</h2><Chip size="sm" tone="outline">Audit trail</Chip></div>
       <span className="collector-source">
-        <Chip size="sm" tone={sourceTone(collection.source)} icon={collection.source === "llm" ? "sparkle" : undefined}
-          title={collection.source === "fallback" ? FALLBACK_EXPLANATION : undefined}>{collection.source === "llm" ? "AI" : "Fallback"}</Chip>
+        <SourceBadge source={collection.source} />
       </span>
     </div>
     <p className="collector-summary"><strong>{summary.lead}</strong>{summary.rest}</p>

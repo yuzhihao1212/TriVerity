@@ -4,12 +4,13 @@
 //
 //   neutral  amounts, IDs, types            ok      refunds, completed
 //   warn     escalated, fallback, deviations danger  threats, high risk
-//   brand    selected filter, AI badge      outline secondary info (tool chips, Code)
+//   brand    selected filter                outline secondary info (tool chips)
+//   ai       Hunyuan AI source badge (blue; only for text Tencent Hy3 wrote)
 
-export type ChipTone = "neutral" | "ok" | "warn" | "danger" | "brand" | "outline";
+export type ChipTone = "neutral" | "ok" | "warn" | "danger" | "brand" | "outline" | "ai";
 export type ChipSize = "md" | "sm";
 
-export const CHIP_TONES: readonly ChipTone[] = ["neutral", "ok", "warn", "danger", "brand", "outline"];
+export const CHIP_TONES: readonly ChipTone[] = ["neutral", "ok", "warn", "danger", "brand", "outline", "ai"];
 
 export function chipClass({ tone = "neutral", size = "md", className }: { tone?: ChipTone; size?: ChipSize; className?: string } = {}): string {
   return ["chip", size === "sm" && "sm", `tone-${tone}`, className].filter(Boolean).join(" ");
@@ -22,7 +23,7 @@ export function chipClass({ tone = "neutral", size = "md", className }: { tone?:
  */
 export function chipTone(tone: string | null | undefined): ChipTone {
   switch (tone) {
-    case "ok": case "warn": case "danger": case "neutral": case "brand": case "outline": return tone;
+    case "ok": case "warn": case "danger": case "neutral": case "brand": case "outline": case "ai": return tone;
     case "accent": return "brand";
     case "high": return "danger";
     case "medium": return "warn";
@@ -30,9 +31,9 @@ export function chipTone(tone: string | null | undefined): ChipTone {
   }
 }
 
-/** Output source badges: AI in brand, Fallback in warn, deterministic Code as an outline. */
+/** Output source badges: AI in blue, Rules and Fallback in neutral grey (red stays brand and alarm). */
 export function sourceTone(source: "llm" | "fallback" | "code"): ChipTone {
-  return source === "llm" ? "brand" : source === "fallback" ? "warn" : "outline";
+  return source === "llm" ? "ai" : "neutral";
 }
 
 /**
