@@ -64,3 +64,59 @@ export function fareSegments(breakdown: FareSegment[], charged: number): FareSeg
   if (!positive.length || total <= 0) return [{ label: "Charged fare", amount: charged }];
   return positive.map(line => ({ label: line.label, amount: (line.amount / total) * charged }));
 }
+
+/** Include a round upper tick so the plotted trace always fits the km ruler. */
+export function kmTicks(max: number): number[] {
+  const step = niceStep(Number.isFinite(max) && max > 0 ? max : 1);
+  return Array.from({ length: Math.ceil(Math.max(0, Number.isFinite(max) ? max : 0) / step) + 1 }, (_, i) => Number((i * step).toPrecision(12)));
+}
+
+/** Linear interpolation along the same points used by the chart, clamped at its ends. */
+export function kmAt(series: readonly ProgressPoint[], minutes: number): number | null {
+  if (!series.length) return null;
+  if (minutes <= series[0].minutes) return series[0].km;
+  for (let i = 1; i < series.length; i++) {
+    const a = series[i - 1], b = series[i];
+    if (minutes <= b.minutes) return b.minutes === a.minutes ? b.km : a.km + (b.km - a.km) * (minutes - a.minutes) / (b.minutes - a.minutes);
+  }
+  return series[series.length - 1].km;
+}
+
+const decimal = (n: number) => Number(n.toFixed(1)).toString();
+export function guideReadout(series: ProgressPoint[], minutes: number, expectedMin: number | null, expectedKm: number | null): string {
+  const km = kmAt(series, minutes);
+  const expected = expectedMin != null && expectedMin > 0 && expectedKm != null
+    ? Math.min(Math.max(minutes / expectedMin, 0), 1) * expectedKm : null;
+  const stop = plateaus(series).find(s => minutes >= s.from && minutes <= s.to);
+  return `${decimal(minutes)} min${km != null ? ` · ${km.toFixed(1)} km travelled` : ""}${expected != null ? ` · expected ${expected.toFixed(1)} km` : ""}${stop ? ` · Stopped ${decimal(stop.to - stop.from)} min` : ""}`;
+}
+
+export function fareReadout(segment: FareSegment): string {
+  return `${segment.label}: $${segment.amount.toFixed(2)}`;
+}
+
+export function distanceReadout(expected: number, actual: number): string {
+  const diff = actual - expected;
+  return diff > 0 ? `+${decimal(diff)} km beyond the expected route` : `${decimal(Math.abs(diff))} km shorter than the expected route`;
+}
+
+export function tripValue(value: number | null, unit: string): string {
+  return value == null ? "Not provided" : unit === "$" ? `$${value.toFixed(2)}` : `${value} ${unit}`;
+}
+
+export function differenceLabel(expected: number | null, actual: number | null, unit: string): string {
+  if (expected == null || actual == null) return "Difference unavailable";
+  const difference = actual - expected;
+  const value = tripValue(unit === "$" ? Math.abs(difference) : Number(decimal(Math.abs(difference))), unit);
+  const percent = expected > 0 ? (difference / expected) * 100 : null;
+  return `${difference > 0 ? "+" : difference < 0 ? "−" : ""}${value}${percent != null ? ` (${percent > 0 ? "+" : ""}${Math.round(percent)}%)` : ""}`;
+}
+
+export function comparisonRows(expected: number | null, actual: number | null, unit: string, breakdown: FareSegment[] = []) {
+  return [
+    { label: "Expected", value: tripValue(expected, unit) },
+    { label: "Actual", value: tripValue(actual, unit) },
+    { label: "Difference", value: differenceLabel(expected, actual, unit) },
+    ...(unit === "$" && actual != null ? fareSegments(breakdown, actual).map(s => ({ label: s.label, value: tripValue(s.amount, unit) })) : []),
+  ];
+}

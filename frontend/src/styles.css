@@ -25,6 +25,8 @@
   --warn-text: #8a5200;
   --warn-soft: #fdf1dc;
   --star: #e8a317; /* rating stars: warm gold, visible on white */
+  --party-rider-soft: #eef3fc;
+  --party-rider-edge: #7185a9;
   --category-route: #7553bb;
   --category-no-show: #16786b;
   --transparent: transparent;
@@ -56,6 +58,8 @@
   --ok-soft: #1b3326;
   --warn-text: #f0c26a;
   --warn-soft: #3b2f17;
+  --party-rider-soft: #243044;
+  --party-rider-edge: #8fa7cf;
   --category-route: #c2a7ff;
   --category-no-show: #7adac9;
 }
@@ -80,6 +84,8 @@
     --ok-soft: #1b3326;
     --warn-text: #f0c26a;
     --warn-soft: #3b2f17;
+    --party-rider-soft: #243044;
+    --party-rider-edge: #8fa7cf;
     --category-route: #c2a7ff;
     --category-no-show: #7adac9;
   }
@@ -195,7 +201,7 @@ textarea { width: 100%; resize: vertical; }
 .who { display: block; margin-bottom: var(--space-2); }
 .comparisons { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-6); }
 .comparisons:empty { display: none; }
-.comparison { min-width: 0; padding-block: var(--space-3); }
+.comparison { min-width: 0; padding: var(--space-4); border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
 .comparison .card-head { font-size: 13px; }
 .comparison-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); margin-top: var(--space-3); font-size: 11px; }
 .comparison-row > span { color: var(--muted); }
@@ -210,8 +216,14 @@ textarea { width: 100%; resize: vertical; }
 .case-details { margin-top: var(--space-2); }
 .case-details[open] > :not(summary) { margin-top: var(--space-4); }
 .chat { display: flex; flex-direction: column; gap: var(--space-2); }
-.bubble { padding: var(--space-3) var(--space-4); border-radius: 10px; background: var(--surface); max-width: 85%; font-size: 13px; }
-.bubble.driver { align-self: flex-end; }
+.bubble { padding: var(--space-3) var(--space-4); border-radius: 10px; background: var(--surface); color: var(--text); max-width: 70%; min-width: 0; overflow-wrap: anywhere; font-size: 13px; }
+.bubble.rider { align-self: flex-start; background: var(--party-rider-soft); border-left: 4px solid var(--party-rider-edge); }
+.bubble.driver { align-self: flex-end; border-right: 4px solid var(--control-border); }
+.bubble .who { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-1); color: var(--text); }
+.bubble .who .icon { flex: none; width: 16px; height: 16px; }
+.bubble time { margin-left: auto; color: var(--muted); font-size: 11px; font-weight: 400; }
+.presentation-mode .bubble { font-size: 15px; }
+.presentation-mode .bubble time { font-size: 13px; }
 .bubble.system { align-self: center; }
 .history { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
 .run-bar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-6); }
@@ -654,12 +666,12 @@ textarea { width: 100%; resize: vertical; }
 .key-expected { border-top: 2px dashed var(--muted); }
 .key-actual { border-color: var(--accent); }
 .fare-bars { display: grid; gap: var(--space-2); padding-block: var(--space-2); }
-.fare-track { position: relative; display: flex; height: 8px; background: var(--surface); border-radius: 999px; overflow: visible; }
+.fare-track { position: relative; display: flex; height: 24px; background: var(--surface); border-radius: 999px; overflow: visible; }
 .fare-expected { height: 100%; background: var(--muted); border-radius: 999px; }
-.fare-segment { height: 100%; background: var(--accent); }
+.fare-segment { flex: none; height: 100%; min-width: 0; padding: 0; border: 0; background: var(--accent); }
 .fare-segment:first-child { border-radius: 999px 0 0 999px; }
 .fare-segment:last-of-type { border-radius: 0 999px 999px 0; }
-.fare-marker { position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--text); }
+.fare-marker { pointer-events: none; position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--text); }
 .fare-extra { font-size: 11px; color: var(--accent-text); font-weight: 600; text-align: right; }
 .fare-legend { font-size: 10px; color: var(--muted); overflow-wrap: anywhere; }
 
@@ -1372,3 +1384,28 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
   .case-run-bar > .secondary-button { width: 100%; }
   .run-cost-popover { max-width: 100%; }
 }
+
+/* Trip comparison cards: the readout stays in the card at every viewport size. */
+.comparison .card-head { flex-wrap: wrap; gap: var(--space-2); }
+.comparison .card-head h3 { margin: 0; font-size: 14px; }
+.comparison-difference { margin: var(--space-2) 0 0; color: var(--text); font-size: 18px; font-weight: 600; overflow-wrap: anywhere; }
+.chart-view-toggle { display: flex; border: 1px solid var(--border); border-radius: 6px; }
+.chart-view-toggle button { min-height: 30px; padding: 2px 6px; border: 0; border-radius: 5px; background: var(--transparent); color: var(--muted); font-size: 11px; }
+.chart-view-toggle button[aria-pressed="true"] { background: var(--bg); color: var(--text); font-weight: 600; }
+.comparison-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; margin-top: var(--space-3); }
+.comparison-table th, .comparison-table td { border-bottom: 1px solid var(--border); padding: var(--space-2) 0; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.comparison-table th { color: var(--muted); font-weight: 500; width: 46%; padding-right: var(--space-2); }
+.comparison-table td { text-align: right; }
+.chart-hit { fill: var(--transparent); pointer-events: all; cursor: pointer; }
+.chart-hit:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.duration-chart { touch-action: pan-y; }
+.chart-guide line { stroke: var(--text); stroke-width: 1; }
+.chart-guide circle { fill: var(--text); stroke: var(--surface); stroke-width: 1; }
+.chart-readout { min-height: 3em; margin: var(--space-2) 0 0; font-size: 12px; color: var(--text); line-height: 1.5; overflow-wrap: anywhere; }
+.chart-key { margin: var(--space-2) 0 0; font-size: 11px; color: var(--muted); }
+.presentation-mode .comparison .card-head h3 { font-size: 16px; }
+.presentation-mode .comparison-difference { font-size: 21px; }
+.presentation-mode .chart-readout, .presentation-mode .comparison-table { font-size: 14px; }
+.presentation-mode .chart-key, .presentation-mode .chart-view-toggle button { font-size: 13px; }
+.presentation-mode .trip-svg .svg-label { font-size: 10px; }
+@media (max-width: 1000px) { .comparisons { grid-template-columns: 1fr; gap: var(--space-4); } }
