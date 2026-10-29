@@ -1,0 +1,221 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Planned TriVerity onboarding tour: six-frame storyboard</title>
+  <desc id="desc">A proposed spotlight tour for non-technical reviewers. Six frames show the home entry, computed evidence, evidence collection, two advocates, policy ruling and human approval. Grey console wireframes are dimmed except for a pink-outlined spotlight, with a white explanation card and connecting arrow. The tour would use a recorded actual run of synthetic sample D001, with a $6.30 partial refund. These wireframes are a design proposal, not AI output or an implemented feature.</desc>
+  <rect width="1600" height="900" fill="#ffffff"/>
+  <g font-family="Poppins, Arial, sans-serif" fill="#1f2937">
+    <text x="32" y="40" font-size="28" font-weight="700">Planned onboarding tour</text>
+    <text x="32" y="70" font-size="17">About 2 minutes · Learn what each agent contributes and where the reviewer stays in control</text>
+    <text x="32" y="96" font-size="16">Tutorial · a recorded run of case D001 · nothing here runs the AI or changes real cases</text>
+<g id="frame-1" transform="translate(32 142)" aria-label="1 of 6: Home">
+<text x="0" y="-16" font-size="18" fill="#1f2937" font-weight="600">1 of 6 · Home</text>
+<rect x="0" y="0" width="496" height="330" rx="0" fill="#ffffff" stroke="#9ca3af"/>
+<rect x="0" y="0" width="496" height="32" rx="0" fill="#e5e7eb"/>
+<text x="12" y="22" font-size="14" fill="#1f2937" font-weight="600">TriVerity · Tutorial</text>
+<text x="376" y="22" font-size="14" fill="#1f2937">Case D001</text>
+<rect x="0" y="32" width="92" height="298" rx="0" fill="#f3f4f6"/>
+<text x="12" y="59" font-size="14" fill="#1f2937" font-weight="600">Your queue</text>
+<rect x="10" y="72" width="72" height="25" rx="3" fill="#e5e7eb"/>
+<text x="18" y="90" font-size="14" fill="#1f2937">D001</text>
+<rect x="10" y="104" width="72" height="25" rx="3" fill="#e5e7eb"/>
+<text x="18" y="122" font-size="14" fill="#1f2937">D006</text>
+<rect x="10" y="136" width="72" height="25" rx="3" fill="#e5e7eb"/>
+<text x="18" y="154" font-size="14" fill="#1f2937">D007</text>
+<text x="108" y="59" font-size="18" fill="#1f2937" font-weight="600">Your queue</text>
+<rect x="108" y="72" width="366" height="29" rx="3" fill="#f3f4f6"/>
+<text x="119" y="92" font-size="14" fill="#1f2937">Guided demo · 3 cases</text>
+<rect x="108" y="117" width="176" height="38" rx="3" fill="#f3f4f6"/>
+<text x="119" y="141" font-size="14" fill="#1f2937">All cases</text>
+<rect x="300" y="117" width="170" height="38" rx="4" fill="#ffffff" stroke="#9ca3af"/>
+<text x="326" y="141" font-size="15" fill="#1f2937" font-weight="600">Take the tour</text>
+<rect x="108" y="168" width="366" height="16" rx="3" fill="#e5e7eb"/>
+<path d="M0 0H496V330H0Z M300 117H470V155H300Z" fill="#111827" fill-opacity="0.55" fill-rule="evenodd"/>
+<rect x="300" y="117" width="170" height="38" fill="none" stroke="#e8365f" stroke-width="3"/>
+<path d="M248 204V195H385.0V159" fill="none" stroke="#e8365f" stroke-width="2"/>
+<path d="M380.0 166L385.0 159L390.0 166" fill="none" stroke="#e8365f" stroke-width="2"/>
+<rect x="23" y="204" width="450" height="114" rx="7" fill="#ffffff" stroke="#e5e7eb"/>
+<text x="37" y="229" font-size="16" fill="#1f2937">New to TriVerity? Learn to review a dispute</text>
+<text x="37" y="249" font-size="16" fill="#1f2937">in 2 minutes, on a recorded example.</text>
+<text x="37" y="303" font-size="14" fill="#1f2937">Skip</text>
+<text x="405" y="303" font-size="14" fill="#e8365f" font-weight="600">Next</text>
+</g>
+<g id="frame-2" transform="translate(552 142)" aria-label="2 of 6: Evidence · computed facts">
+<text x="0" y="-16" font-size="18" fill="#1f2937" font-weight="600">2 of 6 · Evidence · computed facts</text>
+<rect x="0" y="0" width="496" height="330" rx="0" fill="#ffffff" stroke="#9ca3af"/>
+<rect x="0" y="0" width="496" height="32" rx="0" fill="#e5e7eb"/>
+<text x="12" y="22" font-size="14" fill="#1f2937" font-weight="600">TriVerity · Tutorial</text>
+<text x="376" y="22" font-size="14" fill="#1f2937">Case D001</text>
+<rect x="0" y="32" width="92" height="298" rx="0" fill="#f3f4f6"/>
+<text x="12" y="59" font-size="14" fill="#1f2937" font-weight="600">Your queue</text>
+<rect x="10" y="72" width="72" height="25" rx="3" fill="#e5e7eb"/>
+<text x="18" y="90" font-size="14" fill="#1f2937">D001</text>
+<rect x="10" y="104" width="72" height="25" rx="3" fill="#e5e7eb"/>
+<text x="18" y="122" font-size="14" fill="#1f2937">D006</text>
+<rect x="10" y="136" width="72" height="25" rx="3" fill="#e5e7eb"/>
+<text x="18" y="154" font-size="14" fill="#1f2937">D007</text>
+<text x="108" y="59" font-size="18" fill="#1f2937" font-weight="600">Evidence</text>
+<rect x="108" y="72" width="366" height="112" rx="0" fill="#ffffff"/>
+<rect x="116" y="80" width="170" height="96" rx="4" fill="#f3f4f6"/>
+<text x="126" y="101" font-size="15" fill="#1f2937" font-weight="600">Route sketch</text>
+<path d="M129 154 L157 121 L184 144 L217 114 L270 144" fill="none" stroke="#9ca3af" stroke-width="3"/>
+<rect x="298" y="80" width="168" height="96" rx="4" fill="#f3f4f6"/>
+<text x="308" y="101" font-size="15" fill="#1f2937" font-weight="600">Fare check</text>
+<rect x="308" y="116" width="142" height="5" rx="2" fill="#9ca3af"/>
+<rect x="308" y="129" width="124" height="5" rx="2" fill="#9ca3af"/>
+<rect x="308" y="142" width="104" height="5" rx="2" fill="#9ca3af"/>
+<text x="308" y="165" font-size="14" fill="#1f2937">Code</text>
+<path d="M0 0H496V330H0Z M108 72H474V184H108Z" fill="#111827" fill-opacity="0.55" fill-rule="evenodd"/>
+<rect x="108" y="72" width="366" height="112" fill="none" stroke="#e8365f" stroke-width="3"/>
+<path d="M248 204V195H291.0V188" fill="none" stroke="#e8365f" stroke-width="2"/>
+<path d="M286.0 195L291.0 188L296.0 195" fill="none" stroke="#e8365f" stroke-width="2"/>
+<rect x="23" y="204" width="450" height="114" rx="7" fill="#ffffff" stroke="#e5e7eb"/>
+<text x="37" y="229" font-size="16" fill="#1f2937">Facts first. Code computes these from GPS,</text>
+<text x="37" y="249" font-size="16" fill="#1f2937">fare and chat. The AI never invents them.</text>
+<text x="37" y="303" font-size="14" fill="#1f2937">Skip</text>
+<text x="334" y="303" font-size="14" fill="#1f2937">Back</text>
+<text x="405" y="303" font-size="14" fill="#e8365f" font-weight="600">Next</text>
+</g>
+<g id="frame-3" transform="translate(1072 142)" aria-label="3 of 6: Evidence · extra records">
+<text x="0" y="-16" font-size="18" fill="#1f2937" font-weight="600">3 of 6 · Evidence · extra records</text>
+<rect x="0" y="0" width="496" height="330" rx="0" fill="#ffffff" stroke="#9ca3af"/>
+<rect x="0" y="0" width="496" height="32" rx="0" fill="#e5e7eb"/>
+<text x="12" y="22" font-size="14" fill="#1f2937" font-weight="600">TriVerity · Tutorial</text>
+<text x="376" y="22" font-size="14" fill="#1f2937">Case D001</text>
+<rect x="0" y="32" width="92" height="298" rx="0" fill="#f3f4f6"/>
+<text x="12" y="59" font-size="14" fill="#1f2937" font-weight="600">Your queue</text>
+<rect x="10" y="72" width="72" height="25" rx="3" fill="#e5e7eb"/>
+<text x="18" y="90" font-size="14" fill="#1f2937">D001</text>
+<rect x="10" y="104" width="72" height="25" rx="3" fill="#e5e7eb"/>
+<text x="18" y="122" font-size="14" fill="#1f2937">D006</text>
+<rect x="10" y="136" width="72" height="25" rx="3" fill="#e5e7eb"/>
+<text x="18" y="154" font-size="14" fill="#1f2937">D007</text>
+<text x="108" y="59" font-size="18" fill="#1f2937" font-weight="600">Evidence</text>
+<rect x="108" y="72" width="366" height="42" rx="4" fill="#f3f4f6"/>
+<rect x="120" y="81" width="250" height="5" rx="2" fill="#9ca3af"/>
+<rect x="120" y="94" width="232" height="5" rx="2" fill="#9ca3af"/>
+<rect x="120" y="107" width="212" height="5" rx="2" fill="#9ca3af"/>
+<rect x="108" y="126" width="366" height="56" rx="4" fill="#ffffff" stroke="#9ca3af"/>
+<text x="120" y="148" font-size="15" fill="#1f2937" font-weight="600">How the evidence was gathered</text>
+<text x="120" y="170" font-size="14" fill="#1f2937">Rider lookups · Driver lookups</text>
+<path d="M0 0H496V330H0Z M108 126H474V182H108Z" fill="#111827" fill-opacity="0.55" fill-rule="evenodd"/>
+<rect x="108" y="126" width="366" height="56" fill="none" stroke="#e8365f" stroke-width="3"/>
+<path d="M248 204V195H291.0V186" fill="none" stroke="#e8365f" stroke-width="2"/>
+<path d="M286.0 193L291.0 186L296.0 193" fill="none" stroke="#e8365f" stroke-width="2"/>
+<rect x="23" y="204" width="450" height="114" rx="7" fill="#ffffff" stroke="#e5e7eb"/>
+<text x="37" y="229" font-size="16" fill="#1f2937">An AI evidence collector looks up extra</text>
+<text x="37" y="249" font-size="16" fill="#1f2937">records for each side, separately.</text>
+<text x="37" y="303" font-size="14" fill="#1f2937">Skip</text>
+<text x="334" y="303" font-size="14" fill="#1f2937">Back</text>
+<text x="405" y="303" font-size="14" fill="#e8365f" font-weight="600">Next</text>
+</g>
+<g id="frame-4" transform="translate(32 526)" aria-label="4 of 6: Hearing · two advocates">
+<text x="0" y="-16" font-size="18" fill="#1f2937" font-weight="600">4 of 6 · Hearing · two advocates</text>
+<rect x="0" y="0" width="496" height="330" rx="0" fill="#ffffff" stroke="#9ca3af"/>
+<rect x="0" y="0" width="496" height="32" rx="0" fill="#e5e7eb"/>
+<text x="12" y="22" font-size="14" fill="#1f2937" font-weight="600">TriVerity · Tutorial</text>
+<text x="376" y="22" font-size="14" fill="#1f2937">Case D001</text>
+<rect x="0" y="32" width="92" height="298" rx="0" fill="#f3f4f6"/>
+<text x="12" y="59" font-size="14" fill="#1f2937" font-weight="600">Your queue</text>
+<rect x="10" y="72" width="72" height="25" rx="3" fill="#e5e7eb"/>
+<text x="18" y="90" font-size="14" fill="#1f2937">D001</text>
+<rect x="10" y="104" width="72" height="25" rx="3" fill="#e5e7eb"/>
+<text x="18" y="122" font-size="14" fill="#1f2937">D006</text>
+<rect x="10" y="136" width="72" height="25" rx="3" fill="#e5e7eb"/>
+<text x="18" y="154" font-size="14" fill="#1f2937">D007</text>
+<text x="108" y="59" font-size="18" fill="#1f2937" font-weight="600">Hearing</text>
+<rect x="108" y="72" width="366" height="112" rx="0" fill="#ffffff"/>
+<rect x="116" y="80" width="168" height="96" rx="4" fill="#f3f4f6"/>
+<text x="126" y="101" font-size="15" fill="#1f2937" font-weight="600">Rider advocate</text>
+<rect x="126" y="113" width="140" height="5" rx="2" fill="#9ca3af"/>
+<rect x="126" y="126" width="122" height="5" rx="2" fill="#9ca3af"/>
+<rect x="126" y="139" width="102" height="5" rx="2" fill="#9ca3af"/>
+<rect x="126" y="153" width="96" height="18" rx="6" fill="#e5e7eb"/>
+<text x="133" y="167" font-size="14" fill="#1f2937">Cited rules</text>
+<rect x="298" y="80" width="168" height="96" rx="4" fill="#f3f4f6"/>
+<text x="308" y="101" font-size="15" fill="#1f2937" font-weight="600">Driver advocate</text>
+<rect x="308" y="113" width="140" height="5" rx="2" fill="#9ca3af"/>
+<rect x="308" y="126" width="122" height="5" rx="2" fill="#9ca3af"/>
+<rect x="308" y="139" width="102" height="5" rx="2" fill="#9ca3af"/>
+<rect x="308" y="153" width="96" height="18" rx="6" fill="#e5e7eb"/>
+<text x="315" y="167" font-size="14" fill="#1f2937">Cited rules</text>
+<path d="M0 0H496V330H0Z M108 72H474V184H108Z" fill="#111827" fill-opacity="0.55" fill-rule="evenodd"/>
+<rect x="108" y="72" width="366" height="112" fill="none" stroke="#e8365f" stroke-width="3"/>
+<path d="M248 204V195H291.0V188" fill="none" stroke="#e8365f" stroke-width="2"/>
+<path d="M286.0 195L291.0 188L296.0 195" fill="none" stroke="#e8365f" stroke-width="2"/>
+<rect x="23" y="204" width="450" height="114" rx="7" fill="#ffffff" stroke="#e5e7eb"/>
+<text x="37" y="229" font-size="16" fill="#1f2937">Two AI advocates argue for the rider and the</text>
+<text x="37" y="249" font-size="16" fill="#1f2937">driver, citing evidence. Chips show which</text>
+<text x="37" y="269" font-size="16" fill="#1f2937">cited rules the Judge found hold.</text>
+<text x="37" y="303" font-size="14" fill="#1f2937">Skip</text>
+<text x="334" y="303" font-size="14" fill="#1f2937">Back</text>
+<text x="405" y="303" font-size="14" fill="#e8365f" font-weight="600">Next</text>
+</g>
+<g id="frame-5" transform="translate(552 526)" aria-label="5 of 6: Ruling · rules and explanation">
+<text x="0" y="-16" font-size="18" fill="#1f2937" font-weight="600">5 of 6 · Ruling · rules and explanation</text>
+<rect x="0" y="0" width="496" height="330" rx="0" fill="#ffffff" stroke="#9ca3af"/>
+<rect x="0" y="0" width="496" height="32" rx="0" fill="#e5e7eb"/>
+<text x="12" y="22" font-size="14" fill="#1f2937" font-weight="600">TriVerity · Tutorial</text>
+<text x="376" y="22" font-size="14" fill="#1f2937">Case D001</text>
+<rect x="0" y="32" width="92" height="298" rx="0" fill="#f3f4f6"/>
+<text x="12" y="59" font-size="14" fill="#1f2937" font-weight="600">Your queue</text>
+<rect x="10" y="72" width="72" height="25" rx="3" fill="#e5e7eb"/>
+<text x="18" y="90" font-size="14" fill="#1f2937">D001</text>
+<rect x="10" y="104" width="72" height="25" rx="3" fill="#e5e7eb"/>
+<text x="18" y="122" font-size="14" fill="#1f2937">D006</text>
+<rect x="10" y="136" width="72" height="25" rx="3" fill="#e5e7eb"/>
+<text x="18" y="154" font-size="14" fill="#1f2937">D007</text>
+<text x="108" y="59" font-size="18" fill="#1f2937" font-weight="600">Ruling</text>
+<rect x="108" y="72" width="366" height="112" rx="0" fill="#ffffff"/>
+<rect x="116" y="80" width="350" height="44" rx="4" fill="#f3f4f6"/>
+<text x="126" y="108" font-size="18" fill="#1f2937" font-weight="600">Partial refund · $6.30</text>
+<rect x="116" y="134" width="350" height="42" rx="4" fill="#f3f4f6"/>
+<text x="126" y="160" font-size="15" fill="#1f2937" font-weight="600">What would change it</text>
+<path d="M0 0H496V330H0Z M108 72H474V184H108Z" fill="#111827" fill-opacity="0.55" fill-rule="evenodd"/>
+<rect x="108" y="72" width="366" height="112" fill="none" stroke="#e8365f" stroke-width="3"/>
+<path d="M248 204V195H291.0V188" fill="none" stroke="#e8365f" stroke-width="2"/>
+<path d="M286.0 195L291.0 188L296.0 195" fill="none" stroke="#e8365f" stroke-width="2"/>
+<rect x="23" y="204" width="450" height="114" rx="7" fill="#ffffff" stroke="#e5e7eb"/>
+<text x="37" y="229" font-size="16" fill="#1f2937">Policy rules decide the outcome and amount.</text>
+<text x="37" y="249" font-size="16" fill="#1f2937">The AI explains it in plain words.</text>
+<text x="37" y="303" font-size="14" fill="#1f2937">Skip</text>
+<text x="334" y="303" font-size="14" fill="#1f2937">Back</text>
+<text x="405" y="303" font-size="14" fill="#e8365f" font-weight="600">Next</text>
+</g>
+<g id="frame-6" transform="translate(1072 526)" aria-label="6 of 6: Ruling / Notify · human control">
+<text x="0" y="-16" font-size="18" fill="#1f2937" font-weight="600">6 of 6 · Ruling / Notify · human control</text>
+<rect x="0" y="0" width="496" height="330" rx="0" fill="#ffffff" stroke="#9ca3af"/>
+<rect x="0" y="0" width="496" height="32" rx="0" fill="#e5e7eb"/>
+<text x="12" y="22" font-size="14" fill="#1f2937" font-weight="600">TriVerity · Tutorial</text>
+<text x="376" y="22" font-size="14" fill="#1f2937">Case D001</text>
+<rect x="0" y="32" width="92" height="298" rx="0" fill="#f3f4f6"/>
+<text x="12" y="59" font-size="14" fill="#1f2937" font-weight="600">Your queue</text>
+<rect x="10" y="72" width="72" height="25" rx="3" fill="#e5e7eb"/>
+<text x="18" y="90" font-size="14" fill="#1f2937">D001</text>
+<rect x="10" y="104" width="72" height="25" rx="3" fill="#e5e7eb"/>
+<text x="18" y="122" font-size="14" fill="#1f2937">D006</text>
+<rect x="10" y="136" width="72" height="25" rx="3" fill="#e5e7eb"/>
+<text x="18" y="154" font-size="14" fill="#1f2937">D007</text>
+<text x="108" y="59" font-size="18" fill="#1f2937" font-weight="600">Ruling / Notify</text>
+<rect x="108" y="72" width="366" height="112" rx="0" fill="#ffffff"/>
+<rect x="116" y="83" width="200" height="34" rx="4" fill="#f3f4f6" stroke="#9ca3af"/>
+<text x="126" y="105" font-size="14" fill="#1f2937" font-weight="600">Accept ruling / Override</text>
+<rect x="116" y="132" width="200" height="36" rx="4" fill="#f3f4f6"/>
+<text x="126" y="155" font-size="15" fill="#1f2937" font-weight="600">Approve &amp; send</text>
+<rect x="334" y="80" width="132" height="96" rx="8" fill="#f3f4f6" stroke="#9ca3af"/>
+<text x="342" y="100" font-size="14" fill="#1f2937" font-weight="600">Phone preview</text>
+<rect x="344" y="113" width="110" height="5" rx="2" fill="#9ca3af"/>
+<rect x="344" y="126" width="92" height="5" rx="2" fill="#9ca3af"/>
+<rect x="344" y="139" width="72" height="5" rx="2" fill="#9ca3af"/>
+<text x="344" y="165" font-size="14" fill="#1f2937">Rider / Driver</text>
+<path d="M0 0H496V330H0Z M108 72H474V184H108Z" fill="#111827" fill-opacity="0.55" fill-rule="evenodd"/>
+<rect x="108" y="72" width="366" height="112" fill="none" stroke="#e8365f" stroke-width="3"/>
+<path d="M248 204V195H291.0V188" fill="none" stroke="#e8365f" stroke-width="2"/>
+<path d="M286.0 195L291.0 188L296.0 195" fill="none" stroke="#e8365f" stroke-width="2"/>
+<rect x="23" y="204" width="450" height="114" rx="7" fill="#ffffff" stroke="#e5e7eb"/>
+<text x="37" y="229" font-size="16" fill="#1f2937">You&#x27;re in control. Accept or override, then</text>
+<text x="37" y="249" font-size="16" fill="#1f2937">approve exactly what each party sees.</text>
+<text x="37" y="303" font-size="14" fill="#1f2937">Skip</text>
+<text x="334" y="303" font-size="14" fill="#1f2937">Back</text>
+<text x="405" y="303" font-size="14" fill="#e8365f" font-weight="600">Done</text>
+</g>
+<text x="32" y="883" font-size="14" fill="#1f2937">Design proposal only · Separate tutorial route · Keyboard and screen-reader support · No live-case changes</text>
+</g></svg>
