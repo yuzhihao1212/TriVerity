@@ -28,7 +28,7 @@ import { DECISION_LABELS, decisionTone, riskTone } from "./outcomeTone";
 import { Chip, InternalBadge } from "./Chip";
 import { chipClass, chipTone } from "./chipStyle";
 import { SourceBadge } from "./SourceBadge";
-import { Loader3D, useLoaderVisible } from "./OeroAI";
+import { Loader3D, OeroMark, useLoaderVisible } from "./OeroAI";
 import { savedText } from "./decisionState";
 import { AiToggle } from "./AiToggle";
 import { readAiMode, writeAiMode, type AiMode } from "./aiMode";
@@ -404,20 +404,19 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
       <a className="skip-link" href="#main-content" onClick={event => { event.preventDefault(); focusSection("main-content"); }}>Skip to dispute</a>
       <header className="topbar">
         <div className="topbar-brand">
-          <h1 className="brand"><a className="console-home" href="#/">TriVerity<span className="sr-only"> home</span></a></h1>
+          <h1 className="brand"><a className="console-home" href="#/">TriVerity<span className="brand-dot" aria-hidden="true">.</span><span className="sr-only"> home</span></a></h1>
           <span className="topbar-context">
-            <span className="byline">By OeroAI</span>
-            {/* A context label, not a control: plain text, explained on hover and to screen readers. */}
-            <span className="console-label" title={REVIEWER_CONSOLE_NOTE}>
-              <span aria-hidden="true">{"\u00a0·\u00a0"}</span>Reviewer console<span className="sr-only">. {REVIEWER_CONSOLE_NOTE}</span>
-            </span>
+            <span className="byline">by <OeroMark /><strong>OeroAI</strong></span>
+            {/* The context stays for screen readers; the bar itself shows only the brand. */}
+            <span className="sr-only">. Reviewer console. {REVIEWER_CONSOLE_NOTE}</span>
           </span>
         </div>
         <div className="topbar-right">
           <AiToggle mode={aiMode} onToggle={toggleAi} />
-          <span className="topbar-divider" aria-hidden="true" />
-          <ThemeToggle theme={theme} onToggle={onToggleTheme} />
-          <PresentationToggle presentation={presentation} onToggle={onTogglePresentation} />
+          <span className="topbar-tools">
+            <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+            <PresentationToggle presentation={presentation} onToggle={onTogglePresentation} />
+          </span>
         </div>
       </header>
 

@@ -23,8 +23,8 @@ const SIDES: Record<string, { name: string; working: string }> = {
 /**
  * A run in progress, then its completion card: four stages on a rail (liveStages.ts) under a
  * pinned headline and progress bar (progressEstimate.ts). While following, the view scrolls only
- * when the active stage changes, so parallel agents finishing never make it twitch; scrolling up
- * pauses that until "Back to live" or the reviewer returns to the bottom.
+ * when part of the active stage is out of view, leaving room below it; scrolling up pauses that
+ * until "Back to live" or the reviewer returns to the bottom.
  */
 export function LiveProgress({ disputeId, steps, startedAt, finishedAt = {}, endedAt = null, streaming, onReviewEvidence }: {
   disputeId: string; steps: AgentLogEntry[]; startedAt: number; finishedAt?: FinishedTimes;
@@ -113,13 +113,14 @@ export function LiveProgress({ disputeId, steps, startedAt, finishedAt = {}, end
     setFollow(true);
     showActive();
   }
-  // Follow the active stage, not every agent event: parallel agents finish milliseconds apart.
+  // Follow the active stage as it changes or grows; "nearest" moves only when part of it is out of
+  // view, and parallel agents finishing milliseconds apart share one frame.
   useEffect(() => {
     if (complete || !follow || activeIndex < 0) return;
     const frame = requestAnimationFrame(showActive);
     return () => cancelAnimationFrame(frame);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeIndex, complete]);
+  }, [activeIndex, complete, entries.size]);
 
   // Focus moves to the completion heading once, so screen readers announce it.
   useEffect(() => {
@@ -129,7 +130,7 @@ export function LiveProgress({ disputeId, steps, startedAt, finishedAt = {}, end
     heading?.focus({ preventScroll: true });
   }, [complete]);
 
-  return <section className="card loading-state live-progress" aria-labelledby={complete ? "live-completed-title" : "loading-title"}
+  return <section className={`card loading-state live-progress${complete ? "" : " running"}`} aria-labelledby={complete ? "live-completed-title" : "loading-title"}
     style={{ "--live-head": `${headHeight}px` } as CSSProperties}>
     {complete ? <div className="live-completion">
       <h2 ref={completionHeading} id="live-completed-title" tabIndex={-1}><Icon name="check" />{view.completionText}</h2>
