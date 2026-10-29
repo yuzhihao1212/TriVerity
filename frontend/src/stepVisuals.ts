@@ -44,8 +44,10 @@ function liveDone(tab: WorkflowTab, agents: Set<string>): boolean {
   }
 }
 
-export function stepStates({ active, hasResult, busy, liveSteps = [], reviewed = [] }: {
+export function stepStates({ active, hasResult, busy, liveSteps = [], reviewed = [], nextTab }: {
   active: WorkflowTab; hasResult: boolean; busy: boolean; liveSteps?: AgentLogEntry[];
+  /** Overrides the "next" hint, e.g. Ruling while Notify waits for a decision. */
+  nextTab?: WorkflowTab;
   /** Steps this case's reviewer has completed (see reviewProgress.ts). */
   reviewed?: Iterable<WorkflowTab>;
 }): StepState[] {
@@ -57,7 +59,8 @@ export function stepStates({ active, hasResult, busy, liveSteps = [], reviewed =
   const locked = WORKFLOW_TABS.map(({ id }) => id !== "intake" && !hasResult);
   const furthest = isDone.lastIndexOf(true);
   const complete = isDone.every(Boolean);
-  const firstOpen = complete ? -1 : WORKFLOW_TABS.findIndex((_, index) => !isDone[index] && !locked[index]);
+  const firstOpen = nextTab ? WORKFLOW_TABS.findIndex(({ id }) => id === nextTab)
+    : complete ? -1 : WORKFLOW_TABS.findIndex((_, index) => !isDone[index] && !locked[index]);
   return WORKFLOW_TABS.map(({ id }, index) => {
     const isWorking = index === working;
     return {

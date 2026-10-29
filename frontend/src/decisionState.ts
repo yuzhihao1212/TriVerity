@@ -52,3 +52,27 @@ export function decisionBar({ decision, refund, busy, saved, unavailable }: {
   if (busy) return { ...base, state: "saving", note: null, actions, disabled: true };
   return { ...base, state: decision === "needs_review" ? "escalated" : "idle", note: null, actions, disabled: false };
 }
+
+/** Neutral prompt for the reason box: it must not suggest an outcome or an argument. */
+export const REASON_PLACEHOLDER = "Explain your decision in one or two sentences: which facts did you rely on?";
+
+/** Both fields are required; nothing is preselected, so the reviewer chooses without a nudge. */
+export function decisionErrors(choice: FinalDecision | null, reason: string): { outcome: string | null; reason: string | null } {
+  return {
+    outcome: choice ? null : "Choose an outcome.",
+    reason: reason.trim() ? null : "Give a reason for your decision.",
+  };
+}
+
+/**
+ * What the confidence means here. An escalated case goes to a human because of a rule, whatever
+ * the confidence, so it never says "decide automatically"; it names the rules that sent it.
+ */
+export function confidenceNote(decision: Decision, percent: number, policyRefs: string[]): string {
+  if (decision === "needs_review") {
+    // Rule IDs arrive as "SAFE-1: Any threatening message …"; keep the ID only (as policyIds does).
+    const rules = [...new Set(policyRefs.filter(ref => /human|escalat/i.test(ref)).map(ref => ref.split(":", 1)[0].trim()).filter(Boolean))];
+    return rules.length ? `Sent to a human by ${rules.join(" and ")}, whatever the confidence` : "Sent to a human reviewer, whatever the confidence";
+  }
+  return percent >= 60 ? "Clear enough to decide automatically" : "Below 60%: a human decides";
+}

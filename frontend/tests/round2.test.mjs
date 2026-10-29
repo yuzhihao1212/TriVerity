@@ -102,3 +102,29 @@ test('both detail toggles start folded, remember explicit open/closed choices, a
   writeDetailOpen(AGENT_OPEN_KEY, true, saved);
   assert.equal(readDetailOpen(AUDIT_OPEN_KEY, saved), false, 'the two choices are independent');
 });
+
+const ds = await load('decisionState');
+
+test('an escalated case names the rules that sent it to a human, never "decide automatically"', () => {
+  const refs = ['RD-3: A route more than 15% longer…', 'SAFE-1: Any threatening message in the chat log is escalated to human review.', 'FRAUD-1: If either party shows a high bad-faith risk, the dispute is escalated to human review.'];
+  assert.equal(ds.confidenceNote('needs_review', 80, refs), 'Sent to a human by SAFE-1 and FRAUD-1, whatever the confidence');
+  assert.equal(ds.confidenceNote('needs_review', 80, []), 'Sent to a human reviewer, whatever the confidence');
+  assert.equal(ds.confidenceNote('partial_refund', 85, refs), 'Clear enough to decide automatically');
+  assert.equal(ds.confidenceNote('no_action', 40, []), 'Below 60%: a human decides');
+});
+
+test('the decision form requires an outcome and a reason, with nothing preselected', () => {
+  assert.deepEqual(ds.decisionErrors(null, ''), { outcome: 'Choose an outcome.', reason: 'Give a reason for your decision.' });
+  assert.deepEqual(ds.decisionErrors('partial_refund', '   '), { outcome: null, reason: 'Give a reason for your decision.' });
+  assert.deepEqual(ds.decisionErrors('no_action', 'Driver waited 7 min and messaged twice.'), { outcome: null, reason: null });
+  assert.doesNotMatch(ds.REASON_PLACEHOLDER, /road|detour|refund|driver|rider/i, 'the placeholder suggests no argument');
+});
+
+test('every outcome has one wording, shared by the ruling, the lists and the agent log', async () => {
+  const { DECISION_LABELS } = await load('outcomeTone');
+  const { STATUS_LABELS } = await load('disputeList');
+  assert.equal(DECISION_LABELS.no_action, 'No change to the charge');
+  assert.equal(ds.FINAL_LABELS.no_action, DECISION_LABELS.no_action);
+  assert.deepEqual(STATUS_LABELS, DECISION_LABELS);
+});
+

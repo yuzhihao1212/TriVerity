@@ -1,5 +1,6 @@
 // Pure helpers for the console's dispute sidebar (App.tsx, FilterMenu.tsx).
 
+import { DECISION_LABELS } from "./outcomeTone";
 import type { Decision, DisputeCase } from "./types";
 
 export type DisputeFilter = "all" | DisputeCase["type"];
@@ -47,14 +48,8 @@ export function filterButtonLabel(value: string): string {
   return option(value).short ? `Filter disputes: ${filterLabel(value)}` : "Filter disputes";
 }
 
-/** Short ruling status for a list item. */
-export const STATUS_LABELS: Record<Decision, string> = {
-  partial_refund: "Partial refund",
-  full_refund: "Full refund",
-  compensation: "Compensation",
-  no_action: "No action",
-  needs_review: "Escalated",
-};
+/** Ruling status for a list item: the same wording as everywhere else. */
+export const STATUS_LABELS: Record<Decision, string> = DECISION_LABELS;
 
 /** One source of truth for outcome tones (outcomeTone.ts): the sidebar dots match the ruling, header and bar. */
 export { decisionTone } from "./outcomeTone";

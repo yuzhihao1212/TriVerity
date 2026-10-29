@@ -47,7 +47,7 @@ test('decisionTone: refunds and compensation ok, escalation warn, no action neut
   assert.equal(dl.decisionTone('no_action'), 'neutral');
   // Every decision has a short visible label, so status is never colour alone.
   for (const decision of ['partial_refund', 'full_refund', 'compensation', 'needs_review', 'no_action']) assert.ok(dl.STATUS_LABELS[decision]);
-  assert.equal(dl.STATUS_LABELS.needs_review, 'Escalated');
+  assert.equal(dl.STATUS_LABELS.needs_review, 'A human reviewer will decide');
 });
 
 test('filter labels: short for the chip, long for the menu and names', () => {
@@ -69,7 +69,7 @@ test('the item name keeps the type and status audible', () => {
   const d001 = { dispute_id: 'D001', type: 'route_deviation' };
   assert.equal(dl.disputeItemName(d001, '6-min stop, long detour'), 'D001, Route deviation: 6-min stop, long detour');
   assert.equal(dl.disputeItemName(d001, '6-min stop, long detour', 'partial_refund'), 'D001, Route deviation: 6-min stop, long detour. Ruling: Partial refund');
-  assert.equal(dl.disputeItemName({ dispute_id: 'D002', type: 'no_show_charge' }, 'Wait time missing', 'needs_review'), 'D002, No-show charge: Wait time missing. Ruling: Escalated');
+  assert.equal(dl.disputeItemName({ dispute_id: 'D002', type: 'no_show_charge' }, 'Wait time missing', 'needs_review'), 'D002, No-show charge: Wait time missing. Ruling: A human reviewer will decide');
   assert.equal(dl.disputeItemName({ dispute_id: 'X', type: 'new_type' }, 'S'), 'X, new_type: S');
 });
 

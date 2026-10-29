@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 
-import { decisionBar, FINAL_LABELS, savedText, type FinalDecision, type SavedDecision } from "./decisionState";
+import { decisionBar, decisionErrors, FINAL_LABELS, REASON_PLACEHOLDER, savedText, type FinalDecision, type SavedDecision } from "./decisionState";
 import { reveal } from "./routes";
 import { Term } from "./Term";
 import { ApiError, recordReviewerDecision } from "./services/api";
@@ -75,8 +75,11 @@ export function ReviewerDecision({ resolution, controller }: { resolution: Resol
   const { escalated, mode, busy, saved, error } = controller;
   // A partial refund can be overridden to another amount, while keeping the outcome type.
   const options = (Object.keys(FINAL_LABELS) as FinalDecision[]).filter(d => escalated || d !== resolution.decision || d === "partial_refund");
-  const choice = controller.choice ?? options[0];
+  // Nothing preselected: the reviewer picks the outcome themselves (no nudge towards the AI's proposal).
+  const choice = controller.choice && options.includes(controller.choice) ? controller.choice : null;
   const first = useRef<HTMLSelectElement>(null);
+  const [tried, setTried] = useState(false);
+  const errors = decisionErrors(choice, controller.reason);
 
   // "Override" / "Decide" in the decision bar: bring the form into view and focus it.
   useEffect(() => {
@@ -99,15 +102,24 @@ export function ReviewerDecision({ resolution, controller }: { resolution: Resol
         </div>}
         {mode === "override" && <div className="reviewer-form">
           <label className="section-label" htmlFor={`${id}-decision`}>{escalated ? "Outcome" : "Change the outcome to"}</label>
-          <select id={`${id}-decision`} ref={first} value={choice} onChange={e => controller.setChoice(e.target.value as FinalDecision)}>
+          <select id={`${id}-decision`} ref={first} value={choice ?? ""} onChange={e => controller.setChoice(e.target.value as FinalDecision)}
+            aria-invalid={tried && !!errors.outcome} aria-describedby={tried && errors.outcome ? `${id}-decision-error` : undefined}>
+            <option value="" disabled>Choose an outcome…</option>
             {options.map(d => <option key={d} value={d}>{FINAL_LABELS[d]}</option>)}
           </select>
+          {tried && errors.outcome && <p className="field-error small" id={`${id}-decision-error`}>{errors.outcome}</p>}
           <label className="section-label" htmlFor={`${id}-reason`}>Reason</label>
           <textarea id={`${id}-reason`} rows={2} maxLength={300} value={controller.reason} onChange={e => controller.setReason(e.target.value)}
-            placeholder="The main road was closed; the detour was the only open route." />
+            placeholder={REASON_PLACEHOLDER}
+            aria-invalid={tried && !!errors.reason} aria-describedby={tried && errors.reason ? `${id}-reason-error` : undefined} />
+          {tried && errors.reason && <p className="field-error small" id={`${id}-reason-error`}>{errors.reason}</p>}
           <div className="reviewer-actions">
-            <button type="button" className="run-button" disabled={busy || !controller.reason.trim()}
-              onClick={() => controller.submit(choice, controller.reason.trim())}>
+            <button type="button" className="run-button" disabled={busy}
+              onClick={() => {
+                setTried(true);
+                if (!choice || errors.reason) return;
+                controller.submit(choice, controller.reason.trim());
+              }}>
               {escalated ? "Record decision" : "Record override"}
             </button>
             {!escalated && <button type="button" className="secondary-button" disabled={busy} onClick={() => controller.setMode("idle")}>Cancel</button>}

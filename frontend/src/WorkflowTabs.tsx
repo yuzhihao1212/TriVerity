@@ -26,7 +26,9 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, de
 }) {
   const id = useId();
   const refs = useRef<Partial<Record<WorkflowTab, HTMLButtonElement | null>>>({});
-  const states = stepStates({ active, hasResult: !!resolution, busy, liveSteps, reviewed });
+  // Notify waits for a decision: point the reader to Ruling, as the locked Notify panel does.
+  const nextTab = active === "notify" && resolution && !closed && !decisionRecorded ? "ruling" as const : undefined;
+  const states = stepStates({ active, hasResult: !!resolution, busy, liveSteps, reviewed, nextTab });
   function activate(tab: WorkflowTab) {
     if (tabLocked(tab, !!resolution)) return;
     onChange(tab);

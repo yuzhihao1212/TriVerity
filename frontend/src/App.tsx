@@ -553,7 +553,7 @@ function CaseHeader({ dispute, resolution, busy, streaming, progress, final }: {
     <div className="case-file-title">
       <h2 id="case-title">{dispute.dispute_id} <Chip>{TYPE_LABELS[dispute.type]}</Chip></h2>
       {(headline.facts || headline.outcome) && <p className="case-headline">
-        {headline.facts}{headline.facts && headline.outcome && " · "}
+        {headline.facts}{headline.facts && headline.outcome && " "}
         {headline.outcome && <span className={`case-headline-outcome tone-${headline.tone}`}>{headline.outcome}</span>}
       </p>}
     </div>

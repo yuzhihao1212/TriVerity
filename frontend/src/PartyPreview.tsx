@@ -97,7 +97,8 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
   return (
     <section className="card party-preview" aria-labelledby={`${id}-heading`}>
       <h2 id={`${id}-heading`}>Notify parties</h2>
-      <p className="small muted">{sent ? "These are the exact messages and notes delivered. Reopen the case to make a correction." : "The message comes from the final decision. Add an optional note for each party. To change the outcome or explanation, use Override on the Ruling step. Notes are checked so internal details never reach the parties."}</p>
+      <p className="small muted">{sent ? "These are the exact messages and notes delivered. Reopen the case to make a correction." : "Check what each party will see, add a note if you like, then approve and send."}
+        {!sent && <> <button type="button" className="text-button" onClick={onGoToRuling}>To change the outcome, go back to Ruling</button></>}</p>
       {outcome.needsAmount && !sent && <div className="notify-amount">
         <label className="section-label" htmlFor={`${id}-amount`}>Partial refund amount</label>
         <input id={`${id}-amount`} inputMode="decimal" required aria-required="true" aria-invalid={!amountCheck.ok}
@@ -108,13 +109,11 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
       </div>}
       <div className="notify-rows">
         {PARTIES.map(party => <div className="notify-row" key={party}>
+          <Phone party={party} outcome={outcome} message={message(party)} note={cleanNote(note(party))} sent={sent}
+            dispute={dispute} decision={outcome.decision} appealsAvailable={appealsAvailable} id={id}
+            existing={appeals.find(appeal => appeal.party === party) ?? null}
+            onAppealed={appeal => { setAppeals(previous => [...previous.filter(item => item.id !== appeal.id), appeal]); onAppealed?.(); }} />
           <div className="notify-editor">
-            <h3 className="section-label" id={`${id}-${party}-message-label`}>Message to the {party}</h3>
-            <div className="notify-message" aria-labelledby={`${id}-${party}-message-label`}>
-              <p className="notify-message-outcome"><strong>{outcome.label}</strong>
-                {outcome.amount != null && <> · {outcome.decision === "compensation" ? "Credit" : "Refund"} <strong>${outcome.amount.toFixed(2)}</strong></>}</p>
-              <p>{message(party)}</p>
-            </div>
             {sent
               ? note(party) && <div className="notify-note-sent"><span className="section-label">Your note to the {party}</span><p>“{note(party)}”</p></div>
               : <>
@@ -131,12 +130,9 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
                   <Icon name="warning" />Internal wording the {party} must not see: {warnings[party].join(", ")}.</p>}
               </>}
           </div>
-          <Phone party={party} outcome={outcome} message={message(party)} note={cleanNote(note(party))} sent={sent}
-            dispute={dispute} decision={outcome.decision} appealsAvailable={appealsAvailable} id={id}
-            existing={appeals.find(appeal => appeal.party === party) ?? null}
-            onAppealed={appeal => { setAppeals(previous => [...previous.filter(item => item.id !== appeal.id), appeal]); onAppealed?.(); }} />
         </div>)}
       </div>
+      <p className="small muted notify-privacy">{PRIVACY_NOTE}</p>
       {sent ? <div className="notify-done">
         <p className="notify-sent">{sentText(sent)}</p>
         {waitingAppeals.map(appeal => <div className="notify-appeal" key={appeal.id} role="status">
@@ -188,6 +184,5 @@ function Phone({ party, outcome, message, note, sent, dispute, decision, onAppea
           decision={decision} onFiled={onAppealed} available={state.canAppeal} unavailableNote={state.caption ?? undefined} existing={state.delivered ? existing : null} />}
       </div>
     </div>
-    <p className="small muted phone-privacy">{PRIVACY_NOTE}</p>
   </figure>;
 }

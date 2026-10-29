@@ -12,17 +12,17 @@ const ruling = { decision: 'partial_refund', refund_amount: 6.3, confidence: 0.8
 const line = value => [value.facts, value.outcome].filter(Boolean).join(' · ');
 
 test('route headline gives the fare and route difference, never the AI proposal', () => {
-  assert.equal(line(b.caseHeadline(route, ruling)), 'Rider disputes a $24.80 fare · route 44% longer than expected');
+  assert.equal(line(b.caseHeadline(route, ruling)), 'The rider disputes a $24.80 fare. Trip data shows the route was 44% longer than expected.');
   assert.equal(b.caseHeadline(route, ruling).outcome, null);
   assert.equal(b.caseHeadline(route, ruling).tone, 'neutral');
-  assert.equal(line(b.caseHeadline(route)), 'Rider disputes a $24.80 fare · route 44% longer than expected');
+  assert.equal(line(b.caseHeadline(route)), 'The rider disputes a $24.80 fare. Trip data shows the route was 44% longer than expected.');
 });
 
 test('no-show headline gives the fee and wait; a decided no_action explains that no refund is due', () => {
   const result = b.caseHeadline(noShow, { ...ruling, decision: 'no_action', refund_amount: null });
-  assert.equal(line(result), 'Rider disputes a $4.00 no-show fee · driver waited 7 min');
-  assert.equal(b.caseHeadline(noShow, ruling, { decision: 'no_action', amount: null, by: null }).outcome, 'Decided: fee stands, no refund');
-  assert.equal(b.caseHeadline(route, ruling, { decision: 'no_action', amount: null, by: null }).outcome, 'Decided: fare stands, no refund');
+  assert.equal(line(result), 'The rider disputes a $4.00 no-show fee. The driver waited 7 minutes at pickup.');
+  assert.equal(b.caseHeadline(noShow, ruling, { decision: 'no_action', amount: null, by: null }).outcome, 'Decided: no change to the charge.');
+  assert.equal(b.caseHeadline(route, ruling, { decision: 'no_action', amount: null, by: null }).outcome, 'Decided: no change to the charge.');
 });
 
 test('all outcomes use explicit wording and omit inappropriate or unknown amounts', () => {
@@ -30,16 +30,16 @@ test('all outcomes use explicit wording and omit inappropriate or unknown amount
     ['partial_refund', 6.3, 'partial refund $6.30'], ['full_refund', 24.8, 'full refund $24.80'],
     ['compensation', 5, 'compensation $5.00'], ['partial_refund', null, 'partial refund'],
     ['full_refund', NaN, 'full refund'], ['compensation', -1, 'compensation'],
-    ['no_action', 6.3, 'fare stands, no refund'], ['needs_review', 6.3, 'escalated to a human reviewer'],
+    ['no_action', 6.3, 'no change to the charge'], ['needs_review', 6.3, 'a human reviewer will decide'],
   ]) assert.equal(b.caseOutcome('route_deviation', decision, amount), expected);
   assert.equal(b.caseHeadline(route, { ...ruling, decision: 'needs_review' }).outcome, null, 'an escalation is not shown before a decision');
 });
 
 test('final reviewer decisions replace the proposal without borrowing its amount', () => {
   const final = { decision: 'partial_refund', amount: 2.5, by: 'overridden' };
-  assert.equal(b.caseHeadline(route, ruling, final).outcome, 'Decided: partial refund $2.50 (overridden)');
-  assert.equal(b.caseHeadline(route, ruling, { ...final, amount: null }).outcome, 'Decided: partial refund (overridden)');
-  assert.equal(b.caseHeadline(noShow, ruling, { decision: 'no_action', amount: null, by: 'decided' }).outcome, 'Decided: fee stands, no refund');
+  assert.equal(b.caseHeadline(route, ruling, final).outcome, 'Decided: partial refund $2.50 (overridden).');
+  assert.equal(b.caseHeadline(route, ruling, { ...final, amount: null }).outcome, 'Decided: partial refund (overridden).');
+  assert.equal(b.caseHeadline(noShow, ruling, { decision: 'no_action', amount: null, by: 'decided' }).outcome, 'Decided: no change to the charge.');
 });
 
 test('sent overrides survive reload even when only the amount changed; current choices win', () => {
@@ -62,10 +62,10 @@ test('missing and invalid facts are skipped, zero is retained, and shorter route
   assert.equal(line(b.caseHeadline({ ...empty, trip: { expected_distance_km: 0, actual_distance_km: 3 } })), '');
   assert.equal(line(b.caseHeadline({ ...empty, fare: { actual: NaN }, trip: { expected_distance_km: 2, actual_distance_km: Infinity } })), '');
   assert.equal(line(b.caseHeadline({ ...noShow, trip: { driver_wait_min: 0 }, fare: { cancellation_fee: 0 } })),
-    'Rider disputes a $0.00 no-show fee · driver waited 0 min');
+    'The rider disputes a $0.00 no-show fee. The driver waited 0 minutes at pickup.');
   assert.equal(b.caseHeadline({ ...route, trip: { expected_distance_km: 10, actual_distance_km: 9.2 } }).facts,
-    'Rider disputes a $24.80 fare · route 8% shorter than expected');
-  assert.match(b.caseHeadline({ ...route, trip: { expected_distance_km: 10, actual_distance_km: 10 } }).facts, /route matched the expected distance$/);
+    'The rider disputes a $24.80 fare. Trip data shows the route was 8% shorter than expected.');
+  assert.match(b.caseHeadline({ ...route, trip: { expected_distance_km: 10, actual_distance_km: 10 } }).facts, /route matched the expected distance\.$/);
 });
 
 test('what happened uses trip/fare facts, never either party’s allegation', () => {
@@ -85,7 +85,7 @@ test('brief retains full claims for tooltips and shows first policy ID and confi
   assert.deepEqual(rows[1], { label: 'Rider says', text: route.rider_claim, truncate: true });
   assert.equal(rows[3].text, 'partial refund $6.30 · RD-3 · 80% confidence');
   assert.equal(b.caseBriefRows(noShow, { ...ruling, decision: 'no_action', policy_refs: [' NS-1: Fee valid', 'NS-2: Other'], confidence: 0.95 }, { showProposal: true }).at(-1).text,
-    'fee stands, no refund · NS-1 · 95% confidence');
+    'no change to the charge · NS-1 · 95% confidence');
 });
 
 test('brief omits missing rows and proposal metadata, and does not match rule IDs in prose', () => {

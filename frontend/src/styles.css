@@ -1234,8 +1234,11 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .notify-amount input { min-height: 40px; padding: 0 var(--space-3); border: 1px solid var(--control-border); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; font-variant-numeric: tabular-nums; }
 .notify-amount input[aria-invalid="true"] { border-color: var(--error); }
 .error-text { margin: 0; color: var(--error); }
-.notify-rows { display: grid; gap: var(--space-8); }
-.notify-row { display: grid; grid-template-columns: minmax(0, 1fr) 272px; align-items: start; gap: var(--space-6); }
+/* Rider and driver side by side: same decision, two audiences; each phone with its note under it. */
+.notify-rows { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-6); align-items: start; }
+.notify-row { display: grid; align-items: start; gap: var(--space-3); min-width: 0; }
+.notify-row .phone-wrap { justify-self: center; width: min(272px, 100%); }
+.notify-privacy { margin: var(--space-3) 0 0; text-align: center; }
 .notify-editor { display: grid; gap: var(--space-2); min-width: 0; }
 .notify-editor textarea { width: 100%; min-height: 140px; padding: var(--space-3); border: 1px solid var(--control-border); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; font-size: 14px; line-height: 1.5; resize: vertical; }
 /* The generated message: read-only, exactly as the party sees it. */
@@ -1270,7 +1273,7 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .review-complete-title { display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--ok-text); font-size: 18px; font-weight: 600; }
 .review-complete-title .icon { width: 20px; height: 20px; }
 .review-complete-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
-@media (max-width: 760px) { .notify-row { grid-template-columns: minmax(0, 1fr); justify-items: stretch; } .notify-row .phone-wrap { justify-self: center; width: min(272px, 100%); } }
+@media (max-width: 760px) { .notify-rows { grid-template-columns: minmax(0, 1fr); gap: var(--space-8); } }
 
 .home { display: grid; gap: var(--space-6); min-width: 0; }
 .home-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
@@ -1502,3 +1505,6 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 /* WCAG 2.2 target size (2.5.8): small text controls get at least a 24 px tall hit area. */
 .lookup-raw > summary, .tool-calls-link, .agent-flow-result > button, .text-button, .reply-to { display: inline-flex; align-items: center; min-height: 24px; }
 .case-details > summary, .raw > summary { min-height: 24px; display: flex; align-items: center; }
+
+/* Inline form errors, linked to their field with aria-describedby. */
+.field-error { margin: var(--space-1) 0 0; color: var(--error); font-weight: 600; }

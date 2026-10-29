@@ -130,7 +130,7 @@ test('the headline follows the final decision, marked when the reviewer changed 
   const dispute = { type: 'route_deviation', trip: { expected_distance_km: 10.2, actual_distance_km: 14.7 }, fare: { actual: 24.8 } };
   const resolution = { decision: 'partial_refund', refund_amount: 6.3, policy_refs: ['RD-3: …'] };
   assert.equal(caseHeadline(dispute, resolution).outcome, null, 'no AI proposal before a decision');
-  assert.equal(caseHeadline(dispute, resolution, { decision: 'partial_refund', amount: 6.3, by: null }).outcome, 'Decided: partial refund $6.30');
-  assert.equal(caseHeadline(dispute, resolution, { decision: 'full_refund', amount: 24.8, by: 'overridden' }).outcome, 'Decided: full refund $24.80 (overridden)');
-  assert.equal(caseHeadline(dispute, resolution, { decision: 'no_action', amount: null, by: 'decided' }).outcome, 'Decided: fare stands, no refund');
+  assert.equal(caseHeadline(dispute, resolution, { decision: 'partial_refund', amount: 6.3, by: null }).outcome, 'Decided: partial refund $6.30.');
+  assert.equal(caseHeadline(dispute, resolution, { decision: 'full_refund', amount: 24.8, by: 'overridden' }).outcome, 'Decided: full refund $24.80 (overridden).');
+  assert.equal(caseHeadline(dispute, resolution, { decision: 'no_action', amount: null, by: 'decided' }).outcome, 'Decided: no change to the charge.');
 });
