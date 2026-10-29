@@ -32,6 +32,7 @@ test('the outcome and amount come from the final decision', () => {
   assert.deepEqual(pick(ns.finalOutcome(ruling, saved('overridden', 'compensation'), D001)), ['compensation', 5, false, 'override'], 'RD-5 credit');
   assert.deepEqual(pick(ns.finalOutcome(ruling, saved('overridden', 'partial_refund'), D001)), ['partial_refund', null, true, 'override']);
   assert.deepEqual(pick(ns.finalOutcome(ruling, saved('overridden', 'partial_refund'), D001, 2.4)), ['partial_refund', 2.4, true, 'override']);
+  assert.deepEqual(pick(ns.finalOutcome(ruling, { ...saved('overridden', 'partial_refund'), amount: 8 }, D001)), ['partial_refund', 8, false, 'override'], 'amount chosen when overriding');
   assert.deepEqual(pick(ns.finalOutcome({ decision: 'needs_review', refund_amount: 6.9 }, saved('decided', 'full_refund'), NO_SHOW)), ['full_refund', 4, false, 'override'], 'no-show: the fee');
   assert.equal(ns.finalOutcome({ decision: 'needs_review', refund_amount: 6.9 }, null, D001).amount, null, 'escalated, undecided: no amount');
   assert.equal(ns.finalOutcome(ruling, saved('accepted', 'partial_refund'), D001).label, 'Partial refund approved');

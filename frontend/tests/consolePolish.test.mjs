@@ -109,3 +109,43 @@ test('free-text agent messages keep money and distances as written', () => {
     assert.equal(humanizeAgentMessage('rider_advocate', `[llm] ${text}`, null), text);
   }
 });
+
+test('override choices: no compensation, never needs review, a partial refund can change amount', () => {
+  assert.deepEqual(ds.overrideChoices('partial_refund'), ['partial_refund', 'full_refund', 'no_action', 'investigate']);
+  assert.deepEqual(ds.overrideChoices('no_action'), ['partial_refund', 'full_refund', 'investigate']);
+  assert.deepEqual(ds.overrideChoices('needs_review'), ['partial_refund', 'full_refund', 'no_action', 'investigate']);
+});
+
+test('partial refund limits: $0.50 minimum, the fare is the cap (REF-1), 1.5x the ruling needs a second reviewer', () => {
+  const check = text => ds.checkPartialAmount(text, 24.8, 6.3);
+  assert.deepEqual([check('').state, check('abc').state, check('0.20').state], ['empty', 'empty', 'low']);
+  assert.equal(check('30').state, 'high');
+  assert.match(check('30').message, /\$24\.80 fare charged \(rule REF-1\)/);
+  assert.deepEqual([check('8').state, check('8').value], ['ok', 8]);
+  assert.deepEqual([check('9.45').state, check('9.46').state], ['ok', 'second']);
+  assert.equal(check('$24.80').state, 'second');
+  assert.equal(ds.checkPartialAmount('20', 24.8, null).state, 'ok', 'no refund in the ruling: no second-approval limit');
+  assert.equal(ds.secondApprovalLimit(6.3), 9.45);
+});
+
+test('override form: what blocks confirming, in order', () => {
+  const ok = ds.checkPartialAmount('8', 24.8, 6.3);
+  const reason = 'The chat shows the driver agreed to wait.';
+  assert.match(ds.overrideError({ choice: null, check: null, reason, amount: null }), /Choose what should happen/);
+  assert.match(ds.overrideError({ choice: 'partial_refund', check: null, reason, amount: ds.checkPartialAmount('', 24.8, 6.3) }), /Enter the refund amount/);
+  assert.match(ds.overrideError({ choice: 'investigate', check: null, reason, amount: null }), /what needs checking/);
+  assert.match(ds.overrideError({ choice: 'no_action', check: null, reason: 'short', amount: null }), /short reason/);
+  assert.equal(ds.overrideError({ choice: 'partial_refund', check: null, reason, amount: ok }), null);
+  assert.equal(ds.overrideError({ choice: 'investigate', check: 'Safety concern', reason, amount: null }), null);
+});
+
+test('decision lines and the bar while a case is on hold', () => {
+  assert.equal(ds.rulingLine('partial_refund', 6.3), '$6.30 back to the rider');
+  assert.equal(ds.rulingLine('no_action', null), 'No change to the charge');
+  assert.equal(ds.overrideLine('partial_refund', 8, 24.8), '$8.00 back to the rider');
+  assert.equal(ds.overrideLine('full_refund', null, 24.8), '$24.80 back to the rider');
+  const hold = { disputeId: 'D001', why: 'Safety concern', reason: 'Check the chat.', amount: null, at: '14:02' };
+  const bar = ds.decisionBar({ decision: 'partial_refund', refund: 6.3, busy: false, saved: null, unavailable: false, hold });
+  assert.deepEqual([bar.state, bar.tone, bar.actions.length], ['held', 'warn', 0]);
+  assert.equal(bar.note, 'On hold for a second reviewer · Safety concern');
+});

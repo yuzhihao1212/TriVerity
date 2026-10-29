@@ -42,7 +42,7 @@ export interface FinalOutcome {
  * no action -> none; full refund -> the charged fare; compensation -> $5.00 (RD-5);
  * partial refund -> the amount the reviewer enters.
  */
-export function finalOutcome(resolution: Pick<Resolution, "decision" | "refund_amount">, saved: Pick<SavedDecision, "kind" | "decision"> | null,
+export function finalOutcome(resolution: Pick<Resolution, "decision" | "refund_amount">, saved: Pick<SavedDecision, "kind" | "decision" | "amount"> | null,
   dispute: Pick<DisputeCase, "fare">, partialAmount: number | null = null): FinalOutcome {
   if (!saved || saved.kind === "accepted") {
     const refunds = ["partial_refund", "full_refund", "compensation"].includes(resolution.decision);
@@ -54,6 +54,8 @@ export function finalOutcome(resolution: Pick<Resolution, "decision" | "refund_a
   if (decision === "no_action") return { ...base, amount: null, needsAmount: false };
   if (decision === "full_refund") return { ...base, amount: maxRefund(dispute), needsAmount: false };
   if (decision === "compensation") return { ...base, amount: COMPENSATION_CREDIT, needsAmount: false };
+  // The amount chosen when overriding (Ruling step); older decisions without one ask for it here.
+  if (saved.amount != null) return { ...base, amount: saved.amount, needsAmount: false };
   return { ...base, amount: partialAmount, needsAmount: true };
 }
 

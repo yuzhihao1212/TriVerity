@@ -469,7 +469,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
             {samplesLoader && <Loader3D size={112} />}
             <div><h2>Loading disputes…</h2><p className="muted">The sample list is loading. No agents have run.</p></div>
           </section>}
-          {onHome && <Home rows={queueRows} appealsWaiting={appeals === null ? null : waitingIds.size} showStart={Object.keys(results).length === 0}
+          {onHome && <Home rows={queueRows} holds={decision.holds()} appealsWaiting={appeals === null ? null : waitingIds.size} showStart={Object.keys(results).length === 0}
             missing={missing} onDismissMissing={() => setMissing(null)} onNew={newDispute} typeIcon={type => <TypeIcon type={type} />} />}
           {!form && resolving && resolving !== selected?.dispute_id && <p className="small muted">Agents are working on {resolving}. This case remains available.</p>}
           {form && <DisputeForm key={form.template?.dispute_id ?? "blank"} template={form.template} onSubmit={addOwn} onCancel={() => setForm(null)}
@@ -511,7 +511,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
                 {tab === "hearing" && resolution && <Debate resolution={resolution} dispute={selected} availableIds={factIds} onSelectFact={selectFact} />}
                 {tab === "ruling" && resolution && <>
                   <VerdictSummary resolution={resolution} disputeId={selected.dispute_id} />
-                  {actions.decide ? <ReviewerDecision resolution={resolution} controller={decision} /> : sent && <ClosedSummary record={sent} />}
+                  {actions.decide ? <ReviewerDecision resolution={resolution} controller={decision} onContinue={() => changeTab("notify")} /> : sent && <ClosedSummary record={sent} />}
                   <AppealsPanel disputeId={selected.dispute_id} version={appealsVersion} onChanged={() => setAppealsVersion(v => v + 1)} />
                   <RulingSection title="Reasoning" hint="The Judge's explanation, policy and evidence" open>
                     <RulingPanel resolution={resolution} dispute={selected} availableIds={factIds} onSelectFact={selectFact} />

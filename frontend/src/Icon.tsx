@@ -12,6 +12,7 @@ const PATHS: Record<string, ReactNode> = {
   // State
   check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
   cross: <path d="M6 6l12 12M18 6 6 18" />,
+  pause: <path d="M9 6v12M15 6v12" />,
   lock: <><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></>,
   function: <><path d="M16.5 4.5c-2.6-.6-4.2.5-4.7 3L9.2 17c-.5 2.5-2.1 3.6-4.7 3" /><path d="M8 10.5h7.5" /></>,
   arrow: <path d="M4 12h15m-5-5 5 5-5 5" />,

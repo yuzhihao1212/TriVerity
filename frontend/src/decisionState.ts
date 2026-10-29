@@ -10,7 +10,80 @@ export const FINAL_LABELS: Record<FinalDecision, string> = {
 };
 
 /** What was saved: accepting the ruling, overriding it, or deciding an escalated case. */
-export interface SavedDecision { kind: "accepted" | "overridden" | "decided"; decision: FinalDecision; precedentId: string; reason?: string }
+export interface SavedDecision { kind: "accepted" | "overridden" | "decided"; decision: FinalDecision; precedentId: string; reason?: string; amount?: number; at?: string }
+
+/** The outcomes a reviewer can override to: no compensation for now, and never "needs review" (they are the human). */
+export type OverrideChoice = "partial_refund" | "full_refund" | "no_action" | "investigate";
+export const OVERRIDE_LABELS: Record<OverrideChoice, string> = {
+  partial_refund: "Partial refund", full_refund: "Full refund", no_action: "No change to the charge", investigate: "Needs further investigation",
+};
+/** What a reviewer can ask a second reviewer to check. */
+export const INVESTIGATION_CHECKS = ["GPS data looks wrong", "Missing chat or call records", "Possible fraud pattern", "Safety concern"] as const;
+export const MIN_REASON = 10;
+export const MIN_PARTIAL = 0.5;
+/** A partial refund above this multiple of the ruling's refund needs a second reviewer. */
+export const SECOND_APPROVAL_RATIO = 1.5;
+
+/** A case put on hold for a second reviewer (simulated in this browser session). */
+export interface HoldRecord { disputeId: string; why: string; reason: string; amount: number | null; at: string }
+
+/**
+ * The override choices for a ruling: the ruling's own outcome is left out, except a partial
+ * refund, which can be changed to another amount.
+ */
+export function overrideChoices(decision: Decision): OverrideChoice[] {
+  return (Object.keys(OVERRIDE_LABELS) as OverrideChoice[]).filter(choice =>
+    decision === "needs_review" || choice !== decision || choice === "partial_refund");
+}
+
+export interface AmountCheck { value: number | null; state: "ok" | "second" | "empty" | "low" | "high"; message: string }
+
+/**
+ * A partial refund amount: at least $0.50, never above the fare charged (REF-1). Above
+ * 1.5 times the ruling's refund a second reviewer must approve it (no ruling refund: no such limit).
+ */
+export function checkPartialAmount(text: string, fare: number | null, ruling: number | null): AmountCheck {
+  const trimmed = text.trim().replace(/^\$/, "");
+  if (!trimmed) return { value: null, state: "empty", message: "Enter the refund amount." };
+  const value = Number(trimmed);
+  if (!/^\d+(\.\d{1,2})?$/.test(trimmed) || !Number.isFinite(value)) return { value: null, state: "empty", message: "Enter an amount such as 8.00." };
+  if (value < MIN_PARTIAL) return { value: null, state: "low", message: `The smallest refund is $${MIN_PARTIAL.toFixed(2)}. For nothing back, choose "No change to the charge".` };
+  if (fare != null && value > fare + 1e-9) return { value: null, state: "high", message: `A refund can't be more than the $${fare.toFixed(2)} fare charged (rule REF-1). For all of it, choose "Full refund".` };
+  const limit = secondApprovalLimit(ruling);
+  if (limit != null && value > limit + 1e-9) return { value, state: "second", message: `More than ${SECOND_APPROVAL_RATIO}× the ruling's refund. A second reviewer must approve it before anyone is notified.` };
+  return { value, state: "ok", message: "Within your limit. You can decide this on your own." };
+}
+
+export function secondApprovalLimit(ruling: number | null): number | null {
+  return ruling != null && ruling > 0 ? Math.round(ruling * SECOND_APPROVAL_RATIO * 100) / 100 : null;
+}
+
+/** What blocks confirming an override, in the order the reviewer fills the form. */
+export function overrideError({ choice, check, reason, amount }: {
+  choice: OverrideChoice | null; check: string | null; reason: string; amount: AmountCheck | null;
+}): string | null {
+  if (!choice) return "Choose what should happen instead.";
+  if (choice === "partial_refund" && (!amount || amount.value == null)) return amount?.message ?? "Enter the refund amount.";
+  if (choice === "investigate" && !check) return "Choose what needs checking.";
+  if (reason.trim().length < MIN_REASON) return "Add a short reason. It's kept with the case and the precedent.";
+  return null;
+}
+
+/** "$6.30 back to the rider", "No change to the charge", "Needs a person": the ruling in one line. */
+export function rulingLine(decision: Decision, refund: number | null): string {
+  if (decision === "needs_review") return "Sent to you to decide";
+  if (decision === "no_action") return "No change to the charge";
+  if (refund != null && refund > 0) return decision === "compensation" ? `$${refund.toFixed(2)} credit to the rider` : `$${refund.toFixed(2)} back to the rider`;
+  return FINAL_LABELS[decision];
+}
+
+/** The reviewer's override in one line, for the comparison card and the result. */
+export function overrideLine(choice: OverrideChoice, amount: number | null, fare: number | null): string {
+  if (choice === "partial_refund") return amount != null ? `$${amount.toFixed(2)} back to the rider` : "Partial refund";
+  if (choice === "full_refund") return fare != null ? `$${fare.toFixed(2)} back to the rider` : "Full refund";
+  if (choice === "no_action") return "No change to the charge";
+  return "On hold for investigation";
+}
 
 /** The outcome in words, with its amount and tone, e.g. "Partial refund · $6.30". */
 export function outcomeLine(decision: Decision, refund: number | null): { label: string; amount: string | null; tone: OutcomeTone } {
@@ -21,13 +94,17 @@ export function outcomeLine(decision: Decision, refund: number | null): { label:
   return { label: FINAL_LABELS[decision], amount, tone };
 }
 
+export function holdText(hold: HoldRecord): string {
+  return `On hold for a second reviewer · ${hold.why}`;
+}
+
 export function savedText(saved: SavedDecision): string {
   const verb = saved.kind === "accepted" ? "Accepted" : saved.kind === "overridden" ? "Overridden" : "Decided";
   const what = saved.kind === "accepted" ? "" : `: ${FINAL_LABELS[saved.decision].toLowerCase()}`;
   return `✓ ${verb}${what} · saved as precedent ${saved.precedentId}`;
 }
 
-export type BarState = "idle" | "saving" | "accepted" | "overridden" | "decided" | "escalated" | "unavailable";
+export type BarState = "idle" | "saving" | "accepted" | "overridden" | "decided" | "escalated" | "unavailable" | "held";
 export type BarAction = "accept" | "override" | "decide";
 
 export interface BarView {
@@ -41,12 +118,13 @@ export interface BarView {
   disabled: boolean;
 }
 
-export function decisionBar({ decision, refund, busy, saved, unavailable }: {
-  decision: Decision; refund: number | null; busy: boolean; saved: SavedDecision | null; unavailable: boolean;
+export function decisionBar({ decision, refund, busy, saved, unavailable, hold = null }: {
+  decision: Decision; refund: number | null; busy: boolean; saved: SavedDecision | null; unavailable: boolean; hold?: HoldRecord | null;
 }): BarView {
   const outcome = outcomeLine(decision, refund);
   const base = { label: outcome.label, amount: outcome.amount, tone: outcome.tone };
   if (saved) return { ...base, state: saved.kind, note: savedText(saved), actions: [], disabled: true };
+  if (hold) return { ...base, tone: "warn", state: "held", note: holdText(hold), actions: [], disabled: true };
   if (unavailable) return { ...base, state: "unavailable", note: "Decisions are disabled in the public demo", actions: [], disabled: true };
   const actions: BarAction[] = decision === "needs_review" ? ["decide"] : ["accept", "override"];
   if (busy) return { ...base, state: "saving", note: null, actions, disabled: true };

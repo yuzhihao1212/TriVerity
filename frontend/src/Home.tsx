@@ -7,6 +7,7 @@ import { NewDisputeIcon } from "./SidebarToggle";
 import { decisionTone, DECISION_LABELS } from "./outcomeTone";
 import { disputeLabel } from "./presentation";
 import { caseHash } from "./routes";
+import type { HoldRecord } from "./decisionState";
 import type { DisputeCase } from "./types";
 
 export interface HomeRow extends QueueRow { dispute: DisputeCase }
@@ -21,8 +22,8 @@ function writeDemoOpen(open: boolean) {
 }
 
 /** A status bar over the queue, a folded guided demo, and the case list. */
-export function Home({ rows, appealsWaiting, missing, onDismissMissing, onNew }: {
-  rows: HomeRow[]; appealsWaiting: number | null; showStart: boolean; onNew: () => void;
+export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissing, onNew }: {
+  rows: HomeRow[]; holds?: HoldRecord[]; appealsWaiting: number | null; showStart: boolean; onNew: () => void;
   missing: string | null; onDismissMissing: () => void;
   typeIcon: (type: DisputeCase["type"]) => JSX.Element;
 }) {
@@ -73,6 +74,21 @@ export function Home({ rows, appealsWaiting, missing, onDismissMissing, onNew }:
       </li>)}</ol>
       </div></div>
     </section>
+    {holds.length > 0 && <section className="home-holds" aria-labelledby="home-holds-title">
+      <h3 id="home-holds-title"><Icon name="pause" />On hold · waiting for a second reviewer <span className="home-holds-count">{holds.length}</span></h3>
+      <p className="home-holds-note small muted">Simulated in this browser: a hold isn't saved or sent anywhere.</p>
+      <ul className="home-holds-list">{holds.map(hold => {
+        const row = rows.find(r => r.id === hold.disputeId);
+        return <li key={hold.disputeId}>
+          <a className="home-hold" href={caseHash(hold.disputeId)}>
+            <span className="home-hold-icon" aria-hidden="true"><Icon name="magnifier" /></span>
+            <span className="home-row-main"><span className="home-row-summary">{hold.disputeId}{row && <> · {disputeLabel(row.dispute)}</>}</span>
+              <span className="home-row-id">{hold.why} · held by you · {hold.at}</span></span>
+            <span className="home-hold-review">Review<Icon name="chevron" /></span>
+          </a>
+        </li>;
+      })}</ul>
+    </section>}
     <section className="home-cases" aria-labelledby="home-cases-title">
       <h3 id="home-cases-title">All cases</h3>
       <ul className="home-queue" aria-label="Cases, most urgent first">{queue.map(row => {
