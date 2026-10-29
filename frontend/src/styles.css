@@ -673,7 +673,9 @@ textarea { width: 100%; resize: vertical; }
 .live-lines > li { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; padding-block: 3px; }
 .live-lines > li.working > span { grid-column: 1 / -1; }
 .live-others { margin: 0 0 var(--space-4) 36px; }
-@media (max-width: 760px) { .live-sides { grid-template-columns: minmax(0, 1fr); } }
+/* The 236px sidebar plus content padding eat ~300px of the viewport, so this (and the other
+   two-up grids below) collapse ~300px earlier than their content would otherwise suggest. */
+@media (max-width: 1060px) { .live-sides { grid-template-columns: minmax(0, 1fr); } }
 .live-shimmer { display: block; height: 8px; margin-top: var(--space-2); border-radius: 4px; background: linear-gradient(90deg, var(--border) 25%, var(--surface) 50%, var(--border) 75%); background-size: 200% 100%; animation: live-shimmer 1.4s ease-in-out infinite; }
 .live-jump { position: sticky; bottom: var(--space-4); display: block; margin: var(--space-3) auto 0; }
 @keyframes live-flow { to { background-position: 22.6px 0; } }
@@ -716,7 +718,7 @@ textarea { width: 100%; resize: vertical; }
 .lookup-icon .icon { width: 14px; height: 14px; }
 .lookup-reason, .lookup-target { margin: 0; }
 .lookup-raw code { font-size: 12px; overflow-wrap: anywhere; }
-@media (max-width: 760px) { .lookup-columns { grid-template-columns: 1fr; } }
+@media (max-width: 1060px) { .lookup-columns { grid-template-columns: 1fr; } }
 
 /* Cited evidence: key facts, then categories that open on click. */
 .evidence-same { margin: 0; }
@@ -1371,7 +1373,7 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .review-complete-title { display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--ok-text); font-size: 18px; font-weight: 600; }
 .review-complete-title .icon { width: 20px; height: 20px; }
 .review-complete-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
-@media (max-width: 760px) { .notify-rows { grid-template-columns: minmax(0, 1fr); gap: var(--space-8); } }
+@media (max-width: 1060px) { .notify-rows { grid-template-columns: minmax(0, 1fr); gap: var(--space-8); } }
 
 .home { display: grid; gap: var(--space-6); min-width: 0; }
 .home-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
@@ -1555,7 +1557,7 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .presentation-mode .chart-readout, .presentation-mode .comparison-table { font-size: 14px; }
 .presentation-mode .chart-key, .presentation-mode .chart-view-toggle button { font-size: 13px; }
 .presentation-mode .trip-svg .svg-label { font-size: 10px; }
-@media (max-width: 1000px) { .comparisons { grid-template-columns: 1fr; gap: var(--space-4); } }
+@media (max-width: 1300px) { .comparisons { grid-template-columns: 1fr; gap: var(--space-4); } }
 
 /* Sidebar toolbar stays above the scrolling groups; its rule spans the full sidebar. */
 .sidebar { --sidebar-inline: 12px; gap: 0; padding-top: 0; }
