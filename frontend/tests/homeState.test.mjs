@@ -7,7 +7,7 @@ const { amountAtStake, queueSummary, queueSegments, guidedDemoSteps } = await lo
 test('queue summary counts cases, decisions, ready and closed; only decisions warn', () => {
   const rows = ['not_run', 'ready', 'decide', 'closed', 'reviewed', 'reopened'].map(status => ({ status }));
   assert.deepEqual(queueSummary(rows, true), [
-    { text: '6 cases', warning: false },
+    { text: '5 cases', warning: false },
     { text: '1 to decide', warning: true },
     { text: '1 ready', warning: false },
     { text: '1 closed', warning: false },

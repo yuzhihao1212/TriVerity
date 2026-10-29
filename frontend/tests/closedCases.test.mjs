@@ -95,7 +95,7 @@ test('queue groups Appeal waiting with Decide, Reopened with Reviewed, Closed la
   assert.deepEqual(q.sortQueue(rows).map(r=>r.id),['appeal','decide','ready','review','reopened','new','closed']);
   assert.equal(q.nextCase(rows,'decide').id,'appeal');
   assert.equal(q.nextCase([{id:'a',status:'closed'}],null),null);
-  assert.deepEqual(q.tileCounts(rows),{queue:7,ready:1,decide:1,done:1,appeals:1});
+  assert.deepEqual(q.tileCounts(rows),{queue:6,ready:1,decide:1,done:1,appeals:1});
   assert.equal(Object.values(q.STATUS_WORDS).includes('Sent'),false);
   assert.equal(q.STATUS_ICONS.closed,'check');
 });

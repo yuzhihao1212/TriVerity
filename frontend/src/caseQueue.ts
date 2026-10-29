@@ -55,9 +55,12 @@ export function nextCase<T extends QueueRow>(rows: T[], currentId: string | null
 }
 
 export interface Tiles { queue: number; ready: number; decide: number; done: number; appeals: number }
+/** "queue" is what is still left to do (not yet closed); it shrinks as cases close. Closed cases
+ * are not dropped from the list -- they stay there, ticked, and can still be opened. */
 export function tileCounts(rows: Pick<QueueRow, "status">[]): Tiles {
   const count = (status: CaseStatus) => rows.filter(row => row.status === status).length;
-  return { queue: rows.length, ready: count("ready"), decide: count("decide"), done: count("closed"), appeals: count("appeal_waiting") };
+  const done = count("closed");
+  return { queue: rows.length - done, ready: count("ready"), decide: count("decide"), done, appeals: count("appeal_waiting") };
 }
 
 /** The three cases in the guided demo, in presentation order. Titles say what each case is, never its outcome. */

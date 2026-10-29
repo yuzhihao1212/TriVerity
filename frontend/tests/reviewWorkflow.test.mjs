@@ -192,9 +192,19 @@ test('next case: the next not-done case in queue order, none when all are closed
 });
 
 test('tile counts', () => {
-  assert.deepEqual(q.tileCounts(rows), { queue: 7, ready: 2, decide: 2, done: 1, appeals: 0 });
+  assert.deepEqual(q.tileCounts(rows), { queue: 6, ready: 2, decide: 2, done: 1, appeals: 0 });
   assert.deepEqual(q.tileCounts([]), { queue: 0, ready: 0, decide: 0, done: 0, appeals: 0 });
   assert.deepEqual(q.START_HERE.map(s => [s.id, s.title]), [['D001', 'A route dispute'], ['D006', 'A no-show fee'], ['D007', 'A safety flag']]);
+});
+
+test('queue count drops as cases close, even though closed cases stay in the list', () => {
+  const three = [{ status: 'ready' }, { status: 'ready' }, { status: 'ready' }];
+  assert.equal(q.tileCounts(three).queue, 3);
+  const oneClosed = [{ status: 'closed' }, { status: 'ready' }, { status: 'ready' }];
+  assert.equal(q.tileCounts(oneClosed).queue, 2, 'closing a case shrinks the queue count');
+  assert.equal(q.sortQueue(oneClosed).length, 3, 'but the case itself is not removed from the queue list');
+  const allClosed = [{ status: 'closed' }, { status: 'closed' }, { status: 'closed' }];
+  assert.equal(q.tileCounts(allClosed).queue, 0);
 });
 
 test('an appeal from a phone gets a reviewer line, flagged when it is a safety appeal', () => {
