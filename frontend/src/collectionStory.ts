@@ -6,7 +6,7 @@ import type { ToolCallRecord } from "./types";
 
 export const DEFAULT_PLAN = "default plan";
 export const AUDIT_OPEN_KEY = "triverity.auditTrail";
-export const FALLBACK_EXPLANATION = "Fallback: AI was off or unavailable, so standard lookups were used. The ruling is unaffected.";
+export const FALLBACK_EXPLANATION = "Fallback: AI was off or unavailable, so standard lookups were used for both parties.";
 
 type Collection = { source: "llm" | "fallback"; calls?: ToolCallRecord[] | null } | null | undefined;
 

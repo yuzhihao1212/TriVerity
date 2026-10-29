@@ -3,6 +3,7 @@ import { Fragment, useId, useState } from "react";
 import { AGENT_OPEN_KEY, readDetailOpen, writeDetailOpen } from "./detailDisclosure";
 import { EVIDENCE_FACTS_ID } from "./FactLibrary";
 import { reveal } from "./routes";
+import { agentActionLine, SOURCE_KEY, stepHeading } from "./agentDisplay";
 import { humanizeAgentMessage } from "./agentText";
 
 import { EvidenceText, type FactLinks } from "./EvidenceList";
@@ -35,18 +36,19 @@ export function AgentsStrip({ tab, resolution, availableIds, onSelectFact }: { t
   const entries = agentsForTab(all, tab);
   const flow = resolution ? stepFlow(tab, entries, resolution) : null;
   const card = (entry: AgentLogEntry, index: number) => <AgentCard key={`${entry.step}-${entry.agent}-${index}`} entry={entry} all={all}
-    resolution={resolution} availableIds={availableIds} onSelectFact={onSelectFact} />;
+    resolution={resolution} tab={tab} availableIds={availableIds} onSelectFact={onSelectFact} />;
   return <section className="agents-strip" aria-labelledby={`${id}-title`}>
     <div className="agents-head">
-      <h3 className="section-label" id={`${id}-title`}>How this step was decided</h3>
+      <h3 className="section-label" id={`${id}-title`}>{stepHeading(tab)}</h3>
       {entries.length > 0 && <button type="button" className="agents-toggle" aria-expanded={open} aria-controls={`${id}-body`} onClick={toggle}>
         {open ? "Hide details" : "Show details"}<Icon name="arrow" className="agents-toggle-icon" />
       </button>}
     </div>
+    {!!entries.length && <SourceKey />}
     <div id={`${id}-body`}>
-    {entries.length === 0 ? <p className="small muted">{tab === "intake" ? "Manual intake. No agents run in this step."
-      : tab === "notify" ? "No agent runs in this step. The suggested wording comes from the Judge’s ruling; you approve what is sent."
-      : "No agent log entries were returned for this step."}</p>
+    {entries.length === 0 ? <p className="small muted">{tab === "intake" ? "You supplied the case details; no AI was called."
+      : tab === "notify" ? "You check the final messages and approve what is sent."
+      : "No preparation log was returned for this step."}</p>
     : !open ? <ul className="agent-lines">{entries.map((entry, index) => <AgentLine key={`${entry.step}-${entry.agent}-${index}`} entry={entry} resolution={resolution} />)}</ul>
     : flow ? <ol className="agent-flow" aria-label="Agents in order, with what each passes on">
       {entries.map((entry, index) => <Fragment key={`${entry.step}-${entry.agent}-${index}`}>
@@ -65,18 +67,23 @@ export function AgentsStrip({ tab, resolution, availableIds, onSelectFact }: { t
   </section>;
 }
 
-/** One line per agent: "◎ Judge · ✓ · Fallback · 0.1 s". */
+/** The action leads; internal agent names stay in the expanded cards. */
 function AgentLine({ entry, resolution }: { entry: AgentLogEntry; resolution?: Resolution }) {
-  const status = statusBadge(entry.status);
-  const badge = agentBadge(entry.agent, resolution ? agentSource(entry.agent, resolution) : null);
-  const time = durationText(entry.duration_ms);
-  return <li className="agent-line">
-    <span className="agent-line-avatar" aria-hidden="true"><Icon name={agentIcon(entry.agent)} /></span>
-    <strong>{agentLabel(entry.agent)}</strong>
-    <span className={`agent-line-status ${status.tone}`}>{status.icon ? <Icon name={status.icon} /> : null}<span className={status.icon ? "sr-only" : ""}>{status.label}</span></span>
-    {badge ? <SourceBadge source={badge} explain /> : <Chip size="sm" tone="outline">Source not supplied</Chip>}
-    {time && <span className="agent-line-time"><span className="sr-only">took </span>{time}</span>}
-  </li>;
+  const line = agentActionLine(entry, resolution);
+  const [action, ...detail] = line.split(" · ");
+  return <li className="agent-line"><span className="agent-action"><strong>{action}</strong>{detail.length > 0 && <span className="muted"> · {detail.join(" · ")}</span>}</span></li>;
+}
+
+function SourceKey() {
+  const id = useId();
+  const [pinned, setPinned] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  return <span className={`agent-source-key${pinned ? " pinned" : ""}`}>
+    <button type="button" className="text-button" aria-label="Explain Code and AI" aria-describedby={id}
+      onFocus={() => setDismissed(false)} onMouseEnter={() => setDismissed(false)}
+      onClick={() => { setPinned(!pinned); setDismissed(pinned); }} onKeyDown={event => { if (event.key === "Escape") { setPinned(false); setDismissed(true); } }}>Code / AI</button>
+    <span className="agent-source-tip" id={id} role="tooltip" hidden={dismissed}>{SOURCE_KEY}</span>
+  </span>;
 }
 
 function FlowEdge({ label }: { label: string | null }) {
@@ -86,8 +93,8 @@ function FlowEdge({ label }: { label: string | null }) {
   </li>;
 }
 
-function AgentCard({ entry, all, resolution, availableIds, onSelectFact }: {
-  entry: AgentLogEntry; all: AgentLogEntry[]; resolution?: Resolution;
+function AgentCard({ entry, all, resolution, tab, availableIds, onSelectFact }: {
+  entry: AgentLogEntry; all: AgentLogEntry[]; resolution?: Resolution; tab: WorkflowTab;
 } & FactLinks) {
   const status = statusBadge(entry.status);
   const badge = agentBadge(entry.agent, resolution ? agentSource(entry.agent, resolution) : null);
@@ -102,7 +109,7 @@ function AgentCard({ entry, all, resolution, availableIds, onSelectFact }: {
     </div>
     <div className="chip-row">
       <Chip size="sm" tone={chipTone(status.tone)} icon={status.icon ?? undefined}>{status.label}</Chip>
-      {badge ? <SourceBadge source={badge} explain /> : <Chip size="sm" tone="outline">Source not supplied</Chip>}
+      {badge ? tab === "evidence" ? <Chip size="sm" tone="outline" title={badge === "fallback" ? "Template text used when AI was off or unavailable." : SOURCE_KEY}>{badge === "llm" ? "AI" : badge === "fallback" ? "Fallback" : "Code"}</Chip> : <SourceBadge source={badge} explain /> : <Chip size="sm" tone="outline">Source not supplied</Chip>}
     </div>
     {time && <div className="agent-duration">
       <span className="agent-duration-track" aria-hidden="true"><span style={{ width: `${Math.max(share * 100, share > 0 ? 3 : 0)}%` }} /></span>

@@ -3,7 +3,7 @@ import { useEffect, useId, useState } from "react";
 import { createSeenCases } from "./chartIntro";
 import { COUNT_UP_MS, countUpText, EVIDENCE_SEEN_KEY, parseCountTarget } from "./countUp";
 import {
-  gapMinutes, gpsTimeline, labelRows, nearestPointIndex, offRouteFlags, projectRoutes, ROUTE_SEEN_KEY, routeRuns, sketchLabel,
+  labelledTimeline, timelineClock, timelineTicks, labelRows, nearestPointIndex, offRouteFlags, projectRoutes, ROUTE_SEEN_KEY, routeRuns, sketchLabel,
   stopFacts, totalOffMinutes, type Timeline,
 } from "./gpsStory";
 import { metres, polyline, type GpsPoint, type LatLng } from "./tripVisuals";
@@ -82,7 +82,8 @@ export function RouteSketch({ caseId, points, planned, facts }: { caseId: string
           d={polyline(projected.actual.slice(run.from, run.to + 1))} />)}
         {stops.map(({ stop, index }) => { const p = projected.actual[index]; const below = p.y < 40; return <g key={`${stop.time}-${stop.minutes}`} className="route-stop">
           <circle cx={p.x} cy={p.y} r="6" />
-          <text x={p.x} y={below ? p.y + 22 : p.y - 12} textAnchor="middle">{stop.minutes} min</text>
+          <rect x={Math.max(36, Math.min(W - 36, p.x)) - 34} y={(below ? p.y + 22 : p.y - 12) - 17} width={68} height={24} rx={4} />
+          <text x={Math.max(36, Math.min(W - 36, p.x))} y={below ? p.y + 22 : p.y - 12} textAnchor="middle">{stop.minutes} min</text>
         </g>; })}
       </g>
       <circle className="route-pin start" cx={start.x} cy={start.y} r="6" />
@@ -100,10 +101,10 @@ export function RouteSketch({ caseId, points, planned, facts }: { caseId: string
 
 // ---- Timeline -------------------------------------------------------------------
 
-export function timelineLabel(timeline: Timeline): string {
+export function timelineLabel(timeline: Timeline, hasPlan = true): string {
   const off = timeline.segments.filter(segment => segment.off);
   const parts = [`GPS timeline from ${timeline.start} to ${timeline.end}`];
-  parts.push(off.length ? `, off the planned route for part of it` : `, on the planned route throughout`);
+  parts.push(hasPlan ? (off.length ? `, off the planned route for part of it` : `, on the planned route throughout`) : `; no planned route recorded`);
   for (const stop of timeline.stops) parts.push(`; a ${stop.minutes}-minute stop at ${stop.clock}`);
   for (const gap of timeline.gaps) parts.push(`; ${gap.label.toLowerCase()}`);
   return `${parts.join("")}.`;
@@ -111,24 +112,31 @@ export function timelineLabel(timeline: Timeline): string {
 
 /** First to last timestamp: neutral on route, amber off route, stop pins and hatched data gaps. */
 export function GpsTimeline({ points, planned, facts }: { points: GpsPoint[]; planned: LatLng[]; facts: string[] }) {
-  const flags = offRouteFlags(points, planned.length >= 2 ? planned : []);
-  const timeline = gpsTimeline(points, flags, stopFacts(facts), gapMinutes(facts));
+  const timeline = labelledTimeline(points, planned, facts);
   if (!timeline) return null;
-  const marks = [...timeline.stops.map(stop => ({ at: stop.at, label: stop.label, kind: "stop" })), ...timeline.gaps.map(gap => ({ at: gap.from, label: gap.label, kind: "gap" }))]
+  const marks = [...timeline.stops.map(stop => ({ at: stop.at + Math.min(stop.width, 1 - stop.at) / 2, label: `Stopped ${stop.minutes} min · ${stop.clock}`, kind: "stop" })), ...timeline.gaps.map(gap => ({ at: gap.from, label: gap.label, kind: "gap" }))]
     .sort((a, b) => a.at - b.at);
   const rows = labelRows(marks.map(mark => mark.at), 0.28);
+  const ticks = timelineTicks(timeline);
+  const tickRows = labelRows(ticks.map(tick => tick.at), 0.18, 3);
   const pct = (value: number) => `${(value * 100).toFixed(2)}%`;
   return <figure className="gps-timeline">
-    <div className="timeline-track" role="img" aria-label={timelineLabel(timeline)}>
+    <figcaption className="timeline-heading">Timeline</figcaption>
+    <div className="timeline-direct-labels">{timeline.segments.map((segment, index) => <span key={index} style={{ width: pct(segment.to - segment.from) }}>
+      {segment.off ? `Off route ${timelineClock(timeline, segment.from)}–${timelineClock(timeline, segment.to)}` : planned.length >= 2 ? "On route" : "GPS recorded"}
+    </span>)}</div>
+    <div className="timeline-track" role="img" aria-label={timelineLabel(timeline, planned.length >= 2)}>
       {timeline.segments.map((segment, index) => <span key={index} className={`timeline-segment${segment.off ? " off" : ""}`}
         style={{ left: pct(segment.from), width: pct(segment.to - segment.from) }} />)}
       {timeline.gaps.map((gap, index) => <span key={`gap-${index}`} className="timeline-gap" style={{ left: pct(gap.from), width: pct(gap.to - gap.from) }} />)}
-      {timeline.stops.map((stop, index) => <span key={`stop-${index}`} className="timeline-stop" style={{ left: pct(stop.at) }} />)}
     </div>
+    {!!timeline.stops.length && <div className="timeline-stop-track" aria-hidden="true">{timeline.stops.map((stop, index) =>
+      <span key={index} className="timeline-stop" style={{ left: pct(stop.at), width: pct(Math.min(stop.width, 1 - stop.at)) }} />)}</div>}
     <div className="timeline-marks" aria-hidden="true" style={{ height: `${(Math.max(-1, ...rows) + 1) * 1.6}em` }}>
       {marks.map((mark, index) => <span key={index} className={`timeline-mark ${mark.kind}${mark.at > 0.7 ? " end" : mark.at < 0.15 ? " start" : ""}`}
         style={{ left: pct(mark.at), top: `${rows[index] * 1.6}em` }}>{mark.label}</span>)}
     </div>
-    <div className="timeline-ends" aria-hidden="true"><span>{timeline.start}</span><span>{timeline.end}</span></div>
+    <div className="timeline-ticks" aria-hidden="true" style={{ height: `${(Math.max(...tickRows) + 1) * 1.5}em` }}>{ticks.map((tick, i) =>
+      <span key={tick.at} className={tick.at === 0 ? "start" : tick.at === 1 ? "end" : ""} style={{ left: pct(tick.at), top: `${tickRows[i] * 1.5}em` }}>{tick.label}</span>)}</div>
   </figure>;
 }
