@@ -813,13 +813,120 @@ textarea { width: 100%; resize: vertical; }
 .ruling-section[open] > summary::before { transform: rotate(90deg); }
 .ruling-section-title { font-size: 16px; font-weight: 600; }
 .ruling-section-body { display: grid; gap: var(--space-4); padding-bottom: var(--space-4); }
-.reviewer-decision { display: grid; gap: var(--space-3); }
 .reviewer-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
-.reviewer-form { display: grid; gap: var(--space-2); max-width: 520px; }
-.decision-dialog { width: min(520px, calc(100% - 40px)); }
-.decision-dialog > p { margin-bottom: var(--space-4); }
-.decision-dialog .reviewer-form select, .decision-dialog .reviewer-form textarea { width: 100%; }
-.reviewer-done { padding: var(--space-3); border-radius: 12px; background: var(--ok-soft); color: var(--ok-text); font-weight: 600; }
+
+/* "Your decision" (ReviewerDecision.tsx): one box for the human step. Amber = needs a person.
+   It resizes between deciding, overriding (caution) and the result (shrunk to the middle). */
+.decision-panel { --decision-border: 1.5px solid color-mix(in srgb, var(--warn-text) 55%, var(--border)); display: block; gap: 0; width: 100%; margin-inline: auto; padding: 0;
+  overflow: hidden; box-sizing: border-box; border: var(--decision-border); border-radius: 16px; background: var(--bg); }
+/* Not the divider between stacked cards: the panel has its own border all round. */
+.workflow-panel > .card.decision-panel { padding-top: 0; border-top: var(--decision-border); }
+.decision-panel.phase-override { --decision-border: 2px solid var(--warn-text); background: var(--warn-soft); }
+.decision-panel.phase-done, .decision-panel.phase-held { width: min(400px, 100%); }
+.decision-panel.phase-done { --decision-border: 1.5px solid color-mix(in srgb, var(--ok-text) 60%, var(--border)); }
+.decision-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 12px 20px; background: var(--warn-soft); color: var(--warn-text); font-size: 13px; }
+.decision-head > .icon { width: 20px; height: 20px; flex: none; }
+.decision-head h2 { margin: 0; font-size: 15px; color: inherit; }
+.decision-head h2:focus:not(:focus-visible) { outline: none; }
+.decision-head-sub { margin: 0; }
+.phase-override .decision-head { background: transparent; border-bottom: 1px dashed color-mix(in srgb, var(--warn-text) 60%, transparent); }
+.decision-chain { display: flex; flex-wrap: wrap; margin: 0 0 0 auto; padding: 0; list-style: none; font-size: 12px; }
+.decision-chain li { position: relative; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 1px solid currentColor; border-radius: 999px; opacity: .8; }
+.decision-chain li + li { margin-left: 16px; }
+.decision-chain li + li::before { content: "›"; position: absolute; left: -12px; opacity: .8; }
+.decision-chain li.is-you { opacity: 1; font-weight: 600; background: var(--bg); }
+.decision-chain .icon { width: 13px; height: 13px; }
+.decision-chain .source-logo { width: 12px; height: 12px; }
+.decision-body { display: grid; gap: var(--space-3); padding: 16px 20px 18px; }
+.decision-ruling { margin: 0; color: var(--muted); font-size: 14px; }
+.decision-ruling strong { color: var(--text); font-size: 18px; }
+.decision-ruling-label { font-size: 13px; }
+.decision-main, .decision-alt { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 15px; }
+.decision-main .icon { width: 18px; height: 18px; }
+.decision-next { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 0; padding: 0; list-style: none; color: var(--muted); font-size: 13px; }
+.decision-next li { display: inline-flex; align-items: center; gap: 6px; }
+.decision-next .icon { width: 15px; height: 15px; }
+
+/* Override: the policy ruling is struck through and set aside; your decision fills in beside it. */
+.override-intro { margin: 0; color: var(--warn-text); font-size: 14px; }
+.override-compare { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 10px; align-items: stretch; padding-top: 6px; }
+.override-card { position: relative; display: flex; align-items: center; gap: 10px; min-width: 0; padding: 10px 12px; border-radius: 12px; background: var(--bg); }
+.override-card-label { display: block; color: var(--muted); font-size: 12px; }
+.override-card-value { position: relative; display: inline-block; font-size: 16px; overflow-wrap: anywhere; }
+.override-avatar { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--surface); color: var(--muted); }
+.override-avatar .icon { width: 18px; height: 18px; }
+.override-card.is-yours { border: 1.5px dashed var(--warn-text); }
+.override-card.is-yours.is-set { border-style: solid; }
+.is-yours .override-avatar { border: 1.5px dashed var(--warn-text); background: var(--bg); color: var(--warn-text); transition: background-color .3s, color .3s; }
+.is-yours.is-set .override-avatar { border-style: solid; background: var(--warn-text); color: var(--bg); }
+.is-struck .is-policy > :not(.override-tag) { opacity: .62; filter: grayscale(1); }
+.override-strike { position: absolute; left: -3px; right: -3px; top: 54%; height: 2.5px; border-radius: 2px; background: var(--error); transform-origin: left; }
+.override-tag { position: absolute; top: -9px; right: 10px; padding: 1px 8px; border: 1px solid var(--error); border-radius: 999px; background: var(--bg); color: var(--error); font-size: 11px; }
+.override-arrow { align-self: center; width: 20px; height: 20px; color: var(--warn-text); }
+.override-step { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.override-step legend, .override-step-label { padding: 0; margin-bottom: 8px; font-size: 14px; font-weight: 600; }
+.override-step-label .muted { font-weight: 400; }
+.override-step textarea { width: 100%; box-sizing: border-box; }
+.override-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.override-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 4px 14px; border: 1px solid var(--control-border); border-radius: 999px;
+  background: var(--bg); color: var(--text); font: inherit; font-size: 13px; cursor: pointer; }
+.override-chip.is-small { min-height: 30px; font-size: 12px; }
+.override-chip .icon { width: 15px; height: 15px; }
+.override-chip[aria-pressed="true"] { border: 1.5px solid var(--warn-text); color: var(--warn-text); font-weight: 600; }
+.override-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 12px 14px; border-radius: 12px; background: var(--bg); }
+.override-sub-title { flex-basis: 100%; margin: 0; font-size: 13px; font-weight: 600; }
+.override-amount { display: inline-flex; align-items: center; gap: 4px; }
+.override-amount input { width: 90px; }
+.override-range { position: relative; flex-basis: 100%; padding: 20px 0 20px; }
+.override-range input { display: block; width: 100%; height: 20px; margin: 0; accent-color: var(--warn-text); }
+.override-mark { position: absolute; top: 0; transform: translateX(-50%); color: var(--muted); font-size: 11px; white-space: nowrap; }
+.override-mark.is-limit { top: auto; bottom: 0; transform: none; color: var(--warn-text); }
+.override-zone { position: absolute; top: 27px; right: 0; height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--warn-text) 35%, transparent); pointer-events: none; }
+.override-note { display: flex; flex-basis: 100%; align-items: flex-start; gap: 6px; margin: 0; color: var(--muted); font-size: 13px; }
+.override-note .icon { width: 15px; height: 15px; flex: none; margin-top: 2px; }
+.override-note.is-warn { color: var(--warn-text); }
+.override-problem { margin: 0; color: var(--warn-text); font-size: 13px; }
+.caution-button { display: inline-flex; align-items: center; gap: 8px; min-height: 42px; padding: 10px 20px; border: 1px solid var(--warn-text); border-radius: 999px;
+  background: var(--warn-text); color: var(--bg); font-size: 14px; font-weight: 600; }
+.caution-button .icon { width: 16px; height: 16px; }
+.caution-button:disabled { opacity: .6; }
+
+/* The result: the box has shrunk to the middle; a tick (accepted), pencil (overridden) or pause (on hold). */
+.decision-result { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 22px 18px 18px; text-align: center; }
+.decision-result h2 { margin: 0; font-size: 18px; }
+.decision-result h2:focus:not(:focus-visible) { outline: none; }
+.decision-result-line { margin: 0; color: var(--muted); font-size: 14px; }
+.decision-result-actions { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 12px; margin-top: 8px; }
+.decision-result-actions .run-button { display: inline-flex; align-items: center; gap: 6px; }
+.decision-result-actions .icon { width: 16px; height: 16px; }
+.decision-mark { --mark: var(--ok-text); --mark-soft: var(--ok-soft); overflow: visible; }
+.decision-mark.mark-overridden, .decision-mark.mark-held { --mark: var(--warn-text); --mark-soft: var(--warn-soft); }
+.decision-mark-disc { fill: var(--mark-soft); stroke: var(--mark); stroke-width: 2.5; transform-origin: 32px 32px; }
+.decision-mark-ring { fill: none; stroke: var(--mark); stroke-width: 2; transform-origin: 32px 32px; opacity: 0; }
+.decision-mark-path { fill: none; stroke: var(--mark); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; }
+@media (prefers-reduced-motion: no-preference) {
+  .decision-panel { transition: width .5s cubic-bezier(.4, 0, .2, 1), height .5s cubic-bezier(.4, 0, .2, 1), border-color .35s, background-color .35s; }
+  .override-strike { animation: override-strike .35s .15s cubic-bezier(.6, 0, .3, 1) both; }
+  .is-struck .is-policy > :not(.override-tag) { animation: override-dim .4s .35s both; }
+  .override-tag { animation: override-in .25s .5s both; }
+  .is-yours .override-avatar { animation: override-pop .4s .55s cubic-bezier(.3, 1.6, .5, 1) both; }
+  .decision-mark-disc { animation: override-pop .45s .45s cubic-bezier(.3, 1.5, .5, 1) both; }
+  .decision-mark-path { stroke-dashoffset: 1; animation: decision-draw .4s .7s ease-out forwards; }
+  .decision-mark-ring { animation: decision-ring .8s .9s ease-out; }
+  .decision-result > :not(svg) { animation: override-in .3s .55s both; }
+}
+@keyframes override-strike { from { transform: scaleX(0); } }
+@keyframes override-dim { from { opacity: 1; filter: none; } }
+@keyframes override-in { from { opacity: 0; transform: translateY(4px); } }
+@keyframes override-pop { 0% { transform: scale(.5); opacity: 0; } 70% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); } }
+@keyframes decision-draw { to { stroke-dashoffset: 0; } }
+@keyframes decision-ring { from { transform: scale(1); opacity: .7; } to { transform: scale(1.5); opacity: 0; } }
+@media (max-width: 560px) {
+  .decision-chain { margin-left: 0; }
+  .override-compare { grid-template-columns: minmax(0, 1fr); }
+  .override-arrow { justify-self: center; transform: rotate(90deg); }
+  .decision-main, .decision-alt { width: 100%; justify-content: center; }
+}
 
 /* Outcome tones (outcomeTone.ts): ok = in a party's favour, warn = needs attention, neutral = factual. */
 .verdict-value.tone-text-ok { color: var(--ok-text); }
@@ -828,6 +935,12 @@ textarea { width: 100%; resize: vertical; }
 /* Sticky decision bar on the Ruling step (ReviewerDecision.tsx DecisionBar). */
 .decision-bar { position: sticky; bottom: 0; z-index: 15; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-5);
   margin-top: var(--space-8); padding: var(--space-3) var(--space-5); border-top: 1px solid var(--border); background: var(--surface); box-shadow: 0 -6px 16px rgb(0 0 0 / .06); }
+/* While the "Your decision" panel is on screen the bar steps aside, so the actions never show twice. */
+.decision-bar.is-hidden { transform: translateY(110%); opacity: 0; visibility: hidden; }
+@media (prefers-reduced-motion: no-preference) {
+  .decision-bar { transition: transform .2s ease, opacity .2s ease, visibility 0s; }
+  .decision-bar.is-hidden { transition: transform .2s ease, opacity .2s ease, visibility 0s .2s; }
+}
 .decision-bar-outcome { display: inline-flex; align-items: center; gap: var(--space-2); margin: 0; font-size: 15px; font-weight: 600; }
 .decision-bar-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--control-border); }
 .decision-bar.tone-ok .decision-bar-outcome { color: var(--ok-text); }
@@ -1453,6 +1566,20 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .home-cases h3 { color: var(--muted); font-size: 13px; font-weight: 500; }
 .home-queue { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
 .home-queue > li + li { border-top: 1px solid var(--border); }
+/* Cases on hold for a second reviewer (simulated; ReviewerDecision.tsx). */
+.home-holds { display: grid; gap: var(--space-2); margin-top: var(--space-5); }
+.home-holds h3 { display: flex; align-items: center; gap: 8px; margin: 0; }
+.home-holds h3 .icon { width: 18px; height: 18px; color: var(--muted); }
+.home-holds-count { padding: 1px 8px; border-radius: 999px; background: var(--warn-soft); color: var(--warn-text); font-size: 12px; }
+.home-holds-note { margin: 0; }
+.home-holds-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.home-hold { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid color-mix(in srgb, var(--warn-text) 45%, var(--border));
+  border-radius: 12px; background: var(--bg); color: var(--text); text-decoration: none; }
+.home-hold-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--warn-soft); color: var(--warn-text); }
+.home-hold-icon .icon { width: 17px; height: 17px; }
+.home-hold-review { display: inline-flex; align-items: center; gap: 2px; color: var(--accent-text); font-size: 13px; font-weight: 600; }
+.home-hold-review .icon { width: 15px; height: 15px; }
+@media (prefers-reduced-motion: no-preference) { .home-hold { animation: override-in .4s ease-out both; } }
 .home-queue > li:first-child .home-row { border-top-left-radius: 11px; border-top-right-radius: 11px; }
 .home-queue > li:last-child .home-row { border-bottom-left-radius: 11px; border-bottom-right-radius: 11px; }
 .home-row { display: flex; align-items: center; gap: var(--space-3); min-height: 72px; padding: var(--space-3) var(--space-4); color: var(--text); text-decoration: none; }
