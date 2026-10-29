@@ -540,7 +540,7 @@ textarea { width: 100%; resize: vertical; }
 .landing { overflow-wrap: anywhere; }
 .landing-wrap { width: min(1200px, calc(100% - 96px)); margin-inline: auto; }
 .landing-header, .landing-hero { background: var(--header); }
-.landing-nav { display: flex; align-items: center; justify-content: space-between; gap: var(--space-6); padding-block: var(--space-6); }
+.landing-nav { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-6); padding-block: var(--space-6); }
 .landing nav { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-6); }
 .landing-nav nav { justify-content: flex-end; font-size: 12px; }
 .landing-nav nav > a { padding-block: var(--space-3); }
@@ -549,6 +549,8 @@ textarea { width: 100%; resize: vertical; }
 .landing h1 { font-size: clamp(60px, 7.5vw, 100px); line-height: 1.15; letter-spacing: -.065em; margin-block: var(--space-3) var(--space-6); }
 .landing-dot { color: var(--accent-text); }
 .landing-lead { font-size: clamp(24px, 3vw, 38px); line-height: 1.4; font-weight: 500; letter-spacing: -.025em; }
+/* Each phrase wraps as a unit, and evenly when it must wrap, so no word is left alone on a line. */
+.landing-lead > span { display: inline-block; text-wrap: balance; }
 .landing-intro { max-width: 580px; margin-top: var(--space-5); font-size: 15px; }
 .landing-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-6); margin-top: var(--space-8); }
 .landing-actions > a:not(.landing-primary) { font-size: 13px; padding-block: var(--space-3); }
@@ -595,7 +597,7 @@ textarea { width: 100%; resize: vertical; }
 .landing-footer { border-top: 1px solid var(--border); background: var(--surface); padding-block: var(--space-8); }
 .landing-footer > div { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-6); }
 .landing-footer p, .landing-footer nav { font-size: 12px; }
-.landing.presentation-mode .landing-lead { font-size: clamp(28px, 3.5vw, 44px); }
+.landing.presentation-mode .landing-lead { font-size: clamp(28px, 3.5vw, 40px); }
 .landing.presentation-mode .landing-intro { font-size: 17px; }
 .landing.presentation-mode .landing-metric-detail, .landing.presentation-mode .landing-metrics dt,
 .landing.presentation-mode .landing-built-on-label, .landing.presentation-mode .landing-built-on-caption, .landing.presentation-mode .landing-footnote, .landing.presentation-mode .landing-footer p,
@@ -610,11 +612,9 @@ textarea { width: 100%; resize: vertical; }
   .landing-wrap { width: calc(100% - 40px); }
   .landing-nav { gap: var(--space-3); align-items: flex-start; padding-block: var(--space-5); }
   .landing-nav nav { gap: var(--space-2) var(--space-3); }
-  .landing-nav .brand { font-size: 22px; }
   .landing-nav nav > a { display: none; }
   .landing-hero { padding-block: var(--space-8) 48px; }
   .landing-kicker { font-size: 12px; }
-  .landing-desktop-break { display: none; }
   .landing-actions { align-items: stretch; flex-direction: column; gap: var(--space-3); }
   .landing-primary { padding-inline: var(--space-4); font-size: 19px; }
   .landing-actions > a:not(.landing-primary) { align-self: flex-start; }
@@ -647,13 +647,14 @@ textarea { width: 100%; resize: vertical; }
 .live-completion h2 { display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--ok-text); font-size: 17px; }
 .live-completion h2 .icon { width: 20px; height: 20px; flex: none; }
 .live-placeholder { border-left-style: dashed !important; }
-.live-step-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--accent-text); border-top-color: var(--transparent); animation: waiting 1s linear infinite; }
+/* A running agent: the flat OeroAI loader (AgentRunningLoader). */
+.live-step-head .live-step-loader { flex: none; width: 16px; height: 16px; }
 .live-shimmer { display: block; height: 8px; margin-top: var(--space-2); border-radius: 4px; background: linear-gradient(90deg, var(--border) 25%, var(--surface) 50%, var(--border) 75%); background-size: 200% 100%; animation: live-shimmer 1.4s ease-in-out infinite; }
 .live-jump { position: sticky; bottom: var(--space-4); display: block; margin: var(--space-3) auto 0; }
 @keyframes live-flow { to { background-position: 22.6px 0; } }
 @keyframes live-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 @media (prefers-reduced-motion: reduce) {
-  .live-progress-fill, .live-shimmer, .live-step-dot { animation: none; }
+  .live-progress-fill, .live-shimmer { animation: none; }
   .live-progress-fill { transition: none; }
 }
 @media (max-width: 760px) { .live-completion .run-button { width: 100%; } }

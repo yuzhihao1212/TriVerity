@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Chip } from "./Chip";
 import { SourceBadge } from "./SourceBadge";
 import { Icon } from "./Icon";
-import { FlatLoader, useLoaderVisible } from "./OeroAI";
+import { AgentRunningLoader, FlatLoader, useLoaderVisible } from "./OeroAI";
 import { humanizeAgentMessage } from "./agentText";
 import { duration, stepMessage, stepSource } from "./progress";
 import { AGENT_ORDER, isFinished, nearLatest, progressEstimate, progressName, type FinishedTimes } from "./progressEstimate";
@@ -116,7 +116,7 @@ export function LiveProgress({ disputeId, steps, startedAt, finishedAt = {}, end
       {visibleAgents.map(agent => {
         const entry = entries.get(agent);
         if (!entry) return <li key={agent} className="live-placeholder">
-          <div className="live-step-head"><span className="live-step-dot" aria-hidden="true" /><strong>{progressName(agent)}</strong><span className="muted">working…</span></div>
+          <div className="live-step-head"><AgentRunningLoader /><strong>{progressName(agent)}</strong><span className="muted">working…</span></div>
           <span className="live-shimmer" aria-hidden="true" />
         </li>;
         const source = stepSource(entry), time = duration(entry.duration_ms);

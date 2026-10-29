@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type Ref } from "react";
 
 import { LOADER_DELAY_MS, loaderHideDelay } from "./loaderTiming";
 import { prefersReducedMotion } from "./routes";
@@ -7,8 +7,8 @@ import { prefersReducedMotion } from "./routes";
 // animation live in index.html, so the pre-app splash works before this bundle loads.
 
 /** The three circles: rose on top, two ink circles below, a pale triangle behind. Decorative. */
-function Trio({ className }: { className: string }) {
-  return <svg className={className} viewBox="0 0 64 64" aria-hidden="true" focusable="false"><g className="oero-trio">
+function Trio({ className, svgRef }: { className: string; svgRef?: Ref<SVGSVGElement> }) {
+  return <svg ref={svgRef} className={className} viewBox="0 0 64 64" aria-hidden="true" focusable="false"><g className="oero-trio">
     <path className="oero-web" d="M32 20 L18 44 L46 44 Z" />
     <circle className="oero-top" cx="32" cy="17" r="13" />
     <circle className="oero-left" cx="17" cy="45" r="13" />
@@ -33,9 +33,25 @@ export function useLoaderVisible(active: boolean): boolean {
   return visible;
 }
 
-/** The flat loader for inline waits (16–40 px): separate, orbit 120°, rejoin with red on top. */
+/**
+ * The flat loader for inline waits (16–40 px): separate, orbit 120°, rejoin with red on top.
+ * Every flat loader runs on the page clock, so loaders shown side by side (parallel agents)
+ * move in step.
+ */
 export function FlatLoader({ className }: { className?: string }) {
-  return <Trio className={className ? `oero-mark oero-loader ${className}` : "oero-mark oero-loader"} />;
+  const svg = useRef<SVGSVGElement>(null);
+  useLayoutEffect(() => {
+    svg.current?.getAnimations({ subtree: true }).forEach(animation => { animation.startTime = 0; });
+  }, []);
+  return <Trio svgRef={svg} className={className ? `oero-mark oero-loader ${className}` : "oero-mark oero-loader"} />;
+}
+
+/**
+ * A running agent's row: the flat loader after LOADER_DELAY_MS, so near-instant rules agents show
+ * nothing. An empty slot keeps the row from shifting until it appears.
+ */
+export function AgentRunningLoader() {
+  return useLoaderVisible(true) ? <FlatLoader className="live-step-loader" /> : <span className="live-step-loader" aria-hidden="true" />;
 }
 
 /** A 16 px flat loader for a button whose request is pending; the button's own text says what is happening. */
