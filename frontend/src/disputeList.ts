@@ -5,6 +5,22 @@ import type { Decision, DisputeCase } from "./types";
 export type DisputeFilter = "all" | DisputeCase["type"];
 export type Tone = "ok" | "warn" | "neutral";
 
+export type Category = "route" | "no-show" | "other";
+export function disputeCategory(type: string): Category {
+  return type === "route_deviation" ? "route" : type === "no_show_charge" ? "no-show" : "other";
+}
+
+/** Group an already-sorted queue without changing the order inside each category. */
+export function groupByCategory<T extends { type: string }>(cases: readonly T[], filter = "all") {
+  const categories: { id: Category; label: string }[] = [
+    { id: "route", label: "Route" }, { id: "no-show", label: "No-show" }, { id: "other", label: "Other" },
+  ];
+  return categories.map(category => {
+    const items = cases.filter(item => (filter === "all" || item.type === filter) && disputeCategory(item.type) === category.id);
+    return { ...category, items, count: items.length };
+  }).filter(group => group.count > 0);
+}
+
 export const TYPE_LABELS: Record<DisputeCase["type"], string> = {
   route_deviation: "Route deviation",
   no_show_charge: "No-show charge",
@@ -43,7 +59,7 @@ export const STATUS_LABELS: Record<Decision, string> = {
 /** One source of truth for outcome tones (outcomeTone.ts): the sidebar dots match the ruling, header and bar. */
 export { decisionTone } from "./outcomeTone";
 
-/** "D001, Route deviation: 6-min stop, long detour. Ruling: Partial refund" — the type stays audible though only its icon shows. */
+/** Keep category and ruling audible on each case, including when navigating by buttons. */
 export function disputeItemName(dispute: Pick<DisputeCase, "dispute_id" | "type">, summary: string, decision?: Decision | null): string {
   const type = TYPE_LABELS[dispute.type] ?? dispute.type;
   return `${dispute.dispute_id}, ${type}: ${summary}${decision ? `. Ruling: ${STATUS_LABELS[decision]}` : ""}`;

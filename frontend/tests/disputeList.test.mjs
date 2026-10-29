@@ -12,6 +12,33 @@ const transpile = async (file, replace = {}) => {
 };
 const dl = await import(await transpile('disputeList.ts', { './outcomeTone': await transpile('outcomeTone.ts') }));
 
+test('category groups count cases, preserve queue order and do not mutate input', () => {
+  const cases = [
+    { id: 'N2', type: 'no_show_charge' }, { id: 'R3', type: 'route_deviation' },
+    { id: 'R1', type: 'route_deviation' }, { id: 'N1', type: 'no_show_charge' },
+    { id: 'R2', type: 'route_deviation' },
+  ];
+  const before = structuredClone(cases);
+  const groups = dl.groupByCategory(cases);
+  assert.deepEqual(groups.map(({ label, count }) => [label, count]), [['Route', 3], ['No-show', 2]]);
+  assert.deepEqual(groups.map(group => group.items.map(item => item.id)), [['R3', 'R1', 'R2'], ['N2', 'N1']]);
+  assert.deepEqual(cases, before);
+  for (const type of ['route_deviation', 'no_show_charge']) {
+    const filtered = dl.groupByCategory(cases, type);
+    assert.equal(filtered.length, 1);
+    assert.ok(filtered[0].items.every(item => item.type === type));
+  }
+});
+
+test('unknown dispute types share Other; empty categories and queues are omitted', () => {
+  const cases = [{ type: 'unknown', id: 'X' }, { type: 'route_deviation', id: 'R' }, { type: 'toString', id: 'Y' }];
+  const groups = dl.groupByCategory(cases);
+  assert.deepEqual(groups.map(group => [group.label, group.count]), [['Route', 1], ['Other', 2]]);
+  assert.deepEqual(groups[1].items.map(item => item.id), ['X', 'Y']);
+  assert.deepEqual(dl.groupByCategory([]), []);
+  assert.deepEqual(dl.groupByCategory(cases, 'no_show_charge'), []);
+});
+
 test('decisionTone: refunds and compensation ok, escalation warn, no action neutral', () => {
   assert.equal(dl.decisionTone('partial_refund'), 'ok');
   assert.equal(dl.decisionTone('full_refund'), 'ok');
