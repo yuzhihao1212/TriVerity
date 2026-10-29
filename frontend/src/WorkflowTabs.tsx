@@ -1,6 +1,7 @@
 import { useId, useRef, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 
 import { Icon } from "./Icon";
+import { reveal } from "./routes";
 import { DECIDE_FIRST, nextStepMode, SHORT_TAB_LABELS, stepStates, stepStatusText } from "./stepVisuals";
 import { navigateTab, tabLocked, tabProgress, WORKFLOW_TABS, type WorkflowTab } from "./workflow";
 import type { AgentLogEntry, Resolution } from "./types";
@@ -89,7 +90,9 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, de
             : <button type="button" className={nextStepMode({ tab: tab.id, hasResult: !!resolution, closed, decisionRecorded }) === "primary" ? "run-button" : "secondary-button"}
             aria-disabled={tabLocked(WORKFLOW_TABS[index + 1].id, !!resolution)}
             disabled={tabLocked(WORKFLOW_TABS[index + 1].id, !!resolution)}
-            onClick={() => { const next = WORKFLOW_TABS[index + 1].id; activate(next); refs.current[next]?.focus(); }}>
+            // Glide back up to the stepper (instant under reduced motion) and focus the new tab without a second jump.
+            // Next frame: once the new step has rendered, so swapping the content doesn't cancel the scroll.
+            onClick={() => { const next = WORKFLOW_TABS[index + 1].id; activate(next); requestAnimationFrame(() => reveal(refs.current[next], "start")); }}>
             Next: {WORKFLOW_TABS[index + 1].label} →
           </button>}
         </div>}
