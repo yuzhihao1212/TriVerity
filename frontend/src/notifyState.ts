@@ -2,6 +2,7 @@
 // check and the "sent" record. Pure apart from the storage handed to the sent store.
 
 import type { FinalDecision, SavedDecision } from "./decisionState";
+import { confirmedCopy } from "./customerCopy";
 import { DECISION_LABELS } from "./outcomeTone";
 import { PARTY_DECISION_LABELS } from "./partyView";
 import type { Decision, DisputeCase, PartyMessage, Resolution } from "./types";
@@ -77,8 +78,8 @@ const money = (value: number) => `$${value.toFixed(2)}`;
  * explanation for that party. Overridden or decided by the reviewer: plain wording for the
  * final outcome, so it never contradicts it. The reviewer can only add a note under it.
  */
-// No deadline until the team confirms the appeal window (Task 10's CONFIRMED facts).
-export const AUTO_NOTICE = "This was decided automatically under our dispute policy. If you disagree, you can appeal.";
+// No deadline until the team confirms the appeal window (customerCopy CONFIRMED).
+export const AUTO_NOTICE = confirmedCopy().autoNotice;
 
 /**
  * The message in parts for the More info screen, when the party gets the ruling's own

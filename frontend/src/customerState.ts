@@ -15,8 +15,9 @@ export function customerResult(party: Party, outcome: Pick<FinalOutcome, "decisi
     : !amount ? COPY.result.pendingAmount : credit ? COPY.result.credit(amount) : COPY.result.refund(amount);
   const next = party === "rider"
     ? refund && amount ? [COPY.next.refund] : credit && amount ? [COPY.next.credit] : [COPY.next.noChange]
-    : refund && amount ? [COPY.next.driverRefund(amount), COPY.next.rating]
-      : credit && amount ? [COPY.next.driverCredit(amount), COPY.next.rating] : [COPY.next.noChange, COPY.next.rating];
+    : refund && amount ? [COPY.next.driverRefund(amount)] : credit && amount ? [COPY.next.driverCredit(amount)] : [COPY.next.noChange];
+  // "Your rating isn't affected" only once the team confirms it (customerCopy CONFIRMED).
+  if (party === "driver" && COPY.next.rating) next.push(COPY.next.rating);
   return { line, next, icon: party === "rider" && refund ? "receipt" : "check", status: COPY.resolved };
 }
 
@@ -29,7 +30,7 @@ export function quickNotes(party: Party, outcome: Pick<FinalOutcome, "decision" 
     const q = COPY.quick.rider;
     return [
       ...(outcome.decision === "compensation" || refund ? [{ id: "sorry", label: q.sorry.label, text: q.sorry.text(who) }] : []),
-      ...(refund && amount ? [{ id: "timing", label: q.timing.label, text: q.timing.text(amount) }] : []),
+      ...(refund && amount && q.timing.text ? [{ id: "timing", label: q.timing.label, text: q.timing.text(amount) }] : []),
       { id: "thanks", label: q.thanks.label, text: q.thanks.text(who) },
     ];
   }
