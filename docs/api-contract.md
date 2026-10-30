@@ -193,6 +193,15 @@ See `backend/app/models/resolution.py`.
   bad-faith indicators (e.g. 3+ disputes in 90 days, low rating, claims contradicted
   by trip data). The fraud agent never changes a refund or penalises anyone; a
   `high` risk for either party triggers `FRAUD-1` escalation to human review.
+- `autonomy` says whether a routine ruling may skip the human reviewer (internal only, never in the rider or
+  driver view): `{"eligible": bool, "audit": bool, "reasons": [...]}`. Eligible only when the ruling is not
+  escalated, confidence is at least 80%, any refund is at most $10 and at most the fare, and it cites none of
+  SAFE-1, FRAUD-1, PREC-1, ESC-1, RD-4 or NS-4. A stable ~10% sample of eligible cases (hashed from the dispute
+  ID, so it is repeatable) has `audit: true` and still goes to a person. `reasons` explains either outcome
+  with the case's own numbers. Limits are in the policy's `auto_resolve` section; `enabled: false` turns it off.
+  Automatic decisions never become precedents: only human decisions do. The console closes an eligible,
+  non-audit case by itself: the parties get the ruling's own messages plus a notice that it was decided
+  automatically and how to appeal, and the case shows as Auto-resolved until a reviewer reopens it.
 - `triage` orders escalated disputes for human reviewers (internal only, never in the rider or driver
   view). `tier` is `null` when no review is needed; otherwise `safety` (SAFE-1, always first), `high`
   (FRAUD-1), `standard` (missing evidence or low confidence) or `low` (the same, with a proposed refund
@@ -224,6 +233,21 @@ See `backend/app/models/resolution.py`.
   `fraud_detector`, `rider_rebuttal`, `driver_rebuttal`, `precedent_agent`, `judge`.
 - `compensation` (rule RD-5): an unjustified detour (RD-3) that also included an unexpected stop of 10 minutes or
   more. `refund_amount` is the total: the fare charged above the expected fare plus a $5.00 credit for the lost time.
+
+## POST `/api/disputes/resolve/batch`
+
+The queue's **Run all**: resolves several sample disputes in one request. Body:
+`{"dispute_ids": ["D001", "D003"]}` (1 to 10 IDs; duplicates resolve once). Accepts `?ai=off`.
+
+- **Samples only.** Every ID must be one of the server's samples, or the whole request gets 404. Each is
+  resolved exactly like a single sample request: the server's own copy, the same cache and the same daily
+  budget, so a batch can't spend more than the budget allows.
+- **Rate limits:** the per-minute limits count the batch once (the per-minute limit is 3), so a reviewer can run
+  the queue at once; the daily limits count every case, so a batch can't do more in a day than the same cases
+  run one by one. A batch that doesn't fit is refused whole (429 with `Retry-After`) and counts nothing. At most two cases resolve at the same time, leaving a slot for single runs.
+- **Response:** a list in request order, each `{"dispute_id", "result": Resolution | null, "status": int | null,
+  "error": str | null}`. A case that fails (e.g. 503 busy, budget used up) carries its status and message;
+  the others still return. Internal view only.
 
 ## POST `/api/disputes/resolve/stream`
 

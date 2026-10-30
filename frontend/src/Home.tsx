@@ -1,7 +1,7 @@
 import { useState, type CSSProperties } from "react";
-import { sortQueue, STATUS_ICONS, STATUS_WORDS, type QueueRow } from "./caseQueue";
+import { tileCounts, sortQueue, STATUS_ICONS, STATUS_WORDS, type QueueRow } from "./caseQueue";
 import { Chip } from "./Chip";
-import { amountAtStake, guidedDemoSteps, queueSegments, queueSummary } from "./homeState";
+import { amountAtStake, guidedDemoSteps, queueSegments, queueSummary, runAllSummary } from "./homeState";
 import { Icon } from "./Icon";
 import { NewDisputeIcon } from "./SidebarToggle";
 import { decisionTone, DECISION_LABELS } from "./outcomeTone";
@@ -22,19 +22,22 @@ function writeDemoOpen(open: boolean) {
 }
 
 /** A status bar over the queue, a folded guided demo, and the case list. */
-export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissing, onNew }: {
+export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissing, onNew, onRunAll, runAllProgress, typeIcon }: {
   rows: HomeRow[]; holds?: HoldRecord[]; appealsWaiting: number | null; showStart: boolean; onNew: () => void;
   missing: string | null; onDismissMissing: () => void;
+  onRunAll?: () => void; runAllProgress?: { done: number; total: number; running: boolean; ids: string[] } | null;
   typeIcon: (type: DisputeCase["type"]) => JSX.Element;
 }) {
   const summaryParts = queueSummary(rows, appealsWaiting != null);
   const queue = sortQueue(rows);
   const segments = queueSegments(rows, appealsWaiting != null);
   const starts = guidedDemoSteps(rows);
+  const counts = tileCounts(rows);
   const [demoOpen, setDemoOpen] = useState(readDemoOpen);
   function toggleDemo() {
     setDemoOpen(open => { writeDemoOpen(!open); return !open; });
   }
+  const ranSummary = runAllProgress && !runAllProgress.running ? runAllSummary(rows, runAllProgress.ids) : null;
   return <section className="home" aria-labelledby="home-title">
     {missing && <p className="home-note" role="status">
       <Icon name="info" />Case {missing} not found
@@ -51,9 +54,16 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
           {segments.map(segment => <span key={segment.key}><span className={`home-meter-dot tone-${segment.tone}`} /><strong>{segment.count}</strong> {segment.label}</span>)}
         </span>
       </div>
-      <button type="button" className="run-button home-new" onClick={onNew}><NewDisputeIcon />New case</button>
+      <div className="home-head-actions">
+        <button type="button" className="run-button home-new" onClick={onNew}><NewDisputeIcon />New case</button>
+        {onRunAll && <button type="button" className="secondary-button home-run-all" onClick={onRunAll}
+          disabled={runAllProgress?.running || !rows.some(row => row.status === "not_run")}>
+          <Icon name="scales" />{runAllProgress?.running ? `Running ${runAllProgress.total} cases…` : "Run all"}
+        </button>}
+      </div>
       <p className="home-intro">Ride disputes waiting for review. Agents gather evidence and argue both sides, policy rules decide, and you approve.</p>
     </div>
+    {ranSummary && <p className="home-run-summary" role="status"><Icon name="queue" />{ranSummary}</p>}
     <section className={`home-start${demoOpen ? " open" : ""}`} aria-labelledby="home-start-title">
       <h3 id="home-start-title"><button type="button" className="home-start-toggle" aria-expanded={demoOpen} aria-controls="home-start-body" onClick={toggleDemo}>
         <Icon name="chevron" className="home-start-chevron" />Guided demo · 3 cases
@@ -102,6 +112,7 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
             <span className="home-row-main"><span className="home-row-summary">{summary}</span><span className="home-row-id">{row.id}{stake && <> · {stake}</>}</span></span>
             <span className="home-row-meta">
               {row.tier === "safety" && <Chip size="sm" tone="danger">Safety</Chip>}
+              {row.audit && row.status === "ready" && <Chip size="sm" tone="outline">Audit sample</Chip>}
               <span className={`home-row-status status-${row.status}`}>
                 {row.decision && <span className={`outcome-dot tone-${decisionTone(row.decision)}`} title={outcome ?? undefined} aria-hidden="true" />}
                 <Icon name={STATUS_ICONS[row.status]} />{STATUS_WORDS[row.status]}

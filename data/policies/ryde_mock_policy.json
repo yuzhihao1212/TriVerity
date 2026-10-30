@@ -91,5 +91,14 @@
     "rules": {
       "PREC-1": "If human reviewers decided at least two closely similar past disputes differently from the policy rules, the dispute is escalated to human review with those precedents."
     }
+  },
+  "auto_resolve": {
+    "note": "Internal only: decides whether a routine ruling can skip the human reviewer. Never shown to the rider or driver. Turn off by setting enabled to false.",
+    "enabled": true,
+    "thresholds": {
+      "min_confidence": 0.8,
+      "max_refund": 10.0,
+      "audit_rate": 0.1
+    }
   }
 }

@@ -20,6 +20,7 @@ from app.services.counterfactuals import what_would_change
 from app.services.evidence import compute_facts
 from app.services.llm_client import carry_context
 from app.services.triage import triage
+from app.services.autonomy import auto_resolve
 
 # Caps how many resolves run their LLM calls at once, so slow model calls can't
 # starve the server's thread pool (and /health with it).
@@ -117,6 +118,7 @@ def resolve_dispute(case: DisputeCase, on_step: Callable[[AgentLogEntry], None] 
         driver_case=driver_case,
         risk=risk,
         triage=triage(ruling),
+        autonomy=auto_resolve(ruling, case),
         counterfactuals=what_would_change(case, facts, ruling),
         argument_review=review_arguments(case, facts, ruling, rider_case, driver_case),
         precedents=precedents,

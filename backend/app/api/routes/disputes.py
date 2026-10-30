@@ -3,16 +3,18 @@ import queue
 import threading
 import time
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 
 from app.api.streaming import SSE_HEADERS, StreamRoute, event
 
 from app.core import limits
 from app.core.config import settings
-from app.core.rate_limit import enforce_resolve_rate_limit
+from app.core.rate_limit import charge_resolves, enforce_resolve_rate_limit
 from app.models.dispute import DisputeCase
 from app.models.resolution import AgentLogEntry, PartyResolution, Resolution
 from app.services.budget import budget
@@ -46,6 +48,51 @@ def resolve(
     """
     result = _resolve_case(case, code_id, offline=ai == "off")
     return result if view == "internal" else PartyResolution.of(result, case.dispute_id, view)
+
+class BatchResolveRequest(BaseModel):
+    dispute_ids: list[str] = Field(min_length=1, max_length=limits.MAX_BATCH_RESOLVE)
+
+
+class BatchResolveItem(BaseModel):
+    """One dispute's result, or why it could not be resolved (the others still run)."""
+    dispute_id: str
+    result: Resolution | None = None
+    status: int | None = None
+    error: str | None = None
+
+
+@router.post("/disputes/resolve/batch", response_model=list[BatchResolveItem])
+def resolve_batch(
+    body: BatchResolveRequest,
+    request: Request,
+    ai: Literal["on", "off"] = "on",
+) -> list[BatchResolveItem]:
+    """Resolve several sample disputes at once: the queue's "Run all".
+
+    Samples only, by ID: each is resolved exactly as a single sample request would be
+    (same server-side copy, cache and daily budget), so a batch can't spend more than
+    the budget allows. Each case counts against the daily rate limits, as it would run
+    alone; the per-minute limits count the batch once, so a reviewer can run the queue
+    in one go. Internal view only, like the default single resolve.
+    """
+    samples = {c.dispute_id: c for c in load_samples()}
+    ids = list(dict.fromkeys(body.dispute_ids))
+    unknown = [i for i in ids if i not in samples]
+    if unknown:
+        raise HTTPException(status_code=404, detail="Run all resolves the sample disputes only.")
+    code_id = charge_resolves(request, len(ids))
+
+    def one(dispute_id: str) -> BatchResolveItem:
+        try:
+            result = _resolve_case(samples[dispute_id], code_id, offline=ai == "off")
+            return BatchResolveItem(dispute_id=dispute_id, result=result)
+        except HTTPException as exc:
+            detail = exc.detail if isinstance(exc.detail, str) else "Resolve request rejected."
+            return BatchResolveItem(dispute_id=dispute_id, status=exc.status_code, error=detail)
+
+    with ThreadPoolExecutor(max_workers=limits.BATCH_RESOLVE_WORKERS) as pool:
+        return list(pool.map(one, ids))
+
 
 StepCallback = Callable[[AgentLogEntry], None]
 
