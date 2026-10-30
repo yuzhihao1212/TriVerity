@@ -4,6 +4,7 @@ import { Chip } from "./Chip";
 import { useIntroOnce } from "./EvidenceStories";
 import { amountAtStake, GUIDED_DEMO, greeting, greetingLine, guidedDemoSteps, queueSegments, queueSummary, runAllSummary } from "./homeState";
 import { Icon } from "./Icon";
+import { Mascot } from "./Mascot";
 import { NewDisputeIcon } from "./SidebarToggle";
 import { decisionTone, DECISION_LABELS } from "./outcomeTone";
 import { disputeLabel } from "./presentation";
@@ -52,8 +53,10 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
         <Icon name="cross" /></button>
     </p>}
     <div className="home-greeting">
-      <p className="home-hello">{hello}</p>
-      <p className="home-hello-line">{greetingLine(rows)}</p>
+      <Mascot size={112}>
+        <p className="home-hello">{hello}!</p>
+        <p className="home-hello-line">{greetingLine(rows)}</p>
+      </Mascot>
     </div>
     <div className="home-head">
       <h2 id="home-title">Your queue</h2>
