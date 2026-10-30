@@ -41,8 +41,9 @@ SYSTEM = (
     "decision and the policy rule(s) applied by rule ID, the decisive facts, and respond "
     "to each advocate's main argument and, if given, its rebuttal: say which argument the "
     "facts support and why the other was not decisive.\n"
-    '- "rider_explanation": 2-3 plain, respectful sentences addressed to the rider as "you": '
-    "the outcome, the main reason, and what happens next.\n"
+    '- "rider_explanation": 1-2 plain, respectful sentences addressed to the rider as "you": '
+    "the outcome and the main reason. No greeting, thanks or next steps: the message adds those "
+    "around your text.\n"
     '- "driver_explanation": the same, addressed to the driver. The rider filed this dispute, '
     'so call it "the rider\'s dispute", never "your dispute".\n'
     "Rules: use only the facts given. Describe decisions in plain words (e.g. \"the fare stands\", "
@@ -58,6 +59,8 @@ SYSTEM = (
     "this ruling is with them. In the explanation (case record) only, add one sentence on that "
     "consistency, citing precedent IDs exactly as given (e.g. P-004). Never mention precedents, "
     "past rulings or other disputes in rider_explanation or driver_explanation.\n"
+    "Never write a rule ID (e.g. RD-3) or an evidence ID (e.g. TRIP-1) in rider_explanation or "
+    "driver_explanation: describe the rule in plain words instead.\n"
     "Never mention bad-faith or fraud risk, either party's account or dispute history, or either party's tone, in the "
     "rider_explanation or driver_explanation. These are internal signals only. "
     "Write plain text only: no links, email addresses, phone numbers, HTML or markdown. "
@@ -104,6 +107,8 @@ _UPHELD_RE = re.compile(r"\bupheld\b", re.IGNORECASE)
 _CHARGE_RE = re.compile(r"\b(fare|charge|fee)s?\b", re.IGNORECASE)
 _PROPOSAL_RE = re.compile(r"\bpropos\w*", re.IGNORECASE)
 _STANDS_RE = re.compile(r"\b(charge|fare|fee)\s+(?:still\s+)?stands\b", re.IGNORECASE)
+# Evidence IDs (TRIP-1, GPS-2 ...): the case record may cite them, the party messages never.
+_FACT_ID_RE = re.compile(r"\b(?:TRIP|GPS|FARE|CHAT|HIST)\s*-?\s*\d+\b", re.IGNORECASE)
 _PRECEDENT_ID_RE = re.compile(r"\b([PR])\s*-?\s*(\d{3})\b", re.IGNORECASE)
 _PRECEDENT_WORDS_RE = re.compile(r"\b(precedents?|past rulings?|similar (?:past )?(?:cases|disputes))\b", re.IGNORECASE)
 _CONTEXT_WORDS = 5
@@ -255,6 +260,9 @@ def _check(texts: dict, case: DisputeCase, ruling: Ruling, rider_case: AgentCase
     for key, text in party.items():
         if _PRECEDENT_ID_RE.search(text) or _PRECEDENT_WORDS_RE.search(text):
             return f"leak: {key} mentions precedents or other disputes"
+        # Customer-service wording: no rule or evidence codes in what a party reads.
+        if _rule_id_re().search(text) or _FACT_ID_RE.search(text):
+            return f"ids: {key} mentions a rule or evidence ID"
 
     if ruling.decision in _REFUND_DECISIONS and ruling.refund_amount is not None:
         if f"${ruling.refund_amount:.2f}" not in norm["rider_explanation"]:

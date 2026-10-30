@@ -135,6 +135,18 @@ class RulingCondition(BaseModel):
     value: str
     fact_ids: list[str] = Field(default_factory=list)
 
+class PartyMessage(BaseModel):
+    """One party's message in parts, for the phone's More info screen.
+
+    ``found`` is what we found (the AI's wording when it passed the narration checks,
+    else the template); ``greeting`` and ``next`` are fixed templates. The full message
+    (``rider_explanation`` / ``driver_explanation``) is the three joined.
+    """
+    greeting: str
+    found: str
+    next: str
+
+
 class Ruling(BaseModel):
     decision: Decision
     recommended_action: str
@@ -144,6 +156,10 @@ class Ruling(BaseModel):
     # The ruling explained to each party; filled in by the judge from `explanation`.
     rider_explanation: str = ""
     driver_explanation: str = ""
+    # The same messages in parts (greeting, what we found, what happens now). Optional so
+    # older saved results still load; the frontend falls back to the full message.
+    rider_message: PartyMessage | None = None
+    driver_message: PartyMessage | None = None
     judge_evidence: list[str] = Field(default_factory=list)
     # Each judge_evidence line's fact ID ("TRIP-1"), in the same order; empty if they can't be paired.
     judge_evidence_ids: list[str] = Field(default_factory=list)
@@ -179,6 +195,7 @@ class PartyResolution(BaseModel):
     decision: Decision
     refund_amount: float | None = None
     message: str
+    message_parts: PartyMessage | None = None
     explanation_source: CaseSource
 
     @classmethod
@@ -189,5 +206,6 @@ class PartyResolution(BaseModel):
             decision=resolution.decision,
             refund_amount=resolution.refund_amount if refund_given else None,
             message=resolution.rider_explanation if party == "rider" else resolution.driver_explanation,
+            message_parts=resolution.rider_message if party == "rider" else resolution.driver_message,
             explanation_source=resolution.explanation_source,
         )

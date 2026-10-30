@@ -100,12 +100,15 @@ def test_history_included_in_evidence():
 @pytest.mark.parametrize("sample", sorted(p.name for p in DISPUTES.glob("*.json")))
 def test_every_ruling_is_explained_to_both_parties(sample):
     result = resolve(load(sample))
-    assert result["rider_explanation"].startswith("Your dispute")
-    assert result["driver_explanation"]
+    assert result["rider_explanation"].startswith("Hi there, thanks for getting in touch")
+    assert result["driver_explanation"].startswith("Hi there, thanks for your patience")
+    for party in ("rider", "driver"):
+        parts = result[f"{party}_message"]
+        assert all(parts[key] for key in ("greeting", "found", "next"))
 
 def test_refund_explanation_states_amount():
     result = resolve(load("route_deviation_001.json"))
-    assert "you will be refunded $6.30." in result["rider_explanation"]
+    assert "you're getting $6.30 back." in result["rider_explanation"]
     assert "$6.30" in result["driver_explanation"]
 
 def test_unknown_history_fields_are_accepted():

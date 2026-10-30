@@ -7,7 +7,7 @@ import { listAppeals } from "./services/api";
 import type { SavedDecision } from "./decisionState";
 import { Icon } from "./Icon";
 import {
-  appealSummary, cleanNote, clockText, closingTitle, createSentStore, finalOutcome, generatedMessage, maxRefund, NOTE_LIMIT,
+  appealSummary, cleanNote, clockText, closingTitle, createSentStore, finalOutcome, generatedMessage, maxRefund, messageParts, NOTE_LIMIT, sentParts,
   noteCounter, noteWarnings, notifyGate, PARTIES, SEND_TOOLTIP, sendBlock, sentText, sentOutcome, validateAmount,
   type FinalOutcome, type Party, type SentRecord,
 } from "./notifyState";
@@ -69,6 +69,8 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
     ? sentOutcome(sent)
     : finalOutcome(resolution, saved, dispute, amountCheck.ok ? amountCheck.value : null);
   const message = (party: Party) => sent ? sent.messages[party] : generatedMessage(party, resolution, outcome);
+  // The More info parts: what was delivered, or what the ruling's own message would say.
+  const parts = (party: Party) => sent ? sent.parts?.[party] ?? null : messageParts(party, resolution, outcome);
   const note = (party: Party) => sent ? sent.notes?.[party] ?? "" : notes[party];
   // Only the reviewer's notes are checked: the generated message is never blocked.
   const warnings = noteWarnings(notes);
@@ -83,6 +85,7 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
     const record: SentRecord = {
       at: clockText(new Date()), timestamp: new Date().toISOString(), disputeId: dispute.dispute_id, reviewer: saved ?? undefined,
       messages: { rider: message("rider"), driver: message("driver") },
+      ...(sentParts(parts) ? { parts: sentParts(parts) } : {}),
       notes: { rider: cleanNote(notes.rider), driver: cleanNote(notes.driver) },
       decision: outcome.decision, amount: outcome.amount,
     };
@@ -129,7 +132,7 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
       </div>}
       <div className="notify-rows">
         {PARTIES.map(party => <div className="notify-row" key={party}>
-          <CustomerPhone key={`${view}-${party}`} party={party} outcome={outcome} message={message(party)} note={cleanNote(note(party))}
+          <CustomerPhone key={`${view}-${party}`} party={party} outcome={outcome} message={message(party)} parts={parts(party)} note={cleanNote(note(party))}
             live={view === "customer" && !!sent} deliveredAt={sent?.at} dispute={dispute} appealsAvailable={appealsAvailable}
             existing={appeals.find(appeal => appeal.party === party) ?? null}
             onAppealed={appeal => { setAppeals(previous => [...previous.filter(item => item.id !== appeal.id), appeal]); onAppealed?.(); }} />
