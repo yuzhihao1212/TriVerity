@@ -2306,6 +2306,18 @@ details.ruling-condition-group[open] > summary::before { transform: rotate(90deg
   .mascot-bubble { animation: mascot-bubble-in .45s .25s cubic-bezier(.3, 1.4, .5, 1) both; transform-origin: left center; }
   .mascot.bubble-left .mascot-bubble { transform-origin: right center; }
 }
+/* The raised wing pivots at its shoulder (image units): a slow "ready" sway, and a real wave. */
+.mascot-wing { transform-box: view-box; transform-origin: 196px 592px; }
+@media (prefers-reduced-motion: no-preference) {
+  .mascot-wing { animation: mascot-wing-ready 2.8s ease-in-out infinite; }
+  .mascot-body.is-wave .mascot-wing { animation: mascot-wing-wave 1.3s cubic-bezier(.4, 0, .3, 1); }
+  .mascot-body.is-hop .mascot-wing { animation: mascot-wing-flap .62s ease-out; }
+  .mascot-body.is-wave { animation: mascot-wave-body 1.3s ease-in-out; }
+}
+@keyframes mascot-wing-ready { 0%, 100% { rotate: 0deg; } 50% { rotate: -4deg; } }
+@keyframes mascot-wing-wave { 0% { rotate: 0deg; } 18% { rotate: -22deg; } 36% { rotate: -6deg; } 54% { rotate: -22deg; } 72% { rotate: -6deg; } 100% { rotate: 0deg; } }
+@keyframes mascot-wing-flap { 30% { rotate: -16deg; } 60% { rotate: 4deg; } 100% { rotate: 0deg; } }
+@keyframes mascot-wave-body { 20%, 60% { rotate: 2deg; } 100% { rotate: 0deg; } }
 @keyframes mascot-breathe { 0%, 100% { scale: 1 1; } 50% { scale: 1.012 1.018; } }
 @keyframes mascot-hop { 0% { translate: 0 0; scale: 1 1; } 18% { translate: 0 2%; scale: 1.06 .94; } 45% { translate: 0 -16%; scale: .97 1.04; } 75% { translate: 0 0; scale: 1.05 .95; } 100% { translate: 0 0; scale: 1 1; } }
 @keyframes mascot-shadow-hop { 45% { scale: .6 .6; opacity: .5; } }
@@ -2316,7 +2328,7 @@ details.ruling-condition-group[open] > summary::before { transform: rotate(90deg
   100% { opacity: 0; transform: rotate(calc(var(--n) * 45deg)) translateY(calc(var(--mascot-w) * -.55)) scale(1); } }
 @keyframes mascot-bubble-in { from { opacity: 0; scale: .85; } }
 .home-greeting .home-hello { font-size: 22px; }
-.home-greeting .home-hello-line { margin-top: 2px; }
+.home-greeting .home-hello-line { margin-top: 2px; color: var(--text); }
 /* The owl's cheer when a case is closed: bottom right, above the sticky bars; dismissible. */
 .mascot-toast { position: fixed; right: var(--space-5); bottom: var(--space-5); z-index: 40; display: flex; align-items: flex-end; gap: var(--space-2); max-width: min(520px, calc(100vw - 32px)); }
 .mascot-toast .mascot { align-items: flex-end; }
