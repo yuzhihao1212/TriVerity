@@ -37,9 +37,9 @@ test('customer name fallback and greeting never invent names', () => {
 
 test('quick notes fill in name and amount and only offer relevant outcome notes', () => {
   const rider = s.quickNotes('rider', outcome('partial_refund'), 'Sam');
-  assert.deepEqual(rider.map(x => x.label), ['Sorry about your trip', 'When the refund arrives', 'Thanks for telling us']);
+  // No refund-timing note until the team confirms the refund time (customerCopy CONFIRMED).
+  assert.deepEqual(rider.map(x => x.label), ['Sorry about your trip', 'Thanks for telling us']);
   assert.match(rider[0].text, /Sam/);
-  assert.match(rider[1].text, /\$6.30/);
   assert.equal(s.quickNotes('rider', outcome('no_action')).some(x => x.id === 'sorry'), false);
   assert.equal(s.quickNotes('rider', outcome('needs_review')).some(x => x.id === 'timing'), false);
   assert.equal(s.quickNotes('rider', outcome('compensation')).some(x => x.id === 'timing'), false);
