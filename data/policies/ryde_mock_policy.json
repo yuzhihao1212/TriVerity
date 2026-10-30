@@ -16,7 +16,7 @@
       "RD-1": "A route up to 15% longer than expected is within normal tolerance; no refund is due.",
       "RD-2": "A longer route that did not take longer than expected is consistent with avoiding congestion; no refund is due.",
       "RD-3": "A route more than 15% longer than expected that also took longer is treated as an unjustified detour; the fare above the expected fare is refunded.",
-      "RD-4": "If expected and actual distance are not both available, the dispute is escalated to human review.",
+      "RD-4": "If expected and actual distance are not both available, or a route more than 15% longer than expected does not have both expected and actual duration, the dispute is escalated to human review.",
       "RD-5": "If an unjustified detour (RD-3) also included an unexpected stop of 10 minutes or more during the trip, the rider also receives a $5.00 credit for the lost time, on top of the fare refund."
     }
   },

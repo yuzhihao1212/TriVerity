@@ -125,11 +125,27 @@ def _judge_route_deviation(case: DisputeCase, facts: CaseFacts, section: dict) -
         )
 
     duration = facts.duration_excess_ratio
+    if duration is None:
+        # RD-2 and RD-3 both turn on whether the trip took longer, which missing data can't show.
+        conditions.append(_condition("RD-4", "Expected and actual trip durations available", False,
+                                     "Missing trip duration data"))
+        return Ruling(
+            conditions=conditions,
+            decision="needs_review",
+            recommended_action="Escalate to a human reviewer: trip duration data is incomplete.",
+            confidence=0.3,
+            explanation=(
+                f"The route was {excess:.0%} longer than expected, but expected and actual trip duration "
+                "are both required to tell whether it also took longer."
+            ),
+            judge_evidence=evidence,
+            policy_refs=[cite(section, "RD-4")],
+        )
+
     conditions.append(_condition("RD-2", "Longer route took no longer than planned",
-                                 duration is not None and duration <= 0,
-                                 f"{duration:+.0%} vs planned duration" if duration is not None else "Duration data unavailable; no time saving established",
+                                 duration <= 0, f"{duration:+.0%} vs planned duration",
                                  facts, ("Trip took ",)))
-    if facts.duration_excess_ratio is not None and facts.duration_excess_ratio <= 0:
+    if duration <= 0:
         return Ruling(
             conditions=conditions,
             decision="no_action",
@@ -143,20 +159,13 @@ def _judge_route_deviation(case: DisputeCase, facts: CaseFacts, section: dict) -
             policy_refs=[cite(section, "RD-2")],
         )
 
-    # RD-3 is reached only after the distance and time-saving branches above.
-    # Missing duration keeps the existing lower-confidence refund, not a claim
-    # that the trip was slower.
+    # RD-3 is reached only after the distance, duration data and time-saving branches above.
     conditions.append(_condition("RD-3", f"Route more than {max_excess:.0%} longer with no recorded time saving",
-                                 True, f"{excess:+.0%} vs planned distance; " +
-                                 (f"{duration:+.0%} vs planned duration" if duration is not None else "duration unavailable"),
+                                 True, f"{excess:+.0%} vs planned distance; {duration:+.0%} vs planned duration",
                                  facts, ("Route was ", "Trip took ")))
     refund = max(facts.fare_difference or 0.0, 0.0)
-    # Without duration data we can't rule out a time-saving detour.
-    confidence = 0.8 if facts.duration_excess_ratio is not None else 0.65
-    explanation = f"The route was {excess:.0%} longer than expected"
-    if facts.duration_excess_ratio is not None:
-        explanation += f" and took {facts.duration_excess_ratio:.0%} longer, so the detour did not save time"
-    explanation += "."
+    confidence = 0.8
+    explanation = f"The route was {excess:.0%} longer than expected and took {duration:.0%} longer, so the detour did not save time."
     if case.driver_statement:
         explanation += " The driver's explanation is noted but is not supported by the trip data."
     stop = longest_stop_min(facts)
