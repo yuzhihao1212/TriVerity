@@ -5,10 +5,10 @@ const v = await load('verdictDisplay');
 const base = { decision: 'partial_refund', confidence: .8, min_confidence: .6, policy_refs: ['RD-3: Detour'], refund_amount: 6.3 };
 
 test('confidence caption and bar use the supplied threshold, including equality', () => {
-  assert.equal(v.confidenceDisplay(base).caption, 'Above the 60% needed to decide automatically.');
+  assert.equal(v.confidenceDisplay(base).caption, 'Above the 60% minimum, so the rules decide.');
   assert.equal(v.confidenceDisplay(base).tone, 'ok');
   const low = v.confidenceDisplay({ ...base, min_confidence: .9 });
-  assert.equal(low.caption, 'Below 90%, so a human reviewer decides.');
+  assert.equal(low.caption, 'Below the 90% minimum, so a human reviewer decides.');
   assert.equal(low.tone, 'warn');
   assert.equal(low.thresholdPercent, 90);
   const equal = v.confidenceDisplay({ ...base, min_confidence: .8 });
@@ -28,7 +28,7 @@ test('escalations retain the rule-specific human review caption even above thres
   const high = v.confidenceDisplay({ ...base, decision: 'needs_review', policy_refs: ['SAFE-1: Threat escalated to human review'] });
   assert.equal(high.caption, 'Sent to a human by SAFE-1, whatever the confidence');
   assert.equal(high.tone, 'ok');
-  assert.doesNotMatch(high.caption, /automatically/);
+  assert.doesNotMatch(high.caption, /rules decide/);
 });
 
 test('conditions keep met and unmet results, order, original values and fact IDs', () => {
@@ -42,6 +42,35 @@ test('conditions keep met and unmet results, order, original values and fact IDs
   assert.equal(rows[1].status, 'Not met');
   assert.deepEqual(rows.map(({ symbol, tone, status, ...check }) => check), conditions);
   for (const old of [{}, { conditions: null }, { conditions: [] }]) assert.deepEqual(v.rulingConditions(old), []);
+});
+
+test('checklist groups the deciding checks first, then the rest, keeping engine order', () => {
+  const rd3 = { rule: 'RD-3', label: 'Long route', met: true, value: '+44%', fact_ids: ['TRIP-1'] };
+  const rd5 = { rule: 'RD-5', label: 'Stop of 10 min or more', met: false, value: '6 min', fact_ids: ['GPS-4'] };
+  const safe = { rule: 'SAFE-1', label: 'Threat', met: false, value: 'None', fact_ids: [] };
+  const groups = v.rulingConditionGroups({ ...base, conditions: [rd5, rd3, safe] });
+  assert.deepEqual(groups.map(g => g.title), ['Decided the case', 'Also checked']);
+  assert.deepEqual(groups[0].checks.map(c => c.rule), ['RD-3']);
+  assert.deepEqual(groups[1].checks.map(c => [c.rule, c.symbol]), [['RD-5', '⊖'], ['SAFE-1', '⊖']]);
+  // Escalated: the overlays decide; the base refund rule moves to "Also checked".
+  const threat = { ...safe, met: true, value: '1 threatening message' };
+  const escalated = v.rulingConditionGroups({ ...base, decision: 'needs_review', policy_refs: ['RD-3: x', 'SAFE-1: y'], conditions: [rd3, threat] });
+  assert.deepEqual(escalated.map(g => g.checks.map(c => c.rule)), [['SAFE-1'], ['RD-3']]);
+  // Nothing deciding: one group, titled without "also".
+  assert.deepEqual(v.rulingConditionGroups({ ...base, policy_refs: [], conditions: [rd5] }).map(g => g.title), ['Checked by the rules']);
+  for (const old of [{}, { conditions: null }, { conditions: [] }]) assert.deepEqual(v.rulingConditionGroups({ ...base, ...old }), []);
+});
+
+test('the plain summary follows the rule that applied, with a neutral fallback for anything else', () => {
+  assert.match(v.rulingSummary(base), /much longer than planned and also took longer/);
+  assert.equal(v.rulingSummary({ ...base, policy_refs: ['REF-1: x'] }), 'The rules approve a partial refund.');
+  assert.match(v.rulingSummary({ decision: 'no_action', policy_refs: ['RD-1: x'] }), /normal distance tolerance/);
+  assert.match(v.rulingSummary({ decision: 'no_action', policy_refs: ['RD-2: x'] }), /took no longer/);
+  assert.match(v.rulingSummary({ decision: 'no_action', policy_refs: ['NS-1: a', 'NS-2: b', 'NS-3: c'] }), /every no-show fee condition/);
+  assert.match(v.rulingSummary({ decision: 'full_refund', policy_refs: ['NS-1: a'] }), /fee is refunded/);
+  assert.match(v.rulingSummary({ decision: 'compensation', policy_refs: ['RD-3: a', 'RD-5: b'] }), /credit for the lost time/);
+  assert.match(v.rulingSummary({ decision: 'needs_review', policy_refs: ['SAFE-1: a'] }), /human/);
+  assert.doesNotMatch(v.rulingSummary({ decision: 'no_action', policy_refs: [] }), /route|no-show/i);
 });
 
 test('sum uses supplied fares only when the equation equals the approved refund', () => {

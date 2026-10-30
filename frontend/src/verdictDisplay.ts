@@ -2,6 +2,7 @@ import { confidenceNote } from "./decisionState";
 import { decisionTone } from "./outcomeTone";
 import { PARTY_DECISION_LABELS } from "./partyView";
 import { money } from "./presentation";
+import { appliedRuleIds, conditionGroups } from "./rulingDetails";
 import type { DisputeCase, Resolution } from "./types";
 
 export const CONFIDENCE_HELP = "Confidence describes how clearly the available facts meet the policy rule. It is set by the rule that applied, not an AI prediction or a probability that the ruling is correct. Safety and other escalation rules can still require human review.";
@@ -15,12 +16,38 @@ export function confidenceDisplay(result: Pick<Resolution, "confidence" | "min_c
   const tone = !known ? "neutral" : result.confidence >= threshold ? "ok" : "warn";
   const caption = result.decision === "needs_review" ? confidenceNote(result.decision, percent, result.policy_refs)
     : !known ? "Automatic-decision threshold unavailable in this result."
-    : result.confidence < threshold ? `Below ${thresholdLabel}, so a human reviewer decides.`
-    : `${result.confidence === threshold ? "At" : "Above"} the ${thresholdLabel} needed to decide automatically.`;
+    : result.confidence < threshold ? `Below the ${thresholdLabel} minimum, so a human reviewer decides.`
+    : `${result.confidence === threshold ? "At" : "Above"} the ${thresholdLabel} minimum, so the rules decide.`;
   return { percent, thresholdPercent, thresholdLabel, tone, caption };
 }
 
-export function rulingHero(result: Pick<Resolution, "decision" | "refund_amount">) {
+/**
+ * One plain sentence for the rule that decided the case. Keyed by rule, so a new rule never
+ * borrows another rule's reason; anything unlisted falls back to a sentence about the outcome.
+ */
+export function rulingSummary(result: Pick<Resolution, "decision" | "policy_refs">): string {
+  const applied = appliedRuleIds(result.policy_refs);
+  const has = (...rules: string[]) => rules.some(rule => applied.includes(rule));
+  const noShow = applied.some(rule => rule.startsWith("NS-"));
+  switch (result.decision) {
+    case "needs_review": return "An escalation rule requires a human to decide this case.";
+    case "compensation": return has("RD-5")
+      ? "The long detour also took longer and included a long stop, so the extra fare is refunded with a credit for the lost time."
+      : "The rules approve compensation.";
+    case "partial_refund": return has("RD-3")
+      ? "The route was much longer than planned and also took longer, so the extra fare is refunded."
+      : "The rules approve a partial refund.";
+    case "full_refund": return noShow
+      ? "A no-show fee condition was not met, so the fee is refunded."
+      : "The charge did not meet the policy requirements, so it is refunded.";
+    default: return has("RD-1") ? "The route was within the normal distance tolerance, so the fare stands."
+      : has("RD-2") ? "The longer route took no longer than planned, so the fare stands."
+      : noShow ? "The driver met every no-show fee condition, so the fee stands."
+      : "The charge meets the policy checks.";
+  }
+}
+
+export function rulingHero(result: Pick<Resolution, "decision" | "refund_amount" | "policy_refs">) {
   const refund = decisionTone(result.decision) === "ok";
   const amount = refund && result.refund_amount != null ? result.refund_amount : null;
   return {
@@ -29,17 +56,26 @@ export function rulingHero(result: Pick<Resolution, "decision" | "refund_amount"
     headline: amount != null ? money(amount) : result.decision === "needs_review" ? "Awaiting human review" : refund ? "Refund approved" : "The charge stands",
     suffix: amount != null ? "back to the rider" : "",
     checklistTitle: amount != null ? `Why the rider gets ${money(amount)}` : result.decision === "needs_review" ? "Why a human needs to decide" : refund ? "Why the refund is approved" : "Why the charge stands",
-    summary: result.decision === "partial_refund" ? "The long detour had no recorded time saving, so the extra fare is refunded."
-      : result.decision === "full_refund" ? "The charge did not meet the policy requirements, so it is refunded."
-      : result.decision === "compensation" ? "The rules approve a fare refund and a credit for lost time."
-      : result.decision === "needs_review" ? "An escalation rule requires a human to decide this case."
-      : "The charge meets the policy checks.",
+    summary: rulingSummary(result),
   };
 }
 
 /** Preserve the engine's order, wording, values and IDs, including unmet checks. */
 export function rulingConditions(result: Pick<Resolution, "conditions">) {
   return (result.conditions ?? []).map(check => ({ ...check, symbol: check.met ? "✓" : "⊖", tone: check.met ? "ok" : "neutral", status: check.met ? "Met" : "Not met" }));
+}
+
+/**
+ * The checks that decided the outcome first, then everything else the rules also checked
+ * (the safety, fraud, precedent and confidence overlays, and base checks that didn't apply).
+ * Empty groups are left out; with no deciding checks the rest reads "Checked by the rules".
+ */
+export function rulingConditionGroups(result: Pick<Resolution, "conditions" | "policy_refs" | "decision">) {
+  const { deciding, others } = conditionGroups(result);
+  return [
+    { key: "deciding", title: "Decided the case", checks: rulingConditions({ conditions: deciding }) },
+    { key: "others", title: deciding.length ? "Also checked" : "Checked by the rules", checks: rulingConditions({ conditions: others }) },
+  ].filter(group => group.checks.length > 0);
 }
 
 /** Show a refund equation only when the supplied amount really equals this difference. */

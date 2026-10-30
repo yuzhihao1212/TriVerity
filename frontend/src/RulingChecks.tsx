@@ -14,11 +14,7 @@ export function RulingChecks({ resolution, availableIds, onSelectFact }: { resol
   const id = useId();
   const [open, setOpen] = useState<Set<CheckRowId>>(() => new Set());
   const [opened, setOpened] = useState<Set<CheckRowId>>(() => new Set());
-  const rows = reviewRows(resolution).map(row => row.id === "why" ? {
-    ...row, question: "In plain words", answer: "How the Judge explains the rules and each side’s argument.",
-  } : row.id === "changes" && resolution.counterfactuals?.length ? {
-    ...row, answer: "Explore alternative facts and their outcomes.",
-  } : row);
+  const rows = reviewRows(resolution);
   const priority = priorityChip(resolution);
   const allOpen = open.size === rows.length;
   function toggle(key: CheckRowId) {

@@ -10,7 +10,7 @@ import { Icon } from "./Icon";
 import { SourceBadge } from "./SourceBadge";
 import { money, outputSources, policyIds } from "./presentation";
 import { Term } from "./Term";
-import { CONFIDENCE_HELP, confidenceDisplay, refundSum, rulingConditions, rulingCredits, rulingHero } from "./verdictDisplay";
+import { CONFIDENCE_HELP, confidenceDisplay, refundSum, rulingConditionGroups, rulingCredits, rulingHero } from "./verdictDisplay";
 import type { DisputeCase, Resolution } from "./types";
 
 let seen: ReturnType<typeof createSeenCases> | undefined;
@@ -23,13 +23,15 @@ function seenRulings() {
   return seen;
 }
 
-export function VerdictSummary({ resolution, disputeId, dispute, availableIds, onSelectFact }: {
-  resolution: Resolution; disputeId: string; dispute: DisputeCase;
+export function VerdictSummary({ resolution, dispute, availableIds, onSelectFact }: {
+  resolution: Resolution; dispute: DisputeCase;
 } & FactLinks) {
   const id = useId();
+  const disputeId = dispute.dispute_id;
   const hero = rulingHero(resolution);
   const confidence = confidenceDisplay(resolution);
-  const checks = rulingConditions(resolution);
+  const groups = rulingConditionGroups(resolution);
+  const total = groups.reduce((sum, group) => sum + group.checks.length, 0);
   const sum = refundSum(resolution, dispute.fare);
   const credits = rulingCredits(resolution);
   const [sourcesOpen, setSourcesOpen] = useState(false);
@@ -53,7 +55,7 @@ export function VerdictSummary({ resolution, disputeId, dispute, availableIds, o
     const reduce = () => { if (media.matches) finish(); };
     media.addEventListener("change", reduce);
     return () => { cancelAnimationFrame(frame); media.removeEventListener("change", reduce); };
-  }, [disputeId, resolution, hero.amount, firstView]);
+  }, [disputeId, hero.amount, firstView]);
   const change = resolution.counterfactuals?.[0];
   return <section id="ruling-summary" tabIndex={-1} className={`card verdict ruling ruling-revamp ${resolution.decision}${intro ? " ruling-intro" : ""}`} aria-labelledby={`${id}-title`}>
     <div className={`ruling-hero tone-${hero.tone}`}>
@@ -72,15 +74,21 @@ export function VerdictSummary({ resolution, disputeId, dispute, availableIds, o
         <p id={`${id}-confidence-note`} className="ruling-confidence-caption">{confidence.caption}</p>
       </div>
     </div>
-    {checks.length > 0 && <div className="ruling-proof" aria-labelledby={`${id}-checks`}>
+    {total > 0 && <div className="ruling-proof" aria-labelledby={`${id}-checks`}>
       <h3 id={`${id}-checks`}>{hero.checklistTitle}</h3>
       <div className="ruling-policy-summary"><span className="ruling-rule-tags">{policyIds(resolution.policy_refs).map(rule => <Chip key={rule} size="sm"><Term rule={rule} contained /></Chip>)}</span><p>{hero.summary}</p></div>
-      <ul className="ruling-condition-list">{checks.map((check, index) => <li key={`${check.rule}-${index}`} style={{ "--condition-delay": `${200 + index / Math.max(1, checks.length - 1) * 850}ms` } as CSSProperties}>
-        <span className={`ruling-condition-symbol${check.met ? " met" : ""}`} aria-hidden="true">{check.symbol}</span>
-        <div className="ruling-condition-label"><span className="sr-only">{check.status}: </span>{check.label}<Chip size="sm"><Term rule={check.rule} contained /></Chip></div>
-        <span className="ruling-condition-value">{check.value}</span>
-        <span className="ruling-fact-ids">{check.fact_ids.map(factId => <Chip key={factId} size="sm" tone="neutral"><EvidenceText text={factId} availableIds={availableIds} onSelectFact={onSelectFact} /></Chip>)}</span>
-      </li>)}</ul>
+      {groups.map((group, groupIndex) => {
+        const offset = groups.slice(0, groupIndex).reduce((sum, previous) => sum + previous.checks.length, 0);
+        return <section key={group.key} className={`ruling-condition-group is-${group.key}`} aria-labelledby={`${id}-${group.key}`}>
+          <h4 id={`${id}-${group.key}`} className="ruling-condition-group-title">{group.title}</h4>
+          <ul className="ruling-condition-list">{group.checks.map((check, index) => <li key={`${check.rule}-${index}`} style={{ "--condition-delay": `${200 + (offset + index) / Math.max(1, total - 1) * 850}ms` } as CSSProperties}>
+            <span className={`ruling-condition-symbol${check.met ? " met" : ""}`} aria-hidden="true">{check.symbol}</span>
+            <div className="ruling-condition-label"><span className="sr-only">{check.status}: </span>{check.label} <Chip size="sm"><Term rule={check.rule} contained /></Chip></div>
+            <span className="ruling-condition-value">{check.value}</span>
+            <span className="ruling-fact-ids">{check.fact_ids.map(factId => <Chip key={factId} size="sm" tone="neutral"><EvidenceText text={factId} availableIds={availableIds} onSelectFact={onSelectFact} /></Chip>)}</span>
+          </li>)}</ul>
+        </section>;
+      })}
       {sum && <p className="ruling-sum">Charged <span>{sum.charged}</span> <span aria-hidden="true">−</span><span className="sr-only">minus</span> Expected <span>{sum.expected}</span> <span aria-hidden="true">=</span><span className="sr-only">equals</span> <strong>{sum.amount}</strong></p>}
     </div>}
     {change && <p className="ruling-change"><Icon name="swap" /><span><strong>What would change it: </strong>If {change.change}, the outcome would be {change.outcome}.</span></p>}
