@@ -1906,3 +1906,73 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
   /* Rule explanations stay inside the viewport, above the existing decision bar. */
   .ruling-checks .term-tip { position: fixed; top: auto; bottom: 150px; left: 16px; right: 16px; width: auto; max-width: none; transform: none; }
 }
+
+/* Evidence option A: all ordinary fact rows share their source card's column tracks. */
+.evidence-display .fact-card { --fact-columns: 100px minmax(0, 1fr) max-content max-content; display: grid; grid-template-columns: var(--fact-columns); column-gap: 12px; }
+.evidence-display .fact-card > * { grid-column: 1 / -1; min-width: 0; }
+.evidence-display .aligned-grid { display: grid; grid-template-columns: subgrid; gap: 0 12px; }
+.evidence-display .aligned-fact-row { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; gap: 6px 12px; padding: 10px 0 !important; border-left: 0; border-bottom: 1px solid var(--border); position: relative; font-variant-numeric: tabular-nums; }
+.evidence-display .aligned-fact-main { display: contents; }
+.evidence-display .aligned-fact-label { grid-column: 1; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.evidence-display .aligned-fact-value { grid-column: 2; min-width: 0; font-size: 13px; font-weight: 400; line-height: 1.5; }
+.evidence-display .aligned-fact-value.fact-comparison-values { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px; }
+.evidence-display .aligned-fact-value.fact-prose { grid-column: 2 / 4; }
+.evidence-display .aligned-fact-value .expected, .evidence-display .comparison-arrow { color: var(--muted); }
+.evidence-display .aligned-fact-value.fact-comparison-values > span { white-space: nowrap; }
+.evidence-display .fact-change { grid-column: 3; justify-self: start; white-space: nowrap; }
+.evidence-display .aligned-fact-main > .fact-reference { grid-column: 4; justify-self: end; margin: 0; }
+.evidence-display .evidence-link { min-height: 24px; }
+.evidence-display .evidence-trip-comparison, .evidence-display .fact-receipt { padding: 0 !important; background: none; border-radius: 0; }
+.evidence-display .fact-receipt > .fact-row:not(.aligned-fact-row) { grid-column: 1 / -1; }
+.evidence-display .history-profiles { gap: 0 12px; }
+.evidence-display .evidence-related { grid-column: 2 / -1; min-width: 0; padding: 0; margin: 0; }
+.evidence-display .evidence-related-trigger { display: inline-block; min-height: 24px; padding: 3px 0; border: 0; background: none; color: var(--muted); font: inherit; font-size: 12px; font-weight: 400; line-height: 1.5; text-align: left; cursor: pointer; overflow-wrap: anywhere; }
+.evidence-display .evidence-related-trigger:hover { text-decoration: underline; text-underline-offset: 3px; }
+.evidence-display .evidence-related ul { padding-left: 12px; margin-top: 4px; }
+.evidence-display .evidence-related .aligned-grid { grid-template-columns: var(--fact-columns); }
+.evidence-display .fact-original { font-size: 12px; line-height: 1.5; }
+.evidence-intro { position: relative; }
+.evidence-info { display: inline-flex; vertical-align: middle; }
+.evidence-info-button.icon-button { width: 24px; min-width: 24px; height: 24px; min-height: 24px; padding: 3px; color: var(--muted); }
+.evidence-info-button .icon { width: 16px; height: 16px; }
+.evidence-info-tip { position: absolute; left: 0; top: 100%; z-index: 30; width: min(340px, 100%); padding: 12px; border: 1px solid var(--control-border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 12px; font-weight: 400; line-height: 1.5; box-shadow: 0 4px 12px color-mix(in srgb, var(--text) 12%, transparent); }
+
+/* GPS number rows: the tiny pictures summarise supplied counts and recorded times. */
+.evidence-display .gps-fact-grid { display: grid; grid-template-columns: minmax(90px, .6fr) minmax(90px, .6fr) minmax(0, 3fr) max-content; column-gap: 14px; }
+.evidence-display .gps-fact-grid .aligned-fact-row { grid-template-columns: subgrid; }
+.evidence-display .gps-fact-number { grid-column: 2; font-size: 24px; font-weight: 500; line-height: 1.15; }
+.evidence-display .gps-fact-number small { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-top: 4px; font-size: 12px; color: var(--muted); font-weight: 400; }
+.evidence-display .gps-fact-story { grid-column: 3; min-width: 0; display: grid; gap: 6px; font-size: 13px; line-height: 1.5; }
+.evidence-display .gps-fact-story p { margin: 0; }
+.evidence-display .gps-fact-detail { font-size: 12px; color: var(--muted); }
+.gps-mini-picture { width: 100%; max-width: 350px; }
+.gps-mini-track { height: 8px; border-radius: 4px; background: var(--border); position: relative; overflow: hidden; }
+.gps-mini-track > span { position: absolute; height: 100%; background: var(--warn-text); }
+.gps-mini-axis { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px; margin-top: 4px; font-size: 10px; color: var(--muted); }
+.gps-reading-dots { display: grid; grid-template-columns: repeat(18, minmax(0, 1fr)); gap: 3px; max-width: 260px; }
+.gps-reading-dots i { aspect-ratio: 1; max-height: 12px; border-radius: 50%; background: var(--control-border); }
+.gps-reading-dots i.off { background: var(--warn-text); }
+@media (prefers-reduced-motion: no-preference) {
+  .gps-reading-dots i { animation: gps-dot-appear .15s both; animation-delay: calc(var(--dot-index) * 18ms); }
+}
+@keyframes gps-dot-appear { from { opacity: 0; transform: scale(.3); } to { opacity: 1; transform: none; } }
+.presentation-mode .evidence-display .aligned-fact-value, .presentation-mode .evidence-display .gps-fact-story { font-size: 15px; }
+.presentation-mode .evidence-display .aligned-fact-label, .presentation-mode .evidence-display .gps-fact-detail, .presentation-mode .evidence-display .evidence-related-trigger { font-size: 13px; }
+@media (max-width: 760px) {
+  .evidence-display .fact-card { --fact-columns: minmax(0, 1fr) auto; column-gap: 8px; }
+  .evidence-display .aligned-grid, .evidence-display .aligned-fact-row { column-gap: 8px; }
+  .evidence-display .aligned-fact-main > .aligned-fact-label { grid-column: 1; grid-row: 1; }
+  .evidence-display .aligned-fact-main > .fact-reference { grid-column: 2; grid-row: 1; }
+  .evidence-display .aligned-fact-value, .evidence-display .aligned-fact-value.fact-prose { grid-column: 1 / -1; grid-row: 2; }
+  .evidence-display .fact-change { grid-column: 1 / -1; grid-row: 3; }
+  .evidence-display .evidence-related { grid-column: 1 / -1; }
+  .evidence-display .gps-fact-grid { grid-template-columns: minmax(0, 1fr) auto; column-gap: 8px; }
+  .evidence-display .gps-fact-number { grid-column: 1 / -1; grid-row: 2; }
+  .evidence-display .gps-fact-story { grid-column: 1 / -1; grid-row: 3; }
+}
+/* Folded source-level fact lists inherit the same tracks as the visible rows. */
+.evidence-display .fact-card > .evidence-related { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; column-gap: 12px; }
+.evidence-display .fact-card > .evidence-related > .evidence-related-trigger { grid-column: 2 / -1; justify-self: start; }
+.evidence-display .fact-card > .evidence-related > div:not([hidden]) { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; column-gap: 12px; }
+.evidence-display .fact-card > .evidence-related > div > .aligned-grid { grid-column: 1 / -1; grid-template-columns: subgrid; padding-left: 0; border-left: 0; }
+@media (max-width: 760px) { .evidence-display .fact-card > .evidence-related > .evidence-related-trigger { grid-column: 1 / -1; } }
