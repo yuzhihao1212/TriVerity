@@ -75,7 +75,7 @@ export function AppealsPanel({ disputeId, version, onChanged }: { disputeId: str
   const [appeals, setAppeals] = useState<Appeal[]>([]);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
-    // Off in the public demo (403): show nothing rather than an error on every dispute.
+    // Off in the public demo without a judge code (403): show nothing rather than an error on every dispute.
     listAppeals(disputeId).then(setAppeals)
       .catch((e: Error) => e instanceof ApiError && e.status === 403 ? setAppeals([]) : setError(e.message));
   }, [disputeId, version]);

@@ -22,7 +22,7 @@ function describe(status: number, retryAfter: number | null): string {
     case 422:
       return "Some fields are too long or out of range: claims and statements up to 2,000 characters, up to 50 chat messages of 500 characters, and realistic trip and fare numbers.";
     case 403:
-      return "Appeals and reviewer decisions are turned off in the public demo.";
+      return "Appeals and reviewer decisions need your judge access code on the public demo. Enter it in the Judge access code field (shown when you add a dispute and above Run agents on your own disputes).";
     case 429:
       return `Rate limit reached. Try again in ${retryAfter ?? 60} seconds.`;
     case 503:
@@ -82,27 +82,42 @@ export function resolveDisputeLive(payload: DisputeCase, onStep: (entry: AgentLo
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
 
-/** A party contests a ruling (off in the public demo). */
-export function fileAppeal(body: { case: DisputeCase; party: "rider" | "driver"; reason: string; original_decision: Decision }) {
-  return request<Appeal>("/appeals", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(body) });
+// The judge's access code for appeals and reviewer decisions. In the public demo these need
+// it, and each code works in its own sandbox; elsewhere the server ignores it.
+let reviewerCode = "";
+
+/** Set by the console whenever the judge changes the Judge access code field. */
+export function setReviewerAccessCode(code: string) {
+  reviewerCode = code.trim();
 }
 
-/** The reviewer's queue for one dispute. */
-/** The appeals queue, for one dispute or (no ID) all of them. 403 in the public demo. */
+function reviewerHeaders(json: boolean): Record<string, string> {
+  const headers: Record<string, string> = json ? { ...JSON_HEADERS } : {};
+  if (reviewerCode) headers["X-Demo-Key"] = reviewerCode;
+  return headers;
+}
+
+/** A party contests a ruling (public demo: needs the judge access code). */
+export function fileAppeal(body: { case: DisputeCase; party: "rider" | "driver"; reason: string; original_decision: Decision }) {
+  return request<Appeal>("/appeals", { method: "POST", headers: reviewerHeaders(true), body: JSON.stringify(body) });
+}
+
+/** The appeals queue, for one dispute or (no ID) all of them. Public demo: 403 without a code. */
 export function listAppeals(disputeId?: string) {
-  return request<Appeal[]>(disputeId ? `/appeals?dispute_id=${encodeURIComponent(disputeId)}` : "/appeals");
+  return request<Appeal[]>(disputeId ? `/appeals?dispute_id=${encodeURIComponent(disputeId)}` : "/appeals",
+    { headers: reviewerHeaders(false) });
 }
 
 /** The reviewer's final decision on an appeal; it becomes a precedent. */
 export function decideAppeal(id: string, body: { decision: Exclude<Decision, "needs_review">; note: string }) {
   return request<Appeal>(`/appeals/${encodeURIComponent(id)}/decision`, {
-    method: "POST", headers: JSON_HEADERS, body: JSON.stringify(body),
+    method: "POST", headers: reviewerHeaders(true), body: JSON.stringify(body),
   });
 }
 
-/** A reviewer's final decision on a dispute; it becomes a precedent (off in the public demo). */
+/** A reviewer's final decision on a dispute; it becomes a precedent (public demo: needs the code). */
 export function recordReviewerDecision(body: { case: DisputeCase; decision: Exclude<Decision, "needs_review">; note: string }) {
   return request<{ id: string; summary: string; decision: string }>("/precedents/feedback", {
-    method: "POST", headers: JSON_HEADERS, body: JSON.stringify(body),
+    method: "POST", headers: reviewerHeaders(true), body: JSON.stringify(body),
   });
 }

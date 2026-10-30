@@ -28,5 +28,5 @@ test('a refused own run points to the field: 401 (wrong code) or 404 (no code on
   assert.equal(ch.accessCodeProblem(null, true), false);
   assert.match(ch.accessCodeMessage(401), /not recognised.*Judge access code field above Run agents/);
   assert.match(ch.accessCodeMessage(404), /need a judge access code.*above Run agents/);
-  assert.match(ch.ACCESS_CODE_HELP, /Sample disputes don't need it/);
+  assert.match(ch.ACCESS_CODE_HELP, /record decisions and appeals\. Running the sample disputes doesn't need it/);
 });
