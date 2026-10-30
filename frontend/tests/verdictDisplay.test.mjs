@@ -27,7 +27,7 @@ test('confidence caption and bar use the supplied threshold, including equality'
 test('escalations retain the rule-specific human review caption even above threshold', () => {
   const high = v.confidenceDisplay({ ...base, decision: 'needs_review', policy_refs: ['SAFE-1: Threat escalated to human review'] });
   assert.equal(high.caption, 'Sent to a human by SAFE-1, whatever the confidence');
-  assert.equal(high.tone, 'ok');
+  assert.equal(high.tone, 'neutral'); // escalated: no pass/fail colour
   assert.doesNotMatch(high.caption, /rules decide/);
 });
 

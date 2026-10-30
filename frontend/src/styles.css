@@ -2087,6 +2087,13 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .ruling-fact-ids { display: flex; flex-wrap: wrap; gap: 4px; }
 .ruling-fact-ids .chip { padding: 0 5px; }
 .ruling-fact-ids .evidence-link { min-height: 24px; padding: 2px; }
+.ruling-fact-ids .evidence-link { color: var(--muted); text-decoration-color: var(--border); }
+.ruling-fact-ids .evidence-link:hover { color: var(--text); }
+details.ruling-condition-group > summary { display: flex; align-items: center; gap: var(--space-1); min-height: 24px; cursor: pointer; list-style: none; }
+details.ruling-condition-group > summary::-webkit-details-marker { display: none; }
+details.ruling-condition-group > summary::before { content: "▸"; color: var(--accent-text); transition: transform .2s ease; }
+details.ruling-condition-group[open] > summary::before { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) { details.ruling-condition-group > summary::before { transition: none; } }
 .ruling-sum { display: flex; flex-wrap: wrap; gap: 5px 8px; align-items: baseline; border-top: 1px dashed var(--control-border); padding-top: 16px; margin: 6px 0 0; font-size: 14px; font-variant-numeric: tabular-nums; }
 .ruling-sum strong { font-size: 22px; color: var(--ok-text); }
 .ruling-change { display: flex; align-items: start; gap: 9px; margin: 0; color: var(--muted); font-size: 13px; }

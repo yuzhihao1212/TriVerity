@@ -13,7 +13,8 @@ export function confidenceDisplay(result: Pick<Resolution, "confidence" | "min_c
   const known = typeof threshold === "number" && Number.isFinite(threshold) && threshold >= 0 && threshold <= 1;
   const thresholdPercent = known ? threshold * 100 : null;
   const thresholdLabel = thresholdPercent == null ? null : `${Number(thresholdPercent.toFixed(2))}%`;
-  const tone = !known ? "neutral" : result.confidence >= threshold ? "ok" : "warn";
+  // An escalated case goes to a person whatever the number, so its bar takes no pass/fail colour.
+  const tone = !known || result.decision === "needs_review" ? "neutral" : result.confidence >= threshold ? "ok" : "warn";
   const caption = result.decision === "needs_review" ? confidenceNote(result.decision, percent, result.policy_refs)
     : !known ? "Automatic-decision threshold unavailable in this result."
     : result.confidence < threshold ? `Below the ${thresholdLabel} minimum, so a human reviewer decides.`

@@ -79,15 +79,22 @@ export function VerdictSummary({ resolution, dispute, availableIds, onSelectFact
       <div className="ruling-policy-summary"><span className="ruling-rule-tags">{policyIds(resolution.policy_refs).map(rule => <Chip key={rule} size="sm"><Term rule={rule} contained /></Chip>)}</span><p>{hero.summary}</p></div>
       {groups.map((group, groupIndex) => {
         const offset = groups.slice(0, groupIndex).reduce((sum, previous) => sum + previous.checks.length, 0);
-        return <section key={group.key} className={`ruling-condition-group is-${group.key}`} aria-labelledby={`${id}-${group.key}`}>
-          <h4 id={`${id}-${group.key}`} className="ruling-condition-group-title">{group.title}</h4>
-          <ul className="ruling-condition-list">{group.checks.map((check, index) => <li key={`${check.rule}-${index}`} style={{ "--condition-delay": `${200 + (offset + index) / Math.max(1, total - 1) * 850}ms` } as CSSProperties}>
+        const list = <ul className="ruling-condition-list">{group.checks.map((check, index) => <li key={`${check.rule}-${index}`} style={{ "--condition-delay": `${200 + (offset + index) / Math.max(1, total - 1) * 850}ms` } as CSSProperties}>
             <span className={`ruling-condition-symbol${check.met ? " met" : ""}`} aria-hidden="true">{check.symbol}</span>
             <div className="ruling-condition-label"><span className="sr-only">{check.status}: </span>{check.label} <Chip size="sm"><Term rule={check.rule} contained /></Chip></div>
             <span className="ruling-condition-value">{check.value}</span>
             <span className="ruling-fact-ids">{check.fact_ids.map(factId => <Chip key={factId} size="sm" tone="neutral"><EvidenceText text={factId} availableIds={availableIds} onSelectFact={onSelectFact} /></Chip>)}</span>
-          </li>)}</ul>
-        </section>;
+          </li>)}</ul>;
+        // The deciding checks stay open; the rest (often eight overlays and unmet branches) fold.
+        return group.key === "others" && groups.length > 1
+          ? <details key={group.key} className={`ruling-condition-group is-${group.key}`}>
+              <summary className="ruling-condition-group-title">{group.title} · {group.checks.length} more {group.checks.length === 1 ? "check" : "checks"}</summary>
+              {list}
+            </details>
+          : <section key={group.key} className={`ruling-condition-group is-${group.key}`} aria-labelledby={`${id}-${group.key}`}>
+              <h4 id={`${id}-${group.key}`} className="ruling-condition-group-title">{group.title}</h4>
+              {list}
+            </section>;
       })}
       {sum && <p className="ruling-sum">Charged <span>{sum.charged}</span> <span aria-hidden="true">−</span><span className="sr-only">minus</span> Expected <span>{sum.expected}</span> <span aria-hidden="true">=</span><span className="sr-only">equals</span> <strong>{sum.amount}</strong></p>}
     </div>}
