@@ -17,20 +17,20 @@ const rows = [
 ];
 
 test('after closing a guided case, follow guided order before the urgent queue', () => {
-  const next = nextAfterClose(rows, 'D001');
+  const next = nextAfterClose(rows, 'D001', true);
   assert.equal(next.row.id, 'D006');
   assert.equal(next.label, `Next: Case 2 · ${START_HERE[1].title} →`);
-  const third = nextAfterClose(rows, 'D006');
+  const third = nextAfterClose(rows, 'D006', true);
   assert.equal(third.row.id, 'D007');
   assert.equal(third.label, `Next: Case 3 · ${START_HERE[2].title} →`);
 });
 
 test('skip closed or unavailable guided cases and fall back after the last guided case', () => {
   const closedSecond = rows.map(row => row.id === 'D006' ? { ...row, status: 'closed' } : row);
-  assert.equal(nextAfterClose(closedSecond, 'D001').row.id, 'D007');
-  assert.equal(nextAfterClose(rows.filter(row => row.id !== 'D006'), 'D001').row.id, 'D007');
-  assert.equal(nextAfterClose(rows, 'D007').row.id, 'urgent');
-  assert.equal(nextAfterClose(rows.map(row => ({ ...row, status: 'closed' })), 'D001'), null);
+  assert.equal(nextAfterClose(closedSecond, 'D001', true).row.id, 'D007');
+  assert.equal(nextAfterClose(rows.filter(row => row.id !== 'D006'), 'D001', true).row.id, 'D007');
+  assert.equal(nextAfterClose(rows, 'D007', true).row.id, 'urgent');
+  assert.equal(nextAfterClose(rows.map(row => ({ ...row, status: 'closed' })), 'D001', true), null);
 });
 
 test('non-guided cases keep the normal queue order and label', () => {
@@ -128,3 +128,9 @@ test('every outcome has one wording, shared by the ruling, the lists and the age
   assert.deepEqual(STATUS_LABELS, DECISION_LABELS);
 });
 
+
+test('with the guided demo hidden, closing a guided case moves on in normal queue order', async () => {
+  const { GUIDED_DEMO } = await load('homeState');
+  assert.equal(GUIDED_DEMO, false);
+  assert.deepEqual(nextAfterClose(rows, 'D001'), { row: rows[0], label: 'Next case: urgent →' });
+});
