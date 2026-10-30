@@ -33,7 +33,7 @@ import { savedText } from "./decisionState";
 import { AiToggle } from "./AiToggle";
 import { readAiMode, writeAiMode, type AiMode } from "./aiMode";
 import { CurrentCaseShortcut, SidebarNewButton, SidebarToggle } from "./SidebarToggle";
-import { readGroupOpen, writeGroupOpen, readSidebarOpen, writeSidebarOpen } from "./sidebar";
+import { initialSidebarState, openSidebarState, readGroupOpen, readSidebarOpen, sidebarIsOpen, toggleSidebarState, writeGroupOpen, writeSidebarOpen, type SidebarState } from "./sidebar";
 import { PresentationToggle, ThemeToggle } from "./ThemeToggle";
 import type { Theme } from "./theme";
 import { PartyPreview, sentRecords } from "./PartyPreview";
@@ -91,24 +91,31 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
 }) {
   const [filter, setFilter] = useState<DisputeFilter>("all");
   const [aiMode, setAiMode] = useState<AiMode>(() => readAiMode(localStorage));
-  const [sidebarOpen, setSidebarOpen] = useState(() => readSidebarOpen(localStorage));
+  // Case pages keep the stored choice; home starts as the collapsed rail (see sidebar.ts).
+  const [sidebar, setSidebar] = useState(() => initialSidebarState(readSidebarOpen(localStorage)));
+  const onHomeRef = useRef(false);
   const [groupOpen, setGroupOpen] = useState<Record<Category, boolean>>(() => ({
     route: readGroupOpen("route"), "no-show": readGroupOpen("no-show"), other: readGroupOpen("other"),
   }));
   const [revealCurrent, setRevealCurrent] = useState(false);
   const currentCaseButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    if (!sidebarOpen || !revealCurrent) return;
+    if (!sidebar.caseOpen || !revealCurrent) return;
     reveal(currentCaseButton.current, "nearest", { instant: true });
     setRevealCurrent(false);
-  }, [sidebarOpen, revealCurrent]);
+  }, [sidebar.caseOpen, revealCurrent]);
   function setCategoryOpen(category: Category, open: boolean) {
     setGroupOpen(previous => ({ ...previous, [category]: open }));
     writeGroupOpen(category, open);
   }
-  function toggleSidebar() {
-    setSidebarOpen(open => { writeSidebarOpen(localStorage, !open); return !open; });
+  function updateSidebar(change: (state: SidebarState, onHome: boolean) => { state: SidebarState; persist: boolean }) {
+    setSidebar(state => {
+      const next = change(state, onHomeRef.current);
+      if (next.persist) writeSidebarOpen(localStorage, next.state.caseOpen);
+      return next.state;
+    });
   }
+  const toggleSidebar = () => updateSidebar(toggleSidebarState);
   useEffect(() => {
     // Ctrl/Cmd+Shift+S, as in chat apps; ignored while typing in a field.
     function onKey(event: KeyboardEvent) {
@@ -357,6 +364,10 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
 
   // One appeal list feeds the queue and case banner; unavailable (403) shows neither.
   const onHome = active && !form && !selected && !loadingSamples;
+  onHomeRef.current = onHome;
+  const sidebarOpen = sidebarIsOpen(sidebar, onHome);
+  // A filter picked from the collapsed rail opens the list, so its effect is visible.
+  const changeFilter = (value: DisputeFilter) => { setFilter(value); if (!sidebarOpen) updateSidebar(openSidebarState); };
   useEffect(() => {
     if (!active) return;
     let live = true;
@@ -442,8 +453,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
     select(selected);
     if (filter !== "all" && selected.type !== filter) setFilter("all");
     setCategoryOpen(disputeCategory(selected.type), true);
-    writeSidebarOpen(localStorage, true);
-    setSidebarOpen(true);
+    updateSidebar(openSidebarState);
     setRevealCurrent(true);
   }
 
@@ -468,18 +478,19 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
         </div>
       </header>
 
-      <div className={`layout${onHome ? " no-sidebar" : sidebarOpen ? "" : " sidebar-collapsed"}`}>
-        {/* On the home page the queue is the list, so the sidebar returns only in the case view. */}
-        {!onHome && <nav className="sidebar" aria-label="Disputes">
+      <div className={`layout${onHome ? " on-home" : ""}${sidebarOpen ? "" : " sidebar-collapsed"}`}>
+        {/* Always present, so nothing jumps between home and a case; home starts as the collapsed rail. */}
+        <nav className="sidebar" aria-label="Disputes">
           <div className="sidebar-head">
             <SidebarToggle open={sidebarOpen} onToggle={toggleSidebar} />
-            <a className="icon-button home-button" href={HOME_HASH} aria-label="Back to queue" title="Back to queue"><Icon name="home" /></a>
+            <a className={`icon-button home-button${onHome ? " is-current" : ""}`} href={HOME_HASH} aria-current={onHome ? "page" : undefined}
+              aria-label={onHome ? "Queue" : "Back to queue"} title={onHome ? "Queue" : "Back to queue"}><Icon name="home" /></a>
             {sidebarOpen
               ? <div className="sidebar-actions">
-                  <FilterMenu value={filter} onChange={setFilter} />
+                  <FilterMenu value={filter} onChange={changeFilter} />
                   <SidebarNewButton onClick={newDispute} />
                 </div>
-              : <SidebarNewButton onClick={newDispute} />}
+              : <>{onHome && <FilterMenu value={filter} onChange={changeFilter} />}<SidebarNewButton onClick={newDispute} /></>}
           </div>
           {!sidebarOpen && selected && <CurrentCaseShortcut id={selected.dispute_id} summary={disputeLabel(selected)} type={selected.type}
             icon={<TypeIcon type={selected.type} />} onOpen={openCurrentCase} />}
@@ -503,7 +514,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
             </ul>
           </section>)}
           </div>
-        </nav>}
+        </nav>
 
         <main className="content" id="main-content" tabIndex={-1}>
           <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">

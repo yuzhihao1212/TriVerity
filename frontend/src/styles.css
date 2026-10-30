@@ -181,9 +181,10 @@ textarea { width: 100%; resize: vertical; }
 .layout { display: grid; grid-template-columns: 236px minmax(0, 1fr); min-height: calc(100vh - 100px); transition: grid-template-columns .2s ease; }
 .layout.sidebar-collapsed { grid-template-columns: 60px minmax(0, 1fr); }
 /* Home: the queue is the list, so no sidebar. */
-.layout.no-sidebar { grid-template-columns: minmax(0, 1fr); }
-.layout.no-sidebar .content { margin-inline: auto; width: 100%; max-width: 960px; }
-.sidebar { display: flex; flex-direction: column; gap: var(--space-2); border-right: 1px solid var(--border); padding: var(--space-5) var(--space-3); align-self: start; position: sticky; top: 0; max-height: 100vh; overflow-y: auto; }
+/* Home keeps its readable column beside the rail. */
+.layout.on-home .content { margin-inline: auto; width: 100%; max-width: 960px; }
+/* Full viewport height, so the divider runs from the header to the bottom of the screen. */
+.sidebar { display: flex; flex-direction: column; gap: var(--space-2); border-right: 1px solid var(--border); padding: var(--space-5) var(--space-3); align-self: start; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
 /* Dispute sidebar: items (App.tsx disputeButton). */
 .dispute-list { display: grid; gap: 2px; list-style: none; margin: 0; padding: 0; }
 .dispute-item { display: grid; gap: 2px; width: 100%; padding: var(--space-2) var(--space-2); border: 0; border-radius: 8px; background: var(--transparent); color: var(--text); text-align: left; font-size: 13px; line-height: 1.4; }
@@ -482,7 +483,7 @@ textarea { width: 100%; resize: vertical; }
   /* One line on phones: the byline stays for screen readers only. */
   .topbar .byline { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .access-code-field input { width: 100%; }
-  .sidebar { position: static; max-height: min(320px, 45vh); border-right: 0; border-bottom: 1px solid var(--border); padding: var(--space-3) var(--space-4); }
+  .sidebar { position: static; height: auto; max-height: min(320px, 45vh); border-right: 0; border-bottom: 1px solid var(--border); padding: var(--space-3) var(--space-4); }
   .sidebar > * { flex: none; }
   .content { padding: var(--space-5) var(--space-4); }
   .case-file-head { margin-bottom: var(--space-3); gap: var(--space-2); }
@@ -2219,3 +2220,6 @@ details.ruling-condition-group[open] > summary::before { transform: rotate(90deg
   .chat-facts-body:not([hidden]) { animation: none; }
   .chat-facts-toggle .icon { transition: none; }
 }
+
+/* Home is the current page: the rail's Home icon shows it (aria-current="page"). */
+.home-button.is-current { background: var(--surface); color: var(--text); box-shadow: inset 0 0 0 1px var(--border); }
