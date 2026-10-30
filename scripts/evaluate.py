@@ -7,7 +7,7 @@ Measures, per sample and overall:
 - precedents: whether the ruling agreed with the closest past rulings (Policy & Precedent agent)
 
 Resolves in-process, so the API rate limits don't apply, but every run spends real
-LLM tokens (about 5,400 per resolve when both rebuttals run) against DAILY_TOKEN_BUDGET. Use preset 1 in
+LLM tokens (about 11,000 per resolve when both rebuttals run) against DAILY_TOKEN_BUDGET. Use preset 1 in
 backend/.env.example for eval runs. With no API key everything is Fallback.
 
 Usage (from the repo root, with the backend venv active):

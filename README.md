@@ -106,9 +106,11 @@ same facts always give the same ruling, and every ruling is explained.
 - **Observable**: the demo UI shows the evidence, each agent's argument and citations, the fraud risk, and
   whether the AI or the fallback produced each step
 - **Reviewer workflow**: home queue → Evidence → Hearing → Ruling (accept or override) → Notify
-  (optional reviewer note and privacy check). Sending closes the case; a deliberate reopen permits a
-  correction, while history keeps every sent message. Parties can appeal after delivery. Review state
-  is kept in the browser session.
+  (optional reviewer note and privacy check). Internal IDs and assessments in a note block sending;
+  everyday words such as "history" only warn. Sending closes the case; a deliberate reopen permits a
+  correction, while history keeps every sent message. An investigation or a refund above the reviewer's
+  limit puts the case on hold (simulated) and nobody is notified. Parties can appeal after delivery.
+  Review state, including holds, is kept in the browser session.
 
 ## Responsible AI and security
 
@@ -163,7 +165,7 @@ The full threat model is in [docs/security.md](docs/security.md).
 [Documentation index](docs/README.md): architecture, responsible AI, security, evaluation, business case,
 API, deployment, submission and milestones, each with a short description.
 
-**Verified on 16 Oct 2026:** 810 backend tests and 169 frontend tests pass. Tests never call a real LLM.
+**Verified on 30 Oct 2026:** 941 backend tests and 361 frontend tests pass. Tests never call a real LLM.
 
 ## Run it locally
 
@@ -285,7 +287,7 @@ with tests and CI, and measured on live Hy3 before claiming any number.
 - **Turn failures into rules.** Every rule in our prompts and output checks exists because live Hy3 output broke
   it once. For example, advocates cited rules that favoured the other side (9 times in 14 cases) until a prompt
   change cut it to 2 ([prompts.md](docs/prompts.md)).
-- **Verify everything.** We checked every AI change with tests (979 in total) and every AI-written claim against
+- **Verify everything.** We checked every AI change with tests (1,302 in total) and every AI-written claim against
   the code. WorkBuddy's consistency review of our own docs found facts that had drifted between files.
 - **Use tools for what they're good at.** CodeBuddy for the AI core, WorkBuddy as a reviewer of our writing,
   Miora for visuals, and Claude Code, OpenAI Codex and Kiro for features, refactors and code review, all

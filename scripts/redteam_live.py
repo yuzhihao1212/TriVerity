@@ -1,6 +1,6 @@
 """Layer C of the prompt-injection red team: run the attack catalogue against the real LLM.
 
-Run by hand only, never in CI. It spends real tokens (about 4,000 per resolve)
+Run by hand only, never in CI. It spends real tokens (about 11,000 per resolve)
 and calls the model one request at a time, well under its 60 requests/minute.
 
     python scripts/redteam_live.py --smoke --yes             # 1 attack x 1 run, check the setup

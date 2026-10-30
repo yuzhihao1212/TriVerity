@@ -207,7 +207,9 @@ See `backend/app/models/resolution.py`.
   with the case's own numbers. Limits are in the policy's `auto_resolve` section; `enabled: false` turns it off.
   Automatic decisions never become precedents: only human decisions do. The console closes an eligible,
   non-audit case by itself: the parties get the ruling's own messages plus a notice that it was decided
-  automatically and how to appeal, and the case shows as Auto-resolved until a reviewer reopens it.
+  automatically and how to appeal, and the case shows as Auto-resolved until a reviewer reopens it. A
+  refund with no amount (no fare on record) never closes this way, and a case a reviewer reopened or put on
+  hold stays with the reviewer in later runs.
 - `triage` orders escalated disputes for human reviewers (internal only, never in the rider or driver
   view). `tier` is `null` when no review is needed; otherwise `safety` (SAFE-1, always first), `high`
   (FRAUD-1), `standard` (missing evidence or low confidence) or `low` (the same, with a proposed refund

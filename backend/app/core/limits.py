@@ -57,7 +57,7 @@ WRITES_PER_IP_PER_MINUTE = 20
 WRITES_PER_IP_PER_DAY = 300
 
 # -- Daily LLM budget (degrades to the deterministic fallbacks, never fails) --
-# One resolve is about 4,000 tokens, so 300,000 tokens is about 75 resolves.
+# One resolve is about 11,000 tokens (measured 30 Oct 2026), so 300,000 tokens is about 27 resolves.
 DAILY_TOKEN_BUDGET = 300_000
 DAILY_RESOLVE_BUDGET = 75
 

@@ -30,7 +30,7 @@ services:
         value: "true"
       - key: DEMO_ACCESS_CODES    # comma-separated, one per judge; see the docs
         sync: false
-      # -- Preset 2 limits (.env.example), sized for ~8,000 tokens per resolve (collector on) --
+      # -- Preset 2 limits (.env.example), a resolve is ~11,000 tokens (collector on) --
       - key: PER_IP_PER_MINUTE
         value: "5"
       - key: PER_IP_PER_DAY
