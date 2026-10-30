@@ -5,7 +5,7 @@ Ryde challenge), polished with WorkBuddy (Hy4 preview) and checked against the r
 [evaluation.md](evaluation.md), [simulation.md](simulation.md) and the README.
 
 **For the form:** paste the fields below. Drop the relative doc links (they won't work in a form) and give
-the repository URL https://github.com/yuzhihao1212/TriVerity instead. Remaining link placeholders must be confirmed on the final build.
+the repository URL https://github.com/yuzhihao1212/TriVerity instead. Updated on 30 Oct 2026 for the finalist materials; the first version was submitted on 16 Oct 2026.
 
 ## Project title
 
@@ -32,8 +32,8 @@ Specialised agents work like a small courtroom. Code first turns the case data i
 Evidence Collection agent (Tencent Hy3) decides which extra trip, GPS, fare and chat records each side needs. A Rider Advocate and a Driver Advocate (Hy3) build their
 side's case from verified evidence and answer each other once. A Fraud & Bad-Faith detector and a Policy &
 Precedent agent then check the case. The platform's policy rules (a mock Ryde policy) decide the outcome, and
-Hy3 explains the ruling to the reviewer and separately to each party. Standard cases resolve in about 16–18 seconds. Risky or unclear
-ones go to a human reviewer, ordered by priority.
+Hy3 explains the ruling to the reviewer and separately to each party. Standard cases resolve in about 16–18 seconds, and routine ones
+close by themselves within strict limits. Risky or unclear ones go to a human reviewer, ordered by priority.
 
 TriVerity is a hackathon prototype by OeroAI, built for Ryde's challenge and not affiliated with or endorsed
 by Ryde. All dispute data is synthetic, so the results below are measurements on samples, not production
@@ -57,7 +57,11 @@ TriVerity targets each of these:
   bad-faith patterns.
 - **Humans where they matter**: a case goes to a human when there are threats in chat, high bad-faith risk,
   missing data, low confidence, or reviewer precedents that contradict the rules. A priority tier puts
-  safety cases first. Every ruling can be accepted or overridden by a reviewer, and parties can appeal.
+  safety cases first. A reviewer can accept or override a ruling, reopen a closed case, and parties can appeal.
+- **Automation with limits**: a routine case closes by itself only when the rules are at least 80% confident,
+  the refund is at most $10 and nothing needs a person. Both parties are told it was decided automatically
+  and how to appeal, a repeatable ~10% sample still goes to a reviewer, and automatic decisions never become
+  precedents.
 
 ### Solution design: business and technical architecture, and how prompts drive generation
 
@@ -93,14 +97,17 @@ TriVerity targets each of these:
   and an audit trail of what the evidence collector looked up for each side.
 - **Hearing** shows each side's key facts first, then evidence grouped by source, and which facts only one
   side relies on.
-- **Ruling** leads with the outcome; a sticky bar lets the reviewer accept or override it, and every
-  decision becomes a precedent.
+- **Ruling** leads with the outcome, the confidence and a checklist of the conditions the rules checked. The
+  reviewer accepts or overrides it, and every human decision becomes a precedent. An investigation, or a
+  refund above the reviewer's limit, puts the case on hold for a second reviewer (simulated), and nobody is
+  notified. A case that closed by itself shows why.
 - **Notify parties**: the reviewer approves the messages each party receives, can add a short personal note
-  (checked so internal details such as fraud signals never reach the parties), and sends. Parties can appeal
+  (internal IDs and assessments such as fraud signals block sending; everyday words such as "history" only
+  warn), and sends. Parties can appeal
   only after receiving the outcome.
 - **Closed cases**: a sent case reopens read-only with a "Case closed" banner; a deliberate Reopen allows a
   correction, and the history keeps every message that was sent.
-- An **AI Live / Offline** switch lets the whole flow run without AI cost; rulings are identical, and only
+- A **Hy3 live / off** switch lets the whole flow run without AI cost; rulings are identical, and only
   the wording falls back to templates.
 
 **How prompts drive the generation** (full prompts: [prompts.md](prompts.md)):
@@ -116,7 +123,7 @@ TriVerity targets each of these:
   favour the other side (9 wrong-side citations in 14 cases, down to 2 after the prompt change).
 
 **Technology:** Tencent Hy3 through Tencent Cloud TokenHub; Python FastAPI backend; React + TypeScript
-frontend; 810 backend and 169 frontend tests (verified on 16 Oct 2026); a Docker image and Render Blueprint for the live
+frontend; 941 backend and 361 frontend tests (verified on 30 Oct 2026); a Docker image and Render Blueprint for the live
 demo (https://triverity-demo.onrender.com). **Built with:** Tencent Cloud **CodeBuddy**
 (the LLM client, advocate agents, hardening, UI badges and the Fraud & Bad-Faith detector); **WorkBuddy**
 (Hy4 preview) to polish this submission text, review the docs for consistency, prepare judge Q&A and
@@ -137,11 +144,11 @@ Measured on the 9 sample disputes, including the organisers' case, and on 500 ge
 |---|---|---|
 | Time to a ruling | 24–72 hours | about 16–18 seconds |
 | Rulings matching the expected outcome | inconsistent between agents | 9 / 9 samples |
-| Disputes resolved without a human | 0% | 78% of 500 generated disputes ([scale test](simulation.md)), the rest escalated with a priority tier; 6 of 9 samples (the samples deliberately include escalation cases, so the simulation is the better estimate) |
+| Disputes decided by the rules without escalation | 0% | 78% of 500 generated disputes ([scale test](simulation.md)), the rest escalated with a priority tier; 6 of 9 samples, 5 of which close by themselves (the samples deliberately include escalation cases, so the simulation is the better estimate) |
 | Consistency | varies by agent | same facts, same ruling: 100 of 100 re-runs |
 | Fairness | not measured | party history never changed a policy decision: 500 of 500 |
 | At 5,000 disputes a day (illustrative) | thousands of review hours | about 1,100 to human review, about $10 a day in AI cost; an estimated 325–975 reviewer hours freed a day ([business case](business-case.md); reviewer time and cost are assumptions) |
-| AI cost per dispute | — | about 10,000 tokens, roughly $0.002 with Hy3 |
+| AI cost per dispute | — | about 11,000 tokens, roughly $0.002 with Hy3 |
 | Explanation | varies by agent | always: a case record, a message to each party, and what would change the ruling |
 
 For the platform, that means reviewers spend their time on the cases that need judgement, with safety first.
