@@ -136,7 +136,7 @@ The decision, refund amount, confidence and rules applied are **not** generated.
 deterministic policy checks in `backend/app/agents/judge_agent.py`. The LLM only explains them.
 
 **Input (user message):** JSON with the dispute type, both parties' accounts, the facts, the ruling
-(decision, recommended action, refund amount, confidence, the rule-based reasoning, the rules applied),
+(decision, recommended action, refund amount, the allowed dollar amounts, confidence, the rule-based reasoning, the rules applied),
 and each advocate's argument (labelled `unverified_argument`) and citations. The Judge's call is **not**
 given either party's history, the fraud reasoning, or the FRAUD-1 rule wording: the rules have already
 used them, and a model that never sees them can't leak them to a party. On an escalated case
@@ -155,14 +155,20 @@ Write a JSON object with three strings:
 - "explanation": 3-5 sentences for the case record, neutral in tone. State the decision and the policy
 rule(s) applied by rule ID, the decisive facts, and respond to each advocate's main argument and, if
 given, its rebuttal: say which argument the facts support and why the other was not decisive.
-- "rider_explanation": 2-3 plain, respectful sentences addressed to the rider as "you": the outcome, the
-main reason, and what happens next.
+- "rider_explanation": 1-2 plain, respectful sentences addressed to the rider as "you": the outcome and the
+main reason. No greeting, thanks or next steps: the message adds those around your text.
 - "driver_explanation": the same, addressed to the driver. The rider filed this dispute, so call it "the
 rider's dispute", never "your dispute".
 Rules: use only the facts given. Describe decisions in plain words (e.g. "the fare stands", "a partial
 refund"), never internal codes such as no_action or needs_review, and never the word "upheld" in the rider or
 driver message (it is unclear whose claim). Write money exactly as given, with $ and
-two decimals. Only mention rule IDs listed in the ruling, or rules an advocate cited when explaining why
+two decimals. In all three texts, write only the dollar amounts in allowed_dollar_amounts. Leave out any other
+figure, even one from a claim, an advocate or a rule that did not decide the case. If the ruling gives a refund,
+the first sentence of rider_explanation and of driver_explanation states only the refund and its exact
+refund_amount, called a refund and not a credit, for example "You will receive a refund of" then the amount. Give
+the reason in a second sentence, so it cannot read as denying the refund. Never write "justified" or "unjustified"
+in rider_explanation or driver_explanation, even if an advocate does: state the plain reason from the facts
+instead. Only mention rule IDs listed in the ruling, or rules an advocate cited when explaining why
 they did not decide the case. Do not state consequences the ruling does not give, such as who pays,
 penalties or account actions. If the decision is needs_review, rider_explanation and driver_explanation
 must not mention any refund, amount or proposed action, and no dollar amounts at all: say only that a
@@ -171,6 +177,8 @@ precedents lists similar past rulings from the precedent knowledge base and how 
 with them. In the explanation (case record) only, add one sentence on that consistency, citing precedent
 IDs exactly as given (e.g. P-004). Never mention precedents, past rulings or other disputes in
 rider_explanation or driver_explanation.
+Never write a rule ID (e.g. RD-3) or an evidence ID (e.g. TRIP-1) in rider_explanation or driver_explanation:
+describe the rule in plain words instead.
 Never mention bad-faith or fraud risk, either party's account or dispute history, or either party's tone, in the
 rider_explanation or driver_explanation. These are internal signals only. Write plain text only: no links,
 email addresses, phone numbers, HTML or markdown. Write all three texts in English.

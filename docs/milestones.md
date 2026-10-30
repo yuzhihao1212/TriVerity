@@ -1,7 +1,7 @@
 # Milestones
 
 Measured against the Ryde challenge brief and the hackathon submission requirements.
-Status as of 16 Oct 2026.
+Status as of 30 Oct 2026. Submitted 16 Oct 2026; finalist, with the rehearsal on 2 Nov and Demo Day on 3 Nov 2026.
 
 ## Required by the brief
 
@@ -16,7 +16,7 @@ Status as of 16 Oct 2026.
 | ✅ | Working prototype, architecture diagram, source on GitHub | Diagram in [architecture.md](architecture.md) |
 | ✅ | Handle the organisers' sample dataset | Adapter in `backend/app/services/ryde_adapter.py`; DISP-002 resolves as expected |
 | ✅ | Evaluation | `scripts/evaluate.py` ([evaluation.md](evaluation.md)): 9/9 rulings correct live, 42/45 outputs by the AI (45/45 before the evidence collector), 8/9 consistent with precedent |
-| ⬜ | Live demo walkthrough | Rehearse with D001 (refund), D005 (no-show refund), D007 (safety and fraud escalation), DISP-002 (organisers' case) |
+| 🟡 | Demo Day walkthrough | A recorded demo in the presentation; rehearsal on 2 Nov 2026 |
 
 ## Stretch goals (bonus points)
 
@@ -40,13 +40,13 @@ Status as of 16 Oct 2026.
 | ✅ | Secrets and dependencies | gitleaks and trufflehog clean; pre-commit hook and CI scans; pinned Python dependencies |
 | ⬜ | Frontend build-tool advisories (Vite, esbuild) | 5 Dependabot alerts, all in dev and build tools; Vite upgrade after the deadline |
 
-## Submission checklist (due 16 Oct 2026)
+## Submission checklist (submitted 16 Oct 2026)
 
 | | Item | Owner |
 |---|---|---|
 | ✅ | CodeBuddy / WorkBuddy usage proof prepared: 7 CodeBuddy and 3 WorkBuddy captures | [Evidence PDF](submission/ai-tool-evidence.pdf); upload to the submission form still needs confirmation |
 | ✅ | Project title and blurb under 10 words ([submission.md](submission.md)) | Lead |
-| ⬜ | Project description: overview, pain points, solution design incl. how prompts drive generation ([prompts.md](prompts.md)), business value | Lead, from the docs |
+| ✅ | Project description: overview, pain points, solution design incl. how prompts drive generation ([prompts.md](prompts.md)), business value | Lead, from the docs |
 | ✅ | 16:9 cover image (380×216) | Lead (Miora) |
-| ⬜ | Demo video, 5–8 minutes (optional) | Team |
-| 🟡 | Live demo link (optional, bonus points) | Render Blueprint ready; final redeploy when the project is finished ([demo-deployment.md](demo-deployment.md)) |
+| ✅ | Demo video, 5–8 minutes (optional) | [Video](https://www.youtube.com/watch?v=z3-8uuPBPAw) |
+| ✅ | Live demo link (optional, bonus points) | [triverity-demo.onrender.com](https://triverity-demo.onrender.com); deployed by hand, so each deploy is a manual step ([demo-deployment.md](demo-deployment.md)) |
