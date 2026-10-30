@@ -1,4 +1,4 @@
-// The History card: two readable profiles, and attention only when the fraud detector earned it.
+// History display helpers. The Evidence card treats both parties identically and stays neutral.
 // Policy rulings never use party history; it only feeds the bad-faith check. Pure functions.
 
 import { oneDecimal, thousands } from "./numberFormat";
@@ -54,3 +54,28 @@ export function historyRisk(risk: Pick<RiskAssessment, "rider_risk" | "driver_ri
 }
 
 export const FAIRNESS_NOTE = "Context only: party history never changes the policy ruling. It's used only to check for bad-faith patterns.";
+
+export interface HistoryFields { days?: number | null; rating?: number | null; trips?: number | null; disputes?: number | null }
+const present = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0;
+
+/** Same fields and order for both parties. Missing values never become zero or a dash. */
+export function historyLine(history: HistoryFields): string {
+  const parts: string[] = [];
+  if (present(history.days)) parts.push(history.days < 30
+    ? `${history.days} ${history.days === 1 ? "day" : "days"}` : tenureText(history.days).replace(" on Ryde", ""));
+  if (present(history.rating) && history.rating <= 5) parts.push(`★ ${history.rating}`);
+  if (present(history.trips)) parts.push(`${thousands(history.trips)} ${history.trips === 1 ? "trip" : "trips"}`);
+  if (present(history.disputes)) parts.push(`${thousands(history.disputes)} ${history.disputes === 1 ? "dispute" : "disputes"} (90 d)`);
+  return parts.join(" · ");
+}
+
+/** Spoken equivalent of the scannable line; the star and separators aren't read as punctuation. */
+export function historySentence(history: HistoryFields): string {
+  const parts: string[] = [];
+  if (present(history.days)) parts.push(history.days < 30
+    ? `${history.days} ${history.days === 1 ? "day" : "days"} on Ryde` : tenureText(history.days));
+  if (present(history.rating) && history.rating <= 5) parts.push(`rated ${history.rating} out of 5`);
+  if (present(history.trips)) parts.push(`${thousands(history.trips)} ${history.trips === 1 ? "trip" : "trips"}`);
+  if (present(history.disputes)) parts.push(`${thousands(history.disputes)} ${history.disputes === 1 ? "dispute" : "disputes"} in the last 90 days`);
+  return parts.length ? `${parts.join(", ")}.` : "";
+}
