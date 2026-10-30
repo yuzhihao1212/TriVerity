@@ -84,7 +84,8 @@ export function savedTab(remembered: WorkflowTab | undefined, hasResult: boolean
 
 export function tabProgress(tab: WorkflowTab, result?: Resolution): string {
   if (tab === "intake") return "Case added";
-  if (!result) return "Locked";
+  // Locked steps say nothing each: one line under the stepper explains what opens them.
+  if (!result) return "";
   if (tab === "evidence") return `${result.judge_evidence.length} ${result.judge_evidence.length === 1 ? "fact" : "facts"}`;
   if (tab === "hearing") return `${[result.rider_case, result.driver_case].filter(item => item.summary).length} arguments`;
   if (tab === "ruling") return "Decision ready";
