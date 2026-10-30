@@ -306,9 +306,10 @@ The learning feedback loop: a human reviewer's final decision on a case becomes 
  "note": "plain text, up to 300 characters"}
 ```
 
-Returns `201` with `{"id": "R-001", "summary": "string", "decision": "no_action"}`. Shares the resolve
-rate limits. **Turned off in the public demo** (`403`, with or without an access code): judge codes are for
-submitting disputes, not for acting as a reviewer. `422` for `needs_review` (not a final decision), a note
+Returns `201` with `{"id": "R-001", "summary": "string", "decision": "no_action"}`. Has its own
+write rate limits. **Public demo:** needs a judge access code (`X-Demo-Key`; `403` without one, `401` if
+wrong) and the precedent joins only that code's sandbox: it is used for that judge's own disputes, never
+for the public samples or other judges, and each code can add up to 30 (`409` after that). `422` for `needs_review` (not a final decision), a note
 with links or markup, or a note over 300 characters; `409` when the in-memory store is full (200
 entries). Notes stay in the store: they are never returned by the API (not in `precedents.matches`) and
 never sent to the LLM.
@@ -316,18 +317,20 @@ never sent to the LLM.
 ## Appeals: `/api/appeals`
 
 The product loop: a party contests a ruling → a human reviewer decides → the decision becomes a precedent.
-All three endpoints return `403` in the public demo (a real deployment puts them behind the party and
-reviewer logins). The reason is party text: cleaned, plain text only, never sent to the LLM.
+In the public demo all three need a judge access code (`X-Demo-Key`; `403` without one, `401` if wrong),
+and each code has its own sandbox: it lists and decides only its own appeals (another code's appeal is
+`404`), its decisions become precedents only for its own disputes, and it can file up to 30 appeals
+(`409` after that). A real deployment puts them behind the party and reviewer logins. The reason is party text: cleaned, plain text only, never sent to the LLM.
 
 - `POST /api/appeals`: `{"case": DisputeCase, "party": "rider | driver", "reason": "up to 500 characters",
   "original_decision": "partial_refund | full_refund | compensation | no_action"}` returns `201` with the
   appeal (`id` like `A-001`, `priority` `safety` when the chat holds a threat, else `standard`,
   `status: "queued"`). `422` for an escalated ruling (already with a human), an empty reason, or links or
-  markup; `409` when the queue is full (200). Shares the resolve rate limits.
+  markup; `409` when the queue is full (200). Has its own write rate limits.
 - `GET /api/appeals?dispute_id=D001`: the queue, safety first, then oldest first. Not rate-limited.
 - `POST /api/appeals/{id}/decision`: `{"decision": "partial_refund | full_refund | compensation | no_action",
   "note": "optional, up to 300 characters"}` records the reviewer's final decision and adds it to the
   precedent knowledge base (`precedent_id` like `R-001`). `404` for an unknown appeal, `409` if already
-  decided. Shares the resolve rate limits.
+  decided. Has its own write rate limits.
 
 Keep this contract stable so frontend and backend development can proceed independently.

@@ -36,6 +36,9 @@ class Appeal(BaseModel):
     created_at: datetime
     reviewer_decision: FinalDecision | None = None
     precedent_id: str | None = None   # the precedent the reviewer's decision created
+    # Public demo: the judge access-code ID whose sandbox this appeal belongs to (None:
+    # shared). Never returned by the API.
+    owner: str | None = Field(default=None, exclude=True)
 
 
 class AppealsFull(Exception):
@@ -58,39 +61,47 @@ _appeals: dict[str, tuple[Appeal, DisputeCase]] = {}
 _lock = threading.Lock()
 
 
-def file_appeal(case: DisputeCase, party: str, reason: str, original_decision: str) -> Appeal:
+def file_appeal(case: DisputeCase, party: str, reason: str, original_decision: str,
+                owner: str | None = None) -> Appeal:
+    """File an appeal; with ``owner`` (public demo) it joins only that judge's sandbox."""
     facts = compute_facts(case)
     with _lock:
-        if any(a.dispute_id == case.dispute_id and a.party == party for a, _ in _appeals.values()):
+        mine = [a for a, _ in _appeals.values() if a.owner == owner]
+        if any(a.dispute_id == case.dispute_id and a.party == party for a in mine):
             raise AlreadyAppealed
-        if len(_appeals) >= limits.MAX_APPEALS:
+        if len(_appeals) >= limits.MAX_APPEALS or (owner is not None and len(mine) >= limits.SANDBOX_MAX_PER_CODE):
             raise AppealsFull
         appeal = Appeal(
             id=f"A-{len(_appeals) + 1:03d}", dispute_id=case.dispute_id, party=party, reason=reason,
             original_decision=original_decision, priority="safety" if facts.chat.threats else "standard",
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(timezone.utc), owner=owner,
         )
         _appeals[appeal.id] = (appeal, case)
         return appeal
 
 
-def list_appeals(dispute_id: str | None = None) -> list[Appeal]:
-    """Safety first, then oldest first."""
+def list_appeals(dispute_id: str | None = None, owner: str | None = None) -> list[Appeal]:
+    """``owner``'s appeals (None: the shared queue): safety first, then oldest first."""
     with _lock:
-        found = [a for a, _ in _appeals.values() if dispute_id is None or a.dispute_id == dispute_id]
+        found = [a for a, _ in _appeals.values()
+                 if a.owner == owner and (dispute_id is None or a.dispute_id == dispute_id)]
     return sorted(found, key=lambda a: (a.priority != "safety", a.created_at, a.id))
 
 
-def decide(appeal_id: str, decision: str, note: str) -> Appeal:
-    """Record the reviewer's final decision and add it to the precedent knowledge base."""
+def decide(appeal_id: str, decision: str, note: str, owner: str | None = None) -> Appeal:
+    """Record the reviewer's final decision and add it to the precedent knowledge base.
+
+    Only ``owner``'s own appeals can be decided (another judge's appeal is "not found"), and
+    the precedent joins the same sandbox.
+    """
     with _lock:
-        if appeal_id not in _appeals:
+        if appeal_id not in _appeals or _appeals[appeal_id][0].owner != owner:
             raise AppealNotFound
         appeal, case = _appeals[appeal_id]
         if appeal.status == "decided":
             raise AlreadyDecided
     # add_feedback has its own lock and capacity check (FeedbackFull).
-    precedent = add_feedback(case.type, compute_facts(case), decision, note)
+    precedent = add_feedback(case.type, compute_facts(case), decision, note, owner=appeal.owner)
     with _lock:
         decided = appeal.model_copy(update={"status": "decided", "reviewer_decision": decision,
                                             "precedent_id": precedent.id})

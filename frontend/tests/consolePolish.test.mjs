@@ -97,7 +97,7 @@ test('decision bar: idle, saving, accepted, overridden, escalated, unavailable',
   bar = ds.decisionBar({ ...base, decision: 'needs_review', saved: { kind: 'decided', decision: 'no_action', precedentId: 'R-003' } });
   assert.equal(bar.note, '✓ Decided: no change to the charge · saved as precedent R-003');
   bar = ds.decisionBar({ ...base, unavailable: true });
-  assert.deepEqual([bar.state, bar.note, bar.actions], ['unavailable', 'Decisions are disabled in the public demo', []]);
+  assert.deepEqual([bar.state, bar.note, bar.actions], ['unavailable', 'Decisions need your judge access code on the public demo', []]);
   bar = ds.decisionBar({ ...base, decision: 'no_action', refund: null });
   assert.deepEqual([bar.label, bar.amount, bar.tone], ['No change to the charge', null, 'neutral']);
   // A saved decision wins over a later "unavailable" (e.g. a 403 on another case).

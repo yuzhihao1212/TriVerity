@@ -37,11 +37,14 @@ def _timed(fn, *args, **kwargs):
     result = fn(*args, **kwargs)
     return result, started, round((time.perf_counter() - start) * 1000)
 
-def resolve_dispute(case: DisputeCase, on_step: Callable[[AgentLogEntry], None] | None = None) -> Resolution:
+def resolve_dispute(case: DisputeCase, on_step: Callable[[AgentLogEntry], None] | None = None,
+                    precedent_owner: str | None = None) -> Resolution:
     """Run every agent on the case.
 
     ``on_step`` (optional) is called with each agent-log entry the moment that step finishes,
     for live progress. A failing callback is logged and ignored: it can't break a ruling.
+    ``precedent_owner`` (public demo) adds that judge's own reviewer decisions to the
+    precedents; None uses only the shared ones.
     """
     agent_log = []
 
@@ -102,7 +105,7 @@ def resolve_dispute(case: DisputeCase, on_step: Callable[[AgentLogEntry], None] 
             reply = agent_case.rebuttal
             log(name, f"[{reply.source}] {reply.text}" if reply.text else "[fallback] no rebuttal", *timing)
 
-        precedents, prec_started, prec_ms = _timed(consult_precedents, case, facts)
+        precedents, prec_started, prec_ms = _timed(consult_precedents, case, facts, precedent_owner)
         (ruling, precedents), judge_started, judge_ms = _timed(
             judge_with_precedents, case, facts, rider_case, driver_case, risk, precedents)
     finally:

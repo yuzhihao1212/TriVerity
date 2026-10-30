@@ -114,7 +114,7 @@ def test_one_appeal_per_party_and_a_decided_appeal_is_final(client):
     assert len(call(client, "get", "/api/appeals", params={"dispute_id": "D001"}).json()) == 2
 
 
-def test_appeals_are_off_in_the_public_demo(client, monkeypatch):
+def test_appeals_are_off_in_the_public_demo_without_a_code(client, monkeypatch):
     monkeypatch.setattr(settings, "public_demo", True)
     assert appeal(client).status_code == 403
     assert call(client, "get", "/api/appeals").status_code == 403
