@@ -8,6 +8,7 @@
   --muted: #606774;
   --border: #e0e3e8;
   --control-border: #838b97;
+  --step-done-bg: #2f3a48; --step-done-ink: #ffffff;
   --accent: #e8365f;
   --accent-text: #b51f43;
   --accent-control: #bd2248;
@@ -68,6 +69,7 @@
   --muted: #abb1bb;
   --border: #3d444f;
   --control-border: #798392;
+  --step-done-bg: #d5dde6; --step-done-ink: #171b20;
   --accent: #ff789c;
   --accent-text: #ff9bb5;
   --accent-control: #ff789c;
@@ -103,6 +105,7 @@
     --muted: #abb1bb;
     --border: #3d444f;
     --control-border: #798392;
+  --step-done-bg: #d5dde6; --step-done-ink: #171b20;
     --accent: #ff789c;
     --accent-text: #ff9bb5;
     --accent-control: #ff789c;
@@ -1088,28 +1091,42 @@ main[tabindex="-1"]:focus { outline: none; }
 
 /* Workflow stepper (WorkflowTabs.tsx; states from stepVisuals.ts). */
 .stepper { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+/* One line for position (stepperMotion.ts): from step 1's centre to the current step's. The
+   track and line sit under the circles; the line's width is set in WorkflowTabs. */
+.stepper-wrap { position: relative; }
+.stepper-track { position: absolute; z-index: 1; left: 10%; right: 10%; top: calc(var(--space-2) + var(--circle, 32px) / 2 - 1.5px); height: 3px; border-radius: 3px; background: var(--control-border); pointer-events: none; }
+.stepper-line { position: absolute; inset: 0; border-radius: inherit; background: var(--accent-control); transform: scaleX(0); transform-origin: left center; transition: transform .3s cubic-bezier(.3, 0, .2, 1); }
+.stepper .step-circle { z-index: 2; }
+.stepper-position { margin: 0 0 var(--space-1); color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.presentation-mode .stepper-wrap { --circle: 38px; }
+.presentation-mode .stepper-position { font-size: 14px; }
 .step { --circle: 32px; position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; padding: var(--space-2) var(--space-1) var(--space-3); border: 0; border-radius: 10px; background: var(--transparent); color: var(--text); text-align: center; cursor: pointer; }
 /* The connector from the previous circle to this one: a track, and an accent fill once that step is complete. */
-.step::before, .step::after { content: ""; position: absolute; top: calc(var(--space-2) + var(--circle) / 2 - 1px); left: calc(-50% + var(--circle) / 2 + 6px); right: calc(50% + var(--circle) / 2 + 6px); height: 2px; border-radius: 2px; background: var(--border); }
-.step::after { background: var(--accent); transform: scaleX(0); transform-origin: left center; transition: transform .35s ease; }
-.step.joined::after { transform: scaleX(1); }
-.step:first-child::before, .step:first-child::after { display: none; }
 .step-circle { position: relative; display: inline-grid; place-items: center; width: var(--circle); height: var(--circle); border-radius: 50%; border: 2px solid var(--control-border); background: var(--bg); color: var(--muted); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; transition: background-color .2s ease, border-color .2s ease; }
 .step-circle .icon { width: 15px; height: 15px; }
 /* reviewed: filled with a tick. available: grey ring with the number. */
-.step.reviewed .step-circle { background: var(--accent-control); border-color: var(--accent-control); color: var(--on-accent); }
+/* Done steps: a dark (light in dark mode) fill with a tick, readable on a projector; pink is position only. */
+.step.reviewed .step-circle { background: var(--step-done-bg); border-color: var(--step-done-bg); color: var(--step-done-ink); }
 .step.current:not(.reviewed) .step-circle { color: var(--accent-text); }
 .step-name { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; margin-top: var(--space-1); font-size: 13px; font-weight: 600; }
 .step-icon { flex: none; width: 15px; height: 15px; }
 .step.current .step-name { color: var(--accent-text); }
 /* The current step is larger, with a soft halo: size is noticed before colour or text. */
 .step.current .step-circle { transform: scale(1.2); box-shadow: 0 0 0 5px var(--accent-soft); transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease, border-color .2s ease; }
-/* After a run, steps 2-5 unlock one after another. */
-.stepper.unlocking .step:not(:first-child) .step-circle { animation: step-unlock .35s ease-out both; animation-delay: calc((var(--step-index) - 1) * 120ms); }
-@keyframes step-unlock { from { transform: scale(.7); opacity: .4; } to { transform: scale(1); opacity: 1; } }
+/* After a run, each step pops as it unlocks (timed in WorkflowTabs); the line doesn't move. */
+.step.unlocked:not(.current) .step-circle { animation: step-unlock .28s ease-out both; }
+@keyframes step-unlock { 0% { transform: scale(.85); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
+/* Forward: the new step arrives as the line lands, with a small overshoot; the step left draws its tick. */
+.step.current.arriving .step-circle { animation: step-arrive .25s .3s cubic-bezier(.3, 1.6, .5, 1) both; }
+@keyframes step-arrive { 0% { transform: scale(1); } 60% { transform: scale(1.32); } 100% { transform: scale(1.2); } }
+.step.left.reviewed .step-circle .icon path { stroke-dasharray: 24; stroke-dashoffset: 24; animation: step-tick .3s .1s ease-out forwards; }
+@keyframes step-tick { to { stroke-dashoffset: 0; } }
+/* Back: the earlier step is current at once; its ring is already drawn. */
+.step-ring.current.instant circle { animation: none; }
 @media (prefers-reduced-motion: reduce) {
   .step.current .step-circle { transition: none; }
-  .stepper.unlocking .step .step-circle { animation: none; }
+  .stepper-line { transition: none; }
+  .step.unlocked .step-circle, .step.current.arriving .step-circle, .step.left.reviewed .step-circle .icon path { animation: none; }
 }
 .label-short { display: none; }
 .step .tab-progress { color: var(--muted); font-size: 11px; }
@@ -1221,11 +1238,12 @@ main[tabindex="-1"]:focus { outline: none; }
 }
 @media (max-width: 760px) {
   .step { --circle: 28px; padding-inline: 0; }
+  .stepper-wrap { --circle: 28px; }
   .step-name { flex-direction: column; gap: 2px; font-size: 11px; }
   .label-full { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .label-short { display: inline; }
   .step .tab-progress { display: none; }
-  .presentation-mode .step { --circle: 30px; }
+  .presentation-mode .step, .presentation-mode .stepper-wrap { --circle: 30px; }
   .presentation-mode .step-name { font-size: 11px; }
 }
 @media (max-width: 480px) {

@@ -25,7 +25,7 @@ export interface StepState {
   working: boolean;
   /** The first step still to review: a subtle hint, never on the current step. */
   next: boolean;
-  /** The connector INTO this step is filled: it lies within the furthest reviewed step. */
+  /** The line reaches this step: it runs from step 1 to the CURRENT step (position only, never progress). */
   joined: boolean;
 }
 
@@ -73,10 +73,10 @@ export function stepStates({ active, hasResult, busy, liveSteps = [], reviewed =
   const done = new Set<WorkflowTab>(hasResult ? ["intake", ...reviewed] : []);
   const isDone = WORKFLOW_TABS.map(({ id }) => done.has(id));
   const locked = WORKFLOW_TABS.map(({ id }) => id !== "intake" && !hasResult);
-  const furthest = isDone.lastIndexOf(true);
   const complete = isDone.every(Boolean);
   const firstOpen = nextTab ? WORKFLOW_TABS.findIndex(({ id }) => id === nextTab)
     : complete ? -1 : WORKFLOW_TABS.findIndex((_, index) => !isDone[index] && !locked[index]);
+  const activeIndex = WORKFLOW_TABS.findIndex(({ id }) => id === active);
   return WORKFLOW_TABS.map(({ id }, index) => {
     const isWorking = index === working;
     return {
@@ -87,7 +87,7 @@ export function stepStates({ active, hasResult, busy, liveSteps = [], reviewed =
       locked: locked[index],
       working: isWorking,
       next: index === firstOpen && id !== active && !busy,
-      joined: index > 0 && index <= furthest,
+      joined: index > 0 && index <= activeIndex,
     };
   });
 }

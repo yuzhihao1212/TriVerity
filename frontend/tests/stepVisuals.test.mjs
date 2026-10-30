@@ -59,14 +59,15 @@ test('with a ruling and nothing reviewed: Intake ticked, the rest available, Nex
   assert.ok(states.every(s => !s.next));
 });
 
-test('after visiting Evidence: Intake and Evidence ticked, Next = Hearing, line filled to Evidence', () => {
+test('after visiting Evidence: Intake and Evidence ticked, Next = Hearing; the line follows the current step', () => {
   const states = sv.stepStates({ active: 'intake', hasResult: true, busy: false, reviewed: ['evidence'] });
   assert.equal(phases(states), 'intake:reviewed evidence:reviewed hearing:available ruling:available notify:available');
   assert.deepEqual(states.filter(s => s.next).map(s => s.tab), ['hearing']);
-  assert.deepEqual(states.map(s => s.joined), [false, true, false, false, false]);
-  // The line runs to the FURTHEST reviewed step, even across a gap.
+  // Back on Intake: the line is at step 1, though Evidence is reviewed (position, not progress).
+  assert.deepEqual(states.map(s => s.joined), [false, false, false, false, false]);
+  // The line ends at the CURRENT step, whatever has been reviewed.
   const gap = sv.stepStates({ active: 'notify', hasResult: true, busy: false, reviewed: ['ruling'] });
-  assert.deepEqual(gap.map(s => s.joined), [false, true, true, true, false]);
+  assert.deepEqual(gap.map(s => s.joined), [false, true, true, true, true]);
   assert.deepEqual(gap.filter(s => s.next).map(s => s.tab), ['evidence']);
   // All reviewed: no Next hint anywhere.
   const all = sv.stepStates({ active: 'ruling', hasResult: true, busy: false, reviewed: ['evidence', 'hearing', 'ruling', 'notify'] });
