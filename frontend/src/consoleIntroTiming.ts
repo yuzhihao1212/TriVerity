@@ -3,9 +3,9 @@
 // the single source for the sequence and its tests.
 
 export const INTRO_WORD = "TriVerity";
-// Letters fade and rise in one after another.
-export const LETTER_STAGGER_MS = 45;
-export const LETTER_MS = 550;
+// Letters fade and rise in one after another (quicker since 30 Oct: the word forms in about 0.65 s).
+export const LETTER_STAGGER_MS = 30;
+export const LETTER_MS = 400;
 // The three dots leave one after another, each on a circular path into the OeroAI mark.
 export const SWIRL_STAGGER_MS = 110;
 export const SWIRL_MS = 1600;
@@ -13,17 +13,17 @@ export const SWIRL_MS = 1600;
 export const INTRO_STEPS = {
   letters: { start: 0, end: (INTRO_WORD.length - 1) * LETTER_STAGGER_MS + LETTER_MS },
   // The full stop arrives last, with a soft pop.
-  stop: { start: 950, end: 1250 },
+  stop: { start: 650, end: 900 },
   // The two i dots and the full stop swirl into the mark; the credit row rises to the centre with them.
-  swirl: { start: 1400, end: 1400 + 2 * SWIRL_STAGGER_MS + SWIRL_MS },
+  swirl: { start: 1000, end: 1000 + 2 * SWIRL_STAGGER_MS + SWIRL_MS },
   // As the dots leave, the letters dissolve left to right.
-  dissolve: { start: 1550, end: 1550 + (INTRO_WORD.length - 1) * 35 + 600 },
+  dissolve: { start: 1150, end: 1150 + (INTRO_WORD.length - 1) * 35 + 600 },
   // The mark's triangle and "Created by OeroAI" fade in as the dots settle.
-  credit: { start: 2900, end: 3400 },
-  // The hash changes at fly.start, so the console mounts under the overlay; the mark then shrinks
-  // into the top bar's "by OeroAI" while the background fades.
-  fly: { start: 3800, end: 4500 },
-  fade: { start: 3800, end: 4250 },
+  credit: { start: 2500, end: 3000 },
+  // The hash changes at fly.start, so the console mounts under the overlay; the mark and the name
+  // "OeroAI" then shrink together into the top bar's "by OeroAI" while the background fades.
+  fly: { start: 3300, end: 4000 },
+  fade: { start: 3300, end: 3750 },
 } as const;
 
 export const INTRO_TOTAL_MS = INTRO_STEPS.fly.end + 100;

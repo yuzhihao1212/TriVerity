@@ -94,3 +94,20 @@ export function runAllSummary(rows: Pick<QueueRow, "id" | "status" | "audit">[],
   if (audits) parts.push(`${audits} audit ${audits === 1 ? "sample" : "samples"}`);
   return parts.join(" · ");
 }
+
+/** "Good morning" / "Good afternoon" / "Good evening", from the reviewer's own clock. */
+export function greeting(hour: number): string {
+  return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+}
+
+/** One plain line under the greeting: what's waiting, and what needs the reviewer. */
+export function greetingLine(rows: Pick<QueueRow, "status">[]): string {
+  const counts = tileCounts(rows);
+  const fresh = rows.filter(row => row.status === "not_run").length;
+  const cases = (n: number) => `${n} ${n === 1 ? "dispute" : "disputes"}`;
+  if (!counts.queue) return "Your queue is empty.";
+  if (counts.decide > 0) return `${cases(counts.decide)} ${counts.decide === 1 ? "needs" : "need"} your decision, out of ${counts.queue} in your queue.`;
+  if (fresh === counts.queue) return `${cases(fresh)} ${fresh === 1 ? "is" : "are"} waiting. Routine ones can close themselves; you'll see the rest.`;
+  if (fresh > 0) return `${cases(fresh)} still to run, out of ${counts.queue} in your queue.`;
+  return `All ${cases(counts.queue)} in your queue have been handled.`;
+}
