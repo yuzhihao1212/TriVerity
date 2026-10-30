@@ -54,7 +54,7 @@ test('F01: a negative fare is not a usable cap, so it never becomes a negative r
 test('F01: a full refund on a $0.00 fare is $0.00, never the ruling\'s amount', () => {
   const full = ns.finalOutcome(ruling, { kind: 'overridden', decision: 'full_refund', precedentId: 'R-001' }, ZERO_FARE);
   assert.equal(full.amount, 0);
-  assert.match(ns.generatedMessage('rider', ruling, full), /full refund of \$0\.00/);
+  assert.match(ns.generatedMessage('rider', ruling, full), /nothing to refund/);
   assert.doesNotMatch(ns.generatedMessage('rider', ruling, full), /\$6\.30/);
 });
 
@@ -106,8 +106,118 @@ test('F02: internal data blocks sending, and "Send anyway" cannot clear it', () 
   assert.ok(ns.hasInternalData(warnings));
   assert.ok(ns.isInternalData('evidence IDs') && ns.isInternalData('internal case IDs'));
   assert.equal(ns.hasInternalData(NO_WARNINGS), false);
-  // A soft term (none today) would still be overridable; the mechanism is unchanged.
   assert.equal(ns.sendBlock({ amountMissing: false, warnings: NO_WARNINGS, sendAnyway: true }), null);
+});
+
+// ---- Re-check after the fixes (R01, F02 variants, R02, F05 reload, R03) ----------------
+
+test('R01: only the whole case ID is public, never a piece of a longer ID', () => {
+  assert.deepEqual(ns.privacyWarnings('See GPS-4 for the stop.', 'GPS'), ['evidence IDs']);
+  assert.deepEqual(ns.privacyWarnings('Earlier case P-063.', 'P-06'), ['internal case IDs']);
+  assert.deepEqual(ns.privacyWarnings('Earlier case P-063.', 'P-0'), ['internal case IDs']);
+  assert.deepEqual(ns.privacyWarnings('Case D0012 again', 'D001'), [], 'not an internal ID either way');
+  assert.deepEqual(ns.privacyWarnings('Case GPS, about GPS-4.', 'GPS'), ['evidence IDs']);
+  for (const note of ['Your case D001 is closed.', 'Case (D001).', 'Case d001, closed', 'D001: closed']) {
+    assert.deepEqual(ns.privacyWarnings(note, 'D001'), [], note);
+  }
+  assert.deepEqual(ns.privacyWarnings('Case J-MVUVRVW1 was reviewed.', 'J-MVUVRVW1'), []);
+  assert.deepEqual(ns.privacyWarnings('Case RD-3 is closed.', 'RD-3'), [], 'its own ID, even when it reads like a rule');
+  assert.deepEqual(ns.privacyWarnings('Case RD-3 under RD-31.', 'RD-3'), ['internal rule IDs']);
+});
+
+test('F02: an ID is still an ID in another spelling', () => {
+  const rule = ['Applied RD\u20133', 'Applied RD\u20143', 'Applied RD\u22123', 'Applied RD3', 'applied rd3', 'Applied RD 3', 'Applied RD.3', 'Applied RD_3',
+    'Applied RD - 3', 'Applied RD-\n3', 'Applied RD\n3', 'Applied \uFF32\uFF24\uFF0D\uFF13', 'Applied R\u200BD-3', 'Applied RD\u00AD3'];
+  for (const note of rule) assert.deepEqual(ns.privacyWarnings(note, 'D001'), ['internal rule IDs'], JSON.stringify(note));
+  for (const note of ['Earlier case P063', 'Earlier case p063', 'Earlier case P 063', 'Earlier case R\u2013001']) {
+    assert.deepEqual(ns.privacyWarnings(note, 'D001'), ['internal case IDs'], note);
+  }
+  for (const note of ['See GPS4', 'See gps\u20134', 'See CHAT 2', 'See HIST-\n1']) assert.deepEqual(ns.privacyWarnings(note, 'D001'), ['evidence IDs'], note);
+});
+
+test('F02: everyday wording stays clean', () => {
+  for (const note of ['R-1 rated', 'P-1 visa', 'A-1 service', 'Step 1', '$6.30 back', 'Pick-up at 08:05', 'Your trip 1 of 2', 'The fare 2 weeks ago',
+    'Chat 2 days ago', 'Your GPS 4 minutes later', 'GPS was off', 'Safe trip', 'Ref 1', 'Sorry for the trouble.']) {
+    assert.deepEqual(ns.privacyWarnings(note, 'D001'), [], note);
+  }
+});
+
+test('R02: everyday words warn but can be sent; IDs and assessments never can', () => {
+  const soft = ns.noteWarnings({ rider: 'Please check your journey history in the app.', driver: 'Poor mobile signals; contact us if you feel at risk.' }, 'D001');
+  assert.deepEqual(soft, { rider: ['history'], driver: ['risk', 'signals'] });
+  assert.equal(ns.hasInternalData(soft), false);
+  assert.equal(ns.sendBlock({ amountMissing: false, warnings: soft }), 'privacy', 'still warned about first');
+  assert.equal(ns.sendBlock({ amountMissing: false, warnings: soft, sendAnyway: true }), null);
+  for (const note of ['Your fraud score', 'Your risk score', 'bad faith', 'precedents apply', 'your previous disputes', 'History says RD-3']) {
+    const hard = ns.noteWarnings({ rider: note, driver: '' }, 'D001');
+    assert.ok(ns.hasInternalData(hard), note);
+    assert.equal(ns.sendBlock({ amountMissing: false, warnings: hard, sendAnyway: true }), 'privacy', note);
+  }
+  assert.equal(ns.sendBlock({ amountMissing: false, held: true, warnings: soft, sendAnyway: true }), 'held', 'a hold outranks it');
+  assert.equal(ns.sendBlock({ amountMissing: true, warnings: soft, sendAnyway: true }), 'amount', 'so does a missing amount');
+});
+
+const fakeStorage = (initial = {}) => {
+  const data = new Map(Object.entries(initial));
+  return { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, String(value)) };
+};
+
+test('F05: holds and "a person took this on" survive a reload', () => {
+  const hold = { disputeId: 'D004', why: 'Safety concern', reason: 'Needs a second look.', amount: null, at: '10:00' };
+  const storage = fakeStorage();
+  ds.writeHeld(storage, { holds: { D004: hold }, everHeld: ['D004', 'D001'] });
+  const back = ds.readHeld(storage);
+  assert.deepEqual(back.holds, { D004: hold });
+  assert.deepEqual(back.everHeld.sort(), ['D001', 'D004']);
+  const store = ns.createSentStore(fakeStorage());
+  assert.equal(ns.staysWithReviewer(store, 'D004', 'k2', back.everHeld.includes('D004')), true, 'a restored hold keeps auto-close away');
+  assert.equal(ns.staysWithReviewer(store, 'D002', 'k3', back.everHeld.includes('D002')), false);
+});
+
+test('F05: bad or blocked storage means no holds, never a crash', () => {
+  const empty = { holds: {}, everHeld: [] };
+  assert.deepEqual(ds.readHeld(null), empty);
+  assert.deepEqual(ds.readHeld(fakeStorage()), empty);
+  assert.deepEqual(ds.readHeld(fakeStorage({ [ds.HELD_KEY]: 'not json' })), empty);
+  assert.deepEqual(ds.readHeld(fakeStorage({ [ds.HELD_KEY]: JSON.stringify({ holds: { D1: { disputeId: 'D2' } }, everHeld: 'D1' }) })), empty);
+  assert.doesNotThrow(() => ds.writeHeld({ getItem: () => null, setItem() { throw new Error('blocked'); } }, empty));
+  assert.doesNotThrow(() => ds.readHeld({ getItem() { throw new Error('blocked'); }, setItem() {} }));
+});
+
+const eligibleRuling = (decision, refund_amount) => ({ decision, refund_amount, autonomy: { eligible: true, audit: false },
+  rider_explanation: "You're getting $0.00 back.", driver_explanation: 'The rider is getting $0.00 back.',
+  rider_message: { found: 'x', next: 'y' }, driver_message: { found: 'x', next: 'y' } });
+
+test('R03: a known $0 refund says nothing is due, on every route to the parties', () => {
+  const ruling = eligibleRuling('full_refund', 0);
+  const record = ns.autoSentRecord('D005', ruling, { fare: { cancellation_fee: 0 } });
+  assert.ok(record, 'a known $0 can still close itself');
+  for (const party of ['rider', 'driver']) {
+    assert.doesNotMatch(record.messages[party], /\$0\.00|getting/, party);
+    assert.equal(record.parts, undefined, 'the ruling\'s own parts would repeat "$0.00 back"');
+  }
+  assert.match(record.messages.rider, /nothing to refund/);
+  const overridden = ns.finalOutcome(ruling, { kind: 'overridden', decision: 'full_refund', precedentId: 'R-1' }, { fare: { actual: 0 } });
+  assert.equal(overridden.amount, 0);
+  assert.match(ns.generatedMessage('rider', ruling, overridden), /nothing to refund/);
+  assert.doesNotMatch(ns.generatedMessage('driver', ruling, overridden), /\$0\.00/);
+});
+
+test('R03: a refund with no fare on record can be neither promised nor closed automatically', () => {
+  assert.equal(ns.autoSentRecord('D005', eligibleRuling('full_refund', null), { fare: {} }), null, 'stays with a reviewer');
+  assert.ok(ns.autoSentRecord('D005', eligibleRuling('full_refund', 4), { fare: { cancellation_fee: 4 } }), 'a known refund still closes itself');
+  assert.ok(ns.autoSentRecord('D006', eligibleRuling('no_action', null), { fare: { cancellation_fee: 4 } }), 'no refund needs no amount');
+  const ruling = eligibleRuling('full_refund', null);
+  assert.equal(ns.isUnknownRefund(ns.finalOutcome(ruling, null, { fare: {} })), true, 'Notify blocks an accepted ruling');
+  assert.equal(ns.isUnknownRefund(ns.finalOutcome(ruling, { kind: 'overridden', decision: 'full_refund', precedentId: 'R-1' }, { fare: {} })), true);
+  assert.equal(ns.isUnknownRefund(ns.finalOutcome(eligibleRuling('no_action', null), null, { fare: {} })), false);
+  // A partial override with no amount yet is the amount editor's job, not this block.
+  assert.equal(ns.isUnknownRefund(ns.finalOutcome(ruling, { kind: 'overridden', decision: 'partial_refund', precedentId: 'R-1' }, { fare: {} })), false);
+  const reason = 'The fare record is missing here.';
+  const check = ds.overrideAmountCheck('full_refund', '', null, null);
+  assert.equal(check.value, null);
+  assert.equal(ds.overrideError({ choice: 'full_refund', check: null, reason, amount: check }), check.message, 'the override form refuses it');
+  assert.equal(ds.overrideError({ choice: 'full_refund', check: null, reason, amount: ds.overrideAmountCheck('full_refund', '', 0, null) }), null, 'a known $0 is allowed');
 });
 
 // ---- F03: the amount editor for older decisions ---------------------------------------

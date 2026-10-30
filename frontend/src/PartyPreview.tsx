@@ -8,7 +8,7 @@ import { checkPartialAmount, MIN_PARTIAL, type SavedDecision } from "./decisionS
 import { Icon } from "./Icon";
 import {
   appealSummary, cleanNote, clockText, closingTitle, createSentStore, finalOutcome, generatedMessage, maxRefund, messageParts, NOTE_LIMIT, sentParts,
-  noteCounter, noteWarnings, notifyGate, PARTIES, SEND_TOOLTIP, sendBlock, sentText, sentOutcome,
+  hasInternalData, isInternalData, isUnknownRefund, noteCounter, noteWarnings, notifyGate, PARTIES, SEND_TOOLTIP, sendBlock, sentText, sentOutcome,
   type FinalOutcome, type Party, type SentRecord,
 } from "./notifyState";
 import type { ReviewSummary } from "./reviewProgress";
@@ -82,13 +82,17 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
   // Only the reviewer's notes are checked: the generated message is never blocked. The
   // dispute's own case ID is shown on the phones, so it is not internal data.
   const warnings = noteWarnings(notes, dispute.dispute_id);
-  const amountMissing = outcome.needsAmount && amountCheck.value == null;
+  const unknownRefund = !sent && isUnknownRefund(outcome);
+  const amountMissing = unknownRefund || (outcome.needsAmount && amountCheck.value == null);
   const needsSecondApproval = outcome.needsAmount && amountState.state === "second";
   const blocked = sendBlock({ amountMissing, needsSecondApproval, held, warnings });
 
-  function send() {
+  // Everyday words only: the reviewer has read the warning and may send them. IDs never go.
+  const canWaive = blocked === "privacy" && !hasInternalData(warnings);
+
+  function send(waive = false) {
     setSendAttempted(true);
-    if (blocked || held || sent || sentRecords().get(reviewKey)) return;
+    if ((blocked && !(waive && canWaive)) || held || sent || sentRecords().get(reviewKey)) return;
     const record: SentRecord = {
       at: clockText(new Date()), timestamp: new Date().toISOString(), disputeId: dispute.dispute_id, reviewer: saved ?? undefined,
       messages: { rider: message("rider"), driver: message("driver") },
@@ -171,7 +175,9 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
                     onClick={() => setNotes(previous => ({ ...previous, [party]: "" }))}>Clear note</button>}
                 </div>
                 {warnings[party].length > 0 && <p className="notify-warning" id={`${id}-${party}-warn`} role="status">
-                  <Icon name="warning" />Internal wording the {party} must not see: {warnings[party].join(", ")}.</p>}
+                  <Icon name="warning" />{warnings[party].some(isInternalData)
+                    ? `Internal wording the ${party} must not see: ${warnings[party].join(", ")}.`
+                    : `Check this wording for the ${party}: ${warnings[party].join(", ")}. It can point to internal data.`}</p>}
               </>}
           </div>}
         </div>)}
@@ -193,13 +199,14 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
           </div>
         </section>
       </div> : <div className="notify-actions">
-        <button type="button" className="run-button" title={SEND_TOOLTIP} aria-describedby={`${id}-send-note`} onClick={send}>
+        <button type="button" className="run-button" title={SEND_TOOLTIP} aria-describedby={`${id}-send-note`} onClick={() => send()}>
           Approve &amp; send <span className="muted-on-accent">(simulated)</span></button>
-        {/* Internal wording blocks with no override: there is no "Send anyway" for an ID. */}
-        <p className={`small ${sendAttempted && blocked ? "error-text" : "muted"}`} role={sendAttempted && blocked ? "alert" : undefined} id={`${id}-send-note`}>{blocked === "amount" ? "Enter the refund amount first."
+        {/* Only everyday words can be waved through: there is no "Send anyway" for an ID. */}
+        {canWaive && <button type="button" className="secondary-button" onClick={() => send(true)}>Send anyway</button>}
+        <p className={`small ${sendAttempted && blocked ? "error-text" : "muted"}`} role={sendAttempted && blocked ? "alert" : undefined} id={`${id}-send-note`}>{blocked === "amount" ? (unknownRefund ? "The fare charged isn't recorded, so this refund has no amount. Change the outcome on the Ruling step." : "Enter the refund amount first.")
           : blocked === "second" ? "That amount needs a second reviewer: decide it on the Ruling step."
           : blocked === "held" ? "This case is on hold: nobody is notified until the second reviewer decides."
-          : blocked === "privacy" ? "Remove the internal wording from the note." : SEND_TOOLTIP}</p>
+          : blocked === "privacy" ? (canWaive ? "These words can point to internal data. Reword the note, or send it if it's harmless." : "Remove the internal wording from the note.") : SEND_TOOLTIP}</p>
       </div>)}
       </div>
     </section>

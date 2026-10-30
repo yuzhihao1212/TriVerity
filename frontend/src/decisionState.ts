@@ -29,6 +29,31 @@ export const SECOND_APPROVAL_NO_REFUND = 10;
 /** A case put on hold for a second reviewer (simulated in this browser session). */
 export interface HoldRecord { disputeId: string; why: string; reason: string; amount: number | null; at: string }
 
+/** The holds, kept for the browser session: a reload must not put a held case back in play. */
+export interface HeldState {
+  holds: Record<string, HoldRecord>;
+  /** Every dispute put on hold, even if since cleared: a person has taken it on. */
+  everHeld: string[];
+}
+export const HELD_KEY = "triverity.holds";
+type HeldBackend = Pick<Storage, "getItem" | "setItem">;
+
+export function readHeld(storage: HeldBackend | null): HeldState {
+  try {
+    const parsed = JSON.parse(storage?.getItem(HELD_KEY) ?? "{}");
+    const holds: Record<string, HoldRecord> = {};
+    for (const [id, hold] of Object.entries(parsed?.holds ?? {})) {
+      if ((hold as HoldRecord | null)?.disputeId === id) holds[id] = hold as HoldRecord;
+    }
+    const everHeld = Array.isArray(parsed?.everHeld) ? parsed.everHeld.filter((id: unknown) => typeof id === "string") : [];
+    return { holds, everHeld: [...new Set<string>([...everHeld, ...Object.keys(holds)])] };
+  } catch { return { holds: {}, everHeld: [] }; }
+}
+
+export function writeHeld(storage: HeldBackend | null, state: HeldState): void {
+  try { storage?.setItem(HELD_KEY, JSON.stringify(state)); } catch { /* Blocked: memory only. */ }
+}
+
 /**
  * The override choices for a ruling: the ruling's own outcome is left out, except a partial
  * refund, which can be changed to another amount.
@@ -75,7 +100,8 @@ function limitCheck(value: number, ruling: number | null): AmountCheck {
 /** The amount an override would refund, checked against the same limit: partial (entered) or full (the fare). */
 export function overrideAmountCheck(choice: OverrideChoice | null, text: string, fare: number | null, ruling: number | null): AmountCheck | null {
   if (choice === "partial_refund") return checkPartialAmount(text, fare, ruling);
-  if (choice === "full_refund" && fare != null) return limitCheck(fare, ruling);
+  if (choice === "full_refund") return fare != null ? limitCheck(fare, ruling)
+    : { value: null, state: "empty", message: 'The fare charged isn\'t recorded, so a full refund has no amount. Enter a partial amount, or choose "Needs further investigation".' };
   return null;
 }
 
@@ -85,6 +111,7 @@ export function overrideError({ choice, check, reason, amount }: {
 }): string | null {
   if (!choice) return "Choose what should happen instead.";
   if (choice === "partial_refund" && (!amount || amount.value == null)) return amount?.message ?? "Enter the refund amount.";
+  if (choice === "full_refund" && amount && amount.value == null) return amount.message;
   if (choice === "investigate" && !check) return "Choose what needs checking.";
   if (reason.trim().length < MIN_REASON) return "Add a short reason. It's kept with the case and the precedent.";
   return null;

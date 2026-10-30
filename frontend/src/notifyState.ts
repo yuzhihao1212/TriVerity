@@ -73,6 +73,12 @@ export function finalOutcome(resolution: Pick<Resolution, "decision" | "refund_a
 }
 
 const money = (value: number) => `$${value.toFixed(2)}`;
+const isRefund = (decision?: Decision) => decision === "partial_refund" || decision === "full_refund";
+/** A known $0 refund: nothing was charged, so no money moves and none is promised. */
+export const isZeroRefund = (outcome: Partial<Pick<FinalOutcome, "decision" | "amount">>) => isRefund(outcome.decision) && outcome.amount === 0;
+/** A refund with no amount (no fare on record): the parties can't be told it is settled. */
+export const isUnknownRefund = (outcome: Pick<FinalOutcome, "decision" | "amount" | "needsAmount">) =>
+  isRefund(outcome.decision) && outcome.amount == null && !outcome.needsAmount;
 
 /**
  * The generated message, read-only: exactly what the party sees. Accepted: the ruling's own
@@ -88,13 +94,18 @@ export const AUTO_NOTICE = confirmedCopy().autoNotice;
  * phone shows the whole message, as do results from before the parts existed.
  */
 export function messageParts(party: Party, resolution: Pick<Resolution, "rider_message" | "driver_message">,
-  outcome: Pick<FinalOutcome, "source">): PartyMessage | null {
-  if (outcome.source !== "ruling") return null;
+  outcome: Pick<FinalOutcome, "source"> & Partial<Pick<FinalOutcome, "decision" | "amount">>): PartyMessage | null {
+  if (outcome.source !== "ruling" || (outcome.decision && isZeroRefund(outcome))) return null;
   return (party === "rider" ? resolution.rider_message : resolution.driver_message) ?? null;
 }
 
 export function generatedMessage(party: Party, resolution: Pick<Resolution, "rider_explanation" | "driver_explanation">,
   outcome: Pick<FinalOutcome, "decision" | "amount" | "source">): string {
+  // Ahead of the ruling's own wording, which would say "you're getting $0.00 back".
+  if (isZeroRefund(outcome)) {
+    return party === "rider" ? "We looked at your dispute. Nothing was charged, so there is nothing to refund."
+      : "We looked at this trip's dispute. The rider wasn't charged, so nothing changes for you.";
+  }
   if (outcome.source === "ruling") return party === "rider" ? resolution.rider_explanation : resolution.driver_explanation;
   const amount = outcome.amount != null ? money(outcome.amount) : "the approved amount";
   const rider: Record<string, string> = {
@@ -156,7 +167,13 @@ export function sendBlock({ amountMissing, needsSecondApproval = false, held = f
 const EVIDENCE_PREFIXES = ["TRIP", "GPS", "FARE", "CHAT", "HIST"];
 /** Used when the policy's own rule IDs are not available on the frontend. */
 const FALLBACK_RULE_PREFIXES = ["RD", "NS", "REF", "PREC", "SAFE", "FRAUD", "ESC"];
-const anyPrefix = (prefixes: string[]) => new RegExp(`\\b(?:${prefixes.join("|")})-\\d+\\b`, "i");
+/** "RD-3", "rd - 3", "RD_3" and "RD3", in any case. */
+const anyPrefix = (prefixes: string[], digits = "\\d+") => new RegExp(`\\b(?:${prefixes.join("|")})(?:\\s*[-_]\\s*)?${digits}\\b`, "i");
+/**
+ * "RD 3", "RD.3" or "RD/3", capitals only: in lower case "trip 1" and "fare 2" are ordinary words.
+ * GPS is left out, because "GPS 4 minutes" is how anyone would write it.
+ */
+const spacedPrefix = (prefixes: string[], digits = "\\d+") => new RegExp(`\\b(?:${prefixes.filter(prefix => prefix !== "GPS").join("|")})[\\s./]+${digits}\\b`);
 
 /**
  * The rule-ID prefixes from the policy itself: glossary.ts mirrors data/policies/
@@ -167,27 +184,28 @@ export function rulePrefixes(rules: Record<string, unknown> = RULES): string[] {
   return from.length ? [...new Set(from)] : FALLBACK_RULE_PREFIXES;
 }
 
-interface InternalTerm { re: RegExp; label: string; /** A soft term a reviewer may wave through. */ soft?: true }
+interface InternalTerm { re: RegExp; /** The same term in another form. */ also?: RegExp; label: string; /** A soft term a reviewer may wave through. */ soft?: true }
 
 /**
- * Internal wording the parties must never see. Every term is internal data: "Send anyway"
- * cannot clear it (see sendBlock), because a rule, evidence or case ID tells a party how the
- * decision was reached and what we hold about them.
+ * Internal wording the parties must never see. "Send anyway" cannot clear internal data (see
+ * sendBlock), because a rule, evidence or case ID tells a party how the decision was reached and
+ * what we hold about them. The soft terms are everyday words too ("your journey history"), so
+ * a reviewer who has read the warning may send them.
  */
 const INTERNAL_TERMS: InternalTerm[] = [
   { re: /\bfraud\b(?!-\d)/i, label: "fraud" }, // "FRAUD-1" is reported as a rule ID
   { re: /\bbad[- ]faith\b/i, label: "bad faith" },
   { re: /\brisk score\b/i, label: "risk score" },
-  { re: /\brisk(?! score)\b/i, label: "risk" },
-  { re: /\bsignals?\b/i, label: "signals" },
+  { re: /\brisk(?! score)\b/i, label: "risk", soft: true },
+  { re: /\bsignals?\b/i, label: "signals", soft: true },
   { re: /\bprevious disputes?\b/i, label: "previous disputes" },
-  { re: /\bhistory\b/i, label: "history" },
+  { re: /\bhistory\b/i, label: "history", soft: true },
   { re: /\bprecedents?\b/i, label: "precedent" },
-  { re: anyPrefix(EVIDENCE_PREFIXES), label: "evidence IDs" },
-  { re: anyPrefix(rulePrefixes()), label: "internal rule IDs" },
+  { re: anyPrefix(EVIDENCE_PREFIXES), also: spacedPrefix(EVIDENCE_PREFIXES), label: "evidence IDs" },
+  { re: anyPrefix(rulePrefixes()), also: spacedPrefix(rulePrefixes()), label: "internal rule IDs" },
   // Precedents and internal case IDs, e.g. "R-001", "P-063".
   // Always three digits or more, so "R-1 rated" or "P-1 visa" stay ordinary words.
-  { re: /\b[PR]-\d{3,}\b/i, label: "internal case IDs" },
+  { re: anyPrefix(["P", "R"], "\\d{3,}"), also: spacedPrefix(["P", "R"], "\\d{3,}"), label: "internal case IDs" },
 ];
 
 /** Internal data: an ID or signal from the review, which "Send anyway" can never clear. */
@@ -200,15 +218,20 @@ export function hasInternalData(warnings: Record<Party, string[]>): boolean {
 
 const escapeRe = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+/** Full-width letters and digits become plain, every dash a hyphen, and invisible characters go. */
+const normalized = (text: string) => text.normalize("NFKC").replace(/[\u00AD\u200B-\u200D\u2060\uFEFF]/g, "").replace(/[\p{Pd}\u2212]/gu, "-");
+
 /**
  * Internal wording the parties must never see, in the order found. Empty means clean.
  * The dispute's own case ID is shown to the party on their phone ("Case D001"), so it is
  * public and is left out of the text before checking rather than treated as internal data.
+ * Only the whole ID is left out: for a case called "GPS", "GPS-4" is still an evidence ID.
  */
 export function privacyWarnings(text: string, publicCaseId?: string | null): string[] {
   const own = publicCaseId?.trim();
-  const checked = own ? text.replace(new RegExp(escapeRe(own), "gi"), " ") : text;
-  return INTERNAL_TERMS.filter(term => term.re.test(checked)).map(term => term.label);
+  const clean = normalized(text);
+  const checked = own ? clean.replace(new RegExp(`(?<![A-Za-z0-9_-])${escapeRe(normalized(own))}(?![A-Za-z0-9_-])`, "gi"), " ") : clean;
+  return INTERNAL_TERMS.filter(term => term.re.test(checked) || term.also?.test(checked)).map(term => term.label);
 }
 
 // ---- Sent record ------------------------------------------------------------------
@@ -329,6 +352,7 @@ export function autoSentRecord(disputeId: string, resolution: Pick<Resolution, "
   const autonomy = resolution.autonomy;
   if (!autonomy?.eligible || autonomy.audit || resolution.decision === "needs_review") return null;
   const outcome = finalOutcome(resolution, null, dispute);
+  if (isUnknownRefund(outcome)) return null; // Nothing to tell them yet: it stays with a reviewer.
   const message = (party: Party) => `${generatedMessage(party, resolution, outcome)} ${AUTO_NOTICE}`;
   const parts = sentParts(party => {
     const own = messageParts(party, resolution, outcome);

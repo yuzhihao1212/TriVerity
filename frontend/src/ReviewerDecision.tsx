@@ -2,7 +2,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties
 
 import {
   decisionBar, overrideAmountCheck, INVESTIGATION_CHECKS, OVERRIDE_LABELS, overrideChoices, overrideError,
-  overrideLine, REASON_PLACEHOLDER, rulingLine, secondApprovalLimit,
+  overrideLine, readHeld, REASON_PLACEHOLDER, rulingLine, secondApprovalLimit, writeHeld,
   type FinalDecision, type HoldRecord, type OverrideChoice, type SavedDecision,
 } from "./decisionState";
 import { Icon } from "./Icon";
@@ -20,6 +20,8 @@ interface Entry {
 
 export type DecisionController = ReturnType<typeof useReviewerDecision>;
 
+const heldStorage = () => { try { return window.sessionStorage; } catch { return null; } };
+
 const reduceMotion = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 /**
@@ -29,8 +31,8 @@ const reduceMotion = () => typeof window !== "undefined" && window.matchMedia?.(
  * submit is ignored while one is in flight or after one is saved.
  *
  * A hold for a second reviewer is different: it belongs to the dispute, not to the ruling, so
- * it survives a re-run (which gives the case a new key) and the home page shows one hold per
- * case. It is simulated in this browser session: it records nothing and notifies no one.
+ * it survives a re-run (which gives the case a new key) or a reload, and the home page shows
+ * one hold per case. It is simulated in this browser session: it records nothing and notifies no one.
  */
 export function useReviewerDecision({ runKey, dispute, resolution, onDecided, onUnavailable, locked = false }: {
   runKey: string | null; dispute?: DisputeCase | null; resolution?: Resolution | null;
@@ -38,9 +40,11 @@ export function useReviewerDecision({ runKey, dispute, resolution, onDecided, on
 }) {
   const [entries, setEntries] = useState<Record<string, Entry>>({});
   /** Holds by dispute ID, so a case stays on hold across runs until a reviewer clears it. */
-  const [holds, setHolds] = useState<Record<string, HoldRecord>>({});
+  const [restored] = useState(() => readHeld(heldStorage()));
+  const [holds, setHolds] = useState<Record<string, HoldRecord>>(restored.holds);
   /** Every dispute put on hold this session, even if since cleared: a person has taken it on. */
-  const everHeld = useRef(new Set<string>());
+  const everHeld = useRef(new Set<string>(restored.everHeld));
+  useEffect(() => { writeHeld(heldStorage(), { holds, everHeld: [...everHeld.current] }); }, [holds]);
   const inFlight = useRef(new Set<string>());
   const escalated = resolution?.decision === "needs_review";
   const blank: Entry = { mode: "idle", choice: null, amount: "", check: null, reason: "", busy: false, saved: null, error: null };
@@ -308,7 +312,7 @@ function OverrideForm({ id, resolution, controller, ruling, confidence, heading 
         </div>}
         {fullCheck && <div className="override-sub">
           <p className={`override-note${fullCheck.state !== "ok" ? " is-warn" : ""}`}>
-            <Icon name={fullCheck.state === "ok" ? "check" : "person"} />The full ${fullCheck.value?.toFixed(2)} fare. {fullCheck.message}</p>
+            <Icon name={fullCheck.state === "ok" ? "check" : fullCheck.value == null ? "info" : "person"} />{fullCheck.value != null && `The full $${fullCheck.value.toFixed(2)} fare. `}{fullCheck.message}</p>
         </div>}
         {choice === "investigate" && <div className="override-sub">
           <p className="override-sub-title" id={`${id}-check`}>What needs checking?</p>
