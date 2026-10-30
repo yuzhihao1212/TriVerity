@@ -42,6 +42,9 @@ class Precedent(BaseModel):
     policy_refs: list[str] = Field(default_factory=list)
     decided_by: str = "policy"
     note: str = ""
+    # Public demo: the judge access-code ID whose sandbox this decision belongs to. None:
+    # shared (the seed set, and every decision outside the public demo).
+    owner: str | None = None
 
 
 def case_features(dispute_type: str, facts: CaseFacts) -> dict[str, float | bool | None]:
@@ -96,15 +99,17 @@ _feedback: list[Precedent] = []
 _feedback_lock = threading.Lock()
 
 
-def all_precedents() -> list[Precedent]:
+def all_precedents(owner: str | None = None) -> list[Precedent]:
+    """The shared precedents, plus ``owner``'s own sandbox (public demo) when given."""
     with _feedback_lock:
-        return [*_seed(), *_feedback]
+        return [*_seed(), *(p for p in _feedback if p.owner is None or p.owner == owner)]
 
 
-def retrieve(dispute_type: str, facts: CaseFacts, k: int = limits.PRECEDENT_TOP_K) -> list[PrecedentMatch]:
-    """The ``k`` most similar past rulings of the same dispute type."""
+def retrieve(dispute_type: str, facts: CaseFacts, k: int = limits.PRECEDENT_TOP_K,
+             owner: str | None = None) -> list[PrecedentMatch]:
+    """The ``k`` most similar past rulings of the same dispute type, as ``owner`` sees them."""
     query = case_features(dispute_type, facts)
-    scored = [(similarity(query, p.features), p) for p in all_precedents() if p.dispute_type == dispute_type]
+    scored = [(similarity(query, p.features), p) for p in all_precedents(owner) if p.dispute_type == dispute_type]
     scored = [(s, p) for s, p in scored if s >= limits.PRECEDENT_SHOW_MIN_SIMILARITY]
     # Most similar first; a reviewer's decision before the rules' on a tie; then by ID for stable output.
     scored.sort(key=lambda sp: (-round(sp[0], 3), sp[1].decided_by != "human_review", sp[1].id))
@@ -120,10 +125,16 @@ class FeedbackFull(Exception):
     """The in-memory feedback store is full."""
 
 
-def add_feedback(dispute_type: str, facts: CaseFacts, decision: Decision, note: str) -> Precedent:
-    """Record a human reviewer's decision as a new precedent (the learning feedback loop)."""
+def add_feedback(dispute_type: str, facts: CaseFacts, decision: Decision, note: str,
+                 owner: str | None = None) -> Precedent:
+    """Record a human reviewer's decision as a new precedent (the learning feedback loop).
+
+    With ``owner`` (public demo) it joins only that judge's sandbox, capped per judge.
+    """
     with _feedback_lock:
         if len(_feedback) >= limits.PRECEDENT_MAX_FEEDBACK:
+            raise FeedbackFull
+        if owner is not None and sum(p.owner == owner for p in _feedback) >= limits.SANDBOX_MAX_PER_CODE:
             raise FeedbackFull
         features = case_features(dispute_type, facts)
         precedent = Precedent(
@@ -134,6 +145,7 @@ def add_feedback(dispute_type: str, facts: CaseFacts, decision: Decision, note: 
             decision=decision,
             decided_by="human_review",
             note=note,
+            owner=owner,
         )
         _feedback.append(precedent)
         return precedent

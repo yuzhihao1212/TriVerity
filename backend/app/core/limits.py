@@ -52,7 +52,8 @@ GLOBAL_PER_MINUTE = 10
 # -- Rate limits on reviewer and party writes (appeals, appeal decisions, feedback) --
 # They never call the LLM, so they have their own counters instead of spending the
 # resolve limits (a reviewer could otherwise be blocked mid-review). These only stop
-# flooding the in-memory stores, which are capped too. All are off in the public demo.
+# flooding the in-memory stores, which are capped too. In the public demo these writes
+# need a judge access code and stay in that code's sandbox (SANDBOX_MAX_PER_CODE below).
 WRITES_PER_IP_PER_MINUTE = 20
 WRITES_PER_IP_PER_DAY = 300
 
@@ -86,6 +87,9 @@ PRECEDENT_SHOW_MIN_SIMILARITY = 0.4 # weaker matches are not shown at all
 PRECEDENT_MAX_FEEDBACK = 200        # reviewer decisions kept in memory (feedback loop)
 PRECEDENT_NOTE_MAX_CHARS = 300      # reviewer note on a feedback entry
 MAX_APPEALS = 200                   # appeals kept in memory (reviewer queue)
+# Public demo: each judge code's own appeals and reviewer decisions (its sandbox), so
+# one judge can't fill the shared stores above.
+SANDBOX_MAX_PER_CODE = 30
 APPEAL_REASON_MAX_CHARS = 500       # a party's reason for appealing
 
 # -- Evidence Collection agent (agents/evidence_agent.py) ----------------------

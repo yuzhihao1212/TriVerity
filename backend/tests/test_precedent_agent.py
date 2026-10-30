@@ -203,18 +203,18 @@ def test_feedback_is_rate_limited():
     assert 429 in codes
 
 
-def test_public_demo_turns_feedback_off(monkeypatch):
-    """Judge codes let judges submit disputes, not act as reviewers. In the public demo two
-    feedback posts with a judge code would flip a sample (e.g. D001) to PREC-1 for every
-    visitor, so recording reviewer decisions is off there, with or without a code."""
+def test_public_demo_feedback_never_reaches_the_shared_store(monkeypatch):
+    """In the public demo two feedback posts would otherwise flip a sample (e.g. D001) to
+    PREC-1 for every visitor. Without a code it's off; with a judge code it joins only that
+    judge's sandbox, so the shared precedents everyone else sees are unchanged."""
     code = "judge1-" + "a" * 24
     monkeypatch.setattr(settings, "public_demo", True)
     monkeypatch.setattr(settings, "demo_access_codes", code)
     client = TestClient(create_app())
     body = {"case": D001.model_dump(), "decision": "no_action"}
     assert client.post(FEEDBACK, json=body).status_code == 403
-    assert client.post(FEEDBACK, json=body, headers={"X-Demo-Key": code}).status_code == 403
-    assert store.all_precedents() == list(store._seed())   # nothing was recorded
+    assert client.post(FEEDBACK, json=body, headers={"X-Demo-Key": code}).status_code == 201
+    assert store.all_precedents() == list(store._seed())   # the shared store is untouched
 
 
 def test_reviewer_notes_never_appear_in_api_responses():
