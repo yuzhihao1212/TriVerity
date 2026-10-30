@@ -36,7 +36,7 @@ def test_safety_case_is_never_auto_resolved():
 
 def test_whole_batch_counts_once_against_the_rate_limit():
     assert batch(SAMPLE_IDS).status_code == 200
-    # PER_IP_PER_MINUTE is 3: the batch used one, so two more single requests still pass.
+    # The batch used one; PER_IP_PER_MINUTE - 1 more single requests still pass, then the next 429s.
     sample = load_samples()[0].model_dump(mode="json")
     for _ in range(limits.PER_IP_PER_MINUTE - 1):
         assert client.post("/api/disputes/resolve?ai=off", json=sample).status_code == 200

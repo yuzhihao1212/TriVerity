@@ -43,11 +43,13 @@ MAX_COMPLETED_TRIPS = 1_000_000
 MAX_DISPUTES_90D = 10_000
 
 # -- Rate limits on POST /api/disputes/resolve (429 with Retry-After) ---------
-PER_IP_PER_MINUTE = 3
-PER_IP_PER_DAY = 30
+# Raised for the showcase: many concurrent visitors are expected, and we want
+# real LLM resolves rather than hitting these so people get Fallback badges.
+PER_IP_PER_MINUTE = 10
+PER_IP_PER_DAY = 150
 # One resolve is 3 LLM calls and the model allows 60 requests per minute per
 # account, so keep everyone together well under 20 resolves per minute.
-GLOBAL_PER_MINUTE = 10
+GLOBAL_PER_MINUTE = 18
 
 # -- Rate limits on reviewer and party writes (appeals, appeal decisions, feedback) --
 # They never call the LLM, so they have their own counters instead of spending the
@@ -58,9 +60,12 @@ WRITES_PER_IP_PER_MINUTE = 20
 WRITES_PER_IP_PER_DAY = 300
 
 # -- Daily LLM budget (degrades to the deterministic fallbacks, never fails) --
-# One resolve is about 11,000 tokens (measured 30 Oct 2026), so 300,000 tokens is about 27 resolves.
-DAILY_TOKEN_BUDGET = 300_000
-DAILY_RESOLVE_BUDGET = 75
+# Raised for the showcase: one resolve is about 11,000 tokens (measured 30 Oct 2026),
+# so 3,000,000 tokens is about 270 resolves/day. This is a safety net against a
+# runaway loop or abuse, not a throttle on the expected showcase traffic — watch
+# the demo key's TokenHub quota, which is the real hard limit.
+DAILY_TOKEN_BUDGET = 3_000_000
+DAILY_RESOLVE_BUDGET = 1_000
 
 # -- Per LLM call -------------------------------------------------------------
 # Sized for LLM_DISABLE_THINKING=true. With thinking on, reasoning tokens count
@@ -116,15 +121,15 @@ PUBLIC_DEMO_FALLBACK_CACHE_S = 300   # Retry partial/fallback runs after five mi
 # -- Demo access codes (X-Demo-Key) -------------------------------------------
 # Code holders are limited per code instead of per IP, since judges may share
 # one venue IP. The global limit and the daily budget still apply.
-PER_CODE_PER_MINUTE = 3
-PER_CODE_PER_DAY = 20
+PER_CODE_PER_MINUTE = 10
+PER_CODE_PER_DAY = 150
 MIN_ACCESS_CODE_CHARS = 16
 
 # -- Overrides from backend/.env ----------------------------------------------
 # These can be set in backend/.env (e.g. DAILY_TOKEN_BUDGET=2000000 for a local
 # evaluation run) without a code change. Each must stay within (min, max), or the
 # backend refuses to start; every override is logged at start-up.
-MAX_GLOBAL_PER_MINUTE = 10   # the model allows 60 requests/min and a resolve is 3 calls
+MAX_GLOBAL_PER_MINUTE = 20   # the model allows 60 requests/min and a resolve is 3 calls
 
 _OVERRIDABLE = {
     "DAILY_TOKEN_BUDGET": (0, None),
