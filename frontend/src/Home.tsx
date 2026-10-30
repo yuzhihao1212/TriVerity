@@ -1,7 +1,8 @@
 import { useState, type CSSProperties } from "react";
 import { tileCounts, sortQueue, STATUS_ICONS, STATUS_WORDS, type QueueRow } from "./caseQueue";
 import { Chip } from "./Chip";
-import { amountAtStake, GUIDED_DEMO, guidedDemoSteps, queueSegments, queueSummary, runAllSummary } from "./homeState";
+import { useIntroOnce } from "./EvidenceStories";
+import { amountAtStake, GUIDED_DEMO, greeting, greetingLine, guidedDemoSteps, queueSegments, queueSummary, runAllSummary } from "./homeState";
 import { Icon } from "./Icon";
 import { NewDisputeIcon } from "./SidebarToggle";
 import { decisionTone, DECISION_LABELS } from "./outcomeTone";
@@ -11,6 +12,8 @@ import type { HoldRecord } from "./decisionState";
 import type { DisputeCase } from "./types";
 
 export interface HomeRow extends QueueRow { dispute: DisputeCase }
+
+const HOME_SEEN_KEY = "triverity.homeIntroSeen";
 
 // The guided demo is for presenting, so it starts folded; opening it holds for this tab.
 const DEMO_OPEN_KEY = "triverity.guidedDemoOpen";
@@ -38,12 +41,20 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
     setDemoOpen(open => { writeDemoOpen(!open); return !open; });
   }
   const ranSummary = runAllProgress && !runAllProgress.running ? runAllSummary(rows, runAllProgress.ids) : null;
-  return <section className="home" aria-labelledby="home-title">
+  // The page eases in once per tab (greeting, summary, actions, then the queue row by row);
+  // coming back to the queue later shows it at once.
+  const play = useIntroOnce(HOME_SEEN_KEY, "home");
+  const [hello] = useState(() => greeting(new Date().getHours()));
+  return <section className={`home${play ? " home-entering" : ""}`} aria-labelledby="home-title">
     {missing && <p className="home-note" role="status">
       <Icon name="info" />Case {missing} not found
       <button type="button" className="icon-button home-note-close" aria-label={`Dismiss: case ${missing} not found`} title="Dismiss" onClick={onDismissMissing}>
         <Icon name="cross" /></button>
     </p>}
+    <div className="home-greeting">
+      <p className="home-hello">{hello}</p>
+      <p className="home-hello-line">{greetingLine(rows)}</p>
+    </div>
     <div className="home-head">
       <h2 id="home-title">Your queue</h2>
       <div className="home-meter" role="img" aria-label={[summaryParts[0].text, ...segments.map(segment => `${segment.count} ${segment.label}`)].join(", ")}>
@@ -101,11 +112,11 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
     </section>}
     <section className="home-cases" aria-labelledby="home-cases-title">
       <h3 id="home-cases-title">All cases</h3>
-      <ul className="home-queue" aria-label="Cases, most urgent first">{queue.map(row => {
+      <ul className="home-queue" aria-label="Cases, most urgent first">{queue.map((row, index) => {
         const summary = disputeLabel(row.dispute);
         const outcome = row.decision ? DECISION_LABELS[row.decision] : null;
         const stake = amountAtStake(row.dispute.fare);
-        return <li key={row.id}>
+        return <li key={row.id} style={{ "--row": Math.min(index, 12) } as CSSProperties}>
           <a className="home-row" href={caseHash(row.id)}
             aria-label={`${row.id}: ${summary}${stake ? `, ${stake}` : ""}. ${STATUS_WORDS[row.status]}${outcome ? `, ${outcome}` : ""}`}>
             <span className={`home-category category-${row.dispute.type === "route_deviation" ? "route" : "no-show"}`}>{row.dispute.type === "route_deviation" ? "Route" : "No-show"}</span>

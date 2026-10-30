@@ -1266,7 +1266,8 @@ main[tabindex="-1"]:focus { outline: none; }
 .intro-credit-mark { width: 2.5em; height: 2.5em; flex: none; opacity: 0; transform-origin: 0 0; }
 .intro-credit-mark svg { display: block; width: 100%; height: 100%; }
 .intro-credit-text { opacity: 0; }
-.intro-credit-text strong { color: var(--text); font-weight: 600; }
+/* The name flies with the mark into the top bar, so it is its own element (scaled from its top left). */
+.intro-credit-name { display: inline-block; margin-left: -.35em; color: var(--text); font-weight: 600; opacity: 0; transform-origin: 0 0; }
 /* The dots fly above the mark's triangle. */
 .intro-flying-dot { position: absolute; z-index: 1; border-radius: 50%; background: var(--oero-ink); opacity: 0; will-change: transform; }
 .intro-flying-dot.stop { background: var(--accent-text); transition: background-color .4s ease; }
@@ -1560,6 +1561,21 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 }
 @keyframes home-meter-grow { from { transform: scaleX(0); } to { transform: none; } }
 .home-intro { flex-basis: 100%; margin: 0; color: var(--muted); font-size: 14px; }
+/* A greeting above the queue (Home.tsx), from the reviewer's clock. */
+.home-greeting { margin-bottom: var(--space-4); }
+.home-hello { margin: 0; color: var(--heading); font-size: 26px; font-weight: 600; line-height: 1.2; }
+.home-hello-line { margin: 4px 0 0; color: var(--muted); font-size: 15px; }
+.presentation-mode .home-hello { font-size: 30px; }
+/* First visit in a tab: the page eases in, then the queue row by row (about 1 s in all). */
+@media (prefers-reduced-motion: no-preference) {
+  .home-entering .home-hello { animation: home-enter .45s ease-out both; }
+  .home-entering .home-hello-line { animation: home-enter .45s 70ms ease-out both; }
+  .home-entering .home-head > * { animation: home-enter .45s 160ms ease-out both; }
+  .home-entering .home-head > .home-intro { animation-delay: 240ms; }
+  .home-entering .home-holds, .home-entering .home-cases > h3 { animation: home-enter .45s 300ms ease-out both; }
+  .home-entering .home-queue > li { animation: home-enter .45s calc(360ms + var(--row, 0) * 45ms) cubic-bezier(.2, .8, .2, 1) both; }
+}
+@keyframes home-enter { from { opacity: 0; transform: translateY(10px); } }
 .home-note { display: flex; align-items: center; gap: var(--space-2); margin: 0; padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3); border-radius: 10px; background: var(--neutral-soft); color: var(--text); font-size: 13px; overflow-wrap: anywhere; }
 .home-note > .icon { flex: none; width: 16px; height: 16px; color: var(--muted); }
 .home-note-close { margin-left: auto; flex: none; }

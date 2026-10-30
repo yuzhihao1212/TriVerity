@@ -77,7 +77,8 @@ const markPoint = (box: Box, x: number, y: number): Point => ({ x: box.left + x 
 /**
  * Full-screen intro shown once per tab, from the landing CTA. "TriVerity." fades in; its three
  * dots then swirl out into the OeroAI mark as the letters dissolve, beside "Created by OeroAI";
- * finally the mark shrinks into the console top bar's "by OeroAI" while the overlay fades.
+ * finally the mark and the name "OeroAI" shrink together into the console top bar's "by OeroAI"
+ * while the overlay fades.
  * It calls `onNavigate` at the hand-off (the console mounts underneath), then `onDone` when the
  * overlay should leave the DOM. Esc or a click skips.
  */
@@ -89,6 +90,7 @@ export function ConsoleIntro({ onNavigate, onDone }: { onNavigate: () => void; o
   const credit = useRef<HTMLDivElement>(null);
   const markSlot = useRef<HTMLSpanElement>(null);
   const creditText = useRef<HTMLSpanElement>(null);
+  const creditName = useRef<HTMLElement>(null);
   const callbacks = useRef({ onNavigate, onDone });
   callbacks.current = { onNavigate, onDone };
 
@@ -136,6 +138,7 @@ export function ConsoleIntro({ onNavigate, onDone }: { onNavigate: () => void; o
     const lift = creditBox ? creditBox.top + creditBox.height / 2 - window.innerHeight / 2 : 0;
     const restingSlot = (rise: number): Box | null => slotBox ? { left: slotBox.left, top: slotBox.top - lift * rise, width: slotBox.width } : null;
     let flyFrom: Box | null = null;
+    let nameFrom: DOMRect | null = null;
     const startedAt = performance.now();
 
     function draw(now: number) {
@@ -155,7 +158,9 @@ export function ConsoleIntro({ onNavigate, onDone }: { onNavigate: () => void; o
       if (credit.current) credit.current.style.transform = `translate(-50%, ${-lift * rise}px)`;
       const fadeIn = easeOut(progress(t, creditStep.start, creditStep.end - creditStep.start));
       const flight = easeInOut(progress(t, fly.start, fly.end - fly.start));
+      // "Created by" fades as the flight starts; "OeroAI" travels with the mark (below).
       if (creditText.current) creditText.current.style.opacity = `${fadeIn * (1 - clamp(flight * 2.5))}`;
+      if (creditName.current) creditName.current.style.opacity = `${fadeIn}`;
       if (background.current) background.current.style.opacity = `${1 - easeOut(progress(t, fade.start, fade.end - fade.start))}`;
 
       // Where the mark is now: resting in the credit row, or on its way to the top bar.
@@ -165,11 +170,19 @@ export function ConsoleIntro({ onNavigate, onDone }: { onNavigate: () => void; o
         navigate();
         flyFrom ??= box;
         const target = document.querySelector(".topbar .byline .oero-mark")?.getBoundingClientRect();
-        // Phones keep the byline for screen readers only: then the mark stays and fades with the overlay.
+        const name = creditName.current;
+        if (name && !nameFrom) nameFrom = name.getBoundingClientRect();
+        const nameTarget = document.querySelector(".topbar .byline strong")?.getBoundingClientRect();
+        // Phones keep the byline for screen readers only: then the mark and name stay and fade with the overlay.
         if (flyFrom && target && target.width > 4) {
           box = { left: flyFrom.left + (target.left - flyFrom.left) * flight, top: flyFrom.top + (target.top - flyFrom.top) * flight, width: flyFrom.width + (target.width - flyFrom.width) * flight };
+          if (name && nameFrom && nameTarget && nameTarget.height > 0) {
+            const scale = 1 + (nameTarget.height / nameFrom.height - 1) * flight;
+            name.style.transform = `translate(${(nameTarget.left - nameFrom.left) * flight}px, ${(nameTarget.top - nameFrom.top) * flight}px) scale(${scale})`;
+          }
         } else {
           markOpacity = 1 - easeOut(progress(t, fade.start, fade.end - fade.start));
+          if (name) name.style.opacity = `${markOpacity}`;
         }
         if (flight >= .9) root.classList.remove(HIDE_BYLINE);
       }
@@ -229,7 +242,8 @@ export function ConsoleIntro({ onNavigate, onDone }: { onNavigate: () => void; o
     </div>
     <div className="intro-credit" ref={credit}>
       <span className="intro-credit-mark" ref={markSlot}><svg viewBox="0 0 64 64"><path className="oero-web" d="M32 20 L18 44 L46 44 Z" /></svg></span>
-      <span className="intro-credit-text" ref={creditText}>Created by <strong>OeroAI</strong></span>
+      <span className="intro-credit-text" ref={creditText}>Created by</span>
+      <strong className="intro-credit-name" ref={creditName}>OeroAI</strong>
     </div>
     {[0, 1, 2].map(n => <span key={n} className={`intro-flying-dot${n === 2 ? " stop" : ""}`} ref={node => { dots.current[n] = node; }} />)}
   </div>;
