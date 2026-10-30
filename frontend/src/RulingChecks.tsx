@@ -1,10 +1,10 @@
-import { Fragment, useId, useState } from "react";
+import { useId, useState } from "react";
 
 import { Chip } from "./Chip";
 import { EvidenceText, type FactLinks } from "./EvidenceList";
 import { Icon } from "./Icon";
 import { DECISION_LABELS } from "./outcomeTone";
-import { appliedRuleIds, conditionAnswer, conditionGroups, counterfactualLine, debugEnabled, priorityChip, reviewRows, type CheckRowId } from "./rulingDetails";
+import { counterfactualLine, debugEnabled, priorityChip, reviewRows, type CheckRowId } from "./rulingDetails";
 import { SourceBadge } from "./SourceBadge";
 import { Term } from "./Term";
 import type { Resolution } from "./types";
@@ -14,10 +14,12 @@ export function RulingChecks({ resolution, availableIds, onSelectFact }: { resol
   const id = useId();
   const [open, setOpen] = useState<Set<CheckRowId>>(() => new Set());
   const [opened, setOpened] = useState<Set<CheckRowId>>(() => new Set());
-  const rows = reviewRows(resolution);
+  const rows = reviewRows(resolution).map(row => row.id === "why" ? {
+    ...row, question: "In plain words", answer: "How the Judge explains the rules and each side’s argument.",
+  } : row.id === "changes" && resolution.counterfactuals?.length ? {
+    ...row, answer: "Explore alternative facts and their outcomes.",
+  } : row);
   const priority = priorityChip(resolution);
-  const { deciding, others } = conditionGroups(resolution);
-  const applied = appliedRuleIds(resolution.policy_refs);
   const allOpen = open.size === rows.length;
   function toggle(key: CheckRowId) {
     setOpen(previous => { const next = new Set(previous); if (next.has(key)) next.delete(key); else next.add(key); return next; });
@@ -52,21 +54,8 @@ export function RulingChecks({ resolution, availableIds, onSelectFact }: { resol
           {...(!open.has(row.id) ? { inert: "" } : {})}>
           <div className="ruling-check-clip"><div className="ruling-check-body">
             {row.id === "why" && <>
-              {[{ title: "Decided the case", checks: deciding }, { title: deciding.length ? "Also checked" : "Checked by the rules", checks: others }]
-                .filter(group => group.checks.length > 0).map(group => <Fragment key={group.title}>
-                <p className="small muted">{group.title}</p>
-                <ul className="ruling-rule-checks">{group.checks.map((check, index) => <li key={`${check.rule}-${index}`}>
-                  <span className={`ruling-condition-symbol${check.met ? " met" : ""}`} aria-hidden="true">{check.met ? "✓" : "⊖"}</span>
-                  <span>{conditionAnswer(check)}
-                    {check.fact_ids.length > 0 && <> · <EvidenceText text={check.fact_ids.join(" ")} availableIds={availableIds} onSelectFact={onSelectFact} /></>}
-                  </span>
-                  <Chip size="sm" tone="neutral"><Term rule={check.rule} /></Chip>
-                </li>)}</ul>
-              </Fragment>)}
-              {applied.length > 0 && <div className="ruling-applied-rules"><span className="small muted">Rules applied:</span>{applied.map(rule => <Chip key={rule} size="sm" tone="neutral"><Term rule={rule} /></Chip>)}</div>}
-              <h4 className="ruling-plain-title">In plain words <SourceBadge source={resolution.explanation_source === "llm" ? "llm" : "fallback"} /></h4>
+              <h4 className="ruling-plain-title">Judge’s explanation <SourceBadge source={resolution.explanation_source === "llm" ? "llm" : "fallback"} /></h4>
               <p className="ruling-plain-text"><EvidenceText text={resolution.explanation} availableIds={availableIds} onSelectFact={onSelectFact} /></p>
-              <p className="small muted">The outcome comes from the rules above. The AI only writes the plain-words summary.</p>
             </>}
             {row.id === "risk" && (resolution.risk.signals.length ? <>
               <ul className="ruling-signals">{resolution.risk.signals.map((signal, index) => <li key={index}><EvidenceText text={signal} availableIds={availableIds} onSelectFact={onSelectFact} /></li>)}</ul>
