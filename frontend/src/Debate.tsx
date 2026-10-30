@@ -1,10 +1,11 @@
-import { useId, useState, type CSSProperties } from "react";
+import { useId, useState } from "react";
 import { focusSection } from "./routes";
 
 import { Chip } from "./Chip";
 import { EvidenceList, EvidenceText, type FactLinks } from "./EvidenceList";
 import { Icon } from "./Icon";
-import { bottomLine, comparisonGroups } from "./hearingDisplay";
+import { HearingComparison } from "./HearingComparison";
+import { bottomLine } from "./hearingDisplay";
 import { riskTone } from "./outcomeTone";
 import { checkSummary, checksFor, missingReplyText, VERDICT } from "./ruleChecks";
 import { SourceBadge } from "./SourceBadge";
@@ -28,7 +29,6 @@ function ArgumentSummary({ text, prefix, availableIds, onSelectFact }: { text: s
 
 export function Debate({ resolution, dispute, availableIds, onSelectFact }: { resolution: Resolution; dispute?: DisputeCase } & FactLinks) {
   const id = useId();
-  const groups = comparisonGroups(resolution);
   const otherCase = (side: "rider" | "driver") => side === "rider" ? resolution.driver_case : resolution.rider_case;
   const checks = (side: "rider" | "driver") => checksFor(resolution.argument_review, side);
   const argument = (side: "rider" | "driver", item: AgentCase) => (
@@ -68,20 +68,7 @@ export function Debate({ resolution, dispute, availableIds, onSelectFact }: { re
     <section className="card debate" aria-labelledby={`${id}-title`}>
       <h2 id={`${id}-title`}>Hearing</h2>
       <p className="muted">Compare what each side argues and where they disagree.</p>
-      {groups.length === 1 && groups[0].title === "Both sides cite"
-        ? <p className="small muted hearing-same">Both sides cite the same {groups[0].facts.length + groups[0].more} facts; they disagree on what the facts mean.</p>
-        : groups.length > 0 && <div className="hearing-comparison" role="group" aria-label="Evidence cited by each side" style={{ "--groups": groups.length } as CSSProperties}>
-        {groups.map(group => <section key={group.title}>
-          <h3>{group.title}</h3>
-          <ul>{group.facts.map(fact => <li key={fact.id}>
-            {fact.text ? <EvidenceText text={fact.text} availableIds={availableIds} onSelectFact={onSelectFact} /> : <span className="muted">See Evidence</span>}{" "}
-            {availableIds?.has(fact.id) && onSelectFact
-              ? <button type="button" className="hearing-fact-id" onClick={() => onSelectFact(fact.id)} aria-label={`Find evidence ${fact.id}`}>{fact.id}</button>
-              : <span className="hearing-fact-id">{fact.id}</span>}
-          </li>)}</ul>
-          {group.more > 0 && <p className="small muted">and {group.more} more</p>}
-        </section>)}
-      </div>}
+      <HearingComparison key={dispute?.dispute_id} resolution={resolution} disputeId={dispute?.dispute_id} availableIds={availableIds} onSelectFact={onSelectFact} />
       <h3 className="round-title">Round 1 <span>Opening arguments</span></h3>
       <div className="debate-grid">{argument("rider", resolution.rider_case)}{argument("driver", resolution.driver_case)}</div>
       <h3 className="round-title">Round 2 <span>Each advocate answers the other</span></h3>

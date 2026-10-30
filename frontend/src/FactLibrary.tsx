@@ -12,6 +12,7 @@ import { GpsTimeline, RouteSketch } from "./EvidenceStories";
 import { fareChecks, fareHeadline, fareTotalLine } from "./fareStory";
 import { gpsHeadline } from "./gpsStory";
 import { Icon } from "./Icon";
+import { historyLine, historySentence, parseHistory } from "./historyStory";
 import { SOURCE_LABELS, type EvidenceItem } from "./presentation";
 import { reveal } from "./routes";
 import {
@@ -200,9 +201,25 @@ function FareBody({ groups, context }: { groups: FactGroup[]; context: RowContex
 }
 
 function HistoryBody({ groups, context }: { groups: FactGroup[]; context: RowContext }) {
+  const histories = groups.filter(group => /^(Rider|Driver) history:/.test(group.primary.text));
+  const rest = groups.filter(group => !histories.includes(group));
   return <>
-    <p className="story-headline">The account records provide context for both parties.</p>
-    <Rows groups={groups} context={context} />
+    <ul className="history-evidence-lines">{histories.map(group => {
+      const fact = group.primary;
+      const history = parseHistory(fact.text);
+      const who = fact.text.startsWith("Rider") ? "Rider" : "Driver";
+      return <li key={key(fact)} id={fact.id ? `fact-${fact.id}` : undefined} tabIndex={fact.id ? -1 : undefined} className="history-evidence-line" title={fact.text}>
+        <strong>{who}</strong>
+        <span className="history-evidence-summary">{history ? <>
+          <span aria-hidden="true">{historyLine(history)}</span><span className="sr-only">{historySentence(history)}</span>
+        </> : fact.text.replace(/^(Rider|Driver) history:\s*/, "")}</span>
+        {fact.id && <IdBadge id={fact.id} onSelectFact={context.onSelectFact} />}
+        {!!group.related.length && <EvidenceDisclosure label={relatedLinkLabel(group.related, fact)}>
+          <ul><li className="fact-original">{fact.text}</li>{group.related.map(item => <OriginalFact key={key(item)} fact={item} context={context} />)}</ul>
+        </EvidenceDisclosure>}
+      </li>;
+    })}</ul>
+    {!!rest.length && <Rows groups={rest} context={context} />}
     <p className="fairness-note"><Icon name="info" />{"Context only: account history does not establish what happened on this trip."}</p>
   </>;
 }

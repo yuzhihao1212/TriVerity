@@ -34,6 +34,12 @@
   --party-rider-edge: #7185a9;
   --category-route: #7553bb;
   --category-no-show: #16786b;
+  --hearing-rider-bg: #e3e8ee;
+  --hearing-rider-ink: #3e4c5c;
+  --hearing-rider-border: #c5ced8;
+  --hearing-driver-bg: #ece6df;
+  --hearing-driver-ink: #5c4f42;
+  --hearing-driver-border: #d6ccc1;
   --transparent: transparent;
   --space-1: 4px;
   --space-2: 8px;
@@ -46,6 +52,13 @@
 }
 
 :root[data-theme="dark"] {
+  --hearing-rider-bg: #2b343f;
+  --hearing-rider-ink: #c9d3de;
+  --hearing-rider-border: #3e4a57;
+  --hearing-driver-bg: #3a332c;
+  --hearing-driver-ink: #ddd2c6;
+  --hearing-driver-border: #52483e;
+
   color-scheme: dark;
   --feedback-selected: #efc94c;
   --bg: #171b20;
@@ -75,6 +88,13 @@
 /* No saved choice: follow the system setting. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+  --hearing-rider-bg: #2b343f;
+  --hearing-rider-ink: #c9d3de;
+  --hearing-rider-border: #3e4a57;
+  --hearing-driver-bg: #3a332c;
+  --hearing-driver-ink: #ddd2c6;
+  --hearing-driver-border: #52483e;
+
     color-scheme: dark;
     --bg: #171b20;
     --header: #2e1e26;
@@ -263,17 +283,6 @@ textarea { width: 100%; resize: vertical; }
 .hearing-read-more .icon { flex: none; width: 14px; height: 14px; transform: rotate(90deg); transition: transform .15s; }
 .hearing-read-more[aria-expanded="true"] .icon { transform: rotate(-90deg); }
 .hearing-argument > div { margin-top: var(--space-2); }
-.hearing-comparison { display: grid; grid-template-columns: repeat(var(--groups, 3), minmax(0, 1fr)); gap: var(--space-4); padding: var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
-.hearing-comparison section { min-width: 0; overflow-wrap: anywhere; }
-.hearing-comparison h3 { font-size: 14px; margin-bottom: var(--space-2); }
-.hearing-comparison ul { margin: 0; padding-left: var(--space-4); font-size: 13px; }
-.hearing-comparison li + li { margin-top: var(--space-2); }
-.hearing-fact-id { display: inline-block; min-height: 24px; padding: 2px var(--space-1); border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--muted); font: inherit; font-size: 11px; white-space: nowrap; vertical-align: baseline; }
-.presentation-mode .hearing-argument, .presentation-mode .hearing-comparison ul, .presentation-mode .hearing-comparison h3 { font-size: 15px; }
-.presentation-mode .hearing-fact-id { font-size: 13px; }
-@media (max-width: 760px) {
-  .hearing-comparison { grid-template-columns: 1fr; }
-}
 .reply { border-top: 2px solid var(--accent); }
 .reply-to { font-size: 11px; }
 .evidence-group { display: grid; gap: var(--space-3); }
@@ -1976,3 +1985,57 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .evidence-display .fact-card > .evidence-related > div:not([hidden]) { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; column-gap: 12px; }
 .evidence-display .fact-card > .evidence-related > div > .aligned-grid { grid-column: 1 / -1; grid-template-columns: subgrid; padding-left: 0; border-left: 0; }
 @media (max-width: 760px) { .evidence-display .fact-card > .evidence-related > .evidence-related-trigger { grid-column: 1 / -1; } }
+
+
+/* History option B: identical neutral lines, without boxed profiles or a ranking signal. */
+.evidence-display .history-evidence-lines { display: grid; }
+.evidence-display .history-evidence-line { display: grid; grid-template-columns: 70px minmax(0, 1fr) auto; align-items: baseline; gap: 8px 12px; padding: 10px 0; border-bottom: 1px solid var(--border); color: var(--text); font-size: 13px; font-variant-numeric: tabular-nums; scroll-margin-block: var(--space-10); }
+.evidence-display .history-evidence-line:last-child { border-bottom: 0; }
+.evidence-display .history-evidence-line > strong { font-weight: 600; }
+.evidence-display .history-evidence-summary { min-width: 0; line-height: 1.6; overflow-wrap: anywhere; }
+.evidence-display .history-evidence-line > .fact-reference { margin: 0; justify-self: end; }
+.evidence-display .history-evidence-line > .evidence-related { grid-column: 2 / -1; }
+.presentation-mode .evidence-display .history-evidence-line { font-size: 15px; }
+
+/* Hearing: position and mirrored neutral edges distinguish the parties, never a verdict hue. */
+.hearing-comparison { display: grid; gap: 14px; padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
+.hearing-comparison > h3 { margin: 0; font-size: 15px; }
+.hearing-venn { display: grid; justify-items: center; gap: 4px; margin: 0; color: var(--muted); }
+.hearing-venn svg { max-width: 100%; }
+.hearing-venn circle { fill: none; stroke: var(--control-border); stroke-width: 1.2; }
+.hearing-venn text { fill: var(--text); font-size: 15px; text-anchor: middle; font-variant-numeric: tabular-nums; }
+.hearing-venn figcaption { font-size: 11px; text-align: center; }
+.hearing-citation-columns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 14px; }
+.hearing-citation-column { min-width: 0; }
+.hearing-column-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; font-size: 13px; }
+.hearing-column-both .hearing-column-heading { justify-content: center; }
+.hearing-column-driver .hearing-column-heading { flex-direction: row-reverse; }
+.hearing-party-avatar { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex: none; border-radius: 50%; border: 1px solid; }
+.hearing-party-avatar .icon { width: 16px; height: 16px; }
+.hearing-avatar-rider { background: var(--hearing-rider-bg); color: var(--hearing-rider-ink); border-color: var(--hearing-rider-border); }
+.hearing-avatar-driver { background: var(--hearing-driver-bg); color: var(--hearing-driver-ink); border-color: var(--hearing-driver-border); }
+.hearing-citation-column ul { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.hearing-citation-column ul + ul:not([hidden]) { margin-top: 6px; }
+.hearing-citation { display: flex; align-items: flex-start; gap: 7px; padding: 9px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); color: var(--text); font-size: 13px; line-height: 1.5; min-width: 0; }
+.hearing-citation-rider { border-left: 3px solid var(--text); border-radius: 0 9px 9px 0; }
+.hearing-citation-driver { border-right: 3px solid var(--text); border-radius: 9px 0 0 9px; flex-direction: row-reverse; text-align: right; }
+.hearing-citation > .icon { width: 15px; height: 15px; color: var(--muted); flex: none; margin-top: 3px; }
+.hearing-citation-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.hearing-fact-id { display: inline-flex; align-items: center; justify-content: center; align-self: center; flex: none; min-height: 24px; max-width: 100%; padding: 2px 4px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--muted); font: inherit; font-size: 10px; line-height: 1.4; white-space: nowrap; }
+.hearing-citation-empty { margin: 0; padding: 10px; border: 1px dashed var(--control-border); border-radius: 9px; color: var(--muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.hearing-more-facts { min-height: 24px; max-width: 100%; margin-top: 6px; padding: 4px 0; background: none; border: 0; color: var(--muted); font: inherit; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.hearing-column-driver .hearing-more-facts { float: right; }
+.presentation-mode .hearing-argument, .presentation-mode .hearing-citation, .presentation-mode .hearing-column-heading { font-size: 15px; }
+.presentation-mode .hearing-citation-empty, .presentation-mode .hearing-fact-id { font-size: 12px; }
+@media (prefers-reduced-motion: no-preference) {
+  .hearing-citation.intro { animation: hearing-fact-in .2s ease-out both; animation-delay: calc(var(--citation-index) * 45ms); }
+}
+@keyframes hearing-fact-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (max-width: 520px) {
+  .hearing-citation-columns { grid-template-columns: minmax(0, 1fr); }
+  .hearing-comparison { padding: 12px; }
+  .evidence-display .history-evidence-line { grid-template-columns: minmax(0, 1fr) auto; }
+  .evidence-display .history-evidence-line > .fact-reference { grid-column: 2; grid-row: 1; }
+  .evidence-display .history-evidence-summary { grid-column: 1 / -1; grid-row: 2; }
+  .evidence-display .history-evidence-line > .evidence-related { grid-column: 1 / -1; }
+}
