@@ -102,16 +102,23 @@ def _resolve_case(case: DisputeCase, code_id: str | None, on_step: StepCallback 
     # Both transports use the same server-side sample lookup, cache and budget.
     if settings.public_demo and code_id is None:
         return _resolve_public_sample(case.dispute_id, on_step, offline)
-    return _run(case, on_step, offline)
+    # A judge's own dispute (public demo) sees that judge's own reviewer decisions too.
+    return _run(case, on_step, offline, precedent_owner=code_id if settings.public_demo else None)
 
 
-def _run(case: DisputeCase, on_step: StepCallback | None = None, offline: bool = False) -> Resolution:
+def _run(case: DisputeCase, on_step: StepCallback | None = None, offline: bool = False,
+         precedent_owner: str | None = None) -> Resolution:
     # Offline runs spend no tokens, so they don't count against the daily resolve budget.
     if not offline:
         budget.record_resolve()
+    kwargs = {}
+    if on_step is not None:
+        kwargs["on_step"] = on_step
+    if precedent_owner is not None:
+        kwargs["precedent_owner"] = precedent_owner
     try:
         with ai_disabled(offline):
-            return resolve_dispute(case) if on_step is None else resolve_dispute(case, on_step=on_step)
+            return resolve_dispute(case, **kwargs)
     except ServiceBusy:
         raise HTTPException(
             status_code=503,

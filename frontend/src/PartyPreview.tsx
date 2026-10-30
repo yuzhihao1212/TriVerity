@@ -60,7 +60,7 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
   useEffect(() => {
     if (!appealsAvailable) return;
     let current = true;
-    // Off in the public demo (403): no appeals to show.
+    // Off in the public demo without a judge code (403): no appeals to show.
     listAppeals(dispute.dispute_id).then(list => { if (current) setAppeals(list); }).catch(() => {});
     return () => { current = false; };
   }, [dispute.dispute_id, appealsAvailable]);

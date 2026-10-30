@@ -69,7 +69,7 @@ test('six typed tiles retain order, documented fairness/injection proofs and the
   assert.match(tiles[2].detail, /histories removed or swapped/);
   assert.equal(tiles[5].proof, '0 of 68 live runs swayed');
   assert.match(tiles[5].detail, /23.*17.*68/);
-  assert.equal(tiles[4].note, 'Disabled in the public demo.');
+  assert.equal(tiles[4].note, 'Needs a judge access code in the public demo.');
 });
 
 test('trust copy does not repeat the headline numbers from measured results', () => {

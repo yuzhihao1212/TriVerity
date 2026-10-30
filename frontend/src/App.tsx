@@ -39,7 +39,7 @@ import type { Theme } from "./theme";
 import { PartyPreview, sentRecords } from "./PartyPreview";
 import { autoSentRecord, clockText, DELIVERED_ANNOUNCEMENT, staysWithReviewer } from "./notifyState";
 import { DisputeForm } from "./DisputeForm";
-import { ApiError, getSamples, listAppeals, resolveBatch, resolveDisputeLive } from "./services/api";
+import { ApiError, getSamples, listAppeals, resolveBatch, resolveDisputeLive, setReviewerAccessCode } from "./services/api";
 import { AutoResolvedNote } from "./AutoResolvedNote";
 import { AccessCodeField } from "./AccessCodeField";
 import { ACCESS_CODE_FIELD_ID, accessCodeMessage, accessCodeProblem, needsAccessCode } from "./consoleHeader";
@@ -144,6 +144,8 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
   const [own, setOwn] = useState<DisputeCase[]>([]);
   const [form, setForm] = useState<{ template?: DisputeCase } | null>(null);
   const [accessCode, setAccessCode] = useState(loadAccessCode);
+  // Appeals and reviewer decisions send the same code (public demo: the judge's own sandbox).
+  setReviewerAccessCode(accessCode);
   const accessCodeInput = useRef<HTMLInputElement>(null);
   const [focusAccessCode, setFocusAccessCode] = useState(false);
   const [selected, setSelected] = useState<DisputeCase | null>(null);
@@ -165,6 +167,13 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
   const [error, setError] = useState<string | null>(null);
   // Bumped when an appeal is filed or decided, so the reviewer's appeal list reloads.
   const [appealsVersion, setAppealsVersion] = useState(0);
+  // A new code may unlock appeals (public demo): reload them once the judge stops typing.
+  const codeLoaded = useRef(accessCode);
+  useEffect(() => {
+    if (codeLoaded.current === accessCode) return;
+    const timer = window.setTimeout(() => { codeLoaded.current = accessCode; setAppealsVersion(v => v + 1); }, 600);
+    return () => window.clearTimeout(timer);
+  }, [accessCode]);
 
   // Loading the samples is free; the agents (and LLM tokens) only run on "Resolve".
   useEffect(() => {
@@ -209,6 +218,9 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
   function changeAccessCode(code: string) {
     setAccessCode(code);
     saveAccessCode(code.trim());
+    setReviewerAccessCode(code);
+    // A new code may unlock decisions (public demo): let the reviewer try again.
+    setDecisionsUnavailable(false);
   }
 
   function resolve(dispute: DisputeCase) {
@@ -317,7 +329,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
   /** Moving to another case counts as moving on from the step being viewed. */
   function leaveCase() { visit(activeTab); }
   function onDecisionsUnavailable() {
-    // Recording is off (public demo): opening Ruling is all the reviewer can do, so it counts.
+    // Recording is off (public demo, no judge code): opening Ruling is all the reviewer can do, so it counts.
     setDecisionsUnavailable(true);
     markReviewed("ruling");
   }

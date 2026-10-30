@@ -5,7 +5,7 @@ export function needsAccessCode(disputeId: string | null | undefined, own: { dis
   return !!disputeId && own.some(dispute => dispute.dispute_id === disputeId);
 }
 
-export const ACCESS_CODE_HELP = "Needed to run your own disputes on the public demo. Sample disputes don't need it.";
+export const ACCESS_CODE_HELP = "Needed on the public demo to run your own disputes and to record decisions and appeals. Running the sample disputes doesn't need it.";
 export const ACCESS_CODE_FIELD_ID = "judge-access-code";
 
 /**
