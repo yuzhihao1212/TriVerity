@@ -9,8 +9,7 @@ const none = { refundTime: null, ratingUnaffected: false, appealWindowDays: null
 const all = { refundTime: '3–5 working days', ratingUnaffected: true, appealWindowDays: 7 };
 const outcome = (decision, amount = 6.3) => ({ decision, amount });
 
-test('nothing unconfirmed is promised: no refund time, rating line or appeal deadline', () => {
-  assert.deepEqual(c.CONFIRMED, none);
+test('with a claim left out, nothing is promised: no refund time, rating line or appeal deadline', () => {
   const copy = c.confirmedCopy(none);
   assert.equal(copy.refundNext, 'The refund goes back to your original payment method.');
   assert.equal(copy.rating, null);
@@ -19,11 +18,15 @@ test('nothing unconfirmed is promised: no refund time, rating line or appeal dea
   for (const text of [copy.refundNext, copy.appealWindow, copy.appealNote, copy.autoNotice]) {
     assert.doesNotMatch(text, /working days|\d+ days|rating/);
   }
-  // The phones use them: no rating line for the driver, the rider's next step without a time.
-  // The earnings line was approved for the demo (30 Oct); the rating line still waits.
-  assert.deepEqual(s.customerResult('driver', outcome('partial_refund')).next, ['$6.30 of this fare went back to the rider.', 'Your earnings for this trip have been adjusted.']);
-  assert.deepEqual(s.customerResult('driver', outcome('no_action')).next, ["Your earnings for this trip don't change."]);
-  assert.deepEqual(s.customerResult('rider', outcome('partial_refund')).next, ['The refund goes back to your original payment method.']);
+});
+
+test('the demo shows all three promises on the phones', () => {
+  assert.deepEqual(c.CONFIRMED, all);
+  const copy = c.confirmedCopy(all);
+  assert.deepEqual(s.customerResult('driver', outcome('partial_refund')).next,
+    ['$6.30 of this fare went back to the rider.', "Your earnings for this trip have been adjusted; your rating isn't affected."]);
+  assert.deepEqual(s.customerResult('driver', outcome('no_action')).next, ["Your earnings for this trip don't change.", "Your rating isn't affected."]);
+  assert.deepEqual(s.customerResult('rider', outcome('partial_refund')).next, ['Back on your card in 3–5 working days.']);
   assert.equal(ns.AUTO_NOTICE, copy.autoNotice);
 });
 

@@ -18,8 +18,12 @@ export function customerResult(party: Party, outcome: Pick<FinalOutcome, "decisi
     : refund && amount ? [COPY.next.driverRefund(amount), COPY.next.earningsAdjusted]
       : credit && amount ? [COPY.next.driverCredit(amount), COPY.next.earningsAdjusted]
       : outcome.decision === "no_action" ? [COPY.next.earningsUnchanged] : [COPY.next.noChange];
-  // "Your rating isn't affected" only once the team confirms it (customerCopy CONFIRMED).
-  if (party === "driver" && COPY.next.rating) next.push(COPY.next.rating);
+  // "Your rating isn't affected" when set in customerCopy CONFIRMED. The phone keeps two short
+  // lines: after an adjustment it joins the earnings line.
+  if (party === "driver" && COPY.next.rating) {
+    if (next[next.length - 1] === COPY.next.earningsAdjusted) next[next.length - 1] = COPY.next.earningsAndRating;
+    else next.push(COPY.next.rating);
+  }
   return { line, next, icon: party === "rider" && refund ? "receipt" : "check", status: COPY.resolved };
 }
 

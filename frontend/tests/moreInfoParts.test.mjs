@@ -20,12 +20,12 @@ test('falls back to the whole message: a reviewer override, or an older result w
   assert.equal(ns.sentParts(() => null), undefined);
 });
 
-test('an automatic close keeps the parts and adds the notice to what happens now, with no unconfirmed deadline', () => {
+test('an automatic close keeps the parts and adds the notice, with the demo appeal window, to what happens now', () => {
   const record = ns.autoSentRecord('D001', resolution, { fare: { actual: 24.8, expected: 18.5 } });
   assert.equal(record.parts.rider.found, 'Found for the rider.');
   assert.equal(record.parts.rider.next, `Next for the rider. ${ns.AUTO_NOTICE}`);
   assert.match(ns.AUTO_NOTICE, /appeal/);
-  assert.doesNotMatch(ns.AUTO_NOTICE, /\d+ days?/);
+  assert.match(ns.AUTO_NOTICE, /appeal within 7 days\.$/);
   // Older results without parts still close, with the whole message only.
   const old = ns.autoSentRecord('D001', { ...resolution, rider_message: undefined, driver_message: undefined }, { fare: {} });
   assert.equal(old.parts, undefined);
