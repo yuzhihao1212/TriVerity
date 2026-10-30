@@ -177,8 +177,17 @@ export function ConsoleIntro({ onNavigate, onDone }: { onNavigate: () => void; o
         if (flyFrom && target && target.width > 4) {
           box = { left: flyFrom.left + (target.left - flyFrom.left) * flight, top: flyFrom.top + (target.top - flyFrom.top) * flight, width: flyFrom.width + (target.width - flyFrom.width) * flight };
           if (name && nameFrom && nameTarget && nameTarget.height > 0) {
+            // The name rides beside the mark as one piece: its gap from the mark and its vertical
+            // centre follow the mark's box, easing from the credit row's spacing to the top bar's.
             const scale = 1 + (nameTarget.height / nameFrom.height - 1) * flight;
-            name.style.transform = `translate(${(nameTarget.left - nameFrom.left) * flight}px, ${(nameTarget.top - nameFrom.top) * flight}px) scale(${scale})`;
+            const mid = (b: { top: number; width: number }) => b.top + b.width / 2;
+            // The gap closes as "Created by" fades, so the name joins the mark straight away.
+            const join = easeOut(clamp(flight * 2.5));
+            const gap = (nameFrom.left - (flyFrom.left + flyFrom.width)) + ((nameTarget.left - (target.left + target.width)) - (nameFrom.left - (flyFrom.left + flyFrom.width))) * join;
+            const lift = (nameFrom.top + nameFrom.height / 2 - mid(flyFrom)) + ((nameTarget.top + nameTarget.height / 2 - (target.top + target.height / 2)) - (nameFrom.top + nameFrom.height / 2 - mid(flyFrom))) * flight;
+            const left = box.left + box.width + gap;
+            const top = mid(box) + lift - nameFrom.height * scale / 2;
+            name.style.transform = `translate(${left - nameFrom.left}px, ${top - nameFrom.top}px) scale(${scale})`;
           }
         } else {
           markOpacity = 1 - easeOut(progress(t, fade.start, fade.end - fade.start));
