@@ -46,6 +46,8 @@ import { ACCESS_CODE_FIELD_ID, accessCodeMessage, accessCodeProblem, needsAccess
 import { disputeCategory, groupByCategory, type Category, disputeItemName, filterLabel, filterShortLabel, TYPE_LABELS, type DisputeFilter } from "./disputeList";
 import { FilterMenu } from "./FilterMenu";
 import { Icon } from "./Icon";
+import { Mascot } from "./Mascot";
+import { cheerLine } from "./mascotState";
 import type { AgentLogEntry, Appeal, Decision, DisputeCase, PartyHistory, Resolution } from "./types";
 
 
@@ -330,6 +332,13 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
   const actions = allowedActions(closed ? "closed" : reopened ? "reopened" : "ready", closed);
   // Announced once through the polite status region when the phones switch to delivered.
   const [deliveredFor, setDeliveredFor] = useState<string | null>(null);
+  // The owl cheers when the reviewer closes a case (Notify sent); it says what they did.
+  const [cheer, setCheer] = useState<{ caseId: string; key: number } | null>(null);
+  useEffect(() => {
+    if (!cheer) return;
+    const timer = window.setTimeout(() => setCheer(null), 8000);
+    return () => window.clearTimeout(timer);
+  }, [cheer]);
   const allCases = useMemo(() => [...own, ...samples], [own, samples]);
   // Routine rulings the policy lets through close themselves: the parties get the ruling's
   // messages with the automatic-decision notice. Only a case with no history yet; one a
@@ -583,7 +592,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
                   saved={decision.saved ?? (reopened ? latestSent?.reviewer ?? null : null)} unavailable={decisionsUnavailable} rulingVisited={reviewed.has("ruling")}
                   onGoToRuling={() => changeTab("ruling")} onAppealed={() => setAppealsVersion(v => v + 1)}
                   progress={progress}
-                  onSent={() => { markReviewed("notify"); setSentVersion(v => v + 1); setDeliveredFor(reviewId); }}
+                  onSent={() => { markReviewed("notify"); setSentVersion(v => v + 1); setDeliveredFor(reviewId); setCheer({ caseId: selected.dispute_id, key: Date.now() }); }}
                   next={following?.row.id ?? null} nextLabel={following?.label} onNext={goToFollowing}
                   onBack={() => { window.location.hash = HOME_HASH; }} />}
                 {(tab !== "ruling" || !resolution) && <AgentsStrip tab={tab} resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />}
@@ -592,6 +601,17 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
           </section>}
 
         </main>
+        {cheer && (() => {
+          const line = cheerLine({ caseId: cheer.caseId, closedByYou: Math.max(1, queueRows.filter(row => row.status === "closed").length),
+            left: queueRows.filter(row => !["closed", "auto"].includes(row.status)).length });
+          return <div className="mascot-toast" role="status" aria-live="polite">
+            <Mascot size={92} cheer={cheer.key}>
+              <p className="mascot-toast-title">{line.title}</p>
+              <p className="mascot-toast-text">{line.detail}</p>
+            </Mascot>
+            <button type="button" className="icon-button mascot-toast-close" aria-label="Dismiss" title="Dismiss" onClick={() => setCheer(null)}><Icon name="cross" /></button>
+          </div>;
+        })()}
       </div>
     </div>
   );
