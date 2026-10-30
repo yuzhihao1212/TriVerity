@@ -1094,7 +1094,8 @@ main[tabindex="-1"]:focus { outline: none; }
 /* One line for position (stepperMotion.ts): from step 1's centre to the current step's. The
    track and line sit under the circles; the line's width is set in WorkflowTabs. */
 .stepper-wrap { position: relative; }
-.stepper-track { position: absolute; z-index: 1; left: 10%; right: 10%; top: calc(var(--space-2) + var(--circle, 32px) / 2 - 1.5px); height: 3px; border-radius: 3px; background: var(--control-border); pointer-events: none; }
+/* A thin, light track: only the rose position line carries colour. */
+.stepper-track { position: absolute; z-index: 1; left: 10%; right: 10%; top: calc(var(--space-2) + var(--circle, 32px) / 2 - 1px); height: 2px; border-radius: 2px; background: var(--border); pointer-events: none; }
 .stepper-line { position: absolute; inset: 0; border-radius: inherit; background: var(--step-line); transform: scaleX(0); transform-origin: left center; transition: transform .3s cubic-bezier(.3, 0, .2, 1); }
 .stepper .step-circle { z-index: 2; }
 .stepper-position { margin: 0 0 var(--space-1); color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
@@ -1114,7 +1115,7 @@ main[tabindex="-1"]:focus { outline: none; }
 .step-icon { flex: none; width: 15px; height: 15px; }
 .step.current .step-name { color: var(--accent-text); }
 /* The current step is larger, with a soft halo: size is noticed before colour or text. */
-.step.current .step-circle { transform: scale(1.15); box-shadow: 0 0 0 5px var(--accent-soft); transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease, border-color .2s ease; }
+.step.current .step-circle { transform: scale(1.15); box-shadow: none; transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease, border-color .2s ease; }
 /* After a run, each step pops as it unlocks (timed in WorkflowTabs); the line doesn't move. */
 .step.unlocked:not(.current) .step-circle { animation: step-unlock .28s ease-out both; }
 @keyframes step-unlock { 0% { transform: scale(.85); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
@@ -1134,7 +1135,10 @@ main[tabindex="-1"]:focus { outline: none; }
 .step .tab-progress { color: var(--muted); font-size: 11px; }
 .step.locked { cursor: not-allowed; }
 .step.locked .step-name { color: var(--muted); }
-.step.locked:not(.working) .step-circle { opacity: .6; border-style: dashed; }
+/* Locked: a plain grey number, no dashes or padlock (the line under the stepper says why). */
+.step.locked:not(.working) .step-circle { border-color: var(--border); background: var(--bg); color: var(--muted); }
+.stepper-hint { display: flex; align-items: center; gap: 6px; margin-top: var(--space-2); }
+.stepper-hint .icon { width: 14px; height: 14px; flex: none; }
 .step:not(.locked):not([aria-selected="true"]):hover { background: var(--surface); }
 .step:not(.locked):not(.reviewed):hover .step-circle { border-color: var(--accent-text); color: var(--accent-text); }
 /* The first step still to review: a quiet hint, never on the current step. */
@@ -1142,12 +1146,13 @@ main[tabindex="-1"]:focus { outline: none; }
 .step-next { color: var(--accent-text); font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
 /* Rings just outside the circle (WorkflowTabs StepRing). pathLength=100 keeps the dash maths simple. */
 .step-ring { position: absolute; inset: -6px; width: calc(100% + 12px); height: calc(100% + 12px); overflow: visible; pointer-events: none; }
-.step-ring circle { fill: none; stroke: var(--accent-text); stroke-width: 2; vector-effect: non-scaling-stroke; }
+/* One soft halo around the current step (drawn once on arrival). */
+.step-ring circle { fill: none; stroke: color-mix(in srgb, var(--accent-control) 28%, transparent); stroke-width: 3; vector-effect: non-scaling-stroke; }
 /* current: a solid ring that draws itself once on arrival, then stays still (no endless motion, WCAG 2.2.2). */
 .step-ring.current circle { stroke-dasharray: 100; stroke-dashoffset: 0; transform: rotate(-90deg); transform-origin: center; transform-box: fill-box; animation: stepper-draw .4s ease-out both; }
 /* working (live runs only): a dashed ring that turns slowly while the agents are on this step. */
 .step-ring.working { animation: stepper-spin 2.5s linear infinite; }
-.step-ring.working circle { stroke-dasharray: 7 5.5; }
+.step-ring.working circle { stroke: var(--accent-text); stroke-width: 2; stroke-dasharray: 7 5.5; }
 .step.working .step-circle { border-color: var(--accent-text); color: var(--accent-text); }
 @keyframes stepper-draw { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
 @keyframes stepper-spin { to { transform: rotate(360deg); } }

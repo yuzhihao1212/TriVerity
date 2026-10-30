@@ -117,7 +117,7 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, de
             ref={element => { refs.current[tab.id] = element; }}
             onClick={() => activate(tab.id)} onKeyDown={event => navigate(event, tab.id)}>
             <span className="step-circle" aria-hidden="true" key={arriving ? `arrive-${move!.id}` : "circle"}>
-              {state.reviewed && !waiting ? <Icon name="check" /> : locked && !state.working ? <Icon name="lock" /> : index + 1}
+              {state.reviewed && !waiting ? <Icon name="check" /> : index + 1}
               {/* Mounted when the reviewer arrives, so it draws once; a re-render never replays it.
                   Going back, the earlier step is current at once: no draw. */}
               {state.current && !state.working && <StepRing kind="current" instant={move?.kind === "back"} />}
@@ -127,15 +127,15 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, de
               <Icon name={STEP_ICONS[tab.id]} className="step-icon" />
               <span className="tab-label"><span className="label-full">{tab.label}</span><span className="label-short" aria-hidden="true">{SHORT_TAB_LABELS[tab.id]}</span></span>
             </span>
-            {/* A locked step already says "Locked" in its progress text. */}
-            <span className="sr-only">, step {index + 1} of {WORKFLOW_TABS.length}{locked && !state.working ? "" : `, ${stepStatusText(state)}`}{state.next ? ", next to review" : ""}. </span>
-            <span className="tab-progress">{tabProgress(tab.id, resolution)}</span>
+            <span className="sr-only">, step {index + 1} of {WORKFLOW_TABS.length}{locked && !state.working ? ", locked" : `, ${stepStatusText(state)}`}{state.next ? ", next to review" : ""}. </span>
+            {/* Only when it says something: "12 facts", "2 arguments"; locked steps stay quiet. */}
+            {tabProgress(tab.id, resolution) && <span className="tab-progress">{tabProgress(tab.id, resolution)}</span>}
             {state.next && <span className="step-next" aria-hidden="true">Next</span>}
           </button>;
         })}
       </div>
       </div>
-      {!resolution && <p className="small muted" id={`${id}-locked`}>{busy ? "Waiting for the complete result to unlock steps 2–5." : "Run agents in Intake to unlock steps 2–5."}</p>}
+      {!resolution && <p className="small muted stepper-hint" id={`${id}-locked`}><Icon name="lock" />{busy ? "Steps 2–5 open when the complete result is ready." : "Steps 2–5 open once you run the agents."}</p>}
       {busy && <p className="small muted">Completed steps appear live below. Workflow tabs unlock when the ruling is ready.</p>}
     </div>
     {WORKFLOW_TABS.map((tab, index) => <div role="tabpanel" key={tab.id}

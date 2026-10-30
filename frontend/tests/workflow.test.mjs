@@ -70,7 +70,7 @@ test('agent badges use actual output sources and never guess a collector source'
 });
 
 test('progress labels describe saved data, not fabricated execution progress', () => {
-  assert.equal(tabProgress('evidence'),'Locked');
+  assert.equal(tabProgress('evidence'),'', 'locked steps stay quiet; one hint line explains them');
   assert.equal(tabProgress('evidence',result),'1 fact');
   assert.equal(tabProgress('hearing',result),'2 arguments');
   assert.equal(tabProgress('notify',result),'2 messages');
