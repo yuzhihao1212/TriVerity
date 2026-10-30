@@ -30,18 +30,21 @@ services:
         value: "true"
       - key: DEMO_ACCESS_CODES    # comma-separated, one per judge; see the docs
         sync: false
-      # -- Preset 2 limits (.env.example), a resolve is ~11,000 tokens (collector on) --
+      # -- Showcase limits: raised from Preset 2 so concurrent visitors don't hit
+      # 429s/Fallback. DAILY_TOKEN_BUDGET must still stay below the demo key's
+      # TokenHub Total Quota, or the provider starts refusing requests outright
+      # instead of this app degrading gracefully to Fallback badges.
       - key: PER_IP_PER_MINUTE
-        value: "5"
-      - key: PER_IP_PER_DAY
-        value: "60"
-      - key: PER_CODE_PER_MINUTE
-        value: "5"
-      - key: PER_CODE_PER_DAY
-        value: "40"
-      - key: GLOBAL_PER_MINUTE
         value: "10"
+      - key: PER_IP_PER_DAY
+        value: "150"
+      - key: PER_CODE_PER_MINUTE
+        value: "10"
+      - key: PER_CODE_PER_DAY
+        value: "150"
+      - key: GLOBAL_PER_MINUTE
+        value: "18"
       - key: DAILY_TOKEN_BUDGET   # keep below the demo key's TokenHub quota
-        value: "400000"
+        value: "3000000"
       - key: DAILY_RESOLVE_BUDGET
-        value: "45"
+        value: "1000"

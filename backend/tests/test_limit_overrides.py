@@ -24,10 +24,10 @@ def reload_limits(monkeypatch):
 def test_defaults_without_overrides(reload_limits):
     # Clear any overrides in the developer's own backend/.env first.
     reloaded = reload_limits(**{name.lower(): None for name in limits._OVERRIDABLE})
-    assert reloaded.DAILY_TOKEN_BUDGET == 300_000
-    assert reloaded.DAILY_RESOLVE_BUDGET == 75
-    assert reloaded.PER_IP_PER_MINUTE == 3
-    assert reloaded.GLOBAL_PER_MINUTE == 10
+    assert reloaded.DAILY_TOKEN_BUDGET == 3_000_000
+    assert reloaded.DAILY_RESOLVE_BUDGET == 1_000
+    assert reloaded.PER_IP_PER_MINUTE == 10
+    assert reloaded.GLOBAL_PER_MINUTE == 18
 
 
 def test_env_overrides_raise_the_budget(reload_limits):
@@ -38,7 +38,7 @@ def test_env_overrides_raise_the_budget(reload_limits):
     assert reloaded.DAILY_TOKEN_BUDGET == 2_000_000
     assert reloaded.DAILY_RESOLVE_BUDGET == 500
     assert reloaded.PER_IP_PER_DAY == 200
-    assert reloaded.PER_IP_PER_MINUTE == 3  # untouched values keep their default
+    assert reloaded.PER_IP_PER_MINUTE == 10  # untouched values keep their default
 
 
 def test_override_is_used_by_the_budget(reload_limits):
@@ -69,7 +69,7 @@ def test_settings_read_overrides_from_env(monkeypatch):
     ("per_ip_per_day", 0),
     ("per_code_per_minute", 0),
     ("per_code_per_day", 0),
-    ("global_per_minute", 11),   # never above 10 per minute (provider allows 60 requests)
+    ("global_per_minute", 21),   # never above 20 per minute (provider allows 60 requests)
     ("global_per_minute", 0),
 ])
 def test_unsafe_overrides_rejected(reload_limits, name, value):
