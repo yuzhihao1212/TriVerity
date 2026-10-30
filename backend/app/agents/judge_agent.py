@@ -2,9 +2,20 @@ from app.agents._advocate import evidence_index
 from app.agents.judge_narration import narrate
 from app.agents.precedent_agent import check_consistency
 from app.models.dispute import DisputeCase
-from app.models.resolution import AgentCase, PrecedentReport, RiskAssessment, Ruling
+from app.models.resolution import AgentCase, PrecedentReport, RiskAssessment, Ruling, RulingCondition
 from app.services.evidence import CaseFacts
 from app.services.policy_service import cite, load_policy
+
+def _condition(rule: str, label: str, met: bool, value: str,
+               facts: CaseFacts | None = None, prefixes: tuple[str, ...] = ()) -> RulingCondition:
+    # Resolve exact existing facts, never assume an ID's position within a source.
+    ids = [fact_id for fact_id, (_, text) in evidence_index(facts).items()
+           if prefixes and text.startswith(prefixes)] if facts is not None else []
+    return RulingCondition(rule=rule, label=label, met=met, value=value, fact_ids=ids)
+
+
+def _record(ruling: Ruling, condition: RulingCondition) -> Ruling:
+    return ruling.model_copy(update={"conditions": [*(ruling.conditions or []), condition]})
 
 def judge(
     case: DisputeCase,
@@ -36,11 +47,12 @@ def judge_with_precedents(
     ruling = base_ruling(case, facts)
     report, overrides = check_consistency(precedents or PrecedentReport(), ruling.decision)
     ruling = _apply_safety(ruling, facts, policy["safety"])
-    ruling = _apply_fraud(ruling, risk, policy["fraud"])
+    ruling = _apply_fraud(ruling, risk, policy["fraud"], facts)
     ruling = _apply_precedent(ruling, overrides, policy["precedent"])
     ruling = _apply_escalation(ruling, policy["escalation"])
     ruling = _cap_refund(ruling, case, policy["refund"])
-    ruling = ruling.model_copy(update={"judge_evidence_ids": evidence_ids_for(ruling.judge_evidence, facts)})
+    ruling = ruling.model_copy(update={"judge_evidence_ids": evidence_ids_for(ruling.judge_evidence, facts),
+                                      "min_confidence": policy["escalation"]["thresholds"]["min_confidence"]})
     return narrate(case, _explain_to_parties(ruling), rider_case, driver_case, report), report
 
 def evidence_ids_for(lines: list[str], facts: CaseFacts) -> list[str]:
@@ -84,8 +96,12 @@ def _judge_route_deviation(case: DisputeCase, facts: CaseFacts, section: dict) -
     excess = facts.distance_excess_ratio
     max_excess = section["thresholds"]["max_distance_excess_ratio"]
 
+    conditions = [_condition("RD-4", "Expected and actual route distances available", excess is not None,
+                             "Available" if excess is not None else "Missing route distance data",
+                             facts, ("Route was ",))]
     if excess is None:
         return Ruling(
+            conditions=conditions,
             decision="needs_review",
             recommended_action="Escalate to a human reviewer: route distance data is incomplete.",
             confidence=0.3,
@@ -94,8 +110,12 @@ def _judge_route_deviation(case: DisputeCase, facts: CaseFacts, section: dict) -
             policy_refs=[cite(section, "RD-4")],
         )
 
+    conditions.append(_condition("RD-1", f"Route within the {max_excess:.0%} distance tolerance",
+                                 excess <= max_excess, f"{excess:+.0%} vs planned distance",
+                                 facts, ("Route was ",)))
     if excess <= max_excess:
         return Ruling(
+            conditions=conditions,
             decision="no_action",
             recommended_action="Uphold the fare; no refund.",
             confidence=0.85,
@@ -104,8 +124,14 @@ def _judge_route_deviation(case: DisputeCase, facts: CaseFacts, section: dict) -
             policy_refs=[cite(section, "RD-1")],
         )
 
+    duration = facts.duration_excess_ratio
+    conditions.append(_condition("RD-2", "Longer route took no longer than planned",
+                                 duration is not None and duration <= 0,
+                                 f"{duration:+.0%} vs planned duration" if duration is not None else "Duration data unavailable; no time saving established",
+                                 facts, ("Trip took ",)))
     if facts.duration_excess_ratio is not None and facts.duration_excess_ratio <= 0:
         return Ruling(
+            conditions=conditions,
             decision="no_action",
             recommended_action="Uphold the fare; no refund.",
             confidence=0.7,
@@ -117,6 +143,13 @@ def _judge_route_deviation(case: DisputeCase, facts: CaseFacts, section: dict) -
             policy_refs=[cite(section, "RD-2")],
         )
 
+    # RD-3 is reached only after the distance and time-saving branches above.
+    # Missing duration keeps the existing lower-confidence refund, not a claim
+    # that the trip was slower.
+    conditions.append(_condition("RD-3", f"Route more than {max_excess:.0%} longer with no recorded time saving",
+                                 True, f"{excess:+.0%} vs planned distance; " +
+                                 (f"{duration:+.0%} vs planned duration" if duration is not None else "duration unavailable"),
+                                 facts, ("Route was ", "Trip took ")))
     refund = max(facts.fare_difference or 0.0, 0.0)
     # Without duration data we can't rule out a time-saving detour.
     confidence = 0.8 if facts.duration_excess_ratio is not None else 0.65
@@ -127,9 +160,15 @@ def _judge_route_deviation(case: DisputeCase, facts: CaseFacts, section: dict) -
     if case.driver_statement:
         explanation += " The driver's explanation is noted but is not supported by the trip data."
     stop = longest_stop_min(facts)
+    stop_threshold = section["thresholds"]["min_compensation_stop_min"]
+    credit = section["thresholds"]["compensation_credit"]
+    conditions.append(_condition("RD-5", f"Unexpected stop of {stop_threshold:g} min or more (adds a ${credit:.2f} credit)",
+                                 stop is not None and stop >= stop_threshold,
+                                 f"{stop:g} min" if stop is not None else "No unexpected stop recorded",
+                                 facts, (f"Unexpected stop: {stop:g} min at ",) if stop is not None else ()))
     if stop is not None and stop >= section["thresholds"]["min_compensation_stop_min"]:
-        credit = section["thresholds"]["compensation_credit"]
         return Ruling(
+            conditions=conditions,
             decision="compensation",
             recommended_action=(f"Refund ${refund:.2f}, the fare charged above the expected fare, plus a "
                                 f"${credit:.2f} credit for the lost time."),
@@ -140,6 +179,7 @@ def _judge_route_deviation(case: DisputeCase, facts: CaseFacts, section: dict) -
             policy_refs=[cite(section, "RD-3"), cite(section, "RD-5")],
         )
     return Ruling(
+        conditions=conditions,
         decision="partial_refund",
         recommended_action=f"Refund ${refund:.2f}, the fare charged above the expected fare.",
         refund_amount=refund,
@@ -160,9 +200,11 @@ def _judge_no_show(case: DisputeCase, facts: CaseFacts, section: dict) -> Ruling
     distance = facts.driver_distance_from_pickup_m
     wait = facts.driver_wait_min
     fee = case.fare.cancellation_fee
+    conditions: list[RulingCondition] = []
 
     def refund(rule_id: str, reason: str, confidence: float) -> Ruling:
         return Ruling(
+            conditions=conditions,
             decision="full_refund",
             recommended_action=f"Refund the no-show fee{f' of ${fee:.2f}' if fee is not None else ''}.",
             refund_amount=fee,
@@ -172,6 +214,10 @@ def _judge_no_show(case: DisputeCase, facts: CaseFacts, section: dict) -> Ruling
             policy_refs=[cite(section, rule_id)],
         )
 
+    conditions.append(_condition("NS-1", f"Driver arrived within {thresholds['max_pickup_distance_m']:g} m of pickup",
+                                 distance is not None and distance <= thresholds["max_pickup_distance_m"],
+                                 f"{distance:.0f} m from pickup" if distance is not None else "Arrival location unavailable",
+                                 facts, ("Driver arrived ",)))
     if distance is not None and distance > thresholds["max_pickup_distance_m"]:
         return refund(
             "NS-1",
@@ -180,9 +226,14 @@ def _judge_no_show(case: DisputeCase, facts: CaseFacts, section: dict) -> Ruling
             0.85,
         )
 
+    conditions.append(_condition("NS-4", "Arrival location and waiting time available",
+                                 distance is not None and wait is not None,
+                                 f"Location {'available' if distance is not None else 'missing'}; waiting time {'available' if wait is not None else 'missing'}",
+                                 facts, ("Driver arrived ", "Driver waited ")))
     if distance is None or wait is None:
         missing = "arrival location" if distance is None else "waiting time"
         return Ruling(
+            conditions=conditions,
             decision="needs_review",
             recommended_action=f"Escalate to a human reviewer: the driver's {missing} is missing.",
             confidence=0.4,
@@ -191,6 +242,9 @@ def _judge_no_show(case: DisputeCase, facts: CaseFacts, section: dict) -> Ruling
             policy_refs=[cite(section, "NS-4")],
         )
 
+    conditions.append(_condition("NS-2", f"Driver waited at least {thresholds['min_wait_min']:g} min",
+                                 wait >= thresholds["min_wait_min"], f"{wait:g} min",
+                                 facts, ("Driver waited ",)))
     if wait < thresholds["min_wait_min"]:
         return refund(
             "NS-2",
@@ -198,10 +252,15 @@ def _judge_no_show(case: DisputeCase, facts: CaseFacts, section: dict) -> Ruling
             0.8,
         )
 
+    conditions.append(_condition("NS-3", "Driver tried to contact the rider through in-app chat",
+                                 facts.driver_contact_attempted,
+                                 "Contact attempted" if facts.driver_contact_attempted else "No contact attempt recorded",
+                                 facts, ("Driver contacted rider via in-app chat", "No driver contact attempt in chat log")))
     if not facts.driver_contact_attempted:
         return refund("NS-3", "The driver did not try to contact the rider before charging the fee.", 0.7)
 
     return Ruling(
+        conditions=conditions,
         decision="no_action",
         recommended_action="Uphold the no-show fee.",
         confidence=0.85,
@@ -232,11 +291,19 @@ def _escalate(ruling: Ruling, citation: str, reason: str | None = None) -> Rulin
     })
 
 def _apply_safety(ruling: Ruling, facts: CaseFacts, section: dict) -> Ruling:
+    ruling = _record(ruling, _condition("SAFE-1", "Threatening message in the chat log", bool(facts.chat.threats),
+                                       f"{len(facts.chat.threats)} threatening message{'s' if len(facts.chat.threats) != 1 else ''}" if facts.chat.threats else "No threatening messages detected",
+                                       facts, ("Threatening message: ",)))
     if not facts.chat.threats:
         return ruling
     return _escalate(ruling, cite(section, "SAFE-1"), "The chat log contains a threatening message.")
 
-def _apply_fraud(ruling: Ruling, risk: RiskAssessment, section: dict) -> Ruling:
+def _apply_fraud(ruling: Ruling, risk: RiskAssessment, section: dict, facts: CaseFacts | None = None) -> Ruling:
+    ruling = _record(ruling, _condition("FRAUD-1", "Either party has high bad-faith risk",
+                                       risk.rider_risk == "high" or risk.driver_risk == "high",
+                                       f"Rider: {risk.rider_risk}; driver: {risk.driver_risk}",
+                                       facts, ("Rider history:", "Driver history:", "Driver arrived ", "Driver waited ",
+                                               "Driver contacted rider via in-app chat", "No driver contact attempt in chat log")))
     if risk.rider_risk != "high" and risk.driver_risk != "high":
         return ruling
     high = [p for p, r in (("rider", risk.rider_risk), ("driver", risk.driver_risk)) if r == "high"]
@@ -247,6 +314,11 @@ def _apply_fraud(ruling: Ruling, risk: RiskAssessment, section: dict) -> Ruling:
     )
 
 def _apply_precedent(ruling: Ruling, overrides: list[str], section: dict) -> Ruling:
+    thresholds = section["thresholds"]
+    ruling = _record(ruling, _condition("PREC-1",
+                                       f"At least {thresholds['min_human_overrides']} contrary reviewer precedents at {thresholds['min_similarity']:.0%} similarity or above",
+                                       bool(overrides),
+                                       ", ".join(overrides) if overrides else "Not enough contrary reviewer precedents"))
     if not overrides:
         return ruling
     return _escalate(
@@ -256,6 +328,12 @@ def _apply_precedent(ruling: Ruling, overrides: list[str], section: dict) -> Rul
     )
 
 def _apply_escalation(ruling: Ruling, section: dict) -> Ruling:
+    threshold = section["thresholds"]["min_confidence"]
+    already_review = ruling.decision == "needs_review"
+    ruling = _record(ruling, _condition("ESC-1", f"Automatic ruling needs escalation below {threshold:.0%} confidence",
+                                       not already_review and ruling.confidence < threshold,
+                                       "Already needs human review; confidence check skipped" if already_review
+                                       else f"{ruling.confidence:.0%} confidence"))
     if ruling.decision == "needs_review" or ruling.confidence >= section["thresholds"]["min_confidence"]:
         return ruling
     return _escalate(ruling, cite(section, "ESC-1"))

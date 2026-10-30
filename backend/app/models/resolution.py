@@ -112,6 +112,14 @@ class AgentLogEntry(BaseModel):
     started_at: datetime | None = None
     duration_ms: int | None = None
 
+class RulingCondition(BaseModel):
+    """One deterministic check, including unmet conditions; internal reviewer metadata."""
+    rule: str
+    label: str
+    met: bool
+    value: str
+    fact_ids: list[str] = Field(default_factory=list)
+
 class Ruling(BaseModel):
     decision: Decision
     recommended_action: str
@@ -127,6 +135,9 @@ class Ruling(BaseModel):
     policy_refs: list[str] = Field(default_factory=list)
     # Whether the LLM wrote the three explanations or the rule templates were kept.
     explanation_source: CaseSource = "fallback"
+    # None means an older saved ruling, not an empty or inferred checklist.
+    conditions: list[RulingCondition] | None = None
+    min_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
 
 class Resolution(Ruling):
     rider_case: AgentCase

@@ -30,18 +30,44 @@ test('risk row moves first only when signals exist, with amber status and the re
   assert.equal(base.risk.signals.length, 0);
 });
 
-test('rule checks preserve advocate-relative meaning; favouring the other side is not an unmet condition', () => {
-  const checks = d.suppliedRuleChecks([
-    { party: 'rider', rules: [{ rule: 'NS-1', verdict: 'supports', decisive: true }, { rule: 'NS-2', verdict: 'favours_other_side', decisive: false }] },
-    { party: 'driver', rules: [{ rule: 'RD-3', verdict: 'does_not_apply', decisive: false }, { rule: 'RD-5', verdict: 'favours_other_side', decisive: false }] },
-  ]);
-  assert.equal(checks[0].text, "Applies in the rider's favour");
-  assert.equal(checks[1].text, "Applies in the driver's favour");
-  assert.equal(checks[1].applies, true);
-  assert.equal(checks[2].text, 'Does not apply');
-  assert.equal(checks[2].applies, false);
-  assert.equal(checks[3].text, "Applies in the rider's favour");
-  assert.deepEqual(d.suppliedRuleChecks(undefined), []);
+test('checklist uses recorded engine conditions; old results never infer checks from advocate rules', () => {
+  const conditions = [
+    { rule: 'RD-3', label: 'Route more than 15% longer than planned', met: true, value: '44% longer', fact_ids: ['TRIP-1'] },
+    { rule: 'RD-5', label: 'Stop of 10 min or more', met: false, value: '6 min', fact_ids: ['GPS-4'] },
+  ];
+  const result = { ...base, conditions };
+  assert.deepEqual(d.suppliedConditions(result), conditions);
+  const withAvailability = { ...result, conditions: [
+    { rule: 'RD-4', label: 'Distances available', met: true, value: 'Available', fact_ids: [] }, ...conditions,
+  ] };
+  const why = 'Decided by RD-3 · Route more than 15% longer than planned? Yes (44% longer)';
+  assert.equal(d.reviewRows(withAvailability)[0].answer, why);
+  assert.equal(d.reviewRows(result)[0].answer, why);
+  for (const old of [base, { ...base, conditions: null }, { ...base, conditions: [] }, {
+    ...base, argument_review: [{ party: 'rider', rules: [{ rule: 'RD-3', verdict: 'supports', decisive: true }] }],
+  }]) assert.deepEqual(d.suppliedConditions(old), []);
+  // No recorded check matches the applied rule: fall back to the rule and its action.
+  assert.equal(d.reviewRows({ ...base, recommended_action: 'Refund $6.30.', conditions: [{ ...conditions[1] }] })[0].answer, 'RD-3 applied: Refund $6.30.');
+});
+
+test('the deciding checks read the right way round, whichever way the rule points', () => {
+  const ns1 = { rule: 'NS-1', label: 'Driver arrived within 100 m of pickup', met: false, value: '378 m from pickup', fact_ids: ['GPS-1'] };
+  const safe = { rule: 'SAFE-1', label: 'Threatening message in the chat log', met: false, value: 'No threatening messages detected', fact_ids: [] };
+  // D005: a full refund because a condition was NOT met; the count "0 of 2 met" would mislead.
+  const d005 = { ...base, decision: 'full_refund', policy_refs: ['NS-1: Arrival'], conditions: [ns1, safe] };
+  assert.equal(d.reviewRows(d005)[0].answer, 'Decided by NS-1 · Driver arrived within 100 m of pickup? No (378 m from pickup)');
+  assert.deepEqual(d.conditionGroups(d005).others.map(c => c.rule), ['SAFE-1']);
+  // D007: escalated by the overlays, not by the base rule that would have refunded.
+  const rd3 = { rule: 'RD-3', label: 'Route more than 15% longer', met: true, value: '+40%', fact_ids: [] };
+  const threat = { ...safe, met: true, value: '1 threatening message' };
+  const fraud = { rule: 'FRAUD-1', label: 'Either party has high bad-faith risk', met: true, value: 'Rider: low; driver: high', fact_ids: [] };
+  const d007 = { ...base, decision: 'needs_review', policy_refs: ['RD-3: x', 'SAFE-1: y', 'FRAUD-1: z'], conditions: [rd3, threat, fraud] };
+  assert.deepEqual(d.conditionGroups(d007).deciding.map(c => c.rule), ['SAFE-1', 'FRAUD-1']);
+  assert.equal(d.decidingAnswer(d007), 'Decided by SAFE-1 and FRAUD-1 · Threatening message in the chat log? Yes (1 threatening message)');
+  // D002: escalated because data is missing (a base check not met).
+  const ns4 = { rule: 'NS-4', label: 'Arrival location and waiting time available', met: false, value: 'Waiting time missing', fact_ids: [] };
+  assert.deepEqual(d.conditionGroups({ ...base, decision: 'needs_review', policy_refs: ['NS-4: x'], conditions: [ns4] }).deciding, [ns4]);
+  assert.equal(d.decidingAnswer({ ...base, conditions: null }), null);
 });
 
 test('precedent summary counts real outcomes and labels human decisions without inventing overrides', () => {

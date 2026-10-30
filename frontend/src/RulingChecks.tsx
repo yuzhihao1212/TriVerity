@@ -1,10 +1,10 @@
-import { useId, useState } from "react";
+import { Fragment, useId, useState } from "react";
 
 import { Chip } from "./Chip";
 import { EvidenceText, type FactLinks } from "./EvidenceList";
 import { Icon } from "./Icon";
 import { DECISION_LABELS } from "./outcomeTone";
-import { appliedRuleIds, counterfactualLine, debugEnabled, priorityChip, reviewRows, suppliedRuleChecks, type CheckRowId } from "./rulingDetails";
+import { appliedRuleIds, conditionAnswer, conditionGroups, counterfactualLine, debugEnabled, priorityChip, reviewRows, type CheckRowId } from "./rulingDetails";
 import { SourceBadge } from "./SourceBadge";
 import { Term } from "./Term";
 import type { Resolution } from "./types";
@@ -16,7 +16,7 @@ export function RulingChecks({ resolution, availableIds, onSelectFact }: { resol
   const [opened, setOpened] = useState<Set<CheckRowId>>(() => new Set());
   const rows = reviewRows(resolution);
   const priority = priorityChip(resolution);
-  const checks = suppliedRuleChecks(resolution.argument_review);
+  const { deciding, others } = conditionGroups(resolution);
   const applied = appliedRuleIds(resolution.policy_refs);
   const allOpen = open.size === rows.length;
   function toggle(key: CheckRowId) {
@@ -52,14 +52,17 @@ export function RulingChecks({ resolution, availableIds, onSelectFact }: { resol
           {...(!open.has(row.id) ? { inert: "" } : {})}>
           <div className="ruling-check-clip"><div className="ruling-check-body">
             {row.id === "why" && <>
-              {checks.length > 0 && <p className="small muted">The rules each side cited, checked against the facts:</p>}
-              {checks.length > 0 && <ul className="ruling-rule-checks">
-                {checks.map((check, index) => <li key={`${check.party}-${check.rule}-${index}`}>
-                  <span className={`ruling-condition-symbol${check.applies ? " met" : ""}`} aria-hidden="true">{check.applies ? "✓" : "⊖"}</span>
-                  <span><span className="muted">{check.party === "rider" ? "Rider" : "Driver"} cited: </span>{check.text}{check.decisive ? " · Decided the case" : ""}</span>
+              {[{ title: "Decided the case", checks: deciding }, { title: deciding.length ? "Also checked" : "Checked by the rules", checks: others }]
+                .filter(group => group.checks.length > 0).map(group => <Fragment key={group.title}>
+                <p className="small muted">{group.title}</p>
+                <ul className="ruling-rule-checks">{group.checks.map((check, index) => <li key={`${check.rule}-${index}`}>
+                  <span className={`ruling-condition-symbol${check.met ? " met" : ""}`} aria-hidden="true">{check.met ? "✓" : "⊖"}</span>
+                  <span>{conditionAnswer(check)}
+                    {check.fact_ids.length > 0 && <> · <EvidenceText text={check.fact_ids.join(" ")} availableIds={availableIds} onSelectFact={onSelectFact} /></>}
+                  </span>
                   <Chip size="sm" tone="neutral"><Term rule={check.rule} /></Chip>
-                </li>)}
-              </ul>}
+                </li>)}</ul>
+              </Fragment>)}
               {applied.length > 0 && <div className="ruling-applied-rules"><span className="small muted">Rules applied:</span>{applied.map(rule => <Chip key={rule} size="sm" tone="neutral"><Term rule={rule} /></Chip>)}</div>}
               <h4 className="ruling-plain-title">In plain words <SourceBadge source={resolution.explanation_source === "llm" ? "llm" : "fallback"} /></h4>
               <p className="ruling-plain-text"><EvidenceText text={resolution.explanation} availableIds={availableIds} onSelectFact={onSelectFact} /></p>

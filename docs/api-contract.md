@@ -127,6 +127,9 @@ See `backend/app/models/resolution.py`.
   "recommended_action": "string",
   "refund_amount": 6.3,
   "confidence": 0.8,
+  "min_confidence": 0.6,
+  "conditions": [{"rule": "RD-3", "label": "Route more than 15% longer with no recorded time saving",
+                  "met": true, "value": "+44% vs planned distance; +59% vs planned duration", "fact_ids": ["TRIP-1", "TRIP-2"]}],
   "explanation": "string",
   "rider_explanation": "string",
   "driver_explanation": "string",
@@ -172,6 +175,16 @@ See `backend/app/models/resolution.py`.
   come from the policy rules; the LLM only writes these three texts
   (`explanation_source: "llm"`), and any text that contradicts the ruling is replaced
   by the rule templates (`"fallback"`).
+- `conditions` is the ordered checklist recorded by the deterministic ruling engine, including unmet
+  checks and the safety, fraud, precedent and confidence overlays. Each check supplies a rule ID,
+  fixed template label, boolean `met`, case-specific `value` and existing evidence `fact_ids`.
+  Empty IDs mean there is no standalone evidence fact for that check (for example, a precedent
+  result). Early-return branches do not report later checks; an already escalated ruling explicitly
+  says the confidence comparison was skipped. These fields are reviewer-only, never party messages
+  or narration inputs. Missing data is stated explicitly, never treated as a zero value.
+- `min_confidence` is the policy's `escalation.thresholds.min_confidence`, a 0–1 fraction, for the
+  auto-decide threshold. Both `conditions` and `min_confidence` are optional and nullable so older
+  saved results still load. An absent checklist must not be inferred from advocate verdicts.
 - `policy_refs` cite rule IDs from `data/policies/ryde_mock_policy.json`.
 - An advocate's `source` is `llm` when the model wrote its case, `fallback` when the
   deterministic backup was used (no key, API error or unusable reply).

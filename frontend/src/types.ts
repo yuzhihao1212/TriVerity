@@ -157,6 +157,14 @@ export interface Appeal {
   precedent_id: string | null;
 }
 
+export interface RulingCondition {
+  rule: string;
+  label: string;
+  met: boolean;
+  value: string;
+  fact_ids: string[];
+}
+
 export interface Resolution {
   // Optional for compatibility with older saved results.
   evidence_collection?: { source: "llm" | "fallback"; rounds?: number; calls?: ToolCallRecord[] } | null;
@@ -164,6 +172,9 @@ export interface Resolution {
   recommended_action: string;
   refund_amount: number | null;
   confidence: number;
+  // Recorded rule checks and policy threshold; absent/null on older saved results.
+  conditions?: RulingCondition[] | null;
+  min_confidence?: number | null;
   explanation: string;
   rider_explanation: string;
   driver_explanation: string;

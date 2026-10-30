@@ -1,4 +1,4 @@
-import type { ArgumentReview, Counterfactual, PrecedentReport, Resolution, Decision } from "./types";
+import type { Counterfactual, PrecedentReport, Resolution, Decision } from "./types";
 
 export type CheckRowId = "why" | "risk" | "precedents" | "changes";
 
@@ -12,15 +12,39 @@ export function appliedRuleIds(refs: readonly string[]): string[] {
   return [...new Set(refs.map(ref => ref.split(":", 1)[0].trim()).filter(Boolean))];
 }
 
-/** The current API checks rules relative to each advocate. Preserve that context and wording. */
-export function suppliedRuleChecks(reviews: ArgumentReview[] | undefined) {
-  return (reviews ?? []).flatMap(review => review.rules.map(check => ({
-    ...check,
-    party: review.party,
-    applies: check.verdict !== "does_not_apply",
-    text: check.verdict === "does_not_apply" ? "Does not apply"
-      : `Applies in the ${check.verdict === "supports" ? review.party : review.party === "rider" ? "driver" : "rider"}'s favour`,
-  })));
+/** Never reconstruct engine conditions from advocate verdicts or policy references. */
+export function suppliedConditions(resolution: Pick<Resolution, "conditions">) {
+  return resolution.conditions ?? [];
+}
+
+/** Overlays run after the base rule; "not met" there means nothing was triggered. */
+const OVERLAY_RULES = /^(SAFE|FRAUD|PREC|ESC)-/;
+
+/**
+ * Splits the engine's checks into those that decided this outcome (their rule is in
+ * policy_refs) and the rest. An escalated case is decided by what escalated it, not by
+ * a base rule that would otherwise have refunded.
+ */
+export function conditionGroups(resolution: Pick<Resolution, "conditions" | "policy_refs" | "decision">) {
+  const checks = suppliedConditions(resolution);
+  const applied = appliedRuleIds(resolution.policy_refs);
+  const deciding = checks.filter(check => applied.includes(check.rule)
+    && (resolution.decision !== "needs_review" || OVERLAY_RULES.test(check.rule) || !check.met));
+  return { deciding, others: checks.filter(check => !deciding.includes(check)) };
+}
+
+/** Ask the check as a question so "No" reads right whichever way the rule points. */
+export function conditionAnswer(check: { label: string; met: boolean; value: string }): string {
+  return `${check.label}? ${check.met ? "Yes" : "No"}${check.value ? ` (${check.value})` : ""}`;
+}
+
+/** The closed "Why this outcome?" line: the deciding rules and the first deciding check. */
+export function decidingAnswer(resolution: Pick<Resolution, "conditions" | "policy_refs" | "decision">): string | null {
+  const { deciding } = conditionGroups(resolution);
+  if (!deciding.length) return null;
+  const rules = [...new Set(deciding.map(check => check.rule))];
+  const list = rules.length === 1 ? rules[0] : `${rules.slice(0, -1).join(", ")} and ${rules[rules.length - 1]}`;
+  return `Decided by ${list} · ${conditionAnswer(deciding[0])}`;
 }
 
 export function precedentSummary(report: PrecedentReport | undefined): string {
@@ -51,12 +75,11 @@ export function whyAnswer(applied: string[], action: string): string {
   return rules && action ? `${rules}: ${action}` : rules || action || conditionCountText(null);
 }
 
-export function reviewRows(resolution: Pick<Resolution, "risk" | "policy_refs" | "precedents" | "counterfactuals" | "recommended_action">) {
+export function reviewRows(resolution: Pick<Resolution, "risk" | "policy_refs" | "precedents" | "counterfactuals" | "recommended_action" | "conditions" | "decision">) {
   const signals = resolution.risk.signals;
   const applied = appliedRuleIds(resolution.policy_refs);
   const rows: { id: CheckRowId; question: string; answer: string; tone: "ok" | "warn" | "neutral"; icon: string }[] = [
-    // Condition counts arrive with the engine's checked conditions (round 8 item 8); until then, the rule and its action.
-    { id: "why", question: "Why this outcome?", answer: whyAnswer(applied, resolution.recommended_action), tone: "neutral", icon: "scales" },
+    { id: "why", question: "Why this outcome?", answer: decidingAnswer(resolution) ?? whyAnswer(applied, resolution.recommended_action), tone: "neutral", icon: "scales" },
     { id: "risk", question: "Anything suspicious?", answer: signals.length ? `${signals.length} ${signals.length === 1 ? "signal" : "signals"}: ${signals[0]}` : "No risk signals", tone: signals.length ? "warn" : "ok", icon: signals.length ? "warning" : "shield" },
     { id: "precedents", question: "Has this happened before?", answer: precedentSummary(resolution.precedents), tone: "neutral", icon: "history" },
     { id: "changes", question: "What would change the outcome?", answer: resolution.counterfactuals?.[0] ? counterfactualLine(resolution.counterfactuals[0]) : "No alternative conditions supplied in this result", tone: "neutral", icon: "arrow" },
