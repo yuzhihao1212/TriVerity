@@ -2176,3 +2176,32 @@ details.ruling-condition-group[open] > summary::before { transform: rotate(90deg
   .hearing-steps { flex-direction: column; align-items: flex-start; }
   .hearing-step-arrow { display: none; }
 }
+
+/* Evidence Chat card: thread, then the chat facts folded behind one quiet line (round 8 item 3). */
+.bubble .who .chat-avatar { width: 22px; height: 22px; }
+.bubble .who .chat-avatar .icon { width: 13px; height: 13px; }
+.chat-facts { grid-column: 1 / -1; min-width: 0; margin-top: var(--space-2); }
+.chat-facts-toggle { white-space: nowrap; }
+.chat-facts-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; }
+.chat-facts-toggle { display: inline-flex; align-items: center; gap: 4px; min-height: 24px; padding: 2px 0; background: none; border: 0; color: var(--muted); font: inherit; font-size: 13px; cursor: pointer; }
+.chat-facts-toggle:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+.chat-facts-toggle .icon { width: 14px; height: 14px; transition: transform .15s; }
+.chat-facts-toggle[aria-expanded="true"] .icon { transform: rotate(90deg); }
+.chat-tone-chips { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.chat-facts-body:not([hidden]) { animation: chat-facts-open .2s ease-out; }
+@keyframes chat-facts-open { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.chat-fact-rows { list-style: none; margin: 8px 0 0; padding: 0; }
+.chat-fact-row { display: grid; grid-template-columns: 130px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--border); font-size: 13px; }
+.chat-fact-label { color: var(--muted); }
+.chat-fact-value { min-width: 0; overflow-wrap: anywhere; }
+.chat-fact-pointer { gap: 4px; min-height: 24px; text-align: left; }
+.chat-facts-note { margin: 6px 0 0; }
+.presentation-mode .chat-facts-toggle, .presentation-mode .chat-fact-row { font-size: 15px; }
+@media (max-width: 760px) {
+  .chat-fact-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .chat-fact-label { grid-column: 1 / -1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chat-facts-body:not([hidden]) { animation: none; }
+  .chat-facts-toggle .icon { transition: none; }
+}

@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 
 import {
   centsToMoney, factParts, fareReceipt, groupFacts, parseTile,
@@ -19,7 +19,8 @@ import {
   chatExchange, chatFactsForMessages, chatTakeaway, chatTime, gpsFactLine, isChatAnalysis,
   relatedFactsLabel, tripFactLine, tripTakeaway,
 } from "./evidenceDisplay";
-import type { DisputeCase, Resolution } from "./types";
+import { CHAT_CHECKS_NOTE, chatFactRows, chatSummary, foldOpenAfter, showFactsLabel, toneChips } from "./chatThread";
+import type { ChatMessage, DisputeCase, Resolution } from "./types";
 
 export const EVIDENCE_FACTS_ID = "evidence-facts";
 
@@ -43,7 +44,7 @@ export function FactLibrary({ facts, activeId, request, expanded = false, groupe
       let parent = target?.parentElement;
       while (parent) {
         if (parent.matches("details.fact-related")) (parent as HTMLDetailsElement).open = true;
-        else if (parent.matches(".evidence-related")) parent.dispatchEvent(new Event("reveal-fact"));
+        else if (parent.matches(".evidence-related, .chat-facts")) parent.dispatchEvent(new CustomEvent("reveal-fact", { detail: activeId }));
         parent = parent.parentElement;
       }
       // Let controlled disclosures render before measuring and scrolling the selected fact.
@@ -225,31 +226,88 @@ function HistoryBody({ groups, context }: { groups: FactGroup[]; context: RowCon
 }
 
 function ChatBody({ groups, context }: { groups: FactGroup[]; context: RowContext }) {
+  const threadId = useId();
   const messages = chatExchange(context.dispute?.chat_logs, groups);
   const analyses = groups.filter(group => isChatAnalysis(group.primary.text) || /^Chat \d{2}:/.test(group.primary.text));
   const rest = groups.filter(group => !analyses.includes(group));
   const audit = analyses.flatMap(group => [group.primary, ...group.related]);
   const messageFacts = chatFactsForMessages(messages, audit);
   const originals = context.neutral ? audit : audit.filter(fact => !messageFacts.includes(fact));
-  return <>
+  // No messages: today's view (a headline and the facts as rows).
+  if (!messages.length) return <>
     <p className="story-headline">{chatTakeaway(messages)}</p>
-    {!!messages.length && <div className="chat evidence-chat" aria-label="Recorded chat exchange">{messages.map((message, i) =>
-      <div className={`bubble ${message.sender}`} key={i} title={messageFacts[i]?.text}
-        id={!context.neutral && messageFacts[i]?.id ? `fact-${messageFacts[i]!.id}` : undefined} tabIndex={!context.neutral && messageFacts[i]?.id ? -1 : undefined}>
-        <span className="who"><Icon name={message.sender === "rider" ? "person" : message.sender === "driver" ? "wheel" : "info"} />
-          {message.sender === "rider" ? "Rider" : message.sender === "driver" ? "Driver" : "System"}
-          {chatTime(message.timestamp) && <time dateTime={message.timestamp ?? undefined}>{chatTime(message.timestamp)}</time>}
-        </span>{message.message}
-        {!context.neutral && messageFacts[i]?.id && <IdBadge id={messageFacts[i]!.id!} onSelectFact={context.onSelectFact} />}
-      </div>)}
-    </div>}
-    {messages.length > 0 && (["rider", "driver"] as const).filter(party => !messages.some(message => message.sender === party)).map(party =>
-      <p className="small muted" key={party}>{party === "rider" ? "Rider" : "Driver"} message not recorded in this exchange.</p>)}
     {!!rest.length && <Rows groups={rest} context={context} />}
     {!!originals.length && <EvidenceDisclosure label={relatedLinkLabel(originals)}>
       <ul className="fact-library-list aligned-grid">{originals.map(fact => <FactRow key={key(fact)} fact={fact} context={context} />)}</ul>
     </EvidenceDisclosure>}
   </>;
+  const folded = [...rest.flatMap(group => [group.primary, ...group.related]), ...originals];
+  const all = groups.flatMap(group => [group.primary, ...group.related]);
+  const messageId = (index: number) => `${threadId}-message-${index}`;
+  return <>
+    <p className="story-headline">{chatSummary(messages, all) ?? chatTakeaway(messages)}</p>
+    <div className="chat evidence-chat" aria-label="Recorded chat exchange">{messages.map((message, i) =>
+      <div className={`bubble ${message.sender}`} key={i} title={messageFacts[i]?.text}
+        id={!context.neutral && messageFacts[i]?.id ? `fact-${messageFacts[i]!.id}` : messageId(i)} tabIndex={-1}>
+        <span className="who">
+          {message.sender === "system" ? <Icon name="info" />
+            : <span className={`hearing-party-avatar chat-avatar hearing-avatar-${message.sender}`} aria-hidden="true"><Icon name={message.sender === "rider" ? "person" : "wheel"} /></span>}
+          {message.sender === "rider" ? "Rider" : message.sender === "driver" ? "Driver" : "System"}
+          {chatTime(message.timestamp) && <time dateTime={message.timestamp ?? undefined}>{chatTime(message.timestamp)}</time>}
+        </span>{message.message}
+        {!context.neutral && messageFacts[i]?.id && <IdBadge id={messageFacts[i]!.id!} onSelectFact={context.onSelectFact} />}
+      </div>)}
+    </div>
+    {(["rider", "driver"] as const).filter(party => !messages.some(message => message.sender === party)).map(party =>
+      <p className="small muted" key={party}>{party === "rider" ? "Rider" : "Driver"} message not recorded in this exchange.</p>)}
+    {!!folded.length && <ChatFactsFold facts={folded} messages={messages} messageId={messageId} context={context} />}
+  </>;
+}
+
+/**
+ * The chat facts, folded behind one quiet line with the tone chips beside it. Opens on a click,
+ * or when a CHAT citation elsewhere asks for one of its facts ("reveal-fact", like the
+ * related-facts disclosures), so the jump can highlight it.
+ */
+function ChatFactsFold({ facts, messages, messageId, context }: {
+  facts: EvidenceItem[]; messages: ChatMessage[]; messageId: (index: number) => string; context: RowContext;
+}) {
+  const id = useId();
+  const ref = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const ids = facts.map(fact => fact.id);
+  const idsKey = ids.join(" ");
+  useEffect(() => {
+    const target = ref.current;
+    const show = (event: Event) => setOpen(value => foldOpenAfter(value, { type: "reveal", id: (event as CustomEvent<string | null>).detail ?? null }, idsKey.split(" ")));
+    target?.addEventListener("reveal-fact", show);
+    return () => target?.removeEventListener("reveal-fact", show);
+  }, [idsKey]);
+  const rows = chatFactRows(facts, messages);
+  const chips = toneChips(facts);
+  return <div className="chat-facts" ref={ref}>
+    <div className="chat-facts-bar">
+      <button type="button" className="chat-facts-toggle" aria-expanded={open} aria-controls={id} onClick={() => setOpen(value => foldOpenAfter(value, { type: "toggle" }, ids))}>
+        <Icon name="chevron" />{showFactsLabel(facts.length, open)}
+      </button>
+      {!!chips.length && <span className="chat-tone-chips" aria-label="Tone checks">{chips.map(chip =>
+        <Chip key={chip.party} size="sm" tone="neutral">{chip.label}</Chip>)}</span>}
+    </div>
+    <div id={id} className="chat-facts-body" hidden={!open}>
+      <ul className="chat-fact-rows">{rows.map(row => <li key={key(row.fact)} id={row.fact.id ? `fact-${row.fact.id}` : undefined} tabIndex={row.fact.id ? -1 : undefined}
+        className={`chat-fact-row${!context.neutral && row.fact.id && context.activeId === row.fact.id ? " highlighted-fact" : ""}`} title={row.fact.text}>
+        <span className="chat-fact-label">{row.label}</span>
+        <span className="chat-fact-value">
+          {row.messageIndex != null ? <button type="button" className="text-button chat-fact-pointer"
+            onClick={() => reveal(document.getElementById(messageId(row.messageIndex!)), "center", { flash: true })}>{row.messageLabel} <span aria-hidden="true">↑</span></button>
+            : row.tone ? <><Chip size="sm" tone="neutral">{row.tone.value}</Chip>{row.tone.detail && <span className="muted"> {row.tone.detail}</span>}</>
+            : row.text}
+        </span>
+        {row.fact.id && <IdBadge id={row.fact.id} onSelectFact={context.onSelectFact} />}
+      </li>)}</ul>
+      <p className="small muted chat-facts-note">{CHAT_CHECKS_NOTE}</p>
+    </div>
+  </div>;
 }
 
 function Rows({ groups, context }: { groups: FactGroup[]; context: RowContext }) {
