@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import { load } from './_load.mjs';
 
-const { VERDICT, checkSummary, checksFor, missingReplyText } = await load('ruleChecks');
+const { VERDICT, checksFor, missingReplyText } = await load('ruleChecks');
 
 const reviews = [
   { party: 'rider', rules: [
@@ -20,14 +20,8 @@ test('checks are looked up per party and rule', () => {
   assert.equal(checksFor(reviews, 'driver').get('RD-1'), undefined);
 });
 
-test('a missing review gives no checks and no summary line', () => {
+test('a missing review gives no checks', () => {
   assert.equal(checksFor(undefined, 'rider').size, 0);
-  assert.equal(checkSummary(checksFor(undefined, 'rider')), null);
-});
-
-test('the summary counts the rules that hold', () => {
-  assert.equal(checkSummary(checksFor(reviews, 'rider')), "Judge's check: 2 of 3 cited rules hold");
-  assert.equal(checkSummary(checksFor(reviews, 'driver')), "Judge's check: 0 of 1 cited rule holds");
 });
 
 test('every verdict has a label', () => {

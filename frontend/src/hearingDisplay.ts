@@ -1,8 +1,8 @@
 import { parseChat, parseRouteCoverage, parseStop } from "./factVisuals";
 import { parseOffRoute } from "./gpsStory";
 import { distanceText, trimDecimal } from "./numberFormat";
-import { computedFacts, factIndex } from "./presentation";
-import type { AgentCase, Resolution } from "./types";
+import { computedFacts, evidenceItems, factIndex } from "./presentation";
+import type { AgentCase, Resolution, RuleCheck } from "./types";
 
 /** Abbreviations whose full stop doesn't end the sentence. */
 const ABBREVIATION = /\b(?:e\.g|i\.e|vs|approx)$/i;
@@ -16,6 +16,18 @@ export function bottomLine(text: string): { first: string; rest: string } {
   return { first: trimmed.slice(0, split), rest: trimmed.slice(split).trim() };
 }
 
+/**
+ * Fact text by ID: the Evidence step's facts first (they cover IDs whose text the advocates
+ * didn't pair), then the advocates' own pairs. Unknown IDs are absent.
+ */
+export function factTexts(resolution: Resolution): Map<string, string> {
+  const facts = new Map<string, string>();
+  for (const fact of [...factIndex(resolution), ...(resolution.judge_evidence ? computedFacts(resolution) : [])]) {
+    if (fact.id && !facts.has(fact.id)) facts.set(fact.id, fact.text);
+  }
+  return facts;
+}
+
 /** Facts shown before the remaining citations can be expanded. */
 export const GROUP_LIMIT = 4;
 
@@ -23,12 +35,7 @@ export const GROUP_LIMIT = 4;
 export function comparisonGroups(resolution: Resolution, limit = GROUP_LIMIT) {
   const cited = (item: AgentCase) => new Set([...item.evidence_ids, ...(item.rebuttal?.evidence_ids ?? [])]);
   const rider = cited(resolution.rider_case), driver = cited(resolution.driver_case);
-  // Fact text by ID: the Evidence step's facts first (they cover IDs whose text the advocates
-  // didn't pair), then the advocates' own pairs. Unknown IDs keep a null text.
-  const facts = new Map<string, string>();
-  for (const fact of [...factIndex(resolution), ...(resolution.judge_evidence ? computedFacts(resolution) : [])]) {
-    if (fact.id && !facts.has(fact.id)) facts.set(fact.id, fact.text);
-  }
+  const facts = factTexts(resolution);
   return [
     { title: "Both sides cite", ids: [...rider].filter(id => driver.has(id)) },
     { title: "Only the rider", ids: [...rider].filter(id => !driver.has(id)) },
@@ -93,3 +100,106 @@ export function hearingFact(text: string | null, id: string): { text: string; ic
   if (chat) return { text: `${chat.sender[0].toUpperCase()}${chat.sender.slice(1)} said: “${chat.message}”`, icon: "chat" };
   return { text, icon: id.startsWith("TRIP-") ? "route" : id.startsWith("GPS-") ? "pin" : id.startsWith("FARE-") ? "receipt" : id.startsWith("CHAT-") ? "chat" : id.startsWith("HIST-") ? "history" : "info" };
 }
+
+// -- Hearing cards (round 8 item 7) ------------------------------------------------------
+
+export const HEARING_INTRO = "Two AI advocates argue for each side, like lawyers. They don't decide: the policy rules do, in the next step.";
+
+/** The flow pills. The Ruling pill names the next step, never its outcome (evidence first). */
+export const HEARING_STEPS = [
+  { number: 1, label: "Each side makes its case", done: true },
+  { number: 2, label: "Each side replies", done: true },
+  { number: 3, label: "Ruling: the rules decide", done: false },
+] as const;
+
+export const HEARING_ROUNDS = {
+  opening: { title: "1 · Each side makes its case", sub: "What each advocate says happened, and the evidence and rule they lean on." },
+  replies: { title: "2 · Each side replies", sub: "Each advocate reads the other side's case once and answers its strongest point." },
+} as const;
+
+export const NO_RULE_CITED = "None: argues from the facts.";
+
+/** How the Judge read a cited rule, in the Hearing's plain wording. */
+export const RULE_CHECK_LABELS: Record<RuleCheck["verdict"], string> = {
+  supports: "Rule check: applies to these facts",
+  does_not_apply: "Rule check: does not apply",
+  favours_other_side: "Rule check: favours the other side",
+};
+
+export function partyHeading(side: "rider" | "driver", reply = false): string {
+  if (reply) return side === "rider" ? "Rider's reply" : "Driver's reply";
+  return side === "rider" ? "For the rider" : "For the driver";
+}
+
+const CITATION_ID = /\b(?:TRIP|GPS|FARE|CHAT|HIST)-[1-9]\d*\b/g;
+const CITATION_GROUP = /\s*\(\s*(?:TRIP|GPS|FARE|CHAT|HIST)-[1-9]\d*(?:\s*[,;]\s*(?:TRIP|GPS|FARE|CHAT|HIST)-[1-9]\d*)*\s*\)/g;
+
+export type TextPart = { text: string } | { ids: string[] };
+
+/**
+ * Splits argument text into plain runs and citation markers: "(TRIP-1, GPS-1)" becomes one
+ * marker with both IDs, a bare ID in the sentence becomes a marker of its own. The words and
+ * the IDs are the AI's own; only how the IDs are drawn changes.
+ */
+export function citationParts(text: string): TextPart[] {
+  const parts: TextPart[] = [];
+  const pushText = (value: string) => {
+    let last = 0;
+    for (const match of value.matchAll(CITATION_ID)) {
+      if (match.index > last) parts.push({ text: value.slice(last, match.index) });
+      parts.push({ ids: [match[0]] });
+      last = match.index + match[0].length;
+    }
+    if (last < value.length) parts.push({ text: value.slice(last) });
+  };
+  let last = 0;
+  for (const match of text.matchAll(CITATION_GROUP)) {
+    if (match.index > last) pushText(text.slice(last, match.index));
+    parts.push({ ids: match[0].match(CITATION_ID) ?? [] });
+    last = match.index + match[0].length;
+  }
+  if (last < text.length) pushText(text.slice(last));
+  return parts;
+}
+
+/** Text without its citation codes, for quoting the other side's point. */
+export function withoutCitations(text: string): string {
+  return text.replace(CITATION_GROUP, "").replace(/\s{2,}/g, " ").trim();
+}
+
+/** The small quote a reply opens with: the other side's bottom line, without citation codes. */
+export function replyQuote(other: "rider" | "driver", otherSummary: string): string | null {
+  const point = withoutCitations(bottomLine(otherSummary).first);
+  return point ? `Answering the ${other}: “${point}”` : null;
+}
+
+export interface CardFact { id: string | null; text: string; icon: string; only: boolean }
+
+/**
+ * Each cited fact once per card, as a short line: facts the argument itself names first,
+ * then the rest in the advocate's order. Duplicates (same ID, or the same text without an ID)
+ * are merged. `only` marks facts the other side didn't cite, compared by ID when both have IDs.
+ */
+export function cardFacts(texts: string[], ids: string[], mention: string, other?: { texts: string[]; ids: string[] }): CardFact[] {
+  const items = evidenceItems(texts, ids);
+  const seen = new Set<string>();
+  const unique = items.filter(item => {
+    const key = item.id ?? `text:${item.text}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const named = new Set(mention.match(CITATION_ID) ?? []);
+  unique.sort((a, b) => Number(!!b.id && named.has(b.id)) - Number(!!a.id && named.has(a.id)));
+  const otherItems = other ? evidenceItems(other.texts, other.ids) : [];
+  const otherKeys = new Set(otherItems.flatMap(item => item.id ? [item.id, `text:${item.text}`] : [`text:${item.text}`]));
+  const compare = otherItems.length > 0;
+  return unique.map(item => {
+    const shown = hearingFact(item.text, item.id ?? "");
+    const only = compare && !otherKeys.has(item.id ?? `text:${item.text}`) && !otherKeys.has(`text:${item.text}`);
+    return { id: item.id ?? null, text: shown.text, icon: item.id ? shown.icon : "info", only };
+  });
+}
+
+/** Facts shown under "Why" before the rest fold away. */
+export const WHY_LIMIT = 3;
