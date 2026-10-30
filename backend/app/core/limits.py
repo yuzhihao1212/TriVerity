@@ -100,6 +100,10 @@ EVIDENCE_REASON_MAX_CHARS = 160       # the agent's reason for a call
 # -- Concurrency (503 with Retry-After when full) -----------------------------
 MAX_CONCURRENT_RESOLVES = 3
 BUSY_RETRY_AFTER_S = 5
+# The queue's "Run all": samples per batch request, and how many it resolves at
+# once (one fewer than the slots, so a single reviewer's run still gets one).
+MAX_BATCH_RESOLVE = 10
+BATCH_RESOLVE_WORKERS = 2
 
 # -- Public demo mode (PUBLIC_DEMO=true) --------------------------------------
 PUBLIC_DEMO_CACHE_S = 7 * 24 * 3600  # All-AI samples survive a week after prewarming.

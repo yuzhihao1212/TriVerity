@@ -37,9 +37,10 @@ import { readGroupOpen, writeGroupOpen, readSidebarOpen, writeSidebarOpen } from
 import { PresentationToggle, ThemeToggle } from "./ThemeToggle";
 import type { Theme } from "./theme";
 import { PartyPreview, sentRecords } from "./PartyPreview";
-import { clockText, DELIVERED_ANNOUNCEMENT } from "./notifyState";
+import { autoSentRecord, clockText, DELIVERED_ANNOUNCEMENT } from "./notifyState";
 import { DisputeForm } from "./DisputeForm";
-import { ApiError, getSamples, listAppeals, resolveDisputeLive } from "./services/api";
+import { ApiError, getSamples, listAppeals, resolveBatch, resolveDisputeLive } from "./services/api";
+import { AutoResolvedNote } from "./AutoResolvedNote";
 import { AccessCodeField } from "./AccessCodeField";
 import { ACCESS_CODE_FIELD_ID, accessCodeMessage, accessCodeProblem, needsAccessCode } from "./consoleHeader";
 import { disputeCategory, groupByCategory, type Category, disputeItemName, filterLabel, filterShortLabel, TYPE_LABELS, type DisputeFilter } from "./disputeList";
@@ -147,6 +148,8 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
   const [completion, setCompletion] = useState<{ id: string; endedAt: number } | null>(null);
   const [streaming, setStreaming] = useState(true);
   const [resolving, setResolving] = useState<string | null>(null);
+  // The queue's Run all: progress while it runs, kept afterwards for the summary line.
+  const [runAll, setRunAll] = useState<{ done: number; total: number; running: boolean; ids: string[] } | null>(null);
   const [completedId, setCompletedId] = useState<string | null>(null);
   const [loadingSamples, setLoadingSamples] = useState(true);
   const samplesLoader = useLoaderVisible(loadingSamples);
@@ -200,7 +203,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
   }
 
   function resolve(dispute: DisputeCase) {
-    if (resolving !== null) return;
+    if (resolving !== null || runAll?.running) return;
     const previous = results[dispute.dispute_id];
     if (previous && sentRecords().get(reviewKey(dispute.dispute_id, previous))) return;
     setError(null);
@@ -239,6 +242,35 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
         } else setError(`${dispute.dispute_id}: ${e.message}`);
       })
       .finally(() => setResolving(null));
+  }
+
+  /**
+   * Run every sample case that hasn't run yet, in one batch request: the server counts it once
+   * against the rate limit (3 a minute), however many cases it holds. Own disputes are left for
+   * Run agents, which sends the access code.
+   */
+  async function runAllNew() {
+    if (resolving !== null || runAll?.running) return;
+    const sampleIds = new Set(samples.map(d => d.dispute_id));
+    const pending = queueRows.filter(row => row.status === "not_run" && sampleIds.has(row.id)).map(row => row.id);
+    if (pending.length === 0) return;
+    setError(null);
+    setRunAll({ done: 0, total: pending.length, running: true, ids: pending });
+    const failed: string[] = [];
+    try {
+      for (const item of await resolveBatch(pending, aiMode)) {
+        if (item.result) {
+          const result = item.result;
+          sentRecords().saveResult(item.dispute_id, result);
+          setResults(prev => ({ ...prev, [item.dispute_id]: result }));
+        } else failed.push(item.dispute_id);
+      }
+      if (failed.length) setError(`Run all: ${failed.join(", ")} could not be resolved. Open them and use Run agents.`);
+    } catch (e) {
+      setError(`Run all: ${(e as Error).message}`);
+    } finally {
+      setRunAll({ done: pending.length - failed.length, total: pending.length, running: false, ids: pending });
+    }
   }
 
   const resolution = selected ? results[selected.dispute_id] : undefined;
@@ -292,13 +324,31 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
   // Announced once through the polite status region when the phones switch to delivered.
   const [deliveredFor, setDeliveredFor] = useState<string | null>(null);
   const allCases = useMemo(() => [...own, ...samples], [own, samples]);
+  // Routine rulings the policy lets through close themselves: the parties get the ruling's
+  // messages with the automatic-decision notice. Only a case with no history yet; one a
+  // reviewer reopened stays with the reviewer.
+  useEffect(() => {
+    let closedAny = false;
+    for (const d of allCases) {
+      const result = results[d.dispute_id];
+      if (!result) continue;
+      const key = reviewKey(d.dispute_id, result);
+      if (sentRecords().events(key).length) continue;
+      const record = autoSentRecord(d.dispute_id, result, d);
+      if (record) { sentRecords().set(key, record); closedAny = true; }
+    }
+    if (closedAny) setSentVersion(v => v + 1);
+  }, [allCases, results]);
   const queueRows: HomeRow[] = useMemo(() => allCases.map(d => {
     const result = results[d.dispute_id];
     const key = result ? reviewKey(d.dispute_id, result) : null;
     const saved = decision.savedFor(key);
-    const status: CaseStatus = caseStatus(result, !!saved, !!(key && sentRecords().get(key)), { reopened: !!key && sentRecords().reopened(key), appealWaiting: waitingIds.has(d.dispute_id) });
+    const closedRecord = key ? sentRecords().get(key) : null;
+    const audit = !!result?.autonomy?.eligible && !!result?.autonomy?.audit;
+    const status: CaseStatus = caseStatus(result, !!saved, !!closedRecord, { reopened: !!key && sentRecords().reopened(key),
+      appealWaiting: waitingIds.has(d.dispute_id), autoClosed: closedRecord?.reviewer?.kind === "auto" });
     // The outcome dot follows the final decision: an override replaces the ruling's outcome.
-    return { id: d.dispute_id, dispute: d, status, tier: result?.triage?.tier ?? null, decision: saved?.decision ?? (key ? sentRecords().latest(key)?.decision : null) ?? result?.decision ?? null };
+    return { id: d.dispute_id, dispute: d, status, tier: result?.triage?.tier ?? null, decision: saved?.decision ?? (key ? sentRecords().latest(key)?.decision : null) ?? result?.decision ?? null, audit };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [allCases, results, decision.savedFor, sentVersion, waitingIds]);
   const statusOf = (id: string) => queueRows.find(row => row.id === id)?.status ?? "not_run";
@@ -468,7 +518,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
             <div><h2>Loading disputes…</h2><p className="muted">The sample list is loading. No agents have run.</p></div>
           </section>}
           {onHome && <Home rows={queueRows} holds={decision.holds()} appealsWaiting={appeals === null ? null : waitingIds.size} showStart={Object.keys(results).length === 0}
-            missing={missing} onDismissMissing={() => setMissing(null)} onNew={newDispute} typeIcon={type => <TypeIcon type={type} />} />}
+            missing={missing} onDismissMissing={() => setMissing(null)} onNew={newDispute} onRunAll={runAllNew} runAllProgress={runAll} typeIcon={type => <TypeIcon type={type} />} />}
           {!form && resolving && resolving !== selected?.dispute_id && <p className="small muted">Agents are working on {resolving}. This case remains available.</p>}
           {form && <DisputeForm key={form.template?.dispute_id ?? "blank"} template={form.template} onSubmit={addOwn} onCancel={() => setForm(null)}
             accessCode={accessCode} onAccessCodeChange={changeAccessCode} />}
@@ -509,6 +559,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
                 {tab === "hearing" && resolution && <Debate resolution={resolution} dispute={selected} availableIds={factIds} onSelectFact={selectFact} />}
                 {tab === "ruling" && resolution && <>
                   <VerdictSummary key={`ruling-${reviewId}`} resolution={resolution} dispute={selected} availableIds={factIds} onSelectFact={selectFact} />
+                  <AutoResolvedNote autonomy={resolution.autonomy} closedAutomatically={sent?.reviewer?.kind === "auto"} />
                   <RulingChecks key={reviewId} resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
                   {actions.decide ? <ReviewerDecision resolution={resolution} controller={decision} onContinue={() => changeTab("notify")} /> : sent && <ClosedSummary record={sent} />}
                   <AppealsPanel disputeId={selected.dispute_id} version={appealsVersion} onChanged={() => setAppealsVersion(v => v + 1)} />

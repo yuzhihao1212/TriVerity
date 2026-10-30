@@ -1515,6 +1515,11 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .home-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
 .home-head h2 { margin-right: auto; }
 .home-head .home-new { display: inline-flex; flex: none; align-items: center; gap: 6px; padding: 8px 16px; }
+.home-head-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.home-head .home-run-all { display: inline-flex; flex: none; align-items: center; gap: 6px; padding: 8px 16px; font-variant-numeric: tabular-nums; }
+.home-run-all .icon { width: 16px; height: 16px; }
+.home-run-summary { display: flex; align-items: center; gap: var(--space-2); margin: 0; padding: var(--space-2) var(--space-3); border-radius: 10px; background: var(--ok-soft); color: var(--text); font-size: 13px; font-weight: 600; }
+.home-run-summary .icon { width: 16px; height: 16px; flex: none; color: var(--ok-text); }
 .home-new svg { width: 16px; height: 16px; }
 /* Queue meter: one bar split by status, most urgent first, with a legend under it. */
 .home-meter { display: grid; gap: 6px; }
@@ -1526,6 +1531,7 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .home-meter .tone-warning { background: var(--warn-text); }
 .home-meter .tone-ready { background: var(--ok-text); }
 .home-meter .tone-reviewed { background: var(--ok-text); opacity: .5; }
+.home-meter .tone-auto { background: var(--ok-text); opacity: .3; }
 .home-meter .tone-closed { background: var(--muted); }
 .home-meter .tone-new { background: color-mix(in srgb, var(--control-border) 45%, transparent); }
 @media (prefers-reduced-motion: no-preference) {
@@ -1600,6 +1606,14 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .home-row-status .icon { width: 16px; height: 16px; flex: none; }
 .home-row-status.status-not_run { border-color: var(--transparent); background: var(--transparent); font-weight: 500; }
 .home-row-status.status-ready { color: var(--ok-text); background: var(--ok-soft); border-color: var(--transparent); }
+.home-row-status.status-auto { color: var(--ok-text); border-style: dashed; }
+/* Above the decision panel: why a ruling went through on its own, or that it is an audit sample. */
+.auto-note { display: grid; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-radius: 12px; background: var(--ok-soft); }
+.auto-note.is-audit { background: var(--neutral-soft); }
+.auto-note-title { display: flex; align-items: center; gap: var(--space-2); margin: 0; font-weight: 600; }
+.auto-note-title .icon { width: 18px; height: 18px; flex: none; color: var(--ok-text); }
+.auto-note-reasons { margin: 0; padding-left: 1.2em; font-size: 14px; }
+.auto-note p.small { margin: 0; }
 .home-row-status.status-decide, .home-row-status.status-appeal_waiting { color: var(--warn-text); background: var(--warn-soft); border-color: var(--transparent); }
 .home-row-chevron { width: 16px; height: 16px; flex: none; color: var(--muted); }
 .outcome-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--control-border); }

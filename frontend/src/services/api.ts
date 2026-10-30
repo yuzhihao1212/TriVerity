@@ -45,6 +45,17 @@ export function getSamples() {
   return request<DisputeCase[]>("/disputes/samples");
 }
 
+export interface BatchResolveItem { dispute_id: string; result: Resolution | null; status: number | null; error: string | null }
+
+/** Resolve sample disputes in one request (the queue's Run all): one hit against the rate limit for the whole batch. */
+export function resolveBatch(disputeIds: string[], mode: AiMode = "live") {
+  return request<BatchResolveItem[]>(`/disputes/resolve/batch${aiQuery(mode)}`, {
+    method: "POST",
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ dispute_ids: disputeIds }),
+  });
+}
+
 /** Resolve a dispute. Pass the judge's access code only for their own disputes. */
 export function resolveDispute(payload: DisputeCase, accessCode?: string, mode: AiMode = "live") {
   const headers: Record<string, string> = { "Content-Type": "application/json" };

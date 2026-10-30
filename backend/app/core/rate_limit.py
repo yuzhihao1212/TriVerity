@@ -33,25 +33,30 @@ class RateLimiter:
         with self._lock:
             self._hits.clear()
 
-    def hit(self, rules: list[tuple[str, int, int]]) -> float | None:
-        """Record one hit against every ``(key, limit, window_s)`` rule.
+    def hit(self, rules: list[tuple[str, int, int] | tuple[str, int, int, int]]) -> float | None:
+        """Record hits against every ``(key, limit, window_s[, cost])`` rule (cost defaults to 1).
 
         Returns None if allowed, else the seconds until the tightest full window
-        frees a slot (and records nothing).
+        frees enough slots (and records nothing). A cost above the limit can never fit,
+        so it waits a whole window.
         """
         now = self.clock()
         with self._lock:
             waits = []
-            for key, limit, window in rules:
+            for key, limit, window, *rest in rules:
+                cost = rest[0] if rest else 1
                 hits = self._hits[(key, window)]
                 while hits and hits[0] <= now - window:
                     hits.popleft()
-                if len(hits) >= limit:
-                    waits.append(hits[0] + window - now)
+                if len(hits) + cost > limit:
+                    if cost > limit:
+                        waits.append(float(window))
+                    else:
+                        waits.append(hits[len(hits) + cost - limit - 1] + window - now)
             if waits:
                 return max(waits)
-            for key, _, window in rules:
-                self._hits[(key, window)].append(now)
+            for key, _, window, *rest in rules:
+                self._hits[(key, window)].extend([now] * (rest[0] if rest else 1))
             return None
 
 
@@ -64,17 +69,26 @@ def enforce_resolve_rate_limit(request: Request) -> str | None:
     Returns the access-code ID when a valid X-Demo-Key was sent (and limits per
     code), else None (and limits per IP).
     """
+    return charge_resolves(request, 1)
+
+
+def charge_resolves(request: Request, cases: int) -> str | None:
+    """Count ``cases`` resolves against the daily limits and one request against the per-minute ones.
+
+    A batch ("Run all") therefore can't do more in a day than the same cases run one by
+    one, while still fitting the per-minute limit as a single request.
+    """
     code_id = verify_demo_code(request.headers.get(DEMO_KEY_HEADER))
     if code_id:
         rules = [
             (f"code:{code_id}", limits.PER_CODE_PER_MINUTE, _MINUTE),
-            (f"code:{code_id}", limits.PER_CODE_PER_DAY, _DAY),
+            (f"code:{code_id}", limits.PER_CODE_PER_DAY, _DAY, cases),
         ]
     else:
         ip = request.client.host if request.client else "unknown"
         rules = [
             (f"ip:{ip}", limits.PER_IP_PER_MINUTE, _MINUTE),
-            (f"ip:{ip}", limits.PER_IP_PER_DAY, _DAY),
+            (f"ip:{ip}", limits.PER_IP_PER_DAY, _DAY, cases),
         ]
     wait = limiter.hit([*rules, ("global", limits.GLOBAL_PER_MINUTE, _MINUTE)])
     if wait is not None:

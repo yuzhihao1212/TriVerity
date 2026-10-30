@@ -88,6 +88,12 @@ export interface Triage {
   reasons: string[];
 }
 
+export interface Autonomy {
+  eligible: boolean;
+  audit: boolean;
+  reasons: string[];
+}
+
 export interface PrecedentMatch {
   id: string;
   similarity: number;
@@ -188,6 +194,8 @@ export interface Resolution {
   risk: RiskAssessment;
   // Absent from backends without triage (before PR #27).
   triage?: Triage;
+  // Absent from backends without auto-resolve.
+  autonomy?: Autonomy;
   // Absent from backends without the Policy & Precedent agent (before PR #31).
   precedents?: PrecedentReport;
   // What would have changed the ruling (computed from the policy, never by the AI).
