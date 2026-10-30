@@ -1,14 +1,17 @@
-import { useId, useRef, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 
 import { Icon } from "./Icon";
 import { reveal } from "./routes";
 import { DECIDE_FIRST, nextStepMode, SHORT_TAB_LABELS, stepStates, stepStatusText } from "./stepVisuals";
+import { ARRIVE_MS, LINE_MS, lineFraction, nextMove, positionText, unlockSchedule, type Move } from "./stepperMotion";
 import { navigateTab, tabLocked, tabProgress, WORKFLOW_TABS, type WorkflowTab } from "./workflow";
 import type { AgentLogEntry, Resolution } from "./types";
 
 const STEP_ICONS: Record<WorkflowTab, string> = {
   intake: "folder", evidence: "magnifier", hearing: "bubbles", ruling: "scales", notify: "phone",
 };
+
+const prefersReducedMotion = () => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, decisionRecorded = false, closed = false, unlocking = false, onChange, render }: {
   active: WorkflowTab;
@@ -30,8 +33,54 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, de
   // Notify waits for a decision: point the reader to Ruling, as the locked Notify panel does.
   const nextTab = active === "notify" && resolution && !closed && !decisionRecorded ? "ruling" as const : undefined;
   const states = stepStates({ active, hasResult: !!resolution, busy, liveSteps, reviewed, nextTab });
+  const activeIndex = WORKFLOW_TABS.findIndex(tab => tab.id === active);
+
+  // The position line and the move between steps (stepperMotion.ts).
+  const line = useRef<HTMLSpanElement>(null);
+  const shown = useRef(activeIndex);
+  const moveId = useRef(0);
+  const settleTimer = useRef(0);
+  const [move, setMove] = useState<Move | null>(null);
+  useLayoutEffect(() => {
+    const element = line.current;
+    const reduce = prefersReducedMotion();
+    const { settle, move: next } = nextMove(move, shown.current, activeIndex, moveId.current + 1);
+    if (element) {
+      // A move still running finishes at once (no transition), then the new one starts from there.
+      if (settle || reduce || !next) {
+        element.style.transition = "none";
+        element.style.transform = `scaleX(${lineFraction(shown.current, WORKFLOW_TABS.length)})`;
+        void element.offsetWidth;
+        element.style.transition = "";
+      }
+      if (reduce) element.style.transition = "none";
+      element.style.transform = `scaleX(${lineFraction(activeIndex, WORKFLOW_TABS.length)})`;
+    }
+    shown.current = activeIndex;
+    if (!next || reduce) return;
+    moveId.current = next.id;
+    setMove(next);
+    window.clearTimeout(settleTimer.current);
+    settleTimer.current = window.setTimeout(() => setMove(null), LINE_MS + ARRIVE_MS + 50);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeIndex]);
+  useEffect(() => () => window.clearTimeout(settleTimer.current), []);
+
+  // After a live run, steps 2-5 unlock one by one once the completion card has landed; the
+  // line stays put. Leaving the run (or reduced motion) unlocks whatever is left at once.
+  const [pending, setPending] = useState<Set<WorkflowTab>>(() => new Set());
+  useEffect(() => {
+    if (!unlocking || prefersReducedMotion()) { setPending(new Set()); return; }
+    const schedule = unlockSchedule(WORKFLOW_TABS);
+    setPending(new Set(schedule.map(item => item.tab)));
+    const timers = schedule.map(item => window.setTimeout(() => setPending(previous => {
+      const next = new Set(previous); next.delete(item.tab); return next;
+    }), item.at));
+    return () => timers.forEach(timer => window.clearTimeout(timer));
+  }, [unlocking]);
+
   function activate(tab: WorkflowTab) {
-    if (tabLocked(tab, !!resolution)) return;
+    if (tabLocked(tab, !!resolution) || pending.has(tab)) return;
     onChange(tab);
   }
   function navigate(event: KeyboardEvent<HTMLButtonElement>, tab: WorkflowTab) {
@@ -43,13 +92,20 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, de
   }
   return <>
     <div className="workflow-bar">
-      <div className={`workflow-tabs stepper${unlocking ? " unlocking" : ""}`} role="tablist" aria-label="Case workflow">
+      <p className="stepper-position" aria-live="polite">{positionText(activeIndex, WORKFLOW_TABS.length, WORKFLOW_TABS[activeIndex].label)}</p>
+      <div className="stepper-wrap">
+      {/* The pink line: position only, from step 1 to the current step. */}
+      <span className="stepper-track" aria-hidden="true"><span className="stepper-line" ref={line} /></span>
+      <div className={`workflow-tabs stepper${move ? ` moving-${move.kind}` : ""}`} role="tablist" aria-label="Case workflow">
         {WORKFLOW_TABS.map((tab, index) => {
           const state = states[index];
-          const locked = state.locked;
-          // The connector into this step fills only within the furthest reviewed step.
-          const classes = ["step", state.phase, state.current && "current", locked && "locked",
-            state.next && "next", state.joined && "joined"].filter(Boolean).join(" ");
+          // Still waiting for its turn in the unlock sequence: shown locked a moment longer.
+          const waiting = pending.has(tab.id);
+          const locked = state.locked || waiting;
+          const arriving = move?.kind === "forward" && move.to === index;
+          const left = move?.kind === "forward" && move.from === index;
+          const classes = ["step", waiting ? "locked" : state.phase, state.current && "current", locked && "locked",
+            state.next && "next", arriving && "arriving", left && "left", unlocking && !waiting && index > 0 && "unlocked"].filter(Boolean).join(" ");
           return <button type="button" role="tab" key={tab.id} className={classes}
             id={`${id}-${tab.id}-tab`} aria-controls={`${id}-${tab.id}-panel`}
             aria-selected={active === tab.id} aria-disabled={locked} aria-current={state.current ? "step" : undefined}
@@ -59,10 +115,11 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, de
             data-workflow-tab={tab.id}
             ref={element => { refs.current[tab.id] = element; }}
             onClick={() => activate(tab.id)} onKeyDown={event => navigate(event, tab.id)}>
-            <span className="step-circle" aria-hidden="true">
-              {state.reviewed ? <Icon name="check" /> : locked && !state.working ? <Icon name="lock" /> : index + 1}
-              {/* Mounted when the reviewer arrives, so it draws once; a re-render never replays it. */}
-              {state.current && !state.working && <StepRing kind="current" />}
+            <span className="step-circle" aria-hidden="true" key={arriving ? `arrive-${move!.id}` : "circle"}>
+              {state.reviewed && !waiting ? <Icon name="check" /> : locked && !state.working ? <Icon name="lock" /> : index + 1}
+              {/* Mounted when the reviewer arrives, so it draws once; a re-render never replays it.
+                  Going back, the earlier step is current at once: no draw. */}
+              {state.current && !state.working && <StepRing kind="current" instant={move?.kind === "back"} />}
               {state.working && <StepRing kind="working" />}
             </span>
             <span className="step-name">
@@ -75,6 +132,7 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, de
             {state.next && <span className="step-next" aria-hidden="true">Next</span>}
           </button>;
         })}
+      </div>
       </div>
       {!resolution && <p className="small muted" id={`${id}-locked`}>{busy ? "Waiting for the complete result to unlock steps 2–5." : "Run agents in Intake to unlock steps 2–5."}</p>}
       {busy && <p className="small muted">Completed steps appear live below. Workflow tabs unlock when the ruling is ready.</p>}
@@ -105,8 +163,8 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, de
  * A ring just outside a step circle. "current" draws once (stroke-dashoffset) when it
  * mounts; "working" is dashed and turns slowly while the agents are on that step.
  */
-function StepRing({ kind }: { kind: "current" | "working" }) {
-  return <svg className={`step-ring ${kind}`} viewBox="0 0 44 44" aria-hidden="true" focusable="false">
+function StepRing({ kind, instant = false }: { kind: "current" | "working"; instant?: boolean }) {
+  return <svg className={`step-ring ${kind}${instant ? " instant" : ""}`} viewBox="0 0 44 44" aria-hidden="true" focusable="false">
     <circle cx="22" cy="22" r="20" pathLength={100} />
   </svg>;
 }
