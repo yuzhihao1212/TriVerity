@@ -33,6 +33,7 @@ export const CUSTOMER_COPY = {
     refund: (amount: string) => `You're getting ${amount} back`,
     credit: (amount: string) => `You're getting a ${amount} credit`,
     pendingAmount: "Your payment adjustment is being confirmed",
+    nothingDue: "Nothing was charged, so there's nothing to refund",
     noChange: "The charge stays as it is", driver: "This dispute is resolved",
     review: "A human reviewer will decide",
   },

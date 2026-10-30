@@ -37,7 +37,7 @@ import { initialSidebarState, openSidebarState, readGroupOpen, readSidebarOpen, 
 import { PresentationToggle, ThemeToggle } from "./ThemeToggle";
 import type { Theme } from "./theme";
 import { PartyPreview, sentRecords } from "./PartyPreview";
-import { autoSentRecord, clockText, DELIVERED_ANNOUNCEMENT } from "./notifyState";
+import { autoSentRecord, clockText, DELIVERED_ANNOUNCEMENT, staysWithReviewer } from "./notifyState";
 import { DisputeForm } from "./DisputeForm";
 import { ApiError, getSamples, listAppeals, resolveBatch, resolveDisputeLive } from "./services/api";
 import { AutoResolvedNote } from "./AutoResolvedNote";
@@ -342,14 +342,15 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
   const allCases = useMemo(() => [...own, ...samples], [own, samples]);
   // Routine rulings the policy lets through close themselves: the parties get the ruling's
   // messages with the automatic-decision notice. Only a case with no history yet; one a
-  // reviewer reopened stays with the reviewer.
+  // reviewer reopened or put on hold stays with the reviewer, in every later run of that
+  // dispute too (a re-run gets a new review key, so both are remembered by dispute, not by key).
   useEffect(() => {
     let closedAny = false;
     for (const d of allCases) {
       const result = results[d.dispute_id];
       if (!result) continue;
       const key = reviewKey(d.dispute_id, result);
-      if (sentRecords().events(key).length) continue;
+      if (staysWithReviewer(sentRecords(), d.dispute_id, key, decision.wasHeld(d.dispute_id))) continue;
       const record = autoSentRecord(d.dispute_id, result, d);
       if (record) { sentRecords().set(key, record); closedAny = true; }
     }
@@ -588,8 +589,8 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
 
                 </>}
                 {tab === "notify" && resolution && reviewId && <PartyPreview key={`${reviewId}-${sentRecords().events(reviewId).length}`} reviewKey={reviewId} resolution={resolution} dispute={selected}
-                  reopened={reopened} previous={reopened ? latestSent : null} appealsAvailable={appeals !== null}
-                  saved={decision.saved ?? (reopened ? latestSent?.reviewer ?? null : null)} unavailable={decisionsUnavailable} rulingVisited={reviewed.has("ruling")}
+                  previous={reopened ? latestSent : null} appealsAvailable={appeals !== null}
+                  saved={decision.saved} held={!!decision.hold} unavailable={decisionsUnavailable} rulingVisited={reviewed.has("ruling")}
                   onGoToRuling={() => changeTab("ruling")} onAppealed={() => setAppealsVersion(v => v + 1)}
                   progress={progress}
                   onSent={() => { markReviewed("notify"); setSentVersion(v => v + 1); setDeliveredFor(reviewId); setCheer({ caseId: selected.dispute_id, key: Date.now() }); }}

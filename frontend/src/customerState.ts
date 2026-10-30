@@ -12,7 +12,7 @@ export function customerResult(party: Party, outcome: Pick<FinalOutcome, "decisi
   const refund = outcome.decision === "partial_refund" || outcome.decision === "full_refund";
   const credit = outcome.decision === "compensation";
   const line = party === "driver" ? COPY.result.driver : outcome.decision === "no_action" ? COPY.result.noChange
-    : !amount ? COPY.result.pendingAmount : credit ? COPY.result.credit(amount) : COPY.result.refund(amount);
+    : refund && outcome.amount === 0 ? COPY.result.nothingDue : !amount ? COPY.result.pendingAmount : credit ? COPY.result.credit(amount) : COPY.result.refund(amount);
   const next = party === "rider"
     ? refund && amount ? [COPY.next.refund] : credit && amount ? [COPY.next.credit] : [COPY.next.noChange]
     : refund && amount ? [COPY.next.driverRefund(amount), COPY.next.earningsAdjusted]
@@ -24,7 +24,7 @@ export function customerResult(party: Party, outcome: Pick<FinalOutcome, "decisi
     if (next[next.length - 1] === COPY.next.earningsAdjusted) next[next.length - 1] = COPY.next.earningsAndRating;
     else next.push(COPY.next.rating);
   }
-  return { line, next, icon: party === "rider" && refund ? "receipt" : "check", status: COPY.resolved };
+  return { line, next, icon: party === "rider" && refund && outcome.amount !== 0 ? "receipt" : "check", status: COPY.resolved };
 }
 
 export interface QuickNote { id: string; label: string; text: string }

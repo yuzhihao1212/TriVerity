@@ -20,7 +20,9 @@ test('customer result is party-specific for every outcome; driver never receives
   }
   assert.match(s.customerResult('driver', outcome('partial_refund')).next[0], /\$6.30.*rider/);
   assert.equal(s.customerResult('rider', outcome('needs_review')).line, 'A human reviewer will decide');
-  for (const amount of [null, 0, NaN, Infinity]) {
+  assert.equal(s.customerResult('rider', outcome('full_refund', 0)).line, copy.result.nothingDue, 'a known $0 is not "being confirmed"');
+  assert.equal(s.customerResult('rider', outcome('full_refund', 0)).icon, 'check');
+  for (const amount of [null, NaN, Infinity]) {
     assert.doesNotMatch(s.customerResult('rider', outcome('partial_refund', amount)).line, /NaN|Infinity|\$0/);
     assert.equal(s.customerResult('rider', outcome('partial_refund', amount)).line, copy.result.pendingAmount);
   }

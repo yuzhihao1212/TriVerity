@@ -3,6 +3,7 @@
 
 import type { FinalDecision, SavedDecision } from "./decisionState";
 import { confirmedCopy } from "./customerCopy";
+import { RULES } from "./glossary";
 import { DECISION_LABELS } from "./outcomeTone";
 import { PARTY_DECISION_LABELS } from "./partyView";
 import type { Decision, DisputeCase, PartyMessage, Resolution } from "./types";
@@ -16,15 +17,26 @@ export const COMPENSATION_CREDIT = 5;
  * The editors open only after the reviewer accepted or overrode the ruling. In the public
  * demo (decisions unavailable, 403), opening the Ruling step is enough, matching the
  * Ruling-tick fallback.
+ *
+ * A case on hold opens for nobody: the second reviewer decides first. A reopened case opens
+ * on a decision saved in this review, never on the one it carried before the reopen.
  */
-export function notifyGate({ saved, unavailable, rulingVisited }: { saved: boolean; unavailable: boolean; rulingVisited: boolean }): "open" | "locked" {
+export function notifyGate({ saved, unavailable, rulingVisited, held = false }: {
+  saved: boolean; unavailable: boolean; rulingVisited: boolean; held?: boolean;
+}): "open" | "locked" {
+  if (held) return "locked";
   return saved || (unavailable && rulingVisited) ? "open" : "locked";
 }
 
-/** The most a refund can be (REF-1): the fare actually charged (the no-show fee for a no-show). */
+/**
+ * The most a refund can be (REF-1): the fare actually charged (the no-show fee for a no-show).
+ * A fare of 0 is a known 0, so it caps the refund at 0 — nothing was charged, so nothing can
+ * be refunded. Null means no usable fare is known (missing, not a number, or negative), and
+ * then no cap is applied.
+ */
 export function maxRefund(dispute: Pick<DisputeCase, "fare">): number | null {
   const charged = dispute.fare?.actual ?? dispute.fare?.cancellation_fee;
-  return typeof charged === "number" && Number.isFinite(charged) && charged > 0 ? charged : null;
+  return typeof charged === "number" && Number.isFinite(charged) && charged >= 0 ? charged : null;
 }
 
 export interface FinalOutcome {
@@ -60,18 +72,13 @@ export function finalOutcome(resolution: Pick<Resolution, "decision" | "refund_a
   return { ...base, amount: partialAmount, needsAmount: true };
 }
 
-/** The partial-refund amount: required, $0.01 up to the charged fare (REF-1), at most 2 decimals. */
-export function validateAmount(text: string, max: number | null): { ok: true; value: number } | { ok: false; message: string } {
-  const range = max != null ? `between $0.01 and $${max.toFixed(2)}` : "of at least $0.01";
-  const message = `Enter a refund ${range}. A refund never exceeds the fare charged (REF-1).`;
-  const trimmed = text.trim().replace(/^\$/, "");
-  if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) return { ok: false, message: trimmed ? message : `A partial refund needs an amount. ${message}` };
-  const value = Number(trimmed);
-  if (value < 0.01 || (max != null && value > max + 1e-9)) return { ok: false, message };
-  return { ok: true, value };
-}
-
 const money = (value: number) => `$${value.toFixed(2)}`;
+const isRefund = (decision?: Decision) => decision === "partial_refund" || decision === "full_refund";
+/** A known $0 refund: nothing was charged, so no money moves and none is promised. */
+export const isZeroRefund = (outcome: Partial<Pick<FinalOutcome, "decision" | "amount">>) => isRefund(outcome.decision) && outcome.amount === 0;
+/** A refund with no amount (no fare on record): the parties can't be told it is settled. */
+export const isUnknownRefund = (outcome: Pick<FinalOutcome, "decision" | "amount" | "needsAmount">) =>
+  isRefund(outcome.decision) && outcome.amount == null && !outcome.needsAmount;
 
 /**
  * The generated message, read-only: exactly what the party sees. Accepted: the ruling's own
@@ -87,13 +94,18 @@ export const AUTO_NOTICE = confirmedCopy().autoNotice;
  * phone shows the whole message, as do results from before the parts existed.
  */
 export function messageParts(party: Party, resolution: Pick<Resolution, "rider_message" | "driver_message">,
-  outcome: Pick<FinalOutcome, "source">): PartyMessage | null {
-  if (outcome.source !== "ruling") return null;
+  outcome: Pick<FinalOutcome, "source"> & Partial<Pick<FinalOutcome, "decision" | "amount">>): PartyMessage | null {
+  if (outcome.source !== "ruling" || (outcome.decision && isZeroRefund(outcome))) return null;
   return (party === "rider" ? resolution.rider_message : resolution.driver_message) ?? null;
 }
 
 export function generatedMessage(party: Party, resolution: Pick<Resolution, "rider_explanation" | "driver_explanation">,
   outcome: Pick<FinalOutcome, "decision" | "amount" | "source">): string {
+  // Ahead of the ruling's own wording, which would say "you're getting $0.00 back".
+  if (isZeroRefund(outcome)) {
+    return party === "rider" ? "We looked at your dispute. Nothing was charged, so there is nothing to refund."
+      : "We looked at this trip's dispute. The rider wasn't charged, so nothing changes for you.";
+  }
   if (outcome.source === "ruling") return party === "rider" ? resolution.rider_explanation : resolution.driver_explanation;
   const amount = outcome.amount != null ? money(outcome.amount) : "the approved amount";
   const rider: Record<string, string> = {
@@ -131,37 +143,95 @@ export function cleanNote(note: string): string {
  * The privacy check runs on the reviewer's notes only: the generated message is the system's
  * own party-safe wording and is never checked or blocked.
  */
-export function noteWarnings(notes: Record<Party, string>): Record<Party, string[]> {
-  return { rider: privacyWarnings(notes.rider), driver: privacyWarnings(notes.driver) };
+export function noteWarnings(notes: Record<Party, string>, publicCaseId?: string | null): Record<Party, string[]> {
+  return { rider: privacyWarnings(notes.rider, publicCaseId), driver: privacyWarnings(notes.driver, publicCaseId) };
 }
 
 /** Why "Approve & send" is blocked, or null when it can go. */
-export function sendBlock({ amountMissing, warnings, sendAnyway }: {
-  amountMissing: boolean; warnings: Record<Party, string[]>; sendAnyway: boolean;
-}): "amount" | "privacy" | null {
+export function sendBlock({ amountMissing, needsSecondApproval = false, held = false, warnings, sendAnyway = false }: {
+  amountMissing: boolean; needsSecondApproval?: boolean; held?: boolean; warnings: Record<Party, string[]>; sendAnyway?: boolean;
+}): "amount" | "second" | "held" | "privacy" | null {
+  // On hold: nobody is notified until the second reviewer decides, whatever the notes say.
+  if (held) return "held";
   if (amountMissing) return "amount";
-  if (PARTIES.some(party => warnings[party].length) && !sendAnyway) return "privacy";
-  return null;
+  // Over the reviewer's own limit: it needs a second reviewer, not an override.
+  if (needsSecondApproval) return "second";
+  if (!PARTIES.some(party => warnings[party].length)) return null;
+  // Internal data is never waved through: "Send anyway" is only ever offered for a soft term.
+  return sendAnyway && !hasInternalData(warnings) ? null : "privacy";
 }
 
 // ---- Privacy check -------------------------------------------------------------
 
-const INTERNAL_TERMS: { re: RegExp; label: string }[] = [
+/** Evidence IDs the parties never see, e.g. "GPS-4". */
+const EVIDENCE_PREFIXES = ["TRIP", "GPS", "FARE", "CHAT", "HIST"];
+/** Used when the policy's own rule IDs are not available on the frontend. */
+const FALLBACK_RULE_PREFIXES = ["RD", "NS", "REF", "PREC", "SAFE", "FRAUD", "ESC"];
+/** "RD-3", "rd - 3", "RD_3" and "RD3", in any case. */
+const anyPrefix = (prefixes: string[], digits = "\\d+") => new RegExp(`\\b(?:${prefixes.join("|")})(?:\\s*[-_]\\s*)?${digits}\\b`, "i");
+/**
+ * "RD 3", "RD.3" or "RD/3", capitals only: in lower case "trip 1" and "fare 2" are ordinary words.
+ * GPS is left out, because "GPS 4 minutes" is how anyone would write it.
+ */
+const spacedPrefix = (prefixes: string[], digits = "\\d+") => new RegExp(`\\b(?:${prefixes.filter(prefix => prefix !== "GPS").join("|")})[\\s./]+${digits}\\b`);
+
+/**
+ * The rule-ID prefixes from the policy itself: glossary.ts mirrors data/policies/
+ * ryde_mock_policy.json, so a prefix the policy adds is caught without a code change.
+ */
+export function rulePrefixes(rules: Record<string, unknown> = RULES): string[] {
+  const from = Object.keys(rules).map(id => id.split("-", 1)[0]).filter(Boolean);
+  return from.length ? [...new Set(from)] : FALLBACK_RULE_PREFIXES;
+}
+
+interface InternalTerm { re: RegExp; /** The same term in another form. */ also?: RegExp; label: string; /** A soft term a reviewer may wave through. */ soft?: true }
+
+/**
+ * Internal wording the parties must never see. "Send anyway" cannot clear internal data (see
+ * sendBlock), because a rule, evidence or case ID tells a party how the decision was reached and
+ * what we hold about them. The soft terms are everyday words too ("your journey history"), so
+ * a reviewer who has read the warning may send them.
+ */
+const INTERNAL_TERMS: InternalTerm[] = [
   { re: /\bfraud\b(?!-\d)/i, label: "fraud" }, // "FRAUD-1" is reported as a rule ID
   { re: /\bbad[- ]faith\b/i, label: "bad faith" },
   { re: /\brisk score\b/i, label: "risk score" },
-  { re: /\brisk(?! score)\b/i, label: "risk" },
-  { re: /\bsignals?\b/i, label: "signals" },
+  { re: /\brisk(?! score)\b/i, label: "risk", soft: true },
+  { re: /\bsignals?\b/i, label: "signals", soft: true },
   { re: /\bprevious disputes?\b/i, label: "previous disputes" },
-  { re: /\bhistory\b/i, label: "history" },
+  { re: /\bhistory\b/i, label: "history", soft: true },
   { re: /\bprecedents?\b/i, label: "precedent" },
-  { re: /\b(?:TRIP|GPS|FARE|CHAT|HIST)-\d+\b/, label: "evidence IDs" },
-  { re: /\b(?:FRAUD|SAFE|ESC)-\d+\b/, label: "internal rule IDs" },
+  { re: anyPrefix(EVIDENCE_PREFIXES), also: spacedPrefix(EVIDENCE_PREFIXES), label: "evidence IDs" },
+  { re: anyPrefix(rulePrefixes()), also: spacedPrefix(rulePrefixes()), label: "internal rule IDs" },
+  // Precedents and internal case IDs, e.g. "R-001", "P-063".
+  // Always three digits or more, so "R-1 rated" or "P-1 visa" stay ordinary words.
+  { re: anyPrefix(["P", "R"], "\\d{3,}"), also: spacedPrefix(["P", "R"], "\\d{3,}"), label: "internal case IDs" },
 ];
 
-/** Internal wording the parties must never see, in the order found. Empty means clean. */
-export function privacyWarnings(text: string): string[] {
-  return INTERNAL_TERMS.filter(term => term.re.test(text)).map(term => term.label);
+/** Internal data: an ID or signal from the review, which "Send anyway" can never clear. */
+export function isInternalData(label: string): boolean {
+  return INTERNAL_TERMS.some(term => term.label === label && !term.soft);
+}
+export function hasInternalData(warnings: Record<Party, string[]>): boolean {
+  return PARTIES.some(party => warnings[party].some(isInternalData));
+}
+
+const escapeRe = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** Full-width letters and digits become plain, every dash a hyphen, and invisible characters go. */
+const normalized = (text: string) => text.normalize("NFKC").replace(/[\u00AD\u200B-\u200D\u2060\uFEFF]/g, "").replace(/[\p{Pd}\u2212]/gu, "-");
+
+/**
+ * Internal wording the parties must never see, in the order found. Empty means clean.
+ * The dispute's own case ID is shown to the party on their phone ("Case D001"), so it is
+ * public and is left out of the text before checking rather than treated as internal data.
+ * Only the whole ID is left out: for a case called "GPS", "GPS-4" is still an evidence ID.
+ */
+export function privacyWarnings(text: string, publicCaseId?: string | null): string[] {
+  const own = publicCaseId?.trim();
+  const clean = normalized(text);
+  const checked = own ? clean.replace(new RegExp(`(?<![A-Za-z0-9_-])${escapeRe(normalized(own))}(?![A-Za-z0-9_-])`, "gi"), " ") : clean;
+  return INTERNAL_TERMS.filter(term => term.re.test(checked) || term.also?.test(checked)).map(term => term.label);
 }
 
 // ---- Sent record ------------------------------------------------------------------
@@ -227,6 +297,9 @@ export function createSentStore(storage?: SentStoreBackend | null) {
     const { type: _type, ...record } = last;
     return record;
   };
+  /** Every review key known: this session's writes, the case history, and the legacy record. */
+  const allKeys = (): string[] =>
+    [...new Set([...Object.keys(readObject(SENT_KEY)), ...Object.keys(readObject(CASE_HISTORY_KEY)), ...memory.keys()])];
   return {
     events, get, results,
     saveResult(disputeId: string, result: Resolution): void {
@@ -240,11 +313,20 @@ export function createSentStore(storage?: SentStoreBackend | null) {
       return record;
     },
     reopened(key: string): boolean { return events(key).at(-1)?.type === "reopened"; },
+    /**
+     * A reviewer reopened this dispute, in any of its reviews: the case stays with the
+     * reviewer, so a later run must not close it automatically again. Keyed by dispute,
+     * because a re-run gives the case a new review key.
+     */
+    reviewerReopened(disputeId: string): boolean {
+      return allKeys().filter(key => key.startsWith(`${disputeId}|`))
+        .some(key => events(key).some(event => event.type === "reopened"));
+    },
     set(key: string, record: SentRecord): void {
       if (get(key)) return; // A closed review cannot send again until deliberately reopened.
       const id = record.disputeId ?? (key.includes("|") ? key.slice(0, key.indexOf("|")) : null);
-      const keys = new Set([...Object.keys(readObject(SENT_KEY)), ...Object.keys(readObject(CASE_HISTORY_KEY)), ...memory.keys()]);
-      const correction = events(key).some(e => e.type === "sent") || (id != null && [...keys].some(k => k !== key && k.startsWith(`${id}|`) && events(k).some(e => e.type === "sent")));
+      const correction = events(key).some(e => e.type === "sent")
+        || (id != null && allKeys().some(k => k !== key && k.startsWith(`${id}|`) && events(k).some(e => e.type === "sent")));
       append(key, { ...record, ...(correction ? { correction: true } : {}), type: "sent" });
     },
     reopen(key: string, at: string, timestamp?: string): boolean {
@@ -253,8 +335,7 @@ export function createSentStore(storage?: SentStoreBackend | null) {
       return true;
     },
     earlier(disputeId: string, currentKey: string): { key: string; events: ReviewEvent[] }[] {
-      const keys = new Set([...Object.keys(readObject(SENT_KEY)), ...Object.keys(readObject(CASE_HISTORY_KEY)), ...memory.keys()]);
-      return [...keys].filter(key => key !== currentKey && key.startsWith(`${disputeId}|`))
+      return allKeys().filter(key => key !== currentKey && key.startsWith(`${disputeId}|`))
         .map(key => ({ key, events: events(key) })).filter(item => item.events.some(e => e.type === "sent"));
     },
   };
@@ -271,6 +352,7 @@ export function autoSentRecord(disputeId: string, resolution: Pick<Resolution, "
   const autonomy = resolution.autonomy;
   if (!autonomy?.eligible || autonomy.audit || resolution.decision === "needs_review") return null;
   const outcome = finalOutcome(resolution, null, dispute);
+  if (isUnknownRefund(outcome)) return null; // Nothing to tell them yet: it stays with a reviewer.
   const message = (party: Party) => `${generatedMessage(party, resolution, outcome)} ${AUTO_NOTICE}`;
   const parts = sentParts(party => {
     const own = messageParts(party, resolution, outcome);
@@ -283,6 +365,14 @@ export function autoSentRecord(disputeId: string, resolution: Pick<Resolution, "
     messages: { rider: message("rider"), driver: message("driver") }, notes: { rider: "", driver: "" },
     decision: outcome.decision, amount: outcome.amount,
   };
+}
+
+/**
+ * A review that must not close itself: it already has history, a reviewer reopened the dispute,
+ * or a reviewer put it on hold. The last two hold across runs, which each get a new review key.
+ */
+export function staysWithReviewer(store: Pick<ReturnType<typeof createSentStore>, "events" | "reviewerReopened">, disputeId: string, key: string, wasHeld: boolean): boolean {
+  return wasHeld || store.events(key).length > 0 || store.reviewerReopened(disputeId);
 }
 
 /** Both parties' parts for a sent record, or undefined when neither has any. */
