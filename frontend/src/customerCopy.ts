@@ -22,6 +22,7 @@ export const CUSTOMER_COPY = {
     review: "We'll follow up when a reviewer has looked at your case.",
   },
   note: "Note from your reviewer", more: "More info ›", back: "‹ Back",
+  found: "What we found", nextSteps: "What happens now",
   footer: "Ryde Customer Support", message: "Your case update",
   rate: "Rate our support", appeal: "Appeal case", appealWindow: "You can appeal within 7 days.",
   locked: (party: string) => `Available to the ${party} after sending. Try them in the next step: Customer view.`,

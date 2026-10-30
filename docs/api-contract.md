@@ -175,6 +175,12 @@ See `backend/app/models/resolution.py`.
   come from the policy rules; the LLM only writes these three texts
   (`explanation_source: "llm"`), and any text that contradicts the ruling is replaced
   by the rule templates (`"fallback"`).
+- `rider_message` / `driver_message` (optional) are the same party messages in parts for the phone's
+  More info screen: `{"greeting", "found", "next"}`. The greeting and `next` (what happens now) are fixed
+  templates; `found` (what we found) is the LLM's wording when it passed the checks, else the template.
+  `rider_explanation` is the three joined. Party messages never contain rule or evidence IDs, and promise
+  nothing the team hasn't confirmed (refund timing, ratings, earnings changes, appeal deadlines). The party
+  view (`?view=rider|driver`) carries the matching `message_parts`.
 - `conditions` is the ordered checklist recorded by the deterministic ruling engine, including unmet
   checks and the safety, fraud, precedent and confidence overlays. Each check supplies a rule ID,
   fixed template label, boolean `met`, case-specific `value` and existing evidence `fact_ids`.

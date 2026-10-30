@@ -30,7 +30,9 @@ def resolve(sample: str, reply) -> dict:
 def test_valid_narration_replaces_templates_without_changing_ruling():
     result = resolve("route_deviation_001.json", json.dumps(GOOD))
     assert result["explanation_source"] == "llm"
-    assert result["rider_explanation"] == GOOD["rider_explanation"]
+    assert result["rider_message"]["found"] == GOOD["rider_explanation"]
+    parts = result["rider_message"]
+    assert result["rider_explanation"] == f'{parts["greeting"]} {parts["found"]} {parts["next"]}'
     assert result["decision"] == "partial_refund"
     assert result["refund_amount"] == pytest.approx(6.30)
 
@@ -52,7 +54,7 @@ def test_fenced_json_accepted():
 def test_narration_contradicting_ruling_is_rejected(change, why):
     result = resolve("route_deviation_001.json", json.dumps({**GOOD, **change}))
     assert result["explanation_source"] == "fallback", why
-    assert result["rider_explanation"].startswith("Your dispute was upheld and you will be refunded $6.30.")
+    assert result["rider_message"]["found"].startswith("We've looked into your trip and you're getting $6.30 back.")
 
 
 def test_escalated_case_cannot_promise_refund():

@@ -18,7 +18,7 @@ client = TestClient(app)
 DISPUTES = Path(__file__).resolve().parents[2] / "data" / "disputes"
 SAMPLES = sorted(p.name for p in DISPUTES.glob("*.json"))
 RESOLVE = "/api/disputes/resolve"
-PARTY_KEYS = {"dispute_id", "decision", "refund_amount", "message", "explanation_source"}
+PARTY_KEYS = {"dispute_id", "decision", "refund_amount", "message", "message_parts", "explanation_source"}
 LEAK_WORDS = ("fraud", "bad faith", "bad-faith", "scam", "suspicious", "flagged", "history",
               "rating", "days old", "disputes in", "trips", "risk")
 LEAKY_NARRATION = json.dumps({

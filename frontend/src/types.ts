@@ -88,6 +88,9 @@ export interface Triage {
   reasons: string[];
 }
 
+/** One party's message in parts: a greeting, what we found, and what happens now. */
+export interface PartyMessage { greeting: string; found: string; next: string }
+
 export interface Autonomy {
   eligible: boolean;
   audit: boolean;
@@ -183,6 +186,9 @@ export interface Resolution {
   min_confidence?: number | null;
   explanation: string;
   rider_explanation: string;
+  // The same messages in parts for the phone's More info screen. Absent from older results.
+  rider_message?: PartyMessage | null;
+  driver_message?: PartyMessage | null;
   driver_explanation: string;
   explanation_source: "llm" | "fallback";
   judge_evidence: string[];

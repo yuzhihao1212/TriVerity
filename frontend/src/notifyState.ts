@@ -4,7 +4,7 @@
 import type { FinalDecision, SavedDecision } from "./decisionState";
 import { DECISION_LABELS } from "./outcomeTone";
 import { PARTY_DECISION_LABELS } from "./partyView";
-import type { Decision, DisputeCase, Resolution } from "./types";
+import type { Decision, DisputeCase, PartyMessage, Resolution } from "./types";
 
 export type Party = "rider" | "driver";
 export const PARTIES: Party[] = ["rider", "driver"];
@@ -77,7 +77,19 @@ const money = (value: number) => `$${value.toFixed(2)}`;
  * explanation for that party. Overridden or decided by the reviewer: plain wording for the
  * final outcome, so it never contradicts it. The reviewer can only add a note under it.
  */
-export const AUTO_NOTICE = "This was decided automatically under our dispute policy. If you disagree, you can appeal within 7 days.";
+// No deadline until the team confirms the appeal window (Task 10's CONFIRMED facts).
+export const AUTO_NOTICE = "This was decided automatically under our dispute policy. If you disagree, you can appeal.";
+
+/**
+ * The message in parts for the More info screen, when the party gets the ruling's own
+ * message. A reviewer's override has its own plain wording, so it has no parts and the
+ * phone shows the whole message, as do results from before the parts existed.
+ */
+export function messageParts(party: Party, resolution: Pick<Resolution, "rider_message" | "driver_message">,
+  outcome: Pick<FinalOutcome, "source">): PartyMessage | null {
+  if (outcome.source !== "ruling") return null;
+  return (party === "rider" ? resolution.rider_message : resolution.driver_message) ?? null;
+}
 
 export function generatedMessage(party: Party, resolution: Pick<Resolution, "rider_explanation" | "driver_explanation">,
   outcome: Pick<FinalOutcome, "decision" | "amount" | "source">): string {
@@ -154,7 +166,7 @@ export function privacyWarnings(text: string): string[] {
 // ---- Sent record ------------------------------------------------------------------
 
 /** What was sent: the generated message and the reviewer's note (empty: none) per party. */
-export interface SentRecord { at: string; messages: Record<Party, string>; notes: Record<Party, string>; decision: Decision; amount: number | null; disputeId?: string; reviewer?: SavedDecision; correction?: boolean; timestamp?: string }
+export interface SentRecord { at: string; messages: Record<Party, string>; parts?: Partial<Record<Party, PartyMessage>>; notes: Record<Party, string>; decision: Decision; amount: number | null; disputeId?: string; reviewer?: SavedDecision; correction?: boolean; timestamp?: string }
 export interface SentStoreBackend { getItem(key: string): string | null; setItem(key: string, value: string): void }
 export const SENT_KEY = "triverity.sent";
 
@@ -253,18 +265,30 @@ export function createSentStore(storage?: SentStoreBackend | null) {
  * Null unless the policy marked the ruling eligible and it wasn't picked for the audit sample.
  * Only these records carry the notice; a case a person sends never does.
  */
-export function autoSentRecord(disputeId: string, resolution: Pick<Resolution, "decision" | "refund_amount" | "autonomy" | "rider_explanation" | "driver_explanation">,
+export function autoSentRecord(disputeId: string, resolution: Pick<Resolution, "decision" | "refund_amount" | "autonomy" | "rider_explanation" | "driver_explanation" | "rider_message" | "driver_message">,
   dispute: Pick<DisputeCase, "fare">, now = new Date()): SentRecord | null {
   const autonomy = resolution.autonomy;
   if (!autonomy?.eligible || autonomy.audit || resolution.decision === "needs_review") return null;
   const outcome = finalOutcome(resolution, null, dispute);
   const message = (party: Party) => `${generatedMessage(party, resolution, outcome)} ${AUTO_NOTICE}`;
+  const parts = sentParts(party => {
+    const own = messageParts(party, resolution, outcome);
+    return own ? { ...own, next: `${own.next} ${AUTO_NOTICE}` } : null;
+  });
   return {
+    ...(parts ? { parts } : {}),
     at: clockText(now), timestamp: now.toISOString(), disputeId,
     reviewer: { kind: "auto", decision: resolution.decision, precedentId: "" },
     messages: { rider: message("rider"), driver: message("driver") }, notes: { rider: "", driver: "" },
     decision: outcome.decision, amount: outcome.amount,
   };
+}
+
+/** Both parties' parts for a sent record, or undefined when neither has any. */
+export function sentParts(of: (party: Party) => PartyMessage | null): Partial<Record<Party, PartyMessage>> | undefined {
+  const parts: Partial<Record<Party, PartyMessage>> = {};
+  for (const party of PARTIES) { const own = of(party); if (own) parts[party] = own; }
+  return Object.keys(parts).length ? parts : undefined;
 }
 
 /** The delivered snapshot, not the current editable ruling or decision. */

@@ -265,12 +265,18 @@ def narrate(sample: str, reply) -> object:
 def test_good_narration_still_accepted(sample):
     result = narrate(sample, GOOD[sample])
     assert result.explanation_source == "llm"
-    assert result.rider_explanation == GOOD[sample]["rider_explanation"]
+    # The narration supplies "what we found"; the greeting and next steps are fixed templates.
+    assert result.rider_message.found == GOOD[sample]["rider_explanation"]
+    assert GOOD[sample]["rider_explanation"] in result.rider_explanation
 
 
 def test_live_hy3_no_action_narration_accepted():
     """A real Hy3 reply from the first live run (D003), wrongly rejected at first:
-    "the fare is upheld" means the charge stands, which is right for no_action."""
+    "the fare is upheld" means the charge stands, which is right for no_action.
+
+    Its driver message also named "policy rule RD-1"; party messages may no longer carry
+    rule IDs (round 8 item 12), so that reply now falls back for that reason alone, and
+    the same reply without the code is accepted."""
     reply = {
         "explanation": "The decision is to uphold the fare with no refund, applying policy rule RD-1 which states "
                        "a route up to 15% longer than expected is within normal tolerance and no refund is due.",
@@ -279,7 +285,9 @@ def test_live_hy3_no_action_narration_accepted():
         "driver_explanation": "The rider's dispute was reviewed and the fare is upheld with no refund. The trip route "
                               "was 8% longer than expected, which is within the 15% normal tolerance under policy rule RD-1.",
     }
-    assert narrate(D003, reply).explanation_source == "llm"
+    assert narrate(D003, reply).explanation_source == "fallback"
+    plain = {**reply, "driver_explanation": reply["driver_explanation"].replace(" under policy rule RD-1", "")}
+    assert narrate(D003, plain).explanation_source == "llm"
 
 
 def test_escalated_prompt_keeps_the_proposal_out_of_party_messages():

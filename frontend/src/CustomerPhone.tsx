@@ -6,7 +6,7 @@ import { Icon } from "./Icon";
 import { CUSTOMER_COPY as COPY } from "./customerCopy";
 import { createFeedbackStore, customerName, customerResult, ratingIndex } from "./customerState";
 import { NOTE_LIMIT, type FinalOutcome, type Party } from "./notifyState";
-import type { Appeal, DisputeCase } from "./types";
+import type { Appeal, DisputeCase, PartyMessage } from "./types";
 
 let feedbackStore: ReturnType<typeof createFeedbackStore> | null = null;
 function feedbackRecords() {
@@ -21,8 +21,8 @@ function feedbackRecords() {
 type Screen = "main" | "info" | "rate" | "thanks";
 const MOODS = ["mood-cry", "mood-sad", "mood-neutral", "mood-smile", "mood-happy"];
 
-export function CustomerPhone({ party, outcome, message, note, live, deliveredAt, dispute, existing, onAppealed, appealsAvailable, name }: {
-  party: Party; outcome: FinalOutcome; message: string; note: string; live: boolean; deliveredAt?: string;
+export function CustomerPhone({ party, outcome, message, parts = null, note, live, deliveredAt, dispute, existing, onAppealed, appealsAvailable, name }: {
+  party: Party; outcome: FinalOutcome; message: string; parts?: PartyMessage | null; note: string; live: boolean; deliveredAt?: string;
   dispute: DisputeCase; existing: Appeal | null; onAppealed: (appeal: Appeal) => void; appealsAvailable: boolean; name?: string | null;
 }) {
   const id = useId();
@@ -82,7 +82,11 @@ export function CustomerPhone({ party, outcome, message, note, live, deliveredAt
         </>}
         {screen === "info" && <>
           <h3 ref={heading} tabIndex={-1}>{COPY.message}</h3>
-          <p className="phone-generated">{message}</p>
+          {parts ? <div className="phone-message-parts">
+            <p className="phone-generated">{parts.greeting}</p>
+            <h4>{COPY.found}</h4><p className="phone-generated">{parts.found}</p>
+            <h4>{COPY.nextSteps}</h4><p className="phone-generated">{parts.next}</p>
+          </div> : <p className="phone-generated">{message}</p>}
           <div className="phone-actions">
             <button type="button" className="secondary-button" aria-disabled={!live} aria-describedby={!live ? `${id}-locked` : undefined}
               onClick={() => { if (live) go(feedback ? "thanks" : "rate"); }}>

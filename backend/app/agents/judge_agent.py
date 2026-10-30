@@ -2,7 +2,7 @@ from app.agents._advocate import evidence_index
 from app.agents.judge_narration import narrate
 from app.agents.precedent_agent import check_consistency
 from app.models.dispute import DisputeCase
-from app.models.resolution import AgentCase, PrecedentReport, RiskAssessment, Ruling, RulingCondition
+from app.models.resolution import AgentCase, PartyMessage, PrecedentReport, RiskAssessment, Ruling, RulingCondition
 from app.services.evidence import CaseFacts
 from app.services.policy_service import cite, load_policy
 
@@ -53,7 +53,7 @@ def judge_with_precedents(
     ruling = _cap_refund(ruling, case, policy["refund"])
     ruling = ruling.model_copy(update={"judge_evidence_ids": evidence_ids_for(ruling.judge_evidence, facts),
                                       "min_confidence": policy["escalation"]["thresholds"]["min_confidence"]})
-    return narrate(case, _explain_to_parties(ruling), rider_case, driver_case, report), report
+    return finish_party_messages(narrate(case, _explain_to_parties(ruling), rider_case, driver_case, report)), report
 
 def evidence_ids_for(lines: list[str], facts: CaseFacts) -> list[str]:
     """The fact ID of each evidence line, so every fact shows its ID, not only the ones an advocate cited.
@@ -338,38 +338,84 @@ def _apply_escalation(ruling: Ruling, section: dict) -> Ruling:
         return ruling
     return _escalate(ruling, cite(section, "ESC-1"))
 
-def _explain_to_parties(ruling: Ruling) -> Ruling:
-    """Word the ruling for each party. Template baseline; an LLM can rewrite these later.
+# Customer-service wording for the parties (round 8 item 12). Only facts the case or the
+# policy give: no refund timing, rating, earnings-change or appeal-deadline promises until
+# the team confirms them, and no names (the case data has none).
+_GREETING = {
+    "rider": "Hi there, thanks for getting in touch about your trip.",
+    "driver": "Hi there, thanks for your patience while we looked into the rider's dispute.",
+}
+# The judge's case-record sentences, made neutral for the parties: no verdict words about
+# either side, and nothing that talks about a party in the third person to that party.
+_PARTY_REASON_EDITS = (
+    (" The driver's explanation is noted but is not supported by the trip data.", ""),
+    ("so the fee is justified", "so the no-show fee applies"),
+)
+# Escalations whose reason is only missing trip data: safe to tell the parties why.
+_MISSING_DATA_RULES = ("RD-4", "NS-4")
 
-    Fraud/bad-faith signals never appear in the messages to either party; they
-    are internal evidence only. A FRAUD-1 escalation tells the parties only that
-    the dispute needs additional review.
+
+def _party_reason(text: str) -> str:
+    for old, new in _PARTY_REASON_EDITS:
+        text = text.replace(old, new)
+    return text.strip()
+
+
+def _explain_to_parties(ruling: Ruling) -> Ruling:
+    """Word the ruling for each party: a greeting, what we found, and what happens now.
+
+    The template is the baseline; the narration (an LLM) may rewrite only "what we found",
+    and finish_party_messages() then joins the parts. Fraud/bad-faith signals never appear in
+    the messages to either party; they are internal evidence only. An escalated case tells
+    the parties only that a person will look at it (plus which trip data is missing, when
+    that is the only reason), never the proposed outcome.
     """
-    amount = f" ${ruling.refund_amount:.2f}" if ruling.refund_amount is not None else ""
-    # FRAUD-1 and PREC-1 reasons are internal (signals; other parties' disputes).
-    is_internal_escalation = any(ref.startswith(("FRAUD-1", "PREC-1")) for ref in ruling.policy_refs)
-    if is_internal_escalation:
-        rider = (
-            "Your dispute needs additional review. A human reviewer will "
-            "look into it and follow up with you."
-        )
-        driver = (
-            "This dispute needs additional review. A human reviewer will "
-            "look into it and follow up with you."
-        )
-        return ruling.model_copy(update={"rider_explanation": rider, "driver_explanation": driver})
-    reason = ruling.explanation
+    amount = f"${ruling.refund_amount:.2f}" if ruling.refund_amount is not None else None
+    reason = _party_reason(ruling.explanation)
+    refs = [ref.split(":", 1)[0].strip() for ref in ruling.policy_refs]
     match ruling.decision:
         case "partial_refund" | "full_refund":
-            rider = f"Your dispute was upheld and you will be refunded{amount}. {reason}"
-            driver = f"The rider has been refunded{amount}. {reason}"
+            back = f"{amount} back" if amount else "a refund"
+            found = {"rider": f"We've looked into your trip and you're getting {back}. {reason}",
+                     "driver": f"We've looked into the trip, and the rider is getting {back}. {reason}"}
+            next_ = {"rider": "The refund goes back to your original payment method.",
+                     "driver": "You don't need to do anything."}
         case "compensation":
-            rider = f"Your dispute was upheld and you will receive compensation{amount}. {reason}"
-            driver = f"The rider will receive compensation{amount}. {reason}"
+            what = f"{amount}: the extra fare back plus a credit for the lost time" if amount else "the extra fare back plus a credit for the lost time"
+            found = {"rider": f"We've looked into your trip and you're getting {what}. {reason}",
+                     "driver": f"We've looked into the trip, and the rider is getting {what}. {reason}"}
+            next_ = {"rider": "The fare refund goes back to your original payment method, and the credit is added to your account.",
+                     "driver": "You don't need to do anything."}
         case "no_action":
-            rider = f"Your dispute was not upheld and the charge stands. {reason}"
-            driver = f"The rider's dispute was not upheld; no change to your earnings. {reason}"
+            found = {"rider": f"We've looked into your trip, and the charge stays as it is. {reason}",
+                     "driver": f"We've looked into the trip, and the charge stays as it is. {reason}"}
+            next_ = {"rider": "You don't need to do anything.",
+                     "driver": "Your earnings for this trip don't change, and you don't need to do anything."}
         case _:
-            rider = f"Your dispute has been passed to a human reviewer, who will contact you. {reason}"
-            driver = f"This dispute has been passed to a human reviewer, who will contact you. {reason}"
-    return ruling.model_copy(update={"rider_explanation": rider, "driver_explanation": driver})
+            only_missing = any(ref in _MISSING_DATA_RULES for ref in refs) \
+                and not any(ref.startswith(("SAFE", "FRAUD", "PREC", "ESC")) for ref in refs)
+            why = f" {reason}" if only_missing else ""
+            found = {"rider": f"We need a closer look at your dispute before we can decide.{why}",
+                     "driver": f"We need a closer look at the rider's dispute before we can decide.{why}"}
+            next_ = {party: "A member of our team will review it and follow up with you." for party in ("rider", "driver")}
+    parts = {party: PartyMessage(greeting=_GREETING[party], found=found[party].strip(), next=next_[party])
+             for party in ("rider", "driver")}
+    return ruling.model_copy(update={
+        "rider_message": parts["rider"], "driver_message": parts["driver"],
+        # The narration may replace these with its own "what we found".
+        "rider_explanation": parts["rider"].found, "driver_explanation": parts["driver"].found,
+    })
+
+
+def finish_party_messages(ruling: Ruling) -> Ruling:
+    """Join each party's greeting, what we found (as narrated) and what happens now."""
+    update = {}
+    for party in ("rider", "driver"):
+        parts: PartyMessage | None = getattr(ruling, f"{party}_message")
+        if parts is None:
+            continue
+        found = getattr(ruling, f"{party}_explanation").strip() or parts.found
+        joined = parts.model_copy(update={"found": found})
+        update[f"{party}_message"] = joined
+        update[f"{party}_explanation"] = " ".join([joined.greeting, joined.found, joined.next])
+    return ruling.model_copy(update=update)

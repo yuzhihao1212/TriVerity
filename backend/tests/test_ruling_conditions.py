@@ -31,10 +31,15 @@ def test_all_nine_rulings_unchanged_byte_for_byte(dispute_id):
     # Every original Ruling field, not merely decision and amount. Texts are compared
     # verbatim, and list order (including policy_refs) is significant.
     result = resolve_dispute(SAMPLES[dispute_id]).model_dump(mode='json')
-    original_fields = set(Ruling.model_fields) - {'conditions', 'min_confidence'}
+    # The party messages were reworded on purpose (round 8 item 12): every other field,
+    # decision, amount, confidence, policy_refs and the case-record explanation included,
+    # stays exactly as before.
+    reworded = {'rider_explanation', 'driver_explanation', 'rider_message', 'driver_message'}
+    original_fields = set(Ruling.model_fields) - {'conditions', 'min_confidence'} - reworded
     assert len(SAMPLES) == len(BEFORE) == 9
     actual = {key: result[key] for key in original_fields}
-    assert json.dumps(actual, sort_keys=True) == json.dumps(BEFORE[dispute_id], sort_keys=True)
+    expected = {key: BEFORE[dispute_id][key] for key in original_fields}
+    assert json.dumps(actual, sort_keys=True) == json.dumps(expected, sort_keys=True)
 
 
 def checks(result):
