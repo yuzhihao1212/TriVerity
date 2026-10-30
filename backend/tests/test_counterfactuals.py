@@ -82,6 +82,20 @@ def test_missing_data_says_what_to_record(facts, missing):
     assert ("distance" if missing == "route" else missing) in cfs[0].change
 
 
+def test_missing_duration_says_what_to_record():
+    c = case("route_deviation")
+    facts = CaseFacts(distance_excess_ratio=0.4, fare_difference=3.0)
+    ruling = base_ruling(c, facts)
+    assert ruling.decision == "needs_review"
+    within, record = what_would_change(c, facts, ruling)
+    assert (within.decision, within.rules) == ("no_action", ["RD-1"])
+    assert base_ruling(c, apply(within, facts)).decision == "no_action"
+    assert record.decision is None and "duration" in record.change
+    # Recording the duration really does give an automatic ruling.
+    assert base_ruling(c, facts.model_copy(update={"duration_excess_ratio": 0.1})).decision == "partial_refund"
+    assert base_ruling(c, facts.model_copy(update={"duration_excess_ratio": -0.1})).decision == "no_action"
+
+
 def test_escalations_say_what_the_rules_alone_would_decide():
     result = resolve_dispute(SAMPLES["D007"])             # threat + high bad-faith risk on top of RD-3
     first = result.counterfactuals[0]

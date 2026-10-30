@@ -80,9 +80,13 @@ def _route_flips(facts: CaseFacts) -> list[Counterfactual]:
         return [_cf(f"the trip had also taken longer than expected ({faster})", "partial_refund", "RD-3")]
     flips = [_cf(f"the route had been at most {limit:.0%} longer than expected (it was {excess:.0%} longer)",
                  "no_action", "RD-1")]
-    if duration is not None:
-        flips.append(_cf(f"the trip had taken no longer than expected (it was {duration:.0%} slower)",
-                         "no_action", "RD-2"))
+    if duration is None:
+        return [*flips, Counterfactual(
+            change="both the expected and the actual trip duration had been recorded",
+            decision=None, rules=["RD-2", "RD-3"],
+            outcome="an automatic ruling under the route rules instead of human review")]
+    flips.append(_cf(f"the trip had taken no longer than expected (it was {duration:.0%} slower)",
+                     "no_action", "RD-2"))
     stop = longest_stop_min(facts)
     if stop is not None and stop >= min_stop:
         flips.append(_cf(f"the longest unexpected stop had lasted under {min_stop} minutes (it lasted {stop:g})",

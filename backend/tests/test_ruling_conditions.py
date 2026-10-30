@@ -120,9 +120,9 @@ def test_route_branches_record_only_the_rules_reached():
     assert 'RD-3' not in checks(result) and 'RD-5' not in checks(result)
     facts = facts.model_copy(update={'duration_excess_ratio': None})
     result = judge_agent.base_ruling(case, facts)
-    assert result.decision == 'partial_refund' and result.confidence == 0.65
-    assert checks(result)['RD-3'].met
-    assert 'duration unavailable' in checks(result)['RD-3'].value
+    assert result.decision == 'needs_review' and result.refund_amount is None
+    assert checks(result)['RD-4'].met is False and checks(result)['RD-4'].value == 'Missing trip duration data'
+    assert 'RD-2' not in checks(result) and 'RD-3' not in checks(result) and 'RD-5' not in checks(result)
 
 
 def test_threshold_labels_and_response_follow_policy(monkeypatch):

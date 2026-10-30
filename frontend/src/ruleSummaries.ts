@@ -7,7 +7,7 @@ export const RULE_SUMMARIES: Record<string, string> = {
   "RD-1": "Route up to 15% longer than planned → normal, no refund",
   "RD-2": "Longer route that took no longer → avoiding traffic, no refund",
   "RD-3": "Long detour that also took longer → extra fare refunded",
-  "RD-4": "Planned or actual distance missing → a person decides",
+  "RD-4": "Planned or actual distance or time missing → a person decides",
   "RD-5": "Detour with a stop of 10 min or more → $5.00 credit for lost time",
   "NS-1": "No-show fee only if the driver got within 100 m of pickup",
   "NS-2": "No-show fee only if the driver waited at least 5 min",

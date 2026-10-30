@@ -39,6 +39,28 @@ def test_route_deviation_without_distance_needs_review():
     payload["trip"]["actual_distance_km"] = None
     assert resolve(payload)["decision"] == "needs_review"
 
+@pytest.mark.parametrize(("expected_min", "actual_min"), [(20, None), (None, 30), (None, None)])
+def test_longer_route_without_duration_needs_review(expected_min, actual_min):
+    # RD-3 needs the route to have taken longer too, and missing data doesn't show that.
+    payload = load("route_deviation_001.json")
+    payload["trip"] |= {"expected_distance_km": 10, "actual_distance_km": 14,
+                        "expected_duration_min": expected_min, "actual_duration_min": actual_min}
+    result = resolve(payload)
+    assert result["decision"] == "needs_review"
+    assert result["refund_amount"] is None
+    assert [ref.split(":")[0] for ref in result["policy_refs"]] == ["RD-4"]
+    assert "$" not in result["recommended_action"]
+    # The rider sees why, as with any other missing trip data, and no proposed outcome.
+    assert "trip duration" in result["rider_explanation"]
+    assert not any(check["rule"] == "RD-3" for check in result["conditions"])
+
+def test_within_tolerance_route_needs_no_duration():
+    payload = load("route_deviation_002.json")
+    payload["trip"]["actual_duration_min"] = None
+    result = resolve(payload)
+    assert result["decision"] == "no_action"
+    assert result["policy_refs"][0].startswith("RD-1:")
+
 def test_short_wait_refunds_no_show_fee():
     payload = load("no_show_003.json")
     payload["trip"]["driver_wait_min"] = 2
