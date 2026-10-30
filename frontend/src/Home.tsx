@@ -1,7 +1,7 @@
 import { useState, type CSSProperties } from "react";
 import { tileCounts, sortQueue, STATUS_ICONS, STATUS_WORDS, type QueueRow } from "./caseQueue";
 import { Chip } from "./Chip";
-import { amountAtStake, guidedDemoSteps, queueSegments, queueSummary, runAllSummary } from "./homeState";
+import { amountAtStake, GUIDED_DEMO, guidedDemoSteps, queueSegments, queueSummary, runAllSummary } from "./homeState";
 import { Icon } from "./Icon";
 import { NewDisputeIcon } from "./SidebarToggle";
 import { decisionTone, DECISION_LABELS } from "./outcomeTone";
@@ -21,7 +21,7 @@ function writeDemoOpen(open: boolean) {
   try { sessionStorage.setItem(DEMO_OPEN_KEY, open ? "1" : "0"); } catch { /* Storage may be blocked. */ }
 }
 
-/** A status bar over the queue, a folded guided demo, and the case list. */
+/** A status bar over the queue, a folded guided demo (hidden for now: GUIDED_DEMO), and the case list. */
 export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissing, onNew, onRunAll, runAllProgress, typeIcon }: {
   rows: HomeRow[]; holds?: HoldRecord[]; appealsWaiting: number | null; showStart: boolean; onNew: () => void;
   missing: string | null; onDismissMissing: () => void;
@@ -64,7 +64,7 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
       <p className="home-intro">Ride disputes waiting for review. Agents gather evidence and argue both sides, policy rules decide, and you approve.</p>
     </div>
     {ranSummary && <p className="home-run-summary" role="status"><Icon name="queue" />{ranSummary}</p>}
-    <section className={`home-start${demoOpen ? " open" : ""}`} aria-labelledby="home-start-title">
+    {GUIDED_DEMO && <section className={`home-start${demoOpen ? " open" : ""}`} aria-labelledby="home-start-title">
       <h3 id="home-start-title"><button type="button" className="home-start-toggle" aria-expanded={demoOpen} aria-controls="home-start-body" onClick={toggleDemo}>
         <Icon name="chevron" className="home-start-chevron" />Guided demo · 3 cases
         <span className="home-start-path" aria-hidden="true">{starts.map((pick, index) => <span key={pick.id}>
@@ -83,7 +83,7 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
         </a>
       </li>)}</ol>
       </div></div>
-    </section>
+    </section>}
     {holds.length > 0 && <section className="home-holds" aria-labelledby="home-holds-title">
       <h3 id="home-holds-title"><Icon name="pause" />On hold · waiting for a second reviewer <span className="home-holds-count">{holds.length}</span></h3>
       <p className="home-holds-note small muted">Simulated in this browser: a hold isn't saved or sent anywhere.</p>

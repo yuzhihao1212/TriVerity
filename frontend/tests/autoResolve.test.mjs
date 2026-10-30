@@ -31,7 +31,8 @@ test('queue: auto-resolved sorts after reviewed, and next case skips it', () => 
 
 test('guided demo: the next guided case skips one the policy already closed', () => {
   const rows = [{ id: 'D001', status: 'closed' }, { id: 'D006', status: 'auto' }, { id: 'D007', status: 'decide' }];
-  assert.equal(hs.nextAfterClose(rows, 'D001').row.id, 'D007');
+  assert.equal(hs.nextAfterClose(rows, 'D001', true).row.id, 'D007');   // with the guided demo on
+  assert.equal(hs.nextAfterClose(rows, 'D001').row.id, 'D007');         // and off (GUIDED_DEMO = false)
 });
 
 test('home: auto-resolved has its own summary part and meter segment', () => {

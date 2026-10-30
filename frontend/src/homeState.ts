@@ -45,6 +45,12 @@ export function amountAtStake(fare: { actual?: number | null; cancellation_fee?:
   return null;
 }
 
+/**
+ * The guided demo is hidden while the team finalises the Demo Day flow. Turning this back on
+ * restores the home section and the "Next: Case N" hand-off after closing a case.
+ */
+export const GUIDED_DEMO = false;
+
 /** Only closing a case completes a demo step; reopening makes it next again. */
 export function guidedDemoSteps(rows: Pick<QueueRow, "id" | "status">[]) {
   const closed = new Set(rows.filter(row => row.status === "closed").map(row => row.id));
@@ -59,9 +65,9 @@ export function guidedDemoSteps(rows: Pick<QueueRow, "id" | "status">[]) {
 }
 
 /** Continue the guided sequence when possible; otherwise resume the usual queue. */
-export function nextAfterClose<T extends QueueRow>(rows: T[], currentId: string) {
+export function nextAfterClose<T extends QueueRow>(rows: T[], currentId: string, guided = GUIDED_DEMO) {
   const steps = guidedDemoSteps(rows);
-  const current = steps.findIndex(step => step.id === currentId);
+  const current = guided ? steps.findIndex(step => step.id === currentId) : -1;
   if (current >= 0) {
     for (const step of steps.slice(current + 1)) {
       // Auto-resolved is closed too (by the policy): nothing left for the reviewer there.
