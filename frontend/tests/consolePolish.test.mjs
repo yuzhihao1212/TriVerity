@@ -136,7 +136,7 @@ test('override form: what blocks confirming, in order', () => {
   assert.match(ds.overrideError({ choice: null, check: null, reason, amount: null }), /Choose what should happen/);
   assert.match(ds.overrideError({ choice: 'partial_refund', check: null, reason, amount: ds.checkPartialAmount('', 24.8, 6.3) }), /Enter the refund amount/);
   assert.match(ds.overrideError({ choice: 'investigate', check: null, reason, amount: null }), /what needs checking/);
-  assert.match(ds.overrideError({ choice: 'no_action', check: null, reason: 'short', amount: null }), /short reason/);
+  assert.match(ds.overrideError({ choice: 'no_action', check: null, reason: 'short', amount: null }), /at least \d+ characters/);
   assert.equal(ds.overrideError({ choice: 'partial_refund', check: null, reason, amount: ok }), null);
   assert.equal(ds.overrideError({ choice: 'investigate', check: 'Safety concern', reason, amount: null }), null);
 });

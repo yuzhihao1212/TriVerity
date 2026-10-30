@@ -113,7 +113,7 @@ export function overrideError({ choice, check, reason, amount }: {
   if (choice === "partial_refund" && (!amount || amount.value == null)) return amount?.message ?? "Enter the refund amount.";
   if (choice === "full_refund" && amount && amount.value == null) return amount.message;
   if (choice === "investigate" && !check) return "Choose what needs checking.";
-  if (reason.trim().length < MIN_REASON) return "Add a short reason. It's kept with the case and the precedent.";
+  if (reason.trim().length < MIN_REASON) return `Say a bit more about why (at least ${MIN_REASON} characters). It's kept with the case and the precedent.`;
   return null;
 }
 
