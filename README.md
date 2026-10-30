@@ -20,7 +20,7 @@ Live sample measurements and offline simulation results; [measurement context be
 
 ## A quick look
 
-Select an image to view it full size. [All ten screenshots and their provenance](docs/screenshots/README.md).
+Select an image to view it full size. [All eleven screenshots and their provenance](docs/screenshots/README.md).
 
 <table width="100%">
 <tr>
@@ -41,7 +41,7 @@ Select an image to view it full size. [All ten screenshots and their provenance]
 
 [![TriVerity architecture: computed facts, per-side evidence collection and debate, rule-based judging, reviewer workflow and feedback](docs/architecture.svg)](docs/architecture.svg)
 
-[Read the architecture](docs/architecture.md) · [Watch live progress](docs/screenshots/03-live-progress.png) · [Closed review and correction history](docs/screenshots/08-closed-case.png)
+[Read the architecture](docs/architecture.md) · [Watch live progress](docs/screenshots/03-live-progress.png) · [Closed review and correction history](docs/screenshots/08-closed-case.png) · [A case that closed itself](docs/screenshots/11-auto-resolved.png)
 
 **On this page:** [Results](#results) · [What it does](#what-it-does) · [Ryde requirements](#ryde-requirements-where-to-see-each) · [Documentation](#documentation) · [Run it locally](#run-it-locally) · [What's next](#whats-next) · [Built with](#built-with)
 
@@ -103,6 +103,11 @@ same facts always give the same ruling, and every ruling is explained.
   similar cases differently from the rules, those disputes go to a human (`PREC-1`)
 - **Escalation** to a human reviewer for threats in chat, a high bad-faith risk, missing data, low
   confidence or reviewer precedents against the rules, with the proposed action attached for the reviewer
+- **Auto-close for routine cases**: when the rules are confident (at least 80%), the refund is small (at most
+  $10) and nothing needs a person (no safety, fraud, precedent or missing-data flag), the case
+  [closes itself](docs/screenshots/11-auto-resolved.png) and both parties are told, including how to appeal.
+  5 of the 9 samples close this way. A repeatable ~10% sample still goes to a reviewer, a reviewer can reopen any
+  case, and automatic decisions never become precedents
 - **Observable**: the demo UI shows the evidence, each agent's argument and citations, the fraud risk, and
   whether the AI or the fallback produced each step
 - **Reviewer workflow**: home queue → Evidence → Hearing → Ruling (accept or override) → Notify

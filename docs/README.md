@@ -32,7 +32,7 @@ A judge's route: [product and results](../README.md) → [architecture](architec
 
 ## Visual evidence
 
-- [Curated screenshots](screenshots/README.md): ten judge-facing views, image provenance and size checks.
+- [Curated screenshots](screenshots/README.md): eleven judge-facing views, image provenance and size checks.
 - [Review screenshots per feature](review/): the original before/after design-review record, retained in place.
 
 ## Verified build
