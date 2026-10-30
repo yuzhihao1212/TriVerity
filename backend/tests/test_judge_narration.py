@@ -49,12 +49,56 @@ def test_fenced_json_accepted():
         ({"rider_explanation": "Your dispute was upheld and you will get a refund."}, "missing amount"),
         ({"explanation": "Under RD-1 and RD-3 the rider wins."}, "rule nobody cited"),
         ({"driver_explanation": ""}, "empty text"),
+        ({"explanation": "RD-5's $5.00 credit does not apply: the stop was too short."}, "credit not awarded"),
+        ({"explanation": "RD-3 applies. Distance cost $14.70."}, "fare line the checks don't accept"),
+        ({"rider_explanation": "The detour was unjustified, so you will be refunded $6.30."}, "verdict word to the rider"),
+        ({"driver_explanation": "The rider has been refunded $6.30 because the detour was unjustified."}, "verdict word to the driver"),
     ],
 )
 def test_narration_contradicting_ruling_is_rejected(change, why):
     result = resolve("route_deviation_001.json", json.dumps({**GOOD, **change}))
     assert result["explanation_source"] == "fallback", why
     assert result["rider_message"]["found"].startswith("We've looked into your trip and you're getting $6.30 back.")
+
+
+def _d001_prompt(rider_refs=(), driver_refs=()) -> dict:
+    """What the model is sent for D001, with the advocates citing the given rules."""
+    from app.agents.judge_narration import _user_prompt
+    from app.models.resolution import AgentCase
+    from app.services.policy_service import cite, load_policy
+
+    case = DisputeCase(**json.loads((DISPUTES / "route_deviation_001.json").read_text()))
+    ruling = resolve_dispute(case)
+    section = load_policy()["route_deviation"]
+    rider = AgentCase(agent="rider_advocate", summary="x", source="llm", policy_refs=[cite(section, r) for r in rider_refs])
+    driver = AgentCase(agent="driver_advocate", summary="x", source="llm", policy_refs=[cite(section, r) for r in driver_refs])
+    return json.loads(_user_prompt(case, ruling, rider, driver))
+
+
+def test_prompt_lists_only_the_amounts_the_checks_accept():
+    prompt = _d001_prompt()
+    assert prompt["allowed_dollar_amounts"] == ["$6.30", "$18.50", "$24.80"]
+    assert not any(line.startswith("Fare line:") for line in prompt["facts"])
+    assert "Fare: charged $24.80, expected $18.50" in prompt["facts"]
+
+
+def test_prompt_does_not_hand_the_model_rejected_wording():
+    """D001 fell back on every live run in the 30 Oct re-check: RD-3's own "unjustified" and RD-5's $5.00."""
+    prompt = _d001_prompt(rider_refs=["RD-3", "RD-5"])
+    rules = [*prompt["ruling"]["policy_applied"], *prompt["rider_advocate"]["policy_cited"]]
+    assert all(rule.startswith("RD-") for rule in rules)
+    assert not any("justified" in rule or "$5" in rule for rule in rules)
+    assert "a credit" in prompt["rider_advocate"]["policy_cited"][1]
+
+
+def test_compensation_prompt_keeps_the_credit():
+    from app.agents.judge_narration import _policy_view, _allowed_amounts
+    from app.services.policy_service import cite, load_policy
+
+    case = DisputeCase(**json.loads((DISPUTES / "route_deviation_001.json").read_text()))
+    ruling = resolve_dispute(case).model_copy(update={"decision": "compensation"})
+    rd5 = cite(load_policy()["route_deviation"], "RD-5")
+    assert "$5.00 credit" in _policy_view(rd5, _allowed_amounts(case, ruling))
 
 
 def test_escalated_case_cannot_promise_refund():
