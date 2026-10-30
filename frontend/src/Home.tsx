@@ -75,7 +75,6 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
           <Icon name="scales" />{runAllProgress?.running ? `Running ${runAllProgress.total} cases…` : "Run all"}
         </button>}
       </div>
-      <p className="home-intro">Ride disputes waiting for review. Agents gather evidence and argue both sides, policy rules decide, and you approve.</p>
     </div>
     {ranSummary && <p className="home-run-summary" role="status"><Icon name="queue" />{ranSummary}</p>}
     {GUIDED_DEMO && <section className={`home-start${demoOpen ? " open" : ""}`} aria-labelledby="home-start-title">

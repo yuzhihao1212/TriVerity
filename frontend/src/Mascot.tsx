@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 
 import owl from "./assets/mascot/owl.webp";
+import wing from "./assets/mascot/owl-wing.webp";
 import { ACTION_MS, idleDelay, lookAt, nextIdleAction, tiltToward, type IdleAction } from "./mascotState";
 
 // The owl image is 943 × 877 with its printed pupils painted out; the live pupils are drawn on top
@@ -13,13 +14,15 @@ const EYES = [
 const PUPIL_R = 51;
 const TRAVEL = 19;
 const LID = "#fde3e3";
+// The raised wing is its own layer (cut from the same image), so it can wave from its shoulder.
+const WING = { x: 0, y: 284, w: 209, h: 344 };
 
 const reducedMotion = () => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 /**
  * The TriVerity owl. It feels three-dimensional without a 3D model: it tilts toward the cursor with
- * the light shifting across it, casts a soft shadow, blinks, and plays a random idle action every
- * few seconds. Its pupils follow the cursor once it comes within reach. `cheer` (a changing key)
+ * the light shifting across it, casts a soft shadow, blinks, keeps its raised wing gently moving
+ * (and waves with it), and plays a random idle action every few seconds. Its pupils follow the cursor once it comes within reach. `cheer` (a changing key)
  * makes it hop with a burst of sparkles. Decorative: the words it says live in `children`.
  * Reduced motion: still, eyes ahead, no idle actions.
  */
@@ -92,14 +95,22 @@ export function Mascot({ size = 120, cheer, className = "", children, bubbleSide
     lastCheer.current = cheer;
     if (reducedMotion()) return;
     setBurst(count => count + 1);
-    setAction("hop");
-    const timer = window.setTimeout(() => setAction(null), ACTION_MS.hop);
+    setAction("wave");
+    const timer = window.setTimeout(() => setAction(null), ACTION_MS.wave);
     return () => window.clearTimeout(timer);
   }, [cheer]);
 
+  // Hover the owl and it waves back (not while it is already doing something).
+  const busy = useRef(false);
+  busy.current = action !== null;
+  function waveBack() {
+    if (busy.current || reducedMotion()) return;
+    setAction("wave");
+    window.setTimeout(() => setAction(current => current === "wave" ? null : current), ACTION_MS.wave);
+  }
   const height = Math.round(size * VIEW.h / VIEW.w);
   return <div className={`mascot bubble-${bubbleSide} ${className}`} style={{ "--mascot-w": `${size}px`, "--mascot-h": `${height}px` } as CSSProperties}>
-    <div className="mascot-stage" aria-hidden="true">
+    <div className="mascot-stage" aria-hidden="true" onPointerEnter={waveBack}>
       <span className="mascot-shadow" />
       <div ref={body} className={`mascot-body${action ? ` is-${action}` : ""}`}>
         <svg className="mascot-svg" viewBox={`0 0 ${VIEW.w} ${VIEW.h}`} width={size} height={height} focusable="false">
@@ -110,6 +121,7 @@ export function Mascot({ size = 120, cheer, className = "", children, bubbleSide
             </radialGradient>
           </defs>
           <image href={owl} width={VIEW.w} height={VIEW.h} />
+          <g className="mascot-wing"><image href={wing} x={WING.x} y={WING.y} width={WING.w} height={WING.h} /></g>
           {EYES.map((eye, n) => <g key={n} clipPath={`url(#${id}-eye${n})`}>
             <g className="mascot-glance"><g ref={node => { pupils.current[n] = node; }}>
               <circle cx={eye.pupil.x} cy={eye.pupil.y} r={PUPIL_R} fill={`url(#${id}-iris)`} />
