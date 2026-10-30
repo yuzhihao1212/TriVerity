@@ -12,7 +12,7 @@ export function suppliedConditions(resolution: Pick<Resolution, "conditions">) {
 }
 
 /** Overlays run after the base rule; "not met" there means nothing was triggered. */
-const OVERLAY_RULES = /^(SAFE|FRAUD|PREC|ESC)-/;
+export const OVERLAY_RULES = /^(SAFE|FRAUD|PREC|ESC)-/;
 
 /**
  * Splits the engine's checks into those that decided this outcome (their rule is in

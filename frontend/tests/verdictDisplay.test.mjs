@@ -5,7 +5,10 @@ const v = await load('verdictDisplay');
 const base = { decision: 'partial_refund', confidence: .8, min_confidence: .6, policy_refs: ['RD-3: Detour'], refund_amount: 6.3 };
 
 test('confidence caption and bar use the supplied threshold, including equality', () => {
-  assert.equal(v.confidenceDisplay(base).caption, 'Above the 60% minimum, so the rules decide.');
+  assert.equal(v.confidenceDisplay(base).caption, 'Above the 60% minimum: the rules decide, and a person confirms.');
+  // Within the auto-resolve limits it says so; an audit sample still gets a person.
+  assert.equal(v.confidenceDisplay({ ...base, autonomy: { eligible: true, audit: false, reasons: [] } }).caption, 'High enough, and within the limits, to close automatically.');
+  assert.match(v.confidenceDisplay({ ...base, autonomy: { eligible: true, audit: true, reasons: [] } }).caption, /a person confirms/);
   assert.equal(v.confidenceDisplay(base).tone, 'ok');
   const low = v.confidenceDisplay({ ...base, min_confidence: .9 });
   assert.equal(low.caption, 'Below the 90% minimum, so a human reviewer decides.');
@@ -49,9 +52,12 @@ test('checklist groups the deciding checks first, then the rest, keeping engine 
   const rd5 = { rule: 'RD-5', label: 'Stop of 10 min or more', met: false, value: '6 min', fact_ids: ['GPS-4'] };
   const safe = { rule: 'SAFE-1', label: 'Threat', met: false, value: 'None', fact_ids: [] };
   const groups = v.rulingConditionGroups({ ...base, conditions: [rd5, rd3, safe] });
-  assert.deepEqual(groups.map(g => g.title), ['Decided the case', 'Also checked']);
+  assert.deepEqual(groups.map(g => g.key), ['deciding', 'others', 'overlays']);
+  assert.deepEqual(groups.map(g => g.title), ['Decided the case', 'Also checked', 'Safety, fraud, precedent and confidence checks']);
   assert.deepEqual(groups[0].checks.map(c => c.rule), ['RD-3']);
-  assert.deepEqual(groups[1].checks.map(c => [c.rule, c.symbol]), [['RD-5', '⊖'], ['SAFE-1', '⊖']]);
+  // What didn't apply stays in an open group; only the escalation checks fold.
+  assert.deepEqual(groups[1].checks.map(c => [c.rule, c.symbol]), [['RD-5', '⊖']]);
+  assert.deepEqual(groups[2].checks.map(c => [c.rule, c.symbol]), [['SAFE-1', '⊖']]);
   // Escalated: the overlays decide; the base refund rule moves to "Also checked".
   const threat = { ...safe, met: true, value: '1 threatening message' };
   const escalated = v.rulingConditionGroups({ ...base, decision: 'needs_review', policy_refs: ['RD-3: x', 'SAFE-1: y'], conditions: [rd3, threat] });

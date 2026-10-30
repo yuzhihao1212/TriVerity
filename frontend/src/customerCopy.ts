@@ -41,6 +41,8 @@ export const CUSTOMER_COPY = {
     credit: "Your credit will be added to your account.",
     driverRefund: (amount: string) => `${amount} of this fare went back to the rider.`,
     driverCredit: (amount: string) => `The rider receives a ${amount} credit.`,
+    // Approved for the demo (30 Oct), matching the backend's "what happens now".
+    earningsAdjusted: "Your earnings for this trip have been adjusted.", earningsUnchanged: "Your earnings for this trip don't change.",
     rating: PROMISES.rating, noChange: "You don't need to do anything.",
     review: "We'll follow up when a reviewer has looked at your case.",
   },

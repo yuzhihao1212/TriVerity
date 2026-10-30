@@ -20,7 +20,9 @@ test('nothing unconfirmed is promised: no refund time, rating line or appeal dea
     assert.doesNotMatch(text, /working days|\d+ days|rating/);
   }
   // The phones use them: no rating line for the driver, the rider's next step without a time.
-  assert.deepEqual(s.customerResult('driver', outcome('partial_refund')).next, ['$6.30 of this fare went back to the rider.']);
+  // The earnings line was approved for the demo (30 Oct); the rating line still waits.
+  assert.deepEqual(s.customerResult('driver', outcome('partial_refund')).next, ['$6.30 of this fare went back to the rider.', 'Your earnings for this trip have been adjusted.']);
+  assert.deepEqual(s.customerResult('driver', outcome('no_action')).next, ["Your earnings for this trip don't change."]);
   assert.deepEqual(s.customerResult('rider', outcome('partial_refund')).next, ['The refund goes back to your original payment method.']);
   assert.equal(ns.AUTO_NOTICE, copy.autoNotice);
 });

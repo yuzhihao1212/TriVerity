@@ -15,7 +15,9 @@ export function customerResult(party: Party, outcome: Pick<FinalOutcome, "decisi
     : !amount ? COPY.result.pendingAmount : credit ? COPY.result.credit(amount) : COPY.result.refund(amount);
   const next = party === "rider"
     ? refund && amount ? [COPY.next.refund] : credit && amount ? [COPY.next.credit] : [COPY.next.noChange]
-    : refund && amount ? [COPY.next.driverRefund(amount)] : credit && amount ? [COPY.next.driverCredit(amount)] : [COPY.next.noChange];
+    : refund && amount ? [COPY.next.driverRefund(amount), COPY.next.earningsAdjusted]
+      : credit && amount ? [COPY.next.driverCredit(amount), COPY.next.earningsAdjusted]
+      : outcome.decision === "no_action" ? [COPY.next.earningsUnchanged] : [COPY.next.noChange];
   // "Your rating isn't affected" only once the team confirms it (customerCopy CONFIRMED).
   if (party === "driver" && COPY.next.rating) next.push(COPY.next.rating);
   return { line, next, icon: party === "rider" && refund ? "receipt" : "check", status: COPY.resolved };

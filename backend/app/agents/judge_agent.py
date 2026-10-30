@@ -339,8 +339,9 @@ def _apply_escalation(ruling: Ruling, section: dict) -> Ruling:
     return _escalate(ruling, cite(section, "ESC-1"))
 
 # Customer-service wording for the parties (round 8 item 12). Only facts the case or the
-# policy give: no refund timing, rating, earnings-change or appeal-deadline promises until
-# the team confirms them, and no names (the case data has none).
+# policy give: no refund timing, rating or appeal-deadline promises until the team confirms
+# them, and no names (the case data has none). The driver's earnings line and the follow-up
+# promise were approved for the demo (30 Oct).
 _GREETING = {
     "rider": "Hi there, thanks for getting in touch about your trip.",
     "driver": "Hi there, thanks for your patience while we looked into the rider's dispute.",
@@ -379,13 +380,13 @@ def _explain_to_parties(ruling: Ruling) -> Ruling:
             found = {"rider": f"We've looked into your trip and you're getting {back}. {reason}",
                      "driver": f"We've looked into the trip, and the rider is getting {back}. {reason}"}
             next_ = {"rider": "The refund goes back to your original payment method.",
-                     "driver": "You don't need to do anything."}
+                     "driver": "Your earnings for this trip have been adjusted. You don't need to do anything."}
         case "compensation":
             what = f"{amount}: the extra fare back plus a credit for the lost time" if amount else "the extra fare back plus a credit for the lost time"
             found = {"rider": f"We've looked into your trip and you're getting {what}. {reason}",
                      "driver": f"We've looked into the trip, and the rider is getting {what}. {reason}"}
             next_ = {"rider": "The fare refund goes back to your original payment method, and the credit is added to your account.",
-                     "driver": "You don't need to do anything."}
+                     "driver": "Your earnings for this trip have been adjusted. You don't need to do anything."}
         case "no_action":
             found = {"rider": f"We've looked into your trip, and the charge stays as it is. {reason}",
                      "driver": f"We've looked into the trip, and the charge stays as it is. {reason}"}

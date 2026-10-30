@@ -23,6 +23,8 @@ export const MIN_REASON = 10;
 export const MIN_PARTIAL = 0.5;
 /** A partial refund above this multiple of the ruling's refund needs a second reviewer. */
 export const SECOND_APPROVAL_RATIO = 1.5;
+/** With no refund in the ruling, a refund above this needs a second reviewer (the auto-resolve cap). */
+export const SECOND_APPROVAL_NO_REFUND = 10;
 
 /** A case put on hold for a second reviewer (simulated in this browser session). */
 export interface HoldRecord { disputeId: string; why: string; reason: string; amount: number | null; at: string }
@@ -39,8 +41,8 @@ export function overrideChoices(decision: Decision): OverrideChoice[] {
 export interface AmountCheck { value: number | null; state: "ok" | "second" | "empty" | "low" | "high"; message: string }
 
 /**
- * A partial refund amount: at least $0.50, never above the fare charged (REF-1). Above
- * 1.5 times the ruling's refund a second reviewer must approve it (no ruling refund: no such limit).
+ * A partial refund amount: at least $0.50, never above the fare charged (REF-1). Above the
+ * second-approval limit (secondApprovalLimit) a second reviewer must approve it.
  */
 export function checkPartialAmount(text: string, fare: number | null, ruling: number | null): AmountCheck {
   const trimmed = text.trim().replace(/^\$/, "");
@@ -49,13 +51,30 @@ export function checkPartialAmount(text: string, fare: number | null, ruling: nu
   if (!/^\d+(\.\d{1,2})?$/.test(trimmed) || !Number.isFinite(value)) return { value: null, state: "empty", message: "Enter an amount such as 8.00." };
   if (value < MIN_PARTIAL) return { value: null, state: "low", message: `The smallest refund is $${MIN_PARTIAL.toFixed(2)}. For nothing back, choose "No change to the charge".` };
   if (fare != null && value > fare + 1e-9) return { value: null, state: "high", message: `A refund can't be more than the $${fare.toFixed(2)} fare charged (rule REF-1). For all of it, choose "Full refund".` };
-  const limit = secondApprovalLimit(ruling);
-  if (limit != null && value > limit + 1e-9) return { value, state: "second", message: `More than ${SECOND_APPROVAL_RATIO}× the ruling's refund. A second reviewer must approve it before anyone is notified.` };
-  return { value, state: "ok", message: "Within your limit. You can decide this on your own." };
+  return limitCheck(value, ruling);
 }
 
-export function secondApprovalLimit(ruling: number | null): number | null {
-  return ruling != null && ruling > 0 ? Math.round(ruling * SECOND_APPROVAL_RATIO * 100) / 100 : null;
+/**
+ * The refund one reviewer may give alone: 1.5 times the ruling's refund, or $10 when the ruling
+ * gives none. The amount counts, whichever outcome produced it (partial or full refund).
+ */
+export function secondApprovalLimit(ruling: number | null): number {
+  return ruling != null && ruling > 0 ? Math.round(ruling * SECOND_APPROVAL_RATIO * 100) / 100 : SECOND_APPROVAL_NO_REFUND;
+}
+
+function limitCheck(value: number, ruling: number | null): AmountCheck {
+  const limit = secondApprovalLimit(ruling);
+  if (value <= limit + 1e-9) return { value, state: "ok", message: "Within your limit. You can decide this on your own." };
+  const why = ruling != null && ruling > 0 ? `More than ${SECOND_APPROVAL_RATIO}× the ruling's $${ruling.toFixed(2)}`
+    : `More than $${limit.toFixed(2)} when the ruling gives no refund`;
+  return { value, state: "second", message: `${why}. A second reviewer must approve it before anyone is notified.` };
+}
+
+/** The amount an override would refund, checked against the same limit: partial (entered) or full (the fare). */
+export function overrideAmountCheck(choice: OverrideChoice | null, text: string, fare: number | null, ruling: number | null): AmountCheck | null {
+  if (choice === "partial_refund") return checkPartialAmount(text, fare, ruling);
+  if (choice === "full_refund" && fare != null) return limitCheck(fare, ruling);
+  return null;
 }
 
 /** What blocks confirming an override, in the order the reviewer fills the form. */

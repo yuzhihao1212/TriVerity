@@ -570,8 +570,10 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
                 {tab === "hearing" && resolution && <Debate resolution={resolution} dispute={selected} availableIds={factIds} onSelectFact={selectFact} />}
                 {tab === "ruling" && resolution && <>
                   <VerdictSummary key={`ruling-${reviewId}`} resolution={resolution} dispute={selected} availableIds={factIds} onSelectFact={selectFact} />
-                  <AutoResolvedNote autonomy={resolution.autonomy} closedAutomatically={sent?.reviewer?.kind === "auto"} />
-                  <RulingChecks key={reviewId} resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
+                  <AutoResolvedNote autonomy={resolution.autonomy} closedAutomatically={sent?.reviewer?.kind === "auto"}
+                    onSeeSent={() => changeTab("notify")} onReopen={reopenCase} />
+                  {/* Nothing left to decide on a case the policy closed: the note above says why. */}
+                  {sent?.reviewer?.kind !== "auto" && <RulingChecks key={reviewId} resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />}
                   {actions.decide ? <ReviewerDecision resolution={resolution} controller={decision} onContinue={() => changeTab("notify")} /> : sent && <ClosedSummary record={sent} />}
                   <AppealsPanel disputeId={selected.dispute_id} version={appealsVersion} onChanged={() => setAppealsVersion(v => v + 1)} />
 

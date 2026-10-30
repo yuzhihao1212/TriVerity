@@ -56,7 +56,7 @@ def test_outcome_wording_for_both_parties(dispute_id, rider_found, driver_found)
 def test_refund_next_steps_and_driver_framing():
     _, both = messages("D001")
     assert both["rider"][1].next == "The refund goes back to your original payment method."
-    assert both["driver"][1].next == "You don't need to do anything."
+    assert both["driver"][1].next == "Your earnings for this trip have been adjusted. You don't need to do anything."
     # The case record's sentence about the driver's statement stays out of both messages.
     assert "driver's explanation" not in both["rider"][0] and "driver's explanation" not in both["driver"][0]
 
@@ -89,3 +89,18 @@ def test_compensation_names_the_fare_and_the_credit_for_both():
     assert "you're getting $11.30: the extra fare back plus a credit for the lost time" in done.rider_explanation
     assert "the rider is getting $11.30" in done.driver_explanation
     assert not DRIVER_RECEIVES.search(done.driver_explanation)
+
+
+def test_live_wording_guards_catch_verdict_words_and_a_driver_refund():
+    from app.agents.judge_narration import _DRIVER_REFUND_RE, _VERDICT_WORD_RE
+    assert _VERDICT_WORD_RE.search("The detour was unjustified.") and _VERDICT_WORD_RE.search("so the fee is justified")
+    assert not _VERDICT_WORD_RE.search("The fare was adjusted.")
+    for bad in ("You're getting $6.30 back.", "Your refund is on its way.", "You will receive a refund of $6.30.",
+                "you are getting the extra fare back"):
+        assert _DRIVER_REFUND_RE.search(bad), bad
+    for fine in ("The rider is getting $6.30 back.", "Your earnings for this trip have been adjusted.",
+                 "You don't need to do anything."):
+        assert not _DRIVER_REFUND_RE.search(fine), fine
+    for dispute_id in ("D001", "D003", "D006", "D007"):
+        _, both = messages(dispute_id)
+        assert not _DRIVER_REFUND_RE.search(both["driver"][0]) and not _VERDICT_WORD_RE.search(both["driver"][0] + both["rider"][0])

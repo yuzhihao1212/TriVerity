@@ -8,7 +8,7 @@
   --muted: #606774;
   --border: #e0e3e8;
   --control-border: #838b97;
-  --step-done-bg: #2f3a48; --step-done-ink: #ffffff;
+  --step-done-bg: #f8d3dc; --step-done-edge: #d9476b; --step-done-ink: #a3122f; --step-line: #e0708c;
   --accent: #e8365f;
   --accent-text: #b51f43;
   --accent-control: #bd2248;
@@ -69,7 +69,7 @@
   --muted: #abb1bb;
   --border: #3d444f;
   --control-border: #798392;
-  --step-done-bg: #d5dde6; --step-done-ink: #171b20;
+  --step-done-bg: #4a2230; --step-done-edge: #c24a6a; --step-done-ink: #ff9ab3; --step-line: #b8506d;
   --accent: #ff789c;
   --accent-text: #ff9bb5;
   --accent-control: #ff789c;
@@ -105,7 +105,7 @@
     --muted: #abb1bb;
     --border: #3d444f;
     --control-border: #798392;
-  --step-done-bg: #d5dde6; --step-done-ink: #171b20;
+  --step-done-bg: #4a2230; --step-done-edge: #c24a6a; --step-done-ink: #ff9ab3; --step-line: #b8506d;
     --accent: #ff789c;
     --accent-text: #ff9bb5;
     --accent-control: #ff789c;
@@ -1095,7 +1095,7 @@ main[tabindex="-1"]:focus { outline: none; }
    track and line sit under the circles; the line's width is set in WorkflowTabs. */
 .stepper-wrap { position: relative; }
 .stepper-track { position: absolute; z-index: 1; left: 10%; right: 10%; top: calc(var(--space-2) + var(--circle, 32px) / 2 - 1.5px); height: 3px; border-radius: 3px; background: var(--control-border); pointer-events: none; }
-.stepper-line { position: absolute; inset: 0; border-radius: inherit; background: var(--accent-control); transform: scaleX(0); transform-origin: left center; transition: transform .3s cubic-bezier(.3, 0, .2, 1); }
+.stepper-line { position: absolute; inset: 0; border-radius: inherit; background: var(--step-line); transform: scaleX(0); transform-origin: left center; transition: transform .3s cubic-bezier(.3, 0, .2, 1); }
 .stepper .step-circle { z-index: 2; }
 .stepper-position { margin: 0 0 var(--space-1); color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .presentation-mode .stepper-wrap { --circle: 38px; }
@@ -1105,21 +1105,23 @@ main[tabindex="-1"]:focus { outline: none; }
 .step-circle { position: relative; display: inline-grid; place-items: center; width: var(--circle); height: var(--circle); border-radius: 50%; border: 2px solid var(--control-border); background: var(--bg); color: var(--muted); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; transition: background-color .2s ease, border-color .2s ease; }
 .step-circle .icon { width: 15px; height: 15px; }
 /* reviewed: filled with a tick. available: grey ring with the number. */
-/* Done steps: a dark (light in dark mode) fill with a tick, readable on a projector; pink is position only. */
-.step.reviewed .step-circle { background: var(--step-done-bg); border-color: var(--step-done-bg); color: var(--step-done-ink); }
-.step.current:not(.reviewed) .step-circle { color: var(--accent-text); }
+/* Done steps: a rose fill and edge with a thick dark-crimson tick, readable on a projector (round 8 item 9). */
+.step.reviewed .step-circle { background: var(--step-done-bg); border-color: var(--step-done-edge); color: var(--step-done-ink); }
+.step.reviewed .step-circle .icon { stroke-width: 2.75; }
+/* The current step: crimson filled with its number. */
+.step.current .step-circle { background: var(--accent-control); border-color: var(--accent-control); color: var(--on-accent); }
 .step-name { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; margin-top: var(--space-1); font-size: 13px; font-weight: 600; }
 .step-icon { flex: none; width: 15px; height: 15px; }
 .step.current .step-name { color: var(--accent-text); }
 /* The current step is larger, with a soft halo: size is noticed before colour or text. */
-.step.current .step-circle { transform: scale(1.2); box-shadow: 0 0 0 5px var(--accent-soft); transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease, border-color .2s ease; }
+.step.current .step-circle { transform: scale(1.15); box-shadow: 0 0 0 5px var(--accent-soft); transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease, border-color .2s ease; }
 /* After a run, each step pops as it unlocks (timed in WorkflowTabs); the line doesn't move. */
 .step.unlocked:not(.current) .step-circle { animation: step-unlock .28s ease-out both; }
 @keyframes step-unlock { 0% { transform: scale(.85); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
 /* Forward: the new step arrives as the line lands, with a small overshoot; the step left draws its tick. */
-.step.current.arriving .step-circle { animation: step-arrive .25s .3s cubic-bezier(.3, 1.6, .5, 1) both; }
-@keyframes step-arrive { 0% { transform: scale(1); } 60% { transform: scale(1.32); } 100% { transform: scale(1.2); } }
-.step.left.reviewed .step-circle .icon path { stroke-dasharray: 24; stroke-dashoffset: 24; animation: step-tick .3s .1s ease-out forwards; }
+.step.current.arriving .step-circle { animation: step-arrive .42s .28s cubic-bezier(.3, 1.5, .5, 1) both; }
+@keyframes step-arrive { 0% { transform: scale(.8); } 60% { transform: scale(1.26); } 100% { transform: scale(1.15); } }
+.step.left.reviewed .step-circle .icon path { stroke-dasharray: 24; stroke-dashoffset: 24; animation: step-tick .32s .28s ease-out forwards; }
 @keyframes step-tick { to { stroke-dashoffset: 0; } }
 /* Back: the earlier step is current at once; its ring is already drawn. */
 .step-ring.current.instant circle { animation: none; }
@@ -1633,6 +1635,9 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .auto-note-title .icon { width: 18px; height: 18px; flex: none; color: var(--ok-text); }
 .auto-note-reasons { margin: 0; padding-left: 1.2em; font-size: 14px; }
 .auto-note p.small { margin: 0; }
+.auto-note-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin-top: var(--space-1); }
+.auto-note-actions .secondary-button { display: inline-flex; align-items: center; gap: 6px; }
+.auto-note-actions .icon { width: 15px; height: 15px; }
 .home-row-status.status-decide, .home-row-status.status-appeal_waiting { color: var(--warn-text); background: var(--warn-soft); border-color: var(--transparent); }
 .home-row-chevron { width: 16px; height: 16px; flex: none; color: var(--muted); }
 .outcome-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--control-border); }

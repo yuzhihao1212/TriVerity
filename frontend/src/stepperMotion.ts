@@ -8,7 +8,7 @@ import type { WorkflowTab } from "./workflow";
 /** The line's travel between two steps. */
 export const LINE_MS = 300;
 /** The arriving step's small overshoot, after the line lands. */
-export const ARRIVE_MS = 250;
+export const ARRIVE_MS = 420;
 /** The live run's completion card (#119) finishes animating by then (its button lands at 1.3 s). */
 export const COMPLETION_MS = 1300;
 /** Steps 2–5 unlock this far apart once the completion animation is done. */
