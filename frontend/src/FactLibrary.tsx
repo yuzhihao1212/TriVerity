@@ -1,20 +1,21 @@
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type CSSProperties, type ReactNode } from "react";
 
 import {
-  centsToMoney, factParts, fareReceipt, groupFacts, parseStop, parseTile,
+  centsToMoney, factParts, fareReceipt, groupFacts, parseTile,
   SOURCE_ORDER, type FactGroup, type Tone,
 } from "./factVisuals";
+import { alignedFact, gpsRow, rawWindowLabel, relatedLinkLabel } from "./evidenceRows";
+import { EvidenceDisclosure, EvidenceInfo } from "./EvidenceDisclosure";
 import { Chip, InternalBadge } from "./Chip";
 import { valueChipTone } from "./chipStyle";
 import { GpsTimeline, RouteSketch } from "./EvidenceStories";
 import { fareChecks, fareHeadline, fareTotalLine } from "./fareStory";
-import { coverageSummary, gpsHeadline, parseOffRoute } from "./gpsStory";
-import { parseHistory, profile } from "./historyStory";
+import { gpsHeadline } from "./gpsStory";
 import { Icon } from "./Icon";
 import { SOURCE_LABELS, type EvidenceItem } from "./presentation";
 import { reveal } from "./routes";
 import {
-  chatExchange, chatFactsForMessages, chatTakeaway, chatTime, gpsFactLine, gpsReadingsSentence, isChatAnalysis,
+  chatExchange, chatFactsForMessages, chatTakeaway, chatTime, gpsFactLine, isChatAnalysis,
   relatedFactsLabel, tripFactLine, tripTakeaway,
 } from "./evidenceDisplay";
 import type { DisputeCase, Resolution } from "./types";
@@ -34,14 +35,20 @@ export function FactLibrary({ facts, activeId, request, expanded = false, groupe
   useEffect(() => {
     if (!activeId) return;
     if (disclosure.current) disclosure.current.open = true;
+    let followup = 0;
     const frame = requestAnimationFrame(() => {
       const target = document.getElementById(`fact-${activeId}`);
       // A merged fact sits inside its row's related-facts disclosure: open it first.
-      const related = target?.closest<HTMLDetailsElement>("details.fact-related");
-      if (related) related.open = true;
-      reveal(target, "center", { flash: grouped });
+      let parent = target?.parentElement;
+      while (parent) {
+        if (parent.matches("details.fact-related")) (parent as HTMLDetailsElement).open = true;
+        else if (parent.matches(".evidence-related")) parent.dispatchEvent(new Event("reveal-fact"));
+        parent = parent.parentElement;
+      }
+      // Let controlled disclosures render before measuring and scrolling the selected fact.
+      followup = requestAnimationFrame(() => reveal(target, "center", { flash: grouped }));
     });
-    return () => cancelAnimationFrame(frame);
+    return () => { cancelAnimationFrame(frame); cancelAnimationFrame(followup); };
   }, [activeId, request, grouped]);
 
   const context: RowContext = { activeId, onSelectFact, dispute, resolution, neutral: grouped };
@@ -50,8 +57,8 @@ export function FactLibrary({ facts, activeId, request, expanded = false, groupe
 
   return <section className={`card fact-library${grouped ? " evidence-display" : ""}`} id={grouped ? EVIDENCE_FACTS_ID : undefined} tabIndex={-1} aria-labelledby={`${id}-title`}>
     <div className="panel-head"><h2 id={`${id}-title`}>{grouped ? "Evidence" : "Facts behind the citations"}</h2><InternalBadge detail="Computed facts · internal record" /></div>
-    <p className="small muted">{grouped
-      ? "Facts are grouped by source. An ID is shown only when this response supplies an unambiguous ID/text pair. Facts that repeat the same value are shown once; open “related” to read each original sentence."
+    <p className="small muted evidence-intro">{grouped
+      ? <>Facts the agents can cite, grouped by where they came from. <EvidenceInfo label="How evidence facts are matched">An ID is shown only when this response supplies an unambiguous ID/text pair. Facts that repeat the same value are shown once; open a related-facts link to read each original sentence.</EvidenceInfo></>
       : "Select an evidence ID in either round to find its exact fact here."}</p>
     <p className="sr-only" role="status" aria-live="polite">{activeId ? `Highlighted evidence ${activeId}` : ""}</p>
     {!facts.length ? <p className="muted">No computed facts were returned.</p> : expanded ? body : <details ref={disclosure} className="disclosure"><summary>Browse {facts.length} referenced facts</summary>{body}</details>}
@@ -104,7 +111,7 @@ function TripBody({ groups, context }: { groups: FactGroup[]; context: RowContex
   const rest = groups.filter(group => !tiles.includes(group));
   return <>
     <p className="story-headline"><PlainSentence text={tripTakeaway(context.dispute?.trip)} /></p>
-    {!!tiles.length && <ul className="fact-library-list evidence-trip-comparison" aria-label="Recorded trip compared with expected trip">{tiles.map(group =>
+    {!!tiles.length && <ul className="fact-library-list aligned-grid evidence-trip-comparison" aria-label="Recorded trip compared with expected trip">{tiles.map(group =>
       <FactShell key={key(group.primary)} fact={group.primary} related={group.related} context={context} className="fact-plain">
         <PlainSentence text={tripFactLine(group.primary.text, context.dispute?.trip)} />
       </FactShell>)}
@@ -118,10 +125,9 @@ const texts = (groups: FactGroup[]) => groups.flatMap(group => [group.primary.te
 function GpsBody({ groups, context }: { groups: FactGroup[]; context: RowContext }) {
   const all = texts(groups);
   const headline = gpsHeadline(all);
-  const offRoute = groups.filter(group => parseOffRoute(group.primary.text));
-  const coverage = groups.filter(group => coverageSummary(group.primary.text));
-  const stops = groups.filter(group => parseStop(group.primary.text));
-  const rest = groups.filter(group => !offRoute.includes(group) && !coverage.includes(group) && !stops.includes(group));
+  const visual = (["off", "coverage", "stop"] as const).flatMap(kind => groups.filter(group => gpsRow(group.primary.text, all, context.dispute)?.kind === kind));
+  const raw = groups.filter(group => rawWindowLabel(group.primary.text, all));
+  const rest = groups.filter(group => !visual.includes(group) && !raw.includes(group));
   const { dispute } = context;
   const points = dispute?.gps_points ?? [];
   const planned = dispute?.trip.planned_route ?? [];
@@ -129,24 +135,14 @@ function GpsBody({ groups, context }: { groups: FactGroup[]; context: RowContext
     <p className="story-headline"><PlainSentence text={headline ?? "The GPS records for this trip are shown below."} /></p>
     {dispute && <RouteSketch caseId={dispute.dispute_id} points={points} planned={planned} facts={all} />}
     {dispute && <GpsTimeline points={points} planned={planned} facts={all} />}
-    {!!(offRoute.length || coverage.length || stops.length) && <ul className="fact-library-list story-details">
-      {offRoute.map(group => {
-        return <FactShell key={key(group.primary)} fact={group.primary} related={group.related} context={context} className="fact-plain">
-          <PlainSentence text={gpsFactLine(group.primary.text)} />
-        </FactShell>;
-      })}
-      {coverage.map(group => {
-        return <FactShell key={key(group.primary)} fact={group.primary} related={group.related} context={context} className="fact-plain">
-          <PlainSentence text={gpsReadingsSentence(group.primary.text) ?? group.primary.text} />
-        </FactShell>;
-      })}
-      {stops.map(group => {
-        const stop = parseStop(group.primary.text)!;
-        return <FactShell key={key(group.primary)} fact={group.primary} related={group.related} context={context} className="fact-plain">
-          <span>Stopped <strong>{stop.minutes} min</strong> at <strong>{stop.time}</strong>{stop.where && <span className="muted">, {stop.where}</span>}.</span>
-        </FactShell>;
-      })}
+    {!!visual.length && <ul className="fact-library-list gps-fact-grid">
+      {visual.map(group => <FactShell key={key(group.primary)} fact={group.primary} related={group.related} context={context} className="gps-number-row">
+        <GpsFactContent row={gpsRow(group.primary.text, all, dispute)!} />
+      </FactShell>)}
     </ul>}
+    {raw.map(group => <EvidenceDisclosure key={key(group.primary)} label={rawWindowLabel(group.primary.text, all)!}>
+      <ul><OriginalFact fact={group.primary} context={context} />{group.related.map(fact => <OriginalFact key={key(fact)} fact={fact} context={context} />)}</ul>
+    </EvidenceDisclosure>)}
     {!!rest.length && <Rows groups={rest} context={context} />}
   </>;
 }
@@ -180,7 +176,7 @@ function FareBody({ groups, context }: { groups: FactGroup[]; context: RowContex
   return <>
     <p className="story-headline">{headline ? <PlainSentence text={`${headline.lead}${headline.rest}`} />
       : context.dispute?.fare.cancellation_fee != null ? <PlainSentence text={`The recorded no-show fee was $${context.dispute.fare.cancellation_fee.toFixed(2)}.`} /> : "The recorded fare items and checks are shown below."}</p>
-    {(receipt.lines.length || hasTotal || receipt.difference) && <ul className="fact-receipt">
+    {(receipt.lines.length || hasTotal || receipt.difference) && <ul className="fact-receipt aligned-grid">
       {receipt.lines.map(line => shell(line.fact, "receipt-line", <><span><PlainSentence text={line.label} /></span><strong className="receipt-amount">{centsToMoney(line.cents)}</strong></>))}
       {receipt.discount && shell(receipt.discount.fact, "receipt-line",
         <><span>Promo {receipt.discount.code}</span><strong className="receipt-amount">−{centsToMoney(receipt.discount.cents)}</strong></>)}
@@ -196,32 +192,18 @@ function FareBody({ groups, context }: { groups: FactGroup[]; context: RowContex
       <Chip as="li" key={check.key} tone={check.tone} icon={check.icon ?? undefined} title={check.title}>
         {check.label}<span className="sr-only"> ({check.title})</span>
       </Chip>)}</ul>}
-    {!!sources.length && <details className="fact-related fare-check-sources">
-      <summary>See how these were checked</summary>
-      <ul className="fact-library-list">{sources.map(group => <FactRow key={key(group.primary)} fact={group.primary} related={group.related} context={context} />)}</ul>
-    </details>}
+    {!!sources.length && <EvidenceDisclosure label="↳ Fare checks: how these were checked">
+      <ul className="fact-library-list aligned-grid">{sources.map(group => <FactRow key={key(group.primary)} fact={group.primary} related={group.related} context={context} />)}</ul>
+    </EvidenceDisclosure>}
     {!!others.length && <Rows groups={others} context={context} />}
   </>;
 }
 
 function HistoryBody({ groups, context }: { groups: FactGroup[]; context: RowContext }) {
-  const profiles = groups.filter(group => parseHistory(group.primary.text));
-  const rest = groups.filter(group => !profiles.includes(group));
   return <>
     <p className="story-headline">The account records provide context for both parties.</p>
-    <ul className="history-profiles">{profiles.map(group => {
-      const fact = parseHistory(group.primary.text)!;
-      const shown = profile({ days: fact.days, rating: fact.rating, trips: fact.trips, disputes: fact.disputes });
-      return <FactShell key={key(group.primary)} fact={group.primary} related={group.related} context={context} className="history-profile">
-        <span className="history-who">{fact.party === "rider" ? "Rider" : "Driver"}</span>
-        <span className="history-line">{shown.tenure}</span>
-        <span className="history-line"><span className="rating-star" aria-hidden="true">★</span> <span aria-hidden="true">{shown.rating}</span>
-          <span className="sr-only">{shown.ratingLabel}</span> / {shown.trips}</span>
-        <span className="history-line">{shown.disputes}</span>
-      </FactShell>;
-    })}</ul>
+    <Rows groups={groups} context={context} />
     <p className="fairness-note"><Icon name="info" />{"Context only: account history does not establish what happened on this trip."}</p>
-    {!!rest.length && <Rows groups={rest} context={context} />}
   </>;
 }
 
@@ -231,35 +213,30 @@ function ChatBody({ groups, context }: { groups: FactGroup[]; context: RowContex
   const rest = groups.filter(group => !analyses.includes(group));
   const audit = analyses.flatMap(group => [group.primary, ...group.related]);
   const messageFacts = chatFactsForMessages(messages, audit);
-  const originals = audit.filter(fact => !messageFacts.includes(fact));
-  const topic = originals.every(fact => isChatAnalysis(fact.text)) ? "automated tone checks"
-    : originals.some(fact => isChatAnalysis(fact.text)) ? "chat and automated tone checks" : "chat records";
+  const originals = context.neutral ? audit : audit.filter(fact => !messageFacts.includes(fact));
   return <>
     <p className="story-headline">{chatTakeaway(messages)}</p>
     {!!messages.length && <div className="chat evidence-chat" aria-label="Recorded chat exchange">{messages.map((message, i) =>
       <div className={`bubble ${message.sender}`} key={i} title={messageFacts[i]?.text}
-        id={messageFacts[i]?.id ? `fact-${messageFacts[i]!.id}` : undefined} tabIndex={messageFacts[i]?.id ? -1 : undefined}>
+        id={!context.neutral && messageFacts[i]?.id ? `fact-${messageFacts[i]!.id}` : undefined} tabIndex={!context.neutral && messageFacts[i]?.id ? -1 : undefined}>
         <span className="who"><Icon name={message.sender === "rider" ? "person" : message.sender === "driver" ? "wheel" : "info"} />
           {message.sender === "rider" ? "Rider" : message.sender === "driver" ? "Driver" : "System"}
           {chatTime(message.timestamp) && <time dateTime={message.timestamp ?? undefined}>{chatTime(message.timestamp)}</time>}
         </span>{message.message}
-        {messageFacts[i]?.id && <IdBadge id={messageFacts[i]!.id!} onSelectFact={context.onSelectFact} />}
+        {!context.neutral && messageFacts[i]?.id && <IdBadge id={messageFacts[i]!.id!} onSelectFact={context.onSelectFact} />}
       </div>)}
     </div>}
     {messages.length > 0 && (["rider", "driver"] as const).filter(party => !messages.some(message => message.sender === party)).map(party =>
       <p className="small muted" key={party}>{party === "rider" ? "Rider" : "Driver"} message not recorded in this exchange.</p>)}
     {!!rest.length && <Rows groups={rest} context={context} />}
-    {!!originals.length && <details className="fact-related"><summary>{relatedFactsLabel(originals, topic)}</summary>
-      <ul>{originals.map(fact => <li className="fact-original" key={key(fact)} id={fact.id ? `fact-${fact.id}` : undefined} tabIndex={fact.id ? -1 : undefined}>
-        <span>{isChatAnalysis(fact.text) ? "Automated tone check: " : ""}{fact.text}</span>
-        {fact.id && <IdBadge id={fact.id} onSelectFact={context.onSelectFact} />}
-      </li>)}</ul>
-    </details>}
+    {!!originals.length && <EvidenceDisclosure label={relatedLinkLabel(originals)}>
+      <ul className="fact-library-list aligned-grid">{originals.map(fact => <FactRow key={key(fact)} fact={fact} context={context} />)}</ul>
+    </EvidenceDisclosure>}
   </>;
 }
 
 function Rows({ groups, context }: { groups: FactGroup[]; context: RowContext }) {
-  return <ul className="fact-library-list">{groups.map(group =>
+  return <ul className={`fact-library-list${context.neutral ? " aligned-grid" : ""}`}>{groups.map(group =>
     <FactRow key={key(group.primary)} fact={group.primary} related={group.related} context={context} />)}</ul>;
 }
 
@@ -267,11 +244,32 @@ function Rows({ groups, context }: { groups: FactGroup[]; context: RowContext })
 
 const key = (fact: EvidenceItem) => fact.id ?? `${fact.source}:${fact.text}`;
 
-/** A list item carrying the fact's anchor (`fact-<ID>`), its ID badge and its related facts. */
+/** A fact anchor and its originals. Grouped Evidence uses the structured values; citation
+ * libraries retain their existing text rendering, and GPS rows supply their own small picture. */
 function FactShell({ fact, related = [], context, className = "", children }: {
   fact: EvidenceItem; related?: EvidenceItem[]; context: RowContext; className?: string; children: ReactNode;
 }) {
   const active = !!fact.id && context.activeId === fact.id;
+  if (context.neutral) {
+    const row = alignedFact(fact, context.dispute, related);
+    const gps = className === "gps-number-row";
+    return <li id={fact.id ? `fact-${fact.id}` : undefined} tabIndex={fact.id ? -1 : undefined}
+      className={`fact-row aligned-fact-row${gps ? " gps-number-row" : ""}`}>
+      <div className="aligned-fact-main" title={fact.text}>
+        {gps ? children : <>
+          <span className="aligned-fact-label">{row.label}</span>
+          <span className={`aligned-fact-value${row.comparison ? " fact-comparison-values" : " fact-prose"}`}>{row.comparison
+            ? <><span className="expected"><span className="sr-only">Expected </span>{row.comparison.expected}</span><span className="comparison-arrow" aria-hidden="true">→</span><span><span className="sr-only">Actual </span>{row.comparison.actual}</span></>
+            : row.text}</span>
+          {row.comparison && <Chip size="sm" tone={row.comparison.change.tone} className="fact-change">{row.comparison.change.text}</Chip>}
+        </>}
+        {fact.id && <IdBadge id={fact.id} onSelectFact={context.onSelectFact} />}
+      </div>
+      {!!related.length && <EvidenceDisclosure label={relatedLinkLabel(related, fact)}>
+        <ul><li className="fact-original">{fact.text}</li>{related.map(item => <OriginalFact key={key(item)} fact={item} context={context} />)}</ul>
+      </EvidenceDisclosure>}
+    </li>;
+  }
   return <li id={fact.id ? `fact-${fact.id}` : undefined} tabIndex={fact.id ? -1 : undefined}
     className={`fact-row ${className}${active && !context.neutral ? " highlighted-fact" : ""}`}>
     <div className="fact-row-main" title={context.neutral ? fact.text : undefined}>{!context.neutral && fact.id && <IdBadge id={fact.id} onSelectFact={context.onSelectFact} />}<div className="fact-row-body">{children}</div>{context.neutral && fact.id && <IdBadge id={fact.id} onSelectFact={context.onSelectFact} />}</div>
@@ -286,6 +284,29 @@ function FactShell({ fact, related = [], context, className = "", children }: {
       </ul>
     </details>}
   </li>;
+}
+
+function OriginalFact({ fact, context }: { fact: EvidenceItem; context: RowContext }) {
+  return <li className="fact-original" id={fact.id ? `fact-${fact.id}` : undefined} tabIndex={fact.id ? -1 : undefined}>
+    <span>{fact.text}</span>{fact.id && <IdBadge id={fact.id} onSelectFact={context.onSelectFact} />}
+  </li>;
+}
+
+function GpsFactContent({ row }: { row: NonNullable<ReturnType<typeof gpsRow>> }) {
+  const timeline = row.timeline;
+  return <>
+    <span className="aligned-fact-label">{row.label}</span>
+    <span className="gps-fact-number">{row.value}<small>{row.small}{row.kind === "coverage" && <EvidenceInfo label="About off-plan GPS readings">{row.threshold}</EvidenceInfo>}</small></span>
+    <div className="gps-fact-story">
+      {row.kind === "coverage" ? <div className="gps-reading-dots" aria-hidden="true">{row.dots?.map((off, index) => <i key={index} className={off ? "off" : ""} style={{ "--dot-index": index } as CSSProperties} />)}</div>
+        : timeline && <div className="gps-mini-picture" aria-hidden="true">
+          <div className="gps-mini-track">{row.kind === "off" ? timeline.segments.filter(segment => segment.off).map((segment, i) => <span key={i} style={{ left: `${segment.from * 100}%`, width: `${(segment.to - segment.from) * 100}%` }} />)
+            : timeline.stops.filter(stop => stop.clock === row.stop?.time && stop.minutes === row.stop.minutes).map((stop, i) => <span key={i} style={{ left: `${stop.at * 100}%`, width: `${Math.min(stop.width, 1 - stop.at) * 100}%` }} />)}</div>
+          <div className="gps-mini-axis"><span>Pickup {timeline.start}</span><span>Drop-off {timeline.end}</span></div>
+        </div>}
+      <p>{row.sentence}</p>{row.detail && <p className="gps-fact-detail">{row.detail}</p>}
+    </div>
+  </>;
 }
 
 function FactRow({ fact, related, context }: { fact: EvidenceItem; related?: EvidenceItem[]; context: RowContext }) {
