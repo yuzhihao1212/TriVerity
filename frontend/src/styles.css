@@ -2039,3 +2039,97 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
   .evidence-display .history-evidence-summary { grid-column: 1 / -1; grid-row: 2; }
   .evidence-display .history-evidence-line > .evidence-related { grid-column: 1 / -1; }
 }
+
+/* Ruling: answer first, then the checks recorded by the policy engine. */
+.ruling-revamp { gap: 20px; }
+.ruling-hero { display: grid; grid-template-columns: 48px minmax(0, 1fr) minmax(220px, 280px); gap: 16px; align-items: center; }
+.ruling-outcome-icon { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; background: var(--surface); color: var(--muted); }
+.ruling-outcome-icon .icon { width: 26px; height: 26px; }
+.ruling-hero.tone-ok .ruling-outcome-icon { background: var(--ok-soft); color: var(--ok-text); }
+.ruling-hero.tone-warn .ruling-outcome-icon { background: var(--warn-soft); color: var(--warn-text); }
+.ruling-outcome { min-width: 0; }
+.ruling-outcome h2 { font-size: 16px; margin: 0 0 6px; }
+.ruling-amount { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px 10px; margin: 0; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.ruling-amount-number { display: inline-block; font-size: 32px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+.ruling-hero.tone-ok .ruling-amount-number { color: var(--ok-text); }
+.ruling-hero.tone-warn .ruling-amount-number { color: var(--warn-text); }
+.ruling-amount-suffix { font-size: 15px; color: var(--muted); }
+.ruling-confidence { position: relative; min-width: 0; font-variant-numeric: tabular-nums; }
+.ruling-confidence-title { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.ruling-confidence-title > span { display: inline-flex; align-items: center; gap: 4px; }
+.ruling-confidence-title strong { color: var(--text); font-size: 18px; }
+.ruling-confidence .evidence-info-tip { left: 0; right: auto; top: 32px; width: min(340px, 100%); }
+.ruling-confidence-track { position: relative; height: 8px; border-radius: 4px; background: var(--border); margin: 9px 0 7px; }
+.ruling-confidence-fill { display: block; height: 100%; border-radius: inherit; background: var(--muted); }
+.ruling-confidence.tone-ok .ruling-confidence-fill { background: var(--ok-text); }
+.ruling-confidence.tone-warn .ruling-confidence-fill { background: var(--warn-text); }
+.ruling-confidence-marker { position: absolute; top: -5px; height: 18px; border-left: 2px dashed var(--text); transform: translateX(-1px); }
+.ruling-confidence-scale { display: flex; justify-content: space-between; position: relative; min-height: 30px; font-size: 10px; color: var(--muted); }
+.ruling-confidence-threshold { position: absolute; top: 12px; white-space: nowrap; transform: translateX(-50%); }
+.ruling-confidence-threshold.near-start { transform: none; }
+.ruling-confidence-threshold.near-end { transform: translateX(-100%); }
+.ruling-confidence-caption { color: var(--muted); font-size: 12px; line-height: 1.5; margin: 4px 0 0; }
+.ruling-proof { padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); min-width: 0; }
+.ruling-revamp .term-contained .term-tip { display: none; }
+.ruling-revamp .term-contained:hover .term-tip, .ruling-revamp .term-contained:focus .term-tip { display: block; }
+.ruling-revamp .term { display: inline-flex; align-items: center; min-height: 24px; }
+.ruling-proof h3 { margin: 0 0 8px; font-size: 16px; }
+.ruling-policy-summary { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; font-size: 13px; color: var(--muted); }
+.ruling-policy-summary p { flex: 1 1 220px; margin: 0; }
+.ruling-condition-group { margin-top: 14px; }
+.ruling-condition-group-title { margin: 0 0 4px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.ruling-condition-list { list-style: none; padding: 0; margin: 0; }
+/* Fixed value and fact columns, so every row (in both groups) lines up. */
+.ruling-condition-list li { display: grid; grid-template-columns: 20px minmax(0, 1fr) 210px 170px; gap: 10px; align-items: start; border-top: 1px solid var(--border); padding: 11px 0; font-size: 13px; }
+.ruling-condition-label { min-width: 0; overflow-wrap: anywhere; }
+.ruling-condition-label > .chip { vertical-align: middle; }
+.ruling-condition-value { color: var(--muted); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.ruling-fact-ids { display: flex; flex-wrap: wrap; gap: 4px; }
+.ruling-fact-ids .chip { padding: 0 5px; }
+.ruling-fact-ids .evidence-link { min-height: 24px; padding: 2px; }
+.ruling-fact-ids .evidence-link { color: var(--muted); text-decoration-color: var(--border); }
+.ruling-fact-ids .evidence-link:hover { color: var(--text); }
+details.ruling-condition-group > summary { display: flex; align-items: center; gap: var(--space-1); min-height: 24px; cursor: pointer; list-style: none; }
+details.ruling-condition-group > summary::-webkit-details-marker { display: none; }
+details.ruling-condition-group > summary::before { content: "▸"; color: var(--accent-text); transition: transform .2s ease; }
+details.ruling-condition-group[open] > summary::before { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) { details.ruling-condition-group > summary::before { transition: none; } }
+.ruling-sum { display: flex; flex-wrap: wrap; gap: 5px 8px; align-items: baseline; border-top: 1px dashed var(--control-border); padding-top: 16px; margin: 6px 0 0; font-size: 14px; font-variant-numeric: tabular-nums; }
+.ruling-sum strong { font-size: 22px; color: var(--ok-text); }
+.ruling-change { display: flex; align-items: start; gap: 9px; margin: 0; color: var(--muted); font-size: 13px; }
+.ruling-change .icon { width: 18px; height: 18px; flex: none; margin-top: 1px; }
+.ruling-credit { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 9px; border-top: 1px solid var(--border); padding-top: 14px; font-size: 12px; color: var(--muted); }
+.ruling-credit > span { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.ruling-credit .text-button { min-height: 24px; font-size: inherit; text-align: left; }
+.ruling-intro .ruling-condition-list li { animation: ruling-condition-in 200ms ease-out both; animation-delay: var(--condition-delay); }
+.ruling-intro .ruling-sum { animation: ruling-condition-in 250ms ease-out 1150ms both; }
+.ruling-intro .ruling-amount-number.money { animation: ruling-amount-land 250ms ease-out 1750ms both; }
+@keyframes ruling-condition-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes ruling-amount-land { 0%, 100% { transform: scale(1); } 45% { transform: scale(1.05); } }
+.presentation-mode .ruling-outcome h2, .presentation-mode .ruling-proof h3 { font-size: 20px; }
+.presentation-mode .ruling-amount-number { font-size: 38px; }
+.presentation-mode .ruling-condition-list li, .presentation-mode .ruling-policy-summary, .presentation-mode .ruling-change { font-size: 16px; }
+.presentation-mode .ruling-condition-group-title { font-size: 14px; }
+.presentation-mode .ruling-credit, .presentation-mode .ruling-confidence-caption { font-size: 14px; }
+@media (max-width: 1000px) {
+  .ruling-hero { grid-template-columns: 44px minmax(0, 1fr); }
+  .ruling-confidence { grid-column: 1 / -1; max-width: 400px; width: 100%; }
+  .ruling-condition-list li { grid-template-columns: 20px minmax(0, 1fr) 170px 150px; }
+}
+@media (max-width: 760px) {
+  .ruling-hero { gap: 12px; }
+  .ruling-outcome-icon { width: 40px; height: 40px; }
+  .ruling-amount-number { font-size: 28px; }
+  .ruling-proof { padding: 12px; }
+  /* Two lines per check: the condition and its rule, then the value with its fact IDs. */
+  .ruling-condition-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; padding: 9px 0; }
+  .ruling-condition-symbol { flex: none; width: 20px; }
+  .ruling-condition-label { flex: 1 1 calc(100% - 28px); }
+  .ruling-condition-value { margin-left: 28px; }
+  .ruling-fact-ids { display: inline-flex; }
+  .ruling-credit > span[aria-hidden] { display: none; }
+  .presentation-mode .ruling-amount-number { font-size: 32px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ruling-intro .ruling-condition-list li, .ruling-intro .ruling-sum, .ruling-intro .ruling-amount-number.money { animation: none; }
+}

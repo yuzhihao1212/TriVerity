@@ -508,7 +508,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
                 {tab === "evidence" && resolution && <><FactLibrary facts={facts} activeId={activeFact} request={factRequest} expanded grouped onSelectFact={selectFact} dispute={selected} resolution={resolution} /><CollectorCalls collection={resolution.evidence_collection} /></>}
                 {tab === "hearing" && resolution && <Debate resolution={resolution} dispute={selected} availableIds={factIds} onSelectFact={selectFact} />}
                 {tab === "ruling" && resolution && <>
-                  <VerdictSummary resolution={resolution} disputeId={selected.dispute_id} />
+                  <VerdictSummary key={`ruling-${reviewId}`} resolution={resolution} dispute={selected} availableIds={factIds} onSelectFact={selectFact} />
                   <RulingChecks key={reviewId} resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
                   {actions.decide ? <ReviewerDecision resolution={resolution} controller={decision} onContinue={() => changeTab("notify")} /> : sent && <ClosedSummary record={sent} />}
                   <AppealsPanel disputeId={selected.dispute_id} version={appealsVersion} onChanged={() => setAppealsVersion(v => v + 1)} />
@@ -522,7 +522,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
                   onSent={() => { markReviewed("notify"); setSentVersion(v => v + 1); setDeliveredFor(reviewId); }}
                   next={following?.row.id ?? null} nextLabel={following?.label} onNext={goToFollowing}
                   onBack={() => { window.location.hash = HOME_HASH; }} />}
-                <AgentsStrip tab={tab} resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />
+                {(tab !== "ruling" || !resolution) && <AgentsStrip tab={tab} resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />}
                 {tab === "ruling" && resolution && actions.decide && <DecisionBar resolution={resolution} controller={decision} unavailable={decisionsUnavailable} />}
               </>} />
           </section>}
