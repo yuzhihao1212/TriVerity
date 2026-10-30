@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
 
 import {
-  checkPartialAmount, decisionBar, INVESTIGATION_CHECKS, OVERRIDE_LABELS, overrideChoices, overrideError,
+  decisionBar, overrideAmountCheck, INVESTIGATION_CHECKS, OVERRIDE_LABELS, overrideChoices, overrideError,
   overrideLine, REASON_PLACEHOLDER, rulingLine, secondApprovalLimit,
   type FinalDecision, type HoldRecord, type OverrideChoice, type SavedDecision,
 } from "./decisionState";
@@ -59,7 +59,7 @@ export function useReviewerDecision({ runKey, dispute, resolution, onDecided, on
       .finally(() => inFlight.current.delete(key));
   }
 
-  const amountCheck = entry.choice === "partial_refund" ? checkPartialAmount(entry.amount, fare, resolution?.refund_amount ?? null) : null;
+  const amountCheck = overrideAmountCheck(entry.choice, entry.amount, fare, resolution?.refund_amount ?? null);
 
   return {
     ...entry,
@@ -88,7 +88,7 @@ export function useReviewerDecision({ runKey, dispute, resolution, onDecided, on
       const at = clockText(new Date());
       if (entry.choice === "investigate") {
         patch(runKey, { mode: "idle", hold: { disputeId: dispute.dispute_id, why: entry.check ?? "Needs further investigation", reason, amount: null, at } });
-      } else if (entry.choice === "partial_refund" && amountCheck?.state === "second") {
+      } else if ((entry.choice === "partial_refund" || entry.choice === "full_refund") && amountCheck?.state === "second") {
         patch(runKey, { mode: "idle", hold: { disputeId: dispute.dispute_id, why: `$${amountCheck.value!.toFixed(2)} refund needs a second approval`, reason, amount: amountCheck.value, at } });
       } else {
         record(entry.choice, reason, escalated ? "decided" : "overridden", entry.choice === "partial_refund" ? amountCheck?.value ?? undefined : undefined);
@@ -185,7 +185,8 @@ export function ReviewerDecision({ resolution, controller, onContinue }: { resol
       {phase === "override" && <OverrideForm id={id} resolution={resolution} controller={controller} ruling={ruling} confidence={confidence} heading={focusTarget} />}
 
       {(phase === "done" || phase === "held") && <div className="decision-result" aria-live="polite">
-        <DecisionMark kind={saved ? (saved.kind === "accepted" ? "accepted" : "overridden") : "held"} />
+        {/* The pencil means the rules were overridden; deciding an escalated case is a tick, like accepting. */}
+        <DecisionMark kind={saved ? (saved.kind === "overridden" ? "overridden" : "accepted") : "held"} />
         <h2 id={`${id}-title`} ref={focusTarget} tabIndex={-1}>
           {saved ? (saved.kind === "accepted" ? "Ruling accepted" : saved.kind === "overridden" ? "Ruling overridden" : "Decision saved") : "On hold for a second reviewer"}</h2>
         <p className="decision-result-line">{saved ? resultLine(saved, resolution, controller.fare) : `${hold!.why} · nobody is notified yet`}</p>
@@ -223,6 +224,7 @@ function OverrideForm({ id, resolution, controller, ruling, confidence, heading 
   const problem = overrideError({ choice, check, reason, amount: amountCheck });
   const rulingRefund = resolution.refund_amount != null && resolution.refund_amount > 0 ? resolution.refund_amount : null;
   const limit = secondApprovalLimit(rulingRefund);
+  const fullCheck = choice === "full_refund" ? amountCheck : null;
   const holds = choice === "investigate" || amountCheck?.state === "second";
   const yours = choice ? overrideLine(choice, amountCheck?.value ?? null, fare) : null;
   const confirm = choice === "investigate" ? "Put on hold" : amountCheck?.state === "second" ? "Send for second approval" : escalated ? "Confirm decision" : "Confirm override";
@@ -279,6 +281,10 @@ function OverrideForm({ id, resolution, controller, ruling, confidence, heading 
           </div>}
           <p id={`${id}-amount-note`} className={`override-note${amountCheck && amountCheck.state !== "ok" ? " is-warn" : ""}`}>
             <Icon name={amountCheck?.state === "ok" ? "check" : amountCheck?.state === "second" ? "person" : "info"} />{amountCheck?.message}</p>
+        </div>}
+        {fullCheck && <div className="override-sub">
+          <p className={`override-note${fullCheck.state !== "ok" ? " is-warn" : ""}`}>
+            <Icon name={fullCheck.state === "ok" ? "check" : "person"} />The full ${fullCheck.value?.toFixed(2)} fare. {fullCheck.message}</p>
         </div>}
         {choice === "investigate" && <div className="override-sub">
           <p className="override-sub-title" id={`${id}-check`}>What needs checking?</p>

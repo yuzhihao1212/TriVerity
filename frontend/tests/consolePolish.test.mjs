@@ -124,8 +124,10 @@ test('partial refund limits: $0.50 minimum, the fare is the cap (REF-1), 1.5x th
   assert.deepEqual([check('8').state, check('8').value], ['ok', 8]);
   assert.deepEqual([check('9.45').state, check('9.46').state], ['ok', 'second']);
   assert.equal(check('$24.80').state, 'second');
-  assert.equal(ds.checkPartialAmount('20', 24.8, null).state, 'ok', 'no refund in the ruling: no second-approval limit');
-  assert.equal(ds.secondApprovalLimit(6.3), 9.45);
+  // No refund in the ruling: $10 (the auto-resolve cap), so a $0 ruling can't become a big refund alone.
+  assert.deepEqual([ds.checkPartialAmount('10', 24.8, null).state, ds.checkPartialAmount('10.01', 24.8, null).state], ['ok', 'second']);
+  assert.match(ds.checkPartialAmount('20', 24.8, null).message, /More than \$10\.00 when the ruling gives no refund/);
+  assert.deepEqual([ds.secondApprovalLimit(6.3), ds.secondApprovalLimit(null), ds.secondApprovalLimit(0)], [9.45, 10, 10]);
 });
 
 test('override form: what blocks confirming, in order', () => {
@@ -148,4 +150,16 @@ test('decision lines and the bar while a case is on hold', () => {
   const bar = ds.decisionBar({ decision: 'partial_refund', refund: 6.3, busy: false, saved: null, unavailable: false, hold });
   assert.deepEqual([bar.state, bar.tone, bar.actions.length], ['held', 'warn', 0]);
   assert.equal(bar.note, 'On hold for a second reviewer · Safety concern');
+});
+
+test('the limit follows the amount, not the button: a full refund above it needs a second reviewer too', () => {
+  // D007: ruling proposes $6.90, so one reviewer may give up to $10.35; the full fare is $21.90.
+  const full = ds.overrideAmountCheck('full_refund', '', 21.9, 6.9);
+  assert.deepEqual([full.value, full.state], [21.9, 'second']);
+  assert.match(full.message, /More than 1\.5× the ruling's \$6\.90/);
+  assert.equal(ds.overrideAmountCheck('full_refund', '', 8, 6.9).state, 'ok', 'a small fare stays within the limit');
+  assert.equal(ds.overrideAmountCheck('full_refund', '', 24.8, null).state, 'second', 'no refund in the ruling: $10 cap');
+  assert.equal(ds.overrideAmountCheck('partial_refund', '12', 21.9, 6.9).state, 'second');
+  assert.equal(ds.overrideAmountCheck('no_action', '', 21.9, 6.9), null, 'giving less back never needs a second reviewer');
+  assert.equal(ds.overrideAmountCheck('investigate', '', 21.9, 6.9), null);
 });

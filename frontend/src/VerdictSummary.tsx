@@ -48,7 +48,8 @@ export function VerdictSummary({ resolution, dispute, availableIds, onSelectFact
     const finish = () => { cancelAnimationFrame(frame); setIntro(false); setAnimatedAmount(null); };
     function tick(now: number) {
       const elapsed = now - start;
-      if (hero.amount != null) setAnimatedAmount(hero.amount * easeOut((elapsed - 1250) / 500));
+      // Counts up while the checks tick in, landing as the sum appears: never a static $0.00.
+      if (hero.amount != null) setAnimatedAmount(hero.amount * easeOut((elapsed - 200) / 1550));
       if (elapsed < 2050) frame = requestAnimationFrame(tick); else finish();
     }
     frame = requestAnimationFrame(tick);
@@ -85,10 +86,10 @@ export function VerdictSummary({ resolution, dispute, availableIds, onSelectFact
             <span className="ruling-condition-value">{check.value}</span>
             <span className="ruling-fact-ids">{check.fact_ids.map(factId => <Chip key={factId} size="sm" tone="neutral"><EvidenceText text={factId} availableIds={availableIds} onSelectFact={onSelectFact} /></Chip>)}</span>
           </li>)}</ul>;
-        // The deciding checks stay open; the rest (often eight overlays and unmet branches) fold.
-        return group.key === "others" && groups.length > 1
+        // The deciding and other rule checks stay open; only the escalation checks fold.
+        return group.key === "overlays" && groups.length > 1
           ? <details key={group.key} className={`ruling-condition-group is-${group.key}`}>
-              <summary className="ruling-condition-group-title">{group.title} · {group.checks.length} more {group.checks.length === 1 ? "check" : "checks"}</summary>
+              <summary className="ruling-condition-group-title">{group.title} · {group.checks.length} {group.checks.length === 1 ? "check" : "checks"}</summary>
               {list}
             </details>
           : <section key={group.key} className={`ruling-condition-group is-${group.key}`} aria-labelledby={`${id}-${group.key}`}>

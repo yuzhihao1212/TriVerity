@@ -76,6 +76,13 @@ _HISTORY_PREFIXES = ("Rider history:", "Driver history:")
 # A party's chat tone is evidence for the advocates, never something to tell the parties.
 _TONE_PREFIXES = ("Rider tone:", "Driver tone:")
 _TONE_RE = re.compile(r"\b(tone|sentiment|attitude)\b", re.IGNORECASE)
+# Customer-service wording: no verdict words about either party in what they read.
+_VERDICT_WORD_RE = re.compile(r"\b(?:un)?justif(?:ied|iable)\b", re.IGNORECASE)
+# The driver never reads a refund as if it were theirs ("you're getting $6.30 back", "your refund").
+_DRIVER_REFUND_RE = re.compile(
+    r"\byour\s+(?:refund|money\s+back)\b"
+    r"|\byou(?:'re|\s+are|\s+will|'ll)?\s+(?:be\s+)?(?:get(?:ting)?|receiv(?:e|ing)|refunded)\b[^!?\n]{0,30}?\b(?:refund\w*|back)\b",
+    re.IGNORECASE)
 _FRAUD_SENTENCE_RE = re.compile(r"[^.]*\b(bad[-\s]?faith|fraud)\b[^.]*\.\s*", re.IGNORECASE)
 
 _AMOUNT_RE = re.compile(r"\$\s?(\d[\d,]*(?:\.\d+)?)")
@@ -283,6 +290,10 @@ def _check(texts: dict, case: DisputeCase, ruling: Ruling, rider_case: AgentCase
             return f"leak: {key} mentions fraud, risk or party history"
         if _TONE_RE.search(text):
             return f"leak: {key} describes a party's tone"
+        if _VERDICT_WORD_RE.search(text):
+            return f"tone: {key} uses a verdict word such as 'unjustified'"
+    if _DRIVER_REFUND_RE.search(party["driver_explanation"]):
+        return "promise: driver explanation reads the refund as the driver's"
     return None
 
 

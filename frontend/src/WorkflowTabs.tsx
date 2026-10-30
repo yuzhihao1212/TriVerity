@@ -69,7 +69,8 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, de
   // After a live run, steps 2-5 unlock one by one once the completion card has landed; the
   // line stays put. Leaving the run (or reduced motion) unlocks whatever is left at once.
   const [pending, setPending] = useState<Set<WorkflowTab>>(() => new Set());
-  useEffect(() => {
+  // Layout effect: the waiting steps are locked before the first paint, so they never flash unlocked.
+  useLayoutEffect(() => {
     if (!unlocking || prefersReducedMotion()) { setPending(new Set()); return; }
     const schedule = unlockSchedule(WORKFLOW_TABS);
     setPending(new Set(schedule.map(item => item.tab)));

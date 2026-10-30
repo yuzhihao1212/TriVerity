@@ -2,12 +2,12 @@ import { confidenceNote } from "./decisionState";
 import { decisionTone } from "./outcomeTone";
 import { PARTY_DECISION_LABELS } from "./partyView";
 import { money } from "./presentation";
-import { appliedRuleIds, conditionGroups } from "./rulingDetails";
+import { appliedRuleIds, conditionGroups, OVERLAY_RULES } from "./rulingDetails";
 import type { DisputeCase, Resolution } from "./types";
 
 export const CONFIDENCE_HELP = "Confidence describes how clearly the available facts meet the policy rule. It is set by the rule that applied, not an AI prediction or a probability that the ruling is correct. Safety and other escalation rules can still require human review.";
 
-export function confidenceDisplay(result: Pick<Resolution, "confidence" | "min_confidence" | "decision" | "policy_refs">) {
+export function confidenceDisplay(result: Pick<Resolution, "confidence" | "min_confidence" | "decision" | "policy_refs" | "autonomy">) {
   const percent = Math.round(result.confidence * 100);
   const threshold = result.min_confidence;
   const known = typeof threshold === "number" && Number.isFinite(threshold) && threshold >= 0 && threshold <= 1;
@@ -18,7 +18,10 @@ export function confidenceDisplay(result: Pick<Resolution, "confidence" | "min_c
   const caption = result.decision === "needs_review" ? confidenceNote(result.decision, percent, result.policy_refs)
     : !known ? "Automatic-decision threshold unavailable in this result."
     : result.confidence < threshold ? `Below the ${thresholdLabel} minimum, so a human reviewer decides.`
-    : `${result.confidence === threshold ? "At" : "Above"} the ${thresholdLabel} minimum, so the rules decide.`;
+    // Two thresholds: the rules may decide at the minimum, but only cases within the stricter
+    // auto-resolve limits close without a person (the reasons are listed under the ruling).
+    : result.autonomy?.eligible && !result.autonomy.audit ? "High enough, and within the limits, to close automatically."
+    : `${result.confidence === threshold ? "At" : "Above"} the ${thresholdLabel} minimum: the rules decide, and a person confirms.`;
   return { percent, thresholdPercent, thresholdLabel, tone, caption };
 }
 
@@ -73,9 +76,14 @@ export function rulingConditions(result: Pick<Resolution, "conditions">) {
  */
 export function rulingConditionGroups(result: Pick<Resolution, "conditions" | "policy_refs" | "decision">) {
   const { deciding, others } = conditionGroups(result);
+  // What didn't apply stays visible (e.g. "6 min stop, so no credit"); only the safety, fraud,
+  // precedent and confidence checks, which rarely trigger, fold.
+  const rules = others.filter(check => !OVERLAY_RULES.test(check.rule));
+  const overlays = others.filter(check => OVERLAY_RULES.test(check.rule));
   return [
     { key: "deciding", title: "Decided the case", checks: rulingConditions({ conditions: deciding }) },
-    { key: "others", title: deciding.length ? "Also checked" : "Checked by the rules", checks: rulingConditions({ conditions: others }) },
+    { key: "others", title: deciding.length ? "Also checked" : "Checked by the rules", checks: rulingConditions({ conditions: rules }) },
+    { key: "overlays", title: "Safety, fraud, precedent and confidence checks", checks: rulingConditions({ conditions: overlays }) },
   ].filter(group => group.checks.length > 0);
 }
 
