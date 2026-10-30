@@ -174,7 +174,7 @@ export function decisionBar({ decision, refund, busy, saved, unavailable, hold =
   const base = { label: outcome.label, amount: outcome.amount, tone: outcome.tone };
   if (saved) return { ...base, state: saved.kind, note: savedText(saved), actions: [], disabled: true };
   if (hold) return { ...base, tone: "warn", state: "held", note: holdText(hold), actions: [], disabled: true };
-  if (unavailable) return { ...base, state: "unavailable", note: "Decisions are disabled in the public demo", actions: [], disabled: true };
+  if (unavailable) return { ...base, state: "unavailable", note: "Decisions need your judge access code on the public demo", actions: [], disabled: true };
   const actions: BarAction[] = decision === "needs_review" ? ["decide"] : ["accept", "override"];
   if (busy) return { ...base, state: "saving", note: null, actions, disabled: true };
   return { ...base, state: decision === "needs_review" ? "escalated" : "idle", note: null, actions, disabled: false };

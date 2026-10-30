@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 
 import { AccessCodeField } from "./AccessCodeField";
+import { autoLabel, metresFromPickup, nextOwnDisputeId } from "./ownDispute";
 import type { ChatMessage, DisputeCase, DisputeType } from "./types";
 
 // Mirrors backend/app/core/limits.py, so judges see the limits before the API rejects a field.
@@ -34,11 +35,11 @@ interface Fields {
 const str = (v: number | null | undefined) => (v == null ? "" : String(v));
 
 function pickupDistance(trip: DisputeCase["trip"]): string {
-  const { pickup_lat: lat1, pickup_lng: lng1, driver_arrival_lat: lat2, driver_arrival_lng: lng2 } = trip;
-  if (lat1 == null || lng1 == null || lat2 == null || lng2 == null) return "";
-  const dy = (lat2 - lat1) * METRES_PER_DEGREE;
-  const dx = (lng2 - lng1) * METRES_PER_DEGREE * Math.cos((lat1 * Math.PI) / 180);
-  return String(Math.round(Math.hypot(dx, dy)));
+  return str(metresFromPickup(trip));
+}
+
+function countStore(): Pick<Storage, "getItem" | "setItem"> | null {
+  try { return localStorage; } catch { return null; }
 }
 
 function fromCase(c?: DisputeCase): Fields {
@@ -100,8 +101,8 @@ function toCase(f: Fields, template?: DisputeCase): DisputeCase {
           driver_arrival_lat: distanceM == null ? null : pickup.lat + distanceM / METRES_PER_DEGREE,
           driver_arrival_lng: distanceM == null ? null : pickup.lng,
         };
-  return {
-    dispute_id: `J-${Date.now().toString(36).toUpperCase()}`,
+  const dispute: DisputeCase = {
+    dispute_id: nextOwnDisputeId(countStore()),
     type: f.type,
     rider_claim: f.riderClaim.trim(),
     driver_statement: f.driverStatement.trim() || null,
@@ -118,6 +119,8 @@ function toCase(f: Fields, template?: DisputeCase): DisputeCase {
     rider_history: template?.rider_history ?? {},
     driver_history: template?.driver_history ?? {},
   };
+  // A short name for the queue, from the numbers (or the claim's first words).
+  return { ...dispute, label: autoLabel(dispute) };
 }
 
 export function DisputeForm({

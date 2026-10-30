@@ -59,7 +59,7 @@ export const TRUST_TILES: readonly TrustTile[] = [
   { icon: "magnifier", title: "Every argument fact-checked", detail: "Every argument cites evidence and policy rules, and the Judge checks each cited rule against the facts: it holds for that side, favours the other, or doesn't apply." },
   { icon: "person", title: "Fair to both sides", proof: "500/500 fairness checks", detail: "Party history never changed a policy ruling: 500 of 500 simulated disputes got the same decision with histories removed or swapped. History is only used to check for bad-faith patterns." },
   { icon: "shield", title: "Humans for risky cases", detail: "Uncertain or high-risk cases go to a human reviewer with a priority tier. Safety cases come first." },
-  { icon: "books", title: "Appeals teach the system", detail: "A reviewer's appeal decision becomes a precedent for similar future cases.", note: "Disabled in the public demo." },
+  { icon: "books", title: "Appeals teach the system", detail: "A reviewer's appeal decision becomes a precedent for similar future cases.", note: "Needs a judge access code in the public demo." },
   { icon: "lock", title: "Tested against prompt injection", proof: "0 of 68 live runs swayed", detail: "23 attack scenarios tested offline. Across 17 attacks and 68 live Hy3 runs, no injection changed a ruling." },
 ];
 
