@@ -18,6 +18,7 @@ from fastapi import HTTPException, Request
 
 from app.core import limits
 from app.core.access import DEMO_KEY_HEADER, verify_demo_code
+from app.core.config import settings
 
 _MINUTE = 60
 _DAY = 24 * 3600
@@ -100,12 +101,19 @@ def charge_resolves(request: Request, cases: int) -> str | None:
     return code_id
 
 
-def enforce_write_rate_limit(request: Request) -> None:
+def read_demo_code(request: Request) -> str | None:
+    """FastAPI dependency: the access-code ID of a valid X-Demo-Key, None without one (401 if wrong)."""
+    return verify_demo_code(request.headers.get(DEMO_KEY_HEADER))
+
+
+def enforce_write_rate_limit(request: Request) -> str | None:
     """FastAPI dependency for reviewer and party writes (appeals, appeal decisions, feedback).
 
     Separate counters from resolve: these writes never call the LLM, so they must not use up
     the resolve limits, but they are still limited per IP so the in-memory stores can't be flooded.
+    Returns the access-code ID of a valid X-Demo-Key (the judge's sandbox in the public demo).
     """
+    code_id = read_demo_code(request)
     ip = request.client.host if request.client else "unknown"
     wait = limiter.hit([
         (f"writes-ip:{ip}", limits.WRITES_PER_IP_PER_MINUTE, _MINUTE),
@@ -117,3 +125,22 @@ def enforce_write_rate_limit(request: Request) -> None:
             detail="Too many requests; try again later.",
             headers={"Retry-After": str(max(1, math.ceil(wait)))},
         )
+    return code_id
+
+
+def sandbox_owner(code_id: str | None) -> str | None:
+    """Whose appeals and precedents a request reads and writes.
+
+    Outside the public demo: None, the shared store (local use, as before). In the public
+    demo: the judge's access-code ID, so a judge's decisions only ever affect that judge's
+    own disputes, never the public samples or another judge. No code there: 403.
+    """
+    if not settings.public_demo:
+        return None
+    if code_id is None:
+        raise HTTPException(
+            status_code=403,
+            detail="Appeals and reviewer decisions need a judge access code in the public demo. "
+                   "Enter yours in the Judge access code field above Run agents.",
+        )
+    return code_id

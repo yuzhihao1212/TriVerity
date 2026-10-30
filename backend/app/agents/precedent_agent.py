@@ -27,9 +27,9 @@ _PLAIN = {
 }
 
 
-def consult_precedents(case: DisputeCase, facts: CaseFacts) -> PrecedentReport:
+def consult_precedents(case: DisputeCase, facts: CaseFacts, owner: str | None = None) -> PrecedentReport:
     """Retrieve similar past rulings and the decision most of the close ones reached."""
-    matches = retrieve(case.type, facts)
+    matches = retrieve(case.type, facts, owner=owner)   # owner: a judge's sandbox (public demo)
     close = _close(matches)
     votes = Counter(m.decision for m in close).most_common()
     recommended = votes[0][0] if votes and (len(votes) == 1 or votes[0][1] > votes[1][1]) else None
