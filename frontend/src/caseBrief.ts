@@ -50,7 +50,7 @@ export function caseHeadline(dispute: DisputeCase, _resolution?: Resolution, fin
 /** The reviewer's decision (by is null when they accepted the AI ruling); null while undecided. A sent decision survives reloading. */
 export function headerFinalOutcome(resolution: Resolution, dispute: DisputeCase, saved: SavedDecision | null | undefined,
   latest: SentRecord | null): FinalHeaderOutcome | null {
-  if (saved && saved.kind !== "accepted") {
+  if (saved && saved.kind !== "accepted" && saved.kind !== "auto") {
     const outcome = finalOutcome(resolution, saved, dispute, null);
     const amount = outcome.needsAmount && latest?.decision === saved.decision ? latest.amount : outcome.amount;
     return { decision: saved.decision, amount, by: saved.kind };

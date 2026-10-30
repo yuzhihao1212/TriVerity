@@ -9,8 +9,8 @@ export const FINAL_LABELS: Record<FinalDecision, string> = {
   partial_refund: "Partial refund", full_refund: "Full refund", compensation: "Compensation", no_action: "No change to the charge",
 };
 
-/** What was saved: accepting the ruling, overriding it, or deciding an escalated case. */
-export interface SavedDecision { kind: "accepted" | "overridden" | "decided"; decision: FinalDecision; precedentId: string; reason?: string; amount?: number; at?: string }
+/** What was saved: accepting the ruling, overriding it, deciding an escalated case, or auto-resolved by policy. */
+export interface SavedDecision { kind: "accepted" | "overridden" | "decided" | "auto"; decision: FinalDecision; precedentId: string; reason?: string; amount?: number; at?: string }
 
 /** The outcomes a reviewer can override to: no compensation for now, and never "needs review" (they are the human). */
 export type OverrideChoice = "partial_refund" | "full_refund" | "no_action" | "investigate";
@@ -99,12 +99,13 @@ export function holdText(hold: HoldRecord): string {
 }
 
 export function savedText(saved: SavedDecision): string {
-  const verb = saved.kind === "accepted" ? "Accepted" : saved.kind === "overridden" ? "Overridden" : "Decided";
-  const what = saved.kind === "accepted" ? "" : `: ${FINAL_LABELS[saved.decision].toLowerCase()}`;
-  return `✓ ${verb}${what} · saved as precedent ${saved.precedentId}`;
+  const verb = saved.kind === "accepted" ? "Accepted" : saved.kind === "overridden" ? "Overridden" : saved.kind === "auto" ? "Auto-resolved" : "Decided";
+  const what = saved.kind === "accepted" || saved.kind === "auto" ? "" : `: ${FINAL_LABELS[saved.decision].toLowerCase()}`;
+  const precedent = saved.kind === "auto" ? "no precedent (policy decision)" : `saved as precedent ${saved.precedentId}`;
+  return `✓ ${verb}${what} · ${precedent}`;
 }
 
-export type BarState = "idle" | "saving" | "accepted" | "overridden" | "decided" | "escalated" | "unavailable" | "held";
+export type BarState = "idle" | "saving" | "accepted" | "overridden" | "decided" | "auto" | "escalated" | "unavailable" | "held";
 export type BarAction = "accept" | "override" | "decide";
 
 export interface BarView {

@@ -42,6 +42,21 @@ class Triage(BaseModel):
     tier: TriageTier | None = None
     score: int = Field(default=0, ge=0, le=100)
     reasons: list[str] = Field(default_factory=list)
+
+
+class Autonomy(BaseModel):
+    """Whether a routine ruling can skip the human reviewer (internal only; see services/autonomy.py).
+
+    ``eligible`` is True only when the ruling is safe to auto-resolve: not
+    escalated, high enough confidence, refund within the cap, and no human-only
+    rules cited. ``audit`` flags an eligible case for a spot-check by a human.
+    Never carried on ``PartyResolution`` — the rider and driver never see it.
+    """
+    eligible: bool = False
+    audit: bool = False
+    reasons: list[str] = Field(default_factory=list)
+
+
 class PrecedentMatch(BaseModel):
     """A similar past ruling from the precedent knowledge base."""
     id: str
@@ -144,6 +159,7 @@ class Resolution(Ruling):
     driver_case: AgentCase
     risk: RiskAssessment = Field(default_factory=RiskAssessment)
     triage: Triage = Field(default_factory=Triage)
+    autonomy: Autonomy = Field(default_factory=Autonomy)
     precedents: PrecedentReport = Field(default_factory=PrecedentReport)
     # What would have changed the ruling; internal only, like the rest of the reasoning.
     counterfactuals: list[Counterfactual] = Field(default_factory=list)
