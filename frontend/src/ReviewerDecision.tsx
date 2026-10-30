@@ -15,7 +15,7 @@ import type { DisputeCase, Resolution } from "./types";
 
 interface Entry {
   mode: "idle" | "override"; choice: OverrideChoice | null; amount: string; check: string | null; reason: string;
-  busy: boolean; saved: SavedDecision | null; hold: HoldRecord | null; error: string | null;
+  busy: boolean; saved: SavedDecision | null; error: string | null;
 }
 
 export type DecisionController = ReturnType<typeof useReviewerDecision>;
@@ -26,24 +26,39 @@ const reduceMotion = () => typeof window !== "undefined" && window.matchMedia?.(
  * The reviewer's decision for one ruling, shared by the sticky decision bar and the
  * "Your decision" panel. State is kept per ruling (`runKey`), so it survives tab switches
  * and resets with a new run. `onDecided` fires exactly once per saved decision; a second
- * submit is ignored while one is in flight or after one is saved. A hold for a second
- * reviewer is simulated in this browser session: it records nothing and notifies no one.
+ * submit is ignored while one is in flight or after one is saved.
+ *
+ * A hold for a second reviewer is different: it belongs to the dispute, not to the ruling, so
+ * it survives a re-run (which gives the case a new key) and the home page shows one hold per
+ * case. It is simulated in this browser session: it records nothing and notifies no one.
  */
 export function useReviewerDecision({ runKey, dispute, resolution, onDecided, onUnavailable, locked = false }: {
   runKey: string | null; dispute?: DisputeCase | null; resolution?: Resolution | null;
   onDecided?: () => void; onUnavailable?: () => void; locked?: boolean;
 }) {
   const [entries, setEntries] = useState<Record<string, Entry>>({});
+  /** Holds by dispute ID, so a case stays on hold across runs until a reviewer clears it. */
+  const [holds, setHolds] = useState<Record<string, HoldRecord>>({});
+  /** Every dispute put on hold this session, even if since cleared: a person has taken it on. */
+  const everHeld = useRef(new Set<string>());
   const inFlight = useRef(new Set<string>());
   const escalated = resolution?.decision === "needs_review";
-  const blank: Entry = { mode: "idle", choice: null, amount: "", check: null, reason: "", busy: false, saved: null, hold: null, error: null };
+  const blank: Entry = { mode: "idle", choice: null, amount: "", check: null, reason: "", busy: false, saved: null, error: null };
   const entry = (runKey && entries[runKey]) || blank;
+  const caseId = dispute?.dispute_id ?? null;
+  const hold = caseId ? holds[caseId] ?? null : null;
   const fare = dispute ? maxRefund(dispute) : null;
   const patch = (key: string, change: Partial<Entry>) =>
     setEntries(prev => ({ ...prev, [key]: { ...(prev[key] ?? blank), ...change } }));
+  const putHold = (record: HoldRecord) => {
+    everHeld.current.add(record.disputeId);
+    setHolds(prev => ({ ...prev, [record.disputeId]: record }));
+  };
+  const clearHold = (disputeId: string) =>
+    setHolds(prev => { if (!prev[disputeId]) return prev; const next = { ...prev }; delete next[disputeId]; return next; });
 
   function record(decision: FinalDecision, note: string, kind: SavedDecision["kind"], amount?: number) {
-    if (locked || !runKey || !dispute || inFlight.current.has(runKey) || entry.saved || entry.hold) return;
+    if (locked || !runKey || !dispute || inFlight.current.has(runKey) || entry.saved || hold) return;
     const key = runKey;
     inFlight.current.add(key);
     patch(key, { busy: true, error: null });
@@ -64,14 +79,21 @@ export function useReviewerDecision({ runKey, dispute, resolution, onDecided, on
   return {
     ...entry,
     escalated,
+    hold,
     fare,
     amountCheck,
     /** Back to deciding: after a saved decision (recorded again when decided), or off hold. */
-    reopen() { if (runKey && !entry.busy) patch(runKey, { ...blank }); },
+    reopen() {
+      if (!runKey || entry.busy) return;
+      if (caseId) clearHold(caseId);
+      patch(runKey, { ...blank });
+    },
     /** The saved decision for any ruling (by review key), for the queue and the sidebar. */
     savedFor: (key: string | null): SavedDecision | null => (key && entries[key]?.saved) || null,
-    /** Every case on hold in this session, newest first, for the home page. */
-    holds: (): HoldRecord[] => Object.values(entries).flatMap(e => e.hold ? [e.hold] : []).reverse(),
+    /** Every case on hold in this session, newest first, at most one row per case. */
+    holds: (): HoldRecord[] => Object.values(holds).reverse(),
+    /** This dispute went on hold this session, so a later run must not close it automatically. */
+    wasHeld: (disputeId: string): boolean => everHeld.current.has(disputeId),
     setChoice: (choice: OverrideChoice) => runKey && patch(runKey, { choice, error: null }),
     setAmount: (amount: string) => runKey && patch(runKey, { amount }),
     setCheck: (check: string) => runKey && patch(runKey, { check }),
@@ -87,9 +109,11 @@ export function useReviewerDecision({ runKey, dispute, resolution, onDecided, on
       const reason = entry.reason.trim();
       const at = clockText(new Date());
       if (entry.choice === "investigate") {
-        patch(runKey, { mode: "idle", hold: { disputeId: dispute.dispute_id, why: entry.check ?? "Needs further investigation", reason, amount: null, at } });
+        putHold({ disputeId: dispute.dispute_id, why: entry.check ?? "Needs further investigation", reason, amount: null, at });
+        patch(runKey, { mode: "idle" });
       } else if ((entry.choice === "partial_refund" || entry.choice === "full_refund") && amountCheck?.state === "second") {
-        patch(runKey, { mode: "idle", hold: { disputeId: dispute.dispute_id, why: `$${amountCheck.value!.toFixed(2)} refund needs a second approval`, reason, amount: amountCheck.value, at } });
+        putHold({ disputeId: dispute.dispute_id, why: `$${amountCheck.value!.toFixed(2)} refund needs a second approval`, reason, amount: amountCheck.value, at });
+        patch(runKey, { mode: "idle" });
       } else {
         record(entry.choice, reason, escalated ? "decided" : "overridden", entry.choice === "partial_refund" ? amountCheck?.value ?? undefined : undefined);
       }

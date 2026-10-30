@@ -4,11 +4,11 @@ import { CustomerPhone } from "./CustomerPhone";
 import { CUSTOMER_COPY } from "./customerCopy";
 import { quickNotes, toggleQuickNote } from "./customerState";
 import { listAppeals } from "./services/api";
-import type { SavedDecision } from "./decisionState";
+import { checkPartialAmount, MIN_PARTIAL, type SavedDecision } from "./decisionState";
 import { Icon } from "./Icon";
 import {
   appealSummary, cleanNote, clockText, closingTitle, createSentStore, finalOutcome, generatedMessage, maxRefund, messageParts, NOTE_LIMIT, sentParts,
-  noteCounter, noteWarnings, notifyGate, PARTIES, SEND_TOOLTIP, sendBlock, sentText, sentOutcome, validateAmount,
+  noteCounter, noteWarnings, notifyGate, PARTIES, SEND_TOOLTIP, sendBlock, sentText, sentOutcome,
   type FinalOutcome, type Party, type SentRecord,
 } from "./notifyState";
 import type { ReviewSummary } from "./reviewProgress";
@@ -34,9 +34,12 @@ const NO_NOTES: Record<Party, string> = { rider: "", driver: "" };
  * shown read-only, exactly as they will see it, and the reviewer may add a short note under it.
  * Notify stays a locked preview. After "Approve & send", Customer view opens the delivered phones.
  */
-export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailable, rulingVisited, progress, onGoToRuling, onSent, onAppealed, next, nextLabel, onNext, onBack, reopened = false, previous = null, appealsAvailable = true }: {
+export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailable, rulingVisited, progress, onGoToRuling, onSent, onAppealed, next, nextLabel, onNext, onBack, previous = null, appealsAvailable = true, held = false }: {
   resolution: Resolution; dispute: DisputeCase; reviewKey: string;
-  reopened?: boolean; previous?: SentRecord | null; appealsAvailable?: boolean;
+  /** What was sent before this case was reopened: shown as history, never as today's approval. */
+  previous?: SentRecord | null; appealsAvailable?: boolean;
+  /** On hold for a second reviewer: nobody is notified until they decide. */
+  held?: boolean;
   saved: SavedDecision | null; unavailable: boolean; rulingVisited: boolean;
   /** The reviewer's progress: the closing card says "Review complete" only when every step is reviewed. */
   progress: ReviewSummary | null;
@@ -48,7 +51,6 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
   const [sent, setSent] = useState<SentRecord | null>(() => sentRecords().get(reviewKey));
   const [notes, setNotes] = useState<Record<Party, string>>(NO_NOTES);
   const [amountText, setAmountText] = useState(previous?.reviewer?.decision === "partial_refund" && previous.reviewer.kind !== "accepted" && previous.amount != null ? previous.amount.toFixed(2) : "");
-  const [sendAnyway, setSendAnyway] = useState(false);
   const [view, setView] = useState<"notify" | "customer">("notify");
   const [sendAttempted, setSendAttempted] = useState(false);
   const [chipMessage, setChipMessage] = useState<Record<Party, string>>(NO_NOTES);
@@ -62,9 +64,14 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
     listAppeals(dispute.dispute_id).then(list => { if (current) setAppeals(list); }).catch(() => {});
     return () => { current = false; };
   }, [dispute.dispute_id, appealsAvailable]);
-  const gate = reopened ? "open" : notifyGate({ saved: !!saved, unavailable, rulingVisited });
+  // A reopened case opens only on a decision saved in this review, never on the one it carried
+  // before it was reopened; a case on hold stays locked until the second reviewer decides.
+  const gate = notifyGate({ saved: !!saved, unavailable, rulingVisited, held });
   const max = maxRefund(dispute);
-  const amountCheck = validateAmount(amountText, max);
+  // The Ruling panel's own check, so an older decision without an amount of its own still gets
+  // the $0.50 minimum and the second-approval limit (F03).
+  const amountState = checkPartialAmount(amountText, max, resolution.refund_amount ?? null);
+  const amountCheck = { ok: amountState.state === "ok", value: amountState.value, message: amountState.message };
   const outcome: FinalOutcome = sent
     ? sentOutcome(sent)
     : finalOutcome(resolution, saved, dispute, amountCheck.ok ? amountCheck.value : null);
@@ -72,16 +79,16 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
   // The More info parts: what was delivered, or what the ruling's own message would say.
   const parts = (party: Party) => sent ? sent.parts?.[party] ?? null : messageParts(party, resolution, outcome);
   const note = (party: Party) => sent ? sent.notes?.[party] ?? "" : notes[party];
-  // Only the reviewer's notes are checked: the generated message is never blocked.
-  const warnings = noteWarnings(notes);
-  const flagged = PARTIES.some(party => warnings[party].length);
-  useEffect(() => { if (!flagged) setSendAnyway(false); }, [flagged]);
-  const amountMissing = outcome.needsAmount && !amountCheck.ok;
-  const blocked = sendBlock({ amountMissing, warnings, sendAnyway });
+  // Only the reviewer's notes are checked: the generated message is never blocked. The
+  // dispute's own case ID is shown on the phones, so it is not internal data.
+  const warnings = noteWarnings(notes, dispute.dispute_id);
+  const amountMissing = outcome.needsAmount && amountCheck.value == null;
+  const needsSecondApproval = outcome.needsAmount && amountState.state === "second";
+  const blocked = sendBlock({ amountMissing, needsSecondApproval, held, warnings });
 
   function send() {
     setSendAttempted(true);
-    if (blocked || sent || sentRecords().get(reviewKey)) return;
+    if (blocked || held || sent || sentRecords().get(reviewKey)) return;
     const record: SentRecord = {
       at: clockText(new Date()), timestamp: new Date().toISOString(), disputeId: dispute.dispute_id, reviewer: saved ?? undefined,
       messages: { rider: message("rider"), driver: message("driver") },
@@ -97,8 +104,10 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
   if (gate === "locked" && !sent) return (
     <section className="card party-preview notify-locked" aria-labelledby={`${id}-heading`}>
       <h2 id={`${id}-heading`}>Notify parties</h2>
-      <p className="notify-gate"><Icon name="lock" /><strong>Accept or override the ruling first</strong></p>
-      <p className="small muted">The messages go out with the final decision, so they open once you've decided on the Ruling step.</p>
+      <p className="notify-gate"><Icon name="lock" /><strong>{held ? "On hold for a second reviewer" : "Accept or override the ruling first"}</strong></p>
+      <p className="small muted">{held
+        ? "Nobody is notified yet. The case stays with you until the second reviewer decides."
+        : "The messages go out with the final decision, so they open once you've decided on the Ruling step."}</p>
       <div><button type="button" className="run-button" onClick={onGoToRuling}>Go to the Ruling step</button></div>
     </section>
   );
@@ -125,7 +134,7 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
       {outcome.needsAmount && !sent && <div className="notify-amount">
         <label className="section-label" htmlFor={`${id}-amount`}>Partial refund amount</label>
         <input id={`${id}-amount`} inputMode="decimal" required aria-required="true" aria-invalid={!amountCheck.ok}
-          aria-describedby={`${id}-amount-help`} value={amountText} placeholder={max != null ? `0.01 to ${max.toFixed(2)}` : "0.00"}
+          aria-describedby={`${id}-amount-help`} value={amountText} placeholder={max != null && max > 0 ? `${MIN_PARTIAL.toFixed(2)} to ${max.toFixed(2)}` : "0.00"}
           onChange={event => setAmountText(event.target.value)} />
         <p id={`${id}-amount-help`} className={`small ${amountCheck.ok ? "muted" : "error-text"}`}>
           {amountCheck.ok ? `Up to $${(max ?? 0).toFixed(2)}, the fare charged (REF-1).` : amountCheck.message}</p>
@@ -184,12 +193,13 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
           </div>
         </section>
       </div> : <div className="notify-actions">
-        {flagged && <label className="send-anyway"><input type="checkbox" checked={sendAnyway} onChange={event => setSendAnyway(event.target.checked)} />
-          Send anyway: I've checked this note is fine for the parties</label>}
         <button type="button" className="run-button" title={SEND_TOOLTIP} aria-describedby={`${id}-send-note`} onClick={send}>
           Approve &amp; send <span className="muted-on-accent">(simulated)</span></button>
+        {/* Internal wording blocks with no override: there is no "Send anyway" for an ID. */}
         <p className={`small ${sendAttempted && blocked ? "error-text" : "muted"}`} role={sendAttempted && blocked ? "alert" : undefined} id={`${id}-send-note`}>{blocked === "amount" ? "Enter the refund amount first."
-          : blocked === "privacy" ? "Remove the internal wording from the note, or tick “Send anyway”." : SEND_TOOLTIP}</p>
+          : blocked === "second" ? "That amount needs a second reviewer: decide it on the Ruling step."
+          : blocked === "held" ? "This case is on hold: nobody is notified until the second reviewer decides."
+          : blocked === "privacy" ? "Remove the internal wording from the note." : SEND_TOOLTIP}</p>
       </div>)}
       </div>
     </section>

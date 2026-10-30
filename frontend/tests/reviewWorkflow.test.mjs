@@ -38,15 +38,14 @@ test('the outcome and amount come from the final decision', () => {
   assert.equal(ns.finalOutcome(ruling, saved('accepted', 'partial_refund'), D001).label, 'Partial refund approved');
 });
 
-test('partial-refund validation: required, $0.01 up to the fare charged (REF-1)', () => {
-  assert.deepEqual(ns.validateAmount('2.40', 24.8), { ok: true, value: 2.4 });
-  assert.deepEqual(ns.validateAmount('$24.80', 24.8), { ok: true, value: 24.8 });
+test('partial-refund validation: required, $0.50 up to the fare charged (REF-1)', async () => {
+  const ds = await load('decisionState');
+  assert.equal(ds.checkPartialAmount('2.40', 24.8, null).value, 2.4);
+  assert.equal(ds.checkPartialAmount('$24.80', 24.8, 24.8).value, 24.8);
   for (const bad of ['', '0', '0.001', '24.81', 'abc', '-1', '1.234']) {
-    const result = ns.validateAmount(bad, 24.8);
-    assert.equal(result.ok, false, bad);
-    assert.match(result.message, /between \$0\.01 and \$24\.80.*REF-1/, bad);
+    assert.equal(ds.checkPartialAmount(bad, 24.8, null).value, null, bad);
   }
-  assert.match(ns.validateAmount('', 24.8).message, /^A partial refund needs an amount/);
+  assert.match(ds.checkPartialAmount('24.81', 24.8, null).message, /\$24\.80 fare charged \(rule REF-1\)/);
   assert.equal(ns.maxRefund(D001), 24.8);
   assert.equal(ns.maxRefund(NO_SHOW), 4);
   assert.equal(ns.maxRefund({ fare: {} }), null);
@@ -85,7 +84,7 @@ test('the privacy check runs on the notes only; the generated message is never c
   const flagged = ns.noteWarnings({ rider: 'Your fraud risk is high', driver: '' });
   assert.deepEqual(flagged, { rider: ['fraud', 'risk'], driver: [] });
   assert.equal(ns.sendBlock({ ...none, warnings: flagged }), 'privacy');
-  assert.equal(ns.sendBlock({ ...none, warnings: flagged, sendAnyway: true }), null, '"Send anyway"');
+  assert.equal(ns.sendBlock({ ...none, warnings: flagged, sendAnyway: true }), 'privacy', 'internal data: "Send anyway" cannot clear it');
   assert.equal(ns.sendBlock({ ...none, warnings: ns.noteWarnings({ rider: 'Sorry for the trouble on this trip.', driver: '' }) }), null);
   assert.equal(ns.sendBlock({ amountMissing: true, warnings: clean, sendAnyway: true }), 'amount', 'the partial-refund amount still comes first');
 });
@@ -127,7 +126,7 @@ test('privacyWarnings flags internal terms, evidence IDs and internal rule IDs',
   assert.deepEqual(ns.privacyWarnings('Similar to a precedent'), ['precedent']);
   assert.deepEqual(ns.privacyWarnings('See GPS-4 and FARE-12'), ['evidence IDs']);
   assert.deepEqual(ns.privacyWarnings('Escalated under SAFE-1 and FRAUD-1'), ['internal rule IDs']);
-  assert.deepEqual(ns.privacyWarnings('Refunded under RD-3'), [], 'a policy rule a party may see');
+  assert.deepEqual(ns.privacyWarnings('Refunded under RD-3'), ['internal rule IDs'], 'a policy rule ID is internal');
   assert.deepEqual(ns.privacyWarnings('The historic district'), [], 'whole words only');
 });
 

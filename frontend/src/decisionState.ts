@@ -45,6 +45,8 @@ export interface AmountCheck { value: number | null; state: "ok" | "second" | "e
  * second-approval limit (secondApprovalLimit) a second reviewer must approve it.
  */
 export function checkPartialAmount(text: string, fare: number | null, ruling: number | null): AmountCheck {
+  // A $0.00 fare leaves nothing to refund: say that, rather than asking for an impossible amount.
+  if (fare != null && fare <= 0) return { value: null, state: "high", message: `The fare charged was $0.00, so there is nothing to refund (rule REF-1). Choose "No change to the charge".` };
   const trimmed = text.trim().replace(/^\$/, "");
   if (!trimmed) return { value: null, state: "empty", message: "Enter the refund amount." };
   const value = Number(trimmed);
