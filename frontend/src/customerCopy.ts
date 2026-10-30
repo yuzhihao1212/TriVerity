@@ -3,12 +3,12 @@
  */
 
 /**
- * Customer promises the team still has to confirm (Task 10's CONFIRMED facts). Each claim is
- * shown only once its value is set here; until then the phone says only what is certain.
- * e.g. refundTime: "3–5 working days", ratingUnaffected: true, appealWindowDays: 7.
+ * Customer promises shown on the phones. Set for the hackathon demo (30 Oct): the organisers
+ * gave no policy for these, so they use common ride-hailing practice. Set a value to null
+ * (or false) to leave that claim out.
  */
 export interface Confirmed { refundTime: string | null; ratingUnaffected: boolean; appealWindowDays: number | null }
-export const CONFIRMED: Confirmed = { refundTime: null, ratingUnaffected: false, appealWindowDays: null };
+export const CONFIRMED: Confirmed = { refundTime: "3–5 working days", ratingUnaffected: true, appealWindowDays: 7 };
 
 /** The lines that depend on CONFIRMED; null means the claim is left out. */
 export function confirmedCopy(c: Confirmed = CONFIRMED) {
@@ -43,6 +43,7 @@ export const CUSTOMER_COPY = {
     driverCredit: (amount: string) => `The rider receives a ${amount} credit.`,
     // Approved for the demo (30 Oct), matching the backend's "what happens now".
     earningsAdjusted: "Your earnings for this trip have been adjusted.", earningsUnchanged: "Your earnings for this trip don't change.",
+    earningsAndRating: "Your earnings for this trip have been adjusted; your rating isn't affected.",
     rating: PROMISES.rating, noChange: "You don't need to do anything.",
     review: "We'll follow up when a reviewer has looked at your case.",
   },
