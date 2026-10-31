@@ -103,9 +103,10 @@ test('hero follows decision tone and never presents an escalation proposal as ap
 
 test('footer credits actual AI usage and is truthful for fallback and mixed runs', () => {
   const result = { explanation_source: 'llm', rider_case: { source: 'llm' }, driver_case: { source: 'llm' } };
-  assert.deepEqual(v.rulingCredits(result), { source: 'llm', text: 'Hy3 wrote the arguments and this explanation.' });
-  assert.equal(v.rulingCredits({ ...result, explanation_source: 'fallback' }).source, 'llm');
-  assert.equal(v.rulingCredits({ explanation_source: 'fallback', rider_case: { source: 'fallback' }, driver_case: { source: 'fallback' } }).source, 'fallback');
+  assert.deepEqual(v.rulingCredits(result), { lead: 'Decided by the rules.', ai: true, text: 'Hy3 wrote the arguments and explanation.' });
+  assert.match(v.rulingCredits({ ...result, explanation_source: 'fallback' }).text, /Hy3 wrote some of the text/);
+  assert.equal(v.rulingCredits({ explanation_source: 'fallback', rider_case: { source: 'fallback' }, driver_case: { source: 'fallback' } }).ai, false);
+  assert.match(v.rulingCredits({ ...result, rider_case: { source: 'llm', rebuttal: { source: 'fallback' } } }).text, /Hy3 wrote some of the text/);
 });
 
 test('rule tooltip placement stays inside a phone viewport at either edge', async () => {
@@ -163,7 +164,8 @@ test('with AI Live on, a result with no AI in it says so', () => {
   const side = { source: 'fallback' };
   const all = { explanation_source: 'fallback', rider_case: side, driver_case: side };
   assert.equal(v.rulingCredits(all, true).warn, true);
-  assert.match(v.rulingCredits(all, true).text, /AI Live is on, but this result used fallback text/);
+  assert.match(v.rulingCredits(all, true).text, /AI wasn't available.*Re-run to try Hy3/);
+  assert.equal(v.rulingCredits(all, false).text, 'Arguments and explanation use standard text, not AI.');
   assert.ok(!v.rulingCredits(all, false).warn);
 });
 
@@ -182,4 +184,11 @@ test('a rule tooltip sits above its term, or below when there is no room, and st
   assert.equal(tooltipTop(300, 320, 80, 800), 212);
   assert.equal(tooltipTop(40, 60, 80, 800), 68);
   assert.equal(tooltipTop(40, 60, 900, 800), 8);
+});
+
+test('the credit line says who decided: the rules, the rules sending it to a person, or a reviewer', () => {
+  const sides = { explanation_source: 'llm', rider_case: { source: 'llm' }, driver_case: { source: 'llm' } };
+  assert.equal(v.rulingCredits({ ...sides, decision: 'partial_refund' }).lead, 'Decided by the rules.');
+  assert.equal(v.rulingCredits({ ...sides, decision: 'needs_review' }).lead, 'Sent to a person by the rules.');
+  assert.equal(v.rulingCredits({ ...sides, decision: 'needs_review' }, false, true).lead, 'Decided by a reviewer.');
 });

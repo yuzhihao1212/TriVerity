@@ -170,12 +170,16 @@ export function refundSum(result: Pick<Resolution, "decision" | "refund_amount">
   return { charged: money(charged), expected: money(expected), amount: money(difference), text: `Charged ${money(charged)} − Expected ${money(expected)} = ${money(difference)}` };
 }
 
-export function rulingCredits(result: Pick<Resolution, "explanation_source" | "rider_case" | "driver_case">, aiLive = false): { source: "llm" | "fallback"; text: string; warn?: boolean } {
-  const rider = result.rider_case.source === "llm", driver = result.driver_case.source === "llm", judge = result.explanation_source === "llm";
-  if (rider && driver && judge) return { source: "llm", text: "Hy3 wrote the arguments and this explanation." };
+/** Who decided and who wrote the text, in plain words. The exact source of each step is under Rules and Sources. */
+export function rulingCredits(result: Pick<Resolution, "decision" | "explanation_source" | "rider_case" | "driver_case">, aiLive = false, reviewerDecided = false): { lead: string; ai: boolean; text: string; warn?: boolean } {
+  const lead = reviewerDecided ? "Decided by a reviewer." : result.decision === "needs_review" ? "Sent to a person by the rules." : "Decided by the rules.";
+  const written = [result.rider_case, result.driver_case].map(side => side.source === "llm").concat(result.explanation_source === "llm");
+  // A reply that fell back counts too: "Hy3 wrote the arguments" has to hold for all of them.
+  const repliesByAi = [result.rider_case, result.driver_case].every(side => side.rebuttal?.source !== "fallback");
+  if (written.every(Boolean) && repliesByAi) return { lead, ai: true, text: "Hy3 wrote the arguments and explanation." };
   // The pill says AI Live, so a result without any AI has to say so plainly.
-  if (!rider && !driver && !judge) return { source: "fallback", warn: aiLive, text: aiLive
-    ? "AI Live is on, but this result used fallback text. Re-run to try Hy3."
-    : "Checked fallback text supplies the arguments and explanation." };
-  return { source: "llm", text: "Hy3 and checked fallback text supplied these steps." };
+  if (!written.some(Boolean)) return aiLive
+    ? { lead, ai: false, warn: true, text: "AI wasn't available, so this uses standard text. Re-run to try Hy3." }
+    : { lead, ai: false, text: "Arguments and explanation use standard text, not AI." };
+  return { lead, ai: true, text: "Hy3 wrote some of the text, and the rest is standard." };
 }

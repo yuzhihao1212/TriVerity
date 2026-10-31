@@ -172,3 +172,9 @@ test('the sticky decision bar steps aside once enough of the decision panel is o
   assert.equal(ds.panelShowing(-300, -100, 900), false);
   assert.equal(ds.panelShowing(0, 0, 900), false);
 });
+
+test('an escalated decision card names the proposed action without its reason', () => {
+  assert.equal(ds.shortProposal('Refund $6.30, the fare charged above the expected fare'), 'Refund $6.30');
+  assert.equal(ds.shortProposal('$5.00 credit'), '$5.00 credit');
+  assert.equal(ds.shortProposal(null), null);
+});

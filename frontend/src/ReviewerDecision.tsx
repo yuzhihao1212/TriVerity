@@ -2,16 +2,16 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties
 
 import {
   decisionBar, overrideAmountCheck, INVESTIGATION_CHECKS, OVERRIDE_LABELS, overrideChoices, overrideError,
-  overrideLine, readHeld, readSaved, REASON_PLACEHOLDER, rulingLine, secondApprovalLimit, writeHeld, writeSaved,
+  overrideLine, readHeld, readSaved, REASON_PLACEHOLDER, rulingLine, secondApprovalLimit, shortProposal, writeHeld, writeSaved,
   type FinalDecision, type HoldRecord, type OverrideChoice, type SavedDecision,
   panelShowing,
 } from "./decisionState";
 import { Icon } from "./Icon";
 import { clockText, maxRefund } from "./notifyState";
 import { ButtonLoader } from "./OeroAI";
-import { HunyuanMark } from "./SourceBadge";
 import { titleCase } from "./presentation";
 import { Term } from "./Term";
+import { rulingBrief } from "./verdictDisplay";
 import { ApiError, recordReviewerDecision } from "./services/api";
 import type { DisputeCase, Resolution } from "./types";
 
@@ -182,9 +182,9 @@ export function ReviewerDecision({ resolution, controller, onContinue, onNextCas
     if (phase !== "decide") focusTarget.current?.focus();
   }, [phase]);
 
-  const ai = resolution.rider_case.source === "llm" || resolution.driver_case.source === "llm";
   const ruling = rulingLine(resolution.decision, resolution.refund_amount);
   const confidence = Math.round(resolution.confidence * 100);
+  const proposal = escalated ? shortProposal(rulingBrief(resolution).proposed) : null;
   const acceptLabel = resolution.refund_amount != null && resolution.refund_amount > 0 && resolution.decision !== "no_action"
     ? `Accept $${resolution.refund_amount.toFixed(2)} ${resolution.decision === "compensation" ? "credit" : "refund"}` : "Accept ruling";
 
@@ -195,14 +195,11 @@ export function ReviewerDecision({ resolution, controller, onContinue, onNextCas
           <Icon name="person" />
           <h2 id={`${id}-title`}>Your Call</h2>
           <p className="decision-head-sub">{escalated ? "The rules sent this dispute to you. A person makes the decision." : "The agents have finished. A person makes the final decision."}</p>
-          <ol className="decision-chain" aria-label="Who did what">
-            <li>{ai ? <><HunyuanMark />Hy3 argued</> : "Advocates argued"}</li>
-            <li><Icon name="function" />Rules ruled</li>
-            <li className="is-you"><Icon name="person" />You decide</li>
-          </ol>
         </header>
         <div className="decision-body">
-          <p className="decision-ruling"><span className="decision-ruling-label">Ruling</span> <strong>{ruling}</strong> · {confidence}% confidence</p>
+          {escalated
+            ? <p className="decision-ruling">{proposal ? <><span className="decision-ruling-label">The Rules Propose</span> <strong>{proposal}</strong></> : "The rules have no outcome to propose."}</p>
+            : <p className="decision-ruling"><span className="decision-ruling-label">Ruling</span> <strong>{ruling}</strong> · {confidence}% confidence</p>}
           <div className="reviewer-actions">
             {escalated
               ? <button type="button" className="run-button decision-main" disabled={busy} onClick={() => controller.startOverride()}>Make Decision</button>

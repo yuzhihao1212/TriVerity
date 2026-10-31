@@ -7,7 +7,7 @@ import { easeOut } from "./countUp";
 import { EvidenceInfo } from "./EvidenceDisclosure";
 import { EvidenceText, type FactLinks } from "./EvidenceList";
 import { Icon } from "./Icon";
-import { SourceBadge } from "./SourceBadge";
+import { HunyuanMark, SourceBadge } from "./SourceBadge";
 import { money, outputSources, policyIds, titleCase } from "./presentation";
 import { Term } from "./Term";
 import { CONFIDENCE_HELP, confidenceDisplay, refundSum, rulingBrief, rulingConditionGroups, rulingCredits, rulingHero, rulingSides, decidedHero } from "./verdictDisplay";
@@ -34,7 +34,7 @@ export function VerdictSummary({ resolution, dispute, final = null, aiLive = fal
   const groups = rulingConditionGroups(resolution);
   const total = groups.reduce((sum, group) => sum + group.checks.length, 0);
   const sum = refundSum(resolution, dispute.fare);
-  const credits = rulingCredits(resolution, aiLive);
+  const credits = rulingCredits(resolution, aiLive, !!final?.by);
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [firstView] = useState(() => !window.matchMedia("(prefers-reduced-motion: reduce)").matches && !seenRulings().has(disputeId));
   const [intro, setIntro] = useState(false);
@@ -106,9 +106,8 @@ export function VerdictSummary({ resolution, dispute, final = null, aiLive = fal
       </div>
     </div>}
     <p className={`ruling-credit${credits.warn ? " is-warn" : ""}`}>
-      <span><SourceBadge source="code" /> decided the outcome.</span><span aria-hidden="true">·</span>
-      <span><SourceBadge source={credits.source} /> {credits.text}</span><span aria-hidden="true">·</span>
-      <span className="ruling-confidence-line">{confidence.label} · {confidence.percent}% <EvidenceInfo label="About ruling confidence">{CONFIDENCE_HELP}</EvidenceInfo></span>
+      <span className="ruling-credit-text">{credits.lead} {credits.ai && <HunyuanMark />}{credits.text}</span>
+      <span className={`ruling-confidence-line${confidence.label === "Low Confidence" ? " is-low" : ""}`}>{confidence.label} · {confidence.percent}% <EvidenceInfo label="About ruling confidence">{CONFIDENCE_HELP}</EvidenceInfo></span>
     </p>
     <details className="ruling-details">
       <summary>Rules and Sources</summary>
