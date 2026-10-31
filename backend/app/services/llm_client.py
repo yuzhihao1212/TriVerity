@@ -13,7 +13,10 @@ from __future__ import annotations
 
 import logging
 import re
+import threading
+import time
 
+from collections import deque
 from contextlib import contextmanager
 from contextvars import ContextVar, copy_context
 
@@ -69,6 +72,45 @@ def carry_context(fn):
     return lambda *args, **kwargs: ctx.run(fn, *args, **kwargs)
 
 
+class LLMBusy(Exception):
+    """Too many calls are already waiting for the provider's per-minute limit."""
+
+
+class RequestPacer:
+    """Keeps calls within the provider's per-minute limit by spacing them out.
+
+    Each call books the next free slot and waits for it, in order. One per process, which
+    matches the single uvicorn worker in the Dockerfile.
+    """
+
+    WINDOW_S = 60
+
+    def __init__(self, per_minute: int) -> None:
+        self.per_minute = per_minute
+        self._slots: deque[float] = deque()
+        self._lock = threading.Lock()
+
+    def reset(self) -> None:
+        with self._lock:
+            self._slots.clear()
+
+    def wait_seconds(self, now: float, max_wait: float) -> float:
+        """Book a slot and return how long to wait for it; raises LLMBusy if that's over max_wait."""
+        with self._lock:
+            while self._slots and self._slots[0] <= now - self.WINDOW_S:
+                self._slots.popleft()
+            slot = now
+            if len(self._slots) >= self.per_minute:
+                slot = max(now, self._slots[-self.per_minute] + self.WINDOW_S)
+            if slot - now > max_wait:
+                raise LLMBusy(f"next slot is {slot - now:.0f} s away")
+            self._slots.append(slot)
+            return slot - now
+
+
+pacer = RequestPacer(limits.LLM_REQUESTS_PER_MINUTE)
+
+
 def complete(system: str, user: str, *, max_tokens: int = limits.DEFAULT_MAX_TOKENS) -> str:
     """Send a chat-completions request and return the assistant's text.
 
@@ -79,7 +121,8 @@ def complete(system: str, user: str, *, max_tokens: int = limits.DEFAULT_MAX_TOK
 
     Requests JSON-mode (``response_format``) so compatible providers return
     parseable JSON, and strips ``\\`\\`\\`json`` code fences from the response.
-    ``max_tokens`` bounds the reply. Errors are raised, never retried.
+    ``max_tokens`` bounds the reply. Waits for a slot under the provider's per-minute
+    limit (:data:`pacer`). Errors are raised, never retried.
     """
     if _ai_off.get() or not settings.llm_api_key:
         return OFFLINE_PLACEHOLDER
@@ -105,6 +148,10 @@ def complete(system: str, user: str, *, max_tokens: int = limits.DEFAULT_MAX_TOK
     }
     if settings.llm_disable_thinking:
         payload["thinking"] = {"type": "disabled"}
+
+    wait = pacer.wait_seconds(time.monotonic(), limits.LLM_MAX_WAIT_S)
+    if wait > 0:
+        time.sleep(wait)
 
     with httpx.Client(timeout=limits.LLM_TIMEOUT_S) as client:
         response = client.post(url, headers=headers, json=payload)

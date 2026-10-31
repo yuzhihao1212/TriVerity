@@ -252,7 +252,7 @@ The queue's **AI Review** button (new cases, or a re-run of open ones): resolves
   budget, so a batch can't spend more than the budget allows.
 - **Rate limits:** the per-minute limits count the batch once (the per-minute limit is 3), so a reviewer can run
   the queue at once; the daily limits count every case, so a batch can't do more in a day than the same cases
-  run one by one. A batch that doesn't fit is refused whole (429 with `Retry-After`) and counts nothing. At most two cases resolve at the same time, leaving a slot for single runs.
+  run one by one. A batch that doesn't fit is refused whole (429 with `Retry-After`) and counts nothing. Calls to the LLM are paced to stay under the provider's limit of 60 a minute, so nine live cases take about 80 s. At most two cases resolve at the same time, leaving a slot for single runs.
 - **Response:** a list in request order, each `{"dispute_id", "result": Resolution | null, "status": int | null,
   "error": str | null}`. A case that fails (e.g. 503 busy, budget used up) carries its status and message;
   the others still return. Internal view only.

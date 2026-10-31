@@ -76,6 +76,10 @@ DEFAULT_MAX_TOKENS = 800
 REBUTTAL_MAX_TOKENS = 300      # one short reply per advocate in the rebuttal round
 EVIDENCE_AGENT_MAX_TOKENS = 400   # one tool plan per round
 LLM_TIMEOUT_S = 25
+# TokenHub allows 60 requests a minute for this model and then answers 429 (measured 31 Oct
+# 2026). Calls wait for a free slot below that; a wait longer than this gives up instead.
+LLM_REQUESTS_PER_MINUTE = 55
+LLM_MAX_WAIT_S = 60
 
 # -- LLM output checks (judge_narration, _advocate) ---------------------------
 # Longer output is rejected (not truncated) and the deterministic text is kept.
