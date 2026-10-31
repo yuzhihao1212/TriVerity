@@ -1,12 +1,18 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 
 import face from "./assets/mascot/owl-face.webp";
 import { buddyAnswers, type BuddyStage } from "./buddyAnswers";
+import { clampSpot, panelBox, readSpot, spotOf, writeSpot, type BuddySpot, type PanelBox } from "./buddyPosition";
 import { Chip } from "./Chip";
 import { EvidenceText, type FactLinks } from "./EvidenceList";
 import { Icon } from "./Icon";
 import { Term } from "./Term";
 import type { DisputeCase, Resolution } from "./types";
+
+function storage(): Storage | null { try { return window.localStorage; } catch { return null; } }
+// Without the scrollbar, like the right and bottom that position the owl.
+function viewport() { return { width: document.documentElement.clientWidth, height: document.documentElement.clientHeight }; }
+const ARROWS: Record<string, [number, number]> = { ArrowLeft: [1, 0], ArrowRight: [-1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
 
 /** The owl in the corner of a case: questions a lost reviewer would ask, answered from the case's own records. */
 export function CaseBuddy({ resolution, dispute, stage, tab, availableIds, onSelectFact, onOpenHearing }: {
@@ -17,6 +23,12 @@ export function CaseBuddy({ resolution, dispute, stage, tab, availableIds, onSel
   const id = useId();
   const button = useRef<HTMLButtonElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
+  // Wherever the reviewer last left it (null: the corner the CSS gives it), and where its panel opens from there.
+  const [spot, setSpot] = useState<BuddySpot | null>(() => readSpot(storage()));
+  const [panel, setPanel] = useState<PanelBox | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const drag = useRef<{ x: number; y: number; from: BuddySpot; to: BuddySpot; moved: boolean; owl: boolean } | null>(null);
+  const dragged = useRef(false);
   const answers = buddyAnswers({ resolution, dispute, stage, tab });
   const answer = answers.find(item => item.id === chosen);
 
@@ -27,6 +39,66 @@ export function CaseBuddy({ resolution, dispute, stage, tab, availableIds, onSel
 
   useEffect(() => { if (open) heading.current?.focus(); }, [open]);
 
+  function owlBox() {
+    const { left, top, width, height } = button.current!.getBoundingClientRect();
+    return { left, top, width, height };
+  }
+  function moveTo(next: BuddySpot) {
+    const fitted = clampSpot(next, owlBox(), viewport());
+    setSpot(fitted);
+    return fitted;
+  }
+
+  // Before paint: a saved spot is pulled back on screen, and the panel opens on the roomier side.
+  useLayoutEffect(() => {
+    const fit = () => {
+      if (!button.current) return;
+      if (spot) {
+        const fitted = clampSpot(spot, owlBox(), viewport());
+        if (fitted.right !== spot.right || fitted.bottom !== spot.bottom) return setSpot(fitted);
+      }
+      setPanel(open ? panelBox(owlBox(), viewport()) : null);
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [open, spot]);
+
+  // The owl and the panel's header both move it. A press that barely moves is still a click.
+  function startDrag(event: ReactPointerEvent<HTMLElement>) {
+    if (event.button !== 0 || (event.target as HTMLElement).closest(".case-buddy-head button")) return;
+    const from = spotOf(owlBox(), viewport());
+    drag.current = { x: event.clientX, y: event.clientY, from, to: from, moved: false, owl: event.currentTarget === button.current };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+  function moveDrag(event: ReactPointerEvent<HTMLElement>) {
+    const current = drag.current;
+    if (!current) return;
+    const dx = event.clientX - current.x, dy = event.clientY - current.y;
+    if (!current.moved && Math.hypot(dx, dy) < 4) return;
+    if (!current.moved) setDragging(true);
+    current.moved = true;
+    current.to = moveTo({ right: current.from.right - dx, bottom: current.from.bottom - dy });
+  }
+  function endDrag() {
+    const current = drag.current;
+    drag.current = null;
+    if (!current?.moved) return;
+    setDragging(false);
+    // The click that ends a drag on the owl is not a press: the panel stays as it was.
+    dragged.current = current.owl;
+    // The last spot the drag asked for: the page may not have drawn it yet.
+    writeSpot(storage(), current.to);
+  }
+  function nudge(event: ReactKeyboardEvent<HTMLButtonElement>) {
+    const arrow = ARROWS[event.key];
+    if (!arrow) return;
+    event.preventDefault();
+    const step = event.shiftKey ? 96 : 24;
+    const from = spotOf(owlBox(), viewport());
+    writeSpot(storage(), moveTo({ right: from.right + arrow[0] * step, bottom: from.bottom + arrow[1] * step }));
+  }
+
   // On the page, not the panel: following a source moves focus out of it, and the panel stays open.
   useEffect(() => {
     if (!open) return;
@@ -36,10 +108,12 @@ export function CaseBuddy({ resolution, dispute, stage, tab, availableIds, onSel
   }, [open]);
 
 
-  return <div className="case-buddy">
-    {open && <section id={id} className="case-buddy-panel" aria-labelledby={`${id}-title`}>
-      <div className="case-buddy-head">
-        <img src={face} alt="" width={54} height={40} />
+  const drags = { onPointerDown: startDrag, onPointerMove: moveDrag, onPointerUp: endDrag, onPointerCancel: endDrag };
+  return <div className={dragging ? "case-buddy is-dragging" : "case-buddy"} style={spot ?? undefined}>
+    {open && <section id={id} className="case-buddy-panel" aria-labelledby={`${id}-title`}
+      style={panel ? { [panel.below ? "top" : "bottom"]: "calc(100% + 8px)", left: panel.left, width: panel.width, maxHeight: panel.maxHeight } : { visibility: "hidden" }}>
+      <div className="case-buddy-head" {...drags}>
+        <img src={face} alt="" width={54} height={40} draggable={false} />
         <div>
           <h2 id={`${id}-title`} ref={heading} tabIndex={-1}>Need More Context?</h2>
           <p>Answers come from this case's records.</p>
@@ -65,8 +139,11 @@ export function CaseBuddy({ resolution, dispute, stage, tab, availableIds, onSel
       <p className="case-buddy-foot"><Icon name="info" />No AI call and no cost. It never recommends an outcome.</p>
     </section>}
     <button type="button" ref={button} className="case-buddy-button" aria-expanded={open} aria-controls={open ? id : undefined}
-      aria-label="Ask the owl about this case" title="Ask the owl about this case" onClick={() => open ? close() : setOpen(true)}>
-      <img src={face} alt="" width={54} height={40} />
+      aria-describedby={`${id}-move`} title="Drag to move" {...drags} onKeyDown={nudge}
+      onClick={() => { if (dragged.current) dragged.current = false; else if (open) close(); else setOpen(true); }}>
+      <img src={face} alt="" width={54} height={40} draggable={false} />
+      <span className="case-buddy-label">Ask about this case</span>
     </button>
+    <span id={`${id}-move`} className="sr-only">Drag it, or use the arrow keys, to move it.</span>
   </div>;
 }

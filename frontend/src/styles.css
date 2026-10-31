@@ -667,8 +667,8 @@ textarea { width: 100%; resize: vertical; }
 .live-stage { display: grid; grid-template-columns: 24px minmax(0, 1fr); column-gap: var(--space-3); scroll-margin-top: calc(var(--live-head, 0px) + var(--space-4)); scroll-margin-bottom: clamp(64px, 20vh, 160px); }
 .live-stage-marker { display: flex; flex-direction: column; align-items: center; padding-top: 2px; }
 .live-stage:not(:last-child) .live-stage-marker::after { content: ""; flex: 1; width: 2px; margin-top: var(--space-1); border-radius: 1px; background: var(--border); }
-.live-stage.done:not(:last-child) .live-stage-marker::after { background: var(--ok-text); opacity: .45; }
-.live-stage-done { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--ok-soft); color: var(--ok-text); }
+.live-stage.done:not(:last-child) .live-stage-marker::after { background: var(--accent-control); }
+.live-stage-done { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent-control); color: var(--on-accent); }
 .live-stage-done .icon { width: 14px; height: 14px; }
 .live-stage-dot { width: 12px; height: 12px; margin: 5px 0; border: 2px solid var(--control-border); border-radius: 50%; }
 .live-stage .live-step-loader { flex: none; width: 22px; height: 22px; }
@@ -2535,12 +2535,15 @@ details.ruling-condition-group[open] > summary::before { transform: rotate(90deg
   .case-report-rules th:first-child { width: 54px; }
   .case-report-evidence th:first-child { width: 80px; }
 }
-.case-buddy { position: fixed; right: var(--space-5); bottom: 92px; z-index: 30; display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); max-width: calc(100vw - 32px); }
-.case-buddy-button { display: grid; place-items: center; width: 68px; height: 56px; padding: 0; border: 1px solid var(--border); border-radius: 28px; background: var(--bg); box-shadow: 0 6px 18px rgb(0 0 0 / .14); cursor: pointer; }
+/* The owl can be dragged anywhere (CaseBuddy.tsx sets right/bottom); its panel hangs off it on the roomier side. */
+.case-buddy { position: fixed; right: var(--space-5); bottom: 92px; z-index: 30; }
+/* Labelled, so a first-time reviewer can tell what the owl is for; on a phone it shrinks back to the face. */
+.case-buddy-button { display: flex; align-items: center; gap: var(--space-2); height: 56px; padding: 0 var(--space-5) 0 var(--space-2); border: 1px solid var(--border); border-radius: 28px; background: var(--bg); box-shadow: 0 6px 18px rgb(0 0 0 / .14); color: var(--text); font: inherit; font-size: 14px; font-weight: 600; white-space: nowrap; cursor: grab; touch-action: none; user-select: none; }
+.case-buddy.is-dragging, .case-buddy.is-dragging * { cursor: grabbing; }
 .case-buddy-button:hover { border-color: var(--accent); }
 .case-buddy-button img { display: block; }
-.case-buddy-panel { display: flex; flex-direction: column; gap: var(--space-3); width: 340px; max-width: 100%; max-height: calc(100dvh - 190px); overflow-y: auto; padding: var(--space-4); border: 1px solid var(--border); border-radius: 14px; background: var(--bg); box-shadow: 0 10px 28px rgb(0 0 0 / .16); }
-.case-buddy-head { display: flex; align-items: center; gap: var(--space-2); }
+.case-buddy-panel { position: absolute; display: flex; flex-direction: column; gap: var(--space-3); width: 340px; overflow-y: auto; padding: var(--space-4); border: 1px solid var(--border); border-radius: 14px; background: var(--bg); box-shadow: 0 10px 28px rgb(0 0 0 / .16); }
+.case-buddy-head { display: flex; align-items: center; gap: var(--space-2); cursor: grab; touch-action: none; user-select: none; }
 .case-buddy-head > div { flex: 1; min-width: 0; }
 .case-buddy-head h2 { margin: 0; font-size: 1rem; }
 .case-buddy-head h2:focus { outline: none; }
@@ -2557,7 +2560,11 @@ details.ruling-condition-group[open] > summary::before { transform: rotate(90deg
 .case-buddy-questions button.is-chosen { border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
 .case-buddy-foot { display: flex; align-items: center; gap: 6px; margin: 0; font-size: .75rem; color: var(--muted); }
 .case-buddy-foot svg { flex: none; width: 14px; height: 14px; }
-@media (max-width: 560px) { .case-buddy { right: var(--space-3); bottom: 84px; } .case-buddy-panel { width: calc(100vw - 32px); } }
+@media (max-width: 560px) {
+  .case-buddy { right: var(--space-3); bottom: 84px; }
+  .case-buddy-button { width: 68px; padding: 0; justify-content: center; }
+  .case-buddy-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
 
 @media print {
   .term-tip { display: none; }
