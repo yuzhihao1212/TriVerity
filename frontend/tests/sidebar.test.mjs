@@ -57,3 +57,14 @@ test('dispute list is collapsed by default, remembers the choice, and survives b
   assert.equal(readSidebarOpen(blocked), false);
   assert.doesNotThrow(() => writeSidebarOpen(blocked, false));
 });
+
+test('the collapsed rail has one icon per kind of case, with the open case marked', async () => {
+  const { railShortcuts } = await load('disputeList');
+  const cases = [{ type: 'route_deviation' }, { type: 'route_deviation' }, { type: 'no_show_charge' }];
+  const open = { id: 'D002', summary: 'Wait Time Missing', type: 'no_show_charge' };
+  const items = railShortcuts(cases, open);
+  assert.deepEqual(items.map(item => [item.category, item.current]), [['route', false], ['no-show', true]]);
+  assert.equal(items[0].label, 'Route cases: 2');
+  assert.equal(items[1].label, 'No-show cases: 1. Current case: D002 · Wait Time Missing');
+  assert.deepEqual(railShortcuts([{ type: 'route_deviation' }], open).map(item => item.category), ['route']);
+});

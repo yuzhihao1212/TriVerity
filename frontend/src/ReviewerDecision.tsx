@@ -27,6 +27,7 @@ const blank: Entry = { mode: "idle", choice: null, amount: "", check: null, reas
 const heldStorage = () => { try { return window.sessionStorage; } catch { return null; } };
 
 const reduceMotion = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+const scrollToPanel = () => document.getElementById("reviewer-decision")?.scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "start" });
 
 /**
  * The reviewer's decision for one ruling, shared by the sticky decision bar and the
@@ -147,7 +148,8 @@ function useResize(phase: string) {
     const from = last.current;
     const to = { w: el.offsetWidth, h: el.offsetHeight };
     last.current = to;
-    if (!from || reduceMotion() || (from.w === to.w && from.h === to.h)) return;
+    // Opening the form goes to its full size at once: the page scrolls to it next, and needs the real height.
+    if (!from || phase === "override" || reduceMotion() || (from.w === to.w && from.h === to.h)) return;
     el.style.transition = "none";
     el.style.width = `${from.w}px`;
     el.style.height = `${from.h}px`;
@@ -179,7 +181,10 @@ export function ReviewerDecision({ resolution, controller, onContinue, onNextCas
   const firstPhase = useRef(true);
   useEffect(() => {
     if (firstPhase.current) { firstPhase.current = false; return; }
-    if (phase !== "decide") focusTarget.current?.focus();
+    if (phase === "override") {
+      focusTarget.current?.focus({ preventScroll: true });
+      scrollToPanel();
+    } else if (phase !== "decide") focusTarget.current?.focus();
   }, [phase]);
 
   const ruling = rulingLine(resolution.decision, resolution.refund_amount);
@@ -217,7 +222,7 @@ export function ReviewerDecision({ resolution, controller, onContinue, onNextCas
         </div>
       </>}
 
-      {phase === "override" && <OverrideForm id={id} resolution={resolution} controller={controller} ruling={ruling} confidence={confidence} heading={focusTarget} />}
+      {phase === "override" && <OverrideForm id={id} resolution={resolution} controller={controller} ruling={escalated ? proposal ?? "No proposed outcome" : ruling} confidence={confidence} heading={focusTarget} />}
 
       {(phase === "done" || phase === "held") && <div className="decision-result" aria-live="polite">
         {/* The pencil means the rules were overridden; deciding an escalated case is a tick, like accepting. */}
@@ -282,7 +287,7 @@ function OverrideForm({ id, resolution, controller, ruling, confidence, heading 
         <div className="override-card is-policy">
           {!escalated && <span className="override-tag">Set aside</span>}
           <span className="override-avatar"><Icon name="function" /></span>
-          <span><span className="override-card-label">Policy ruling · by the rules</span>
+          <span><span className="override-card-label">{escalated ? "The rules propose" : "Policy ruling · by the rules"}</span>
             <strong className="override-card-value">{ruling}{!escalated && <span className="override-strike" aria-hidden="true" />}</strong>
             {!escalated && <span className="sr-only"> (set aside)</span>}</span>
         </div>
@@ -374,8 +379,9 @@ export function DecisionBar({ resolution, controller, unavailable }: { resolutio
   }, [resolution, controller.mode, !!controller.saved, !!controller.hold]);
   const hidden = panelInView;
   function goToPanel() {
-    controller.startOverride();
-    document.getElementById("reviewer-decision")?.scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "start" });
+    // Opening the form scrolls to it once it has rendered; one already open just needs bringing back.
+    if (controller.mode === "override") scrollToPanel();
+    else controller.startOverride();
   }
   return (
     <section className={`decision-bar tone-${view.tone}${hidden ? " is-hidden" : ""}`} aria-label="Your decision on this ruling">
