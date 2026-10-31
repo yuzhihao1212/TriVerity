@@ -3,6 +3,7 @@ import { decisionTone } from "./outcomeTone";
 import { PARTY_DECISION_LABELS } from "./partyView";
 import { money } from "./presentation";
 import { appliedRuleIds, conditionGroups, OVERLAY_RULES } from "./rulingDetails";
+import type { FinalHeaderOutcome } from "./stepVisuals";
 import type { DisputeCase, Resolution } from "./types";
 
 export const CONFIDENCE_HELP = "Confidence describes how clearly the available facts meet the policy rule. It is set by the rule that applied, not an AI prediction or a probability that the ruling is correct. Safety and other escalation rules can still require human review.";
@@ -61,6 +62,22 @@ export function rulingHero(result: Pick<Resolution, "decision" | "refund_amount"
     suffix: amount != null ? "back to the rider" : "",
     checklistTitle: amount != null ? `Why the rider gets ${money(amount)}` : result.decision === "needs_review" ? "Why a human needs to decide" : refund ? "Why the refund is approved" : "Why the charge stands",
     summary: rulingSummary(result),
+  };
+}
+
+/** Once a person has decided, the hero shows that decision; the checks below stay as the rules' own result. */
+export function decidedHero(hero: ReturnType<typeof rulingHero>, final: FinalHeaderOutcome | null): ReturnType<typeof rulingHero> {
+  if (!final?.by) return hero;
+  const refund = decisionTone(final.decision) === "ok";
+  const amount = refund && final.amount != null ? final.amount : null;
+  return {
+    ...hero,
+    label: final.by === "decided" ? "Reviewer decided" : "Reviewer overrode the rules",
+    tone: decisionTone(final.decision), amount,
+    icon: refund ? "receipt" : "check",
+    headline: amount != null ? money(amount) : PARTY_DECISION_LABELS[final.decision],
+    suffix: amount != null ? "back to the rider" : "",
+    checklistTitle: final.by === "decided" ? "Why a human needed to decide" : "What the rules found",
   };
 }
 

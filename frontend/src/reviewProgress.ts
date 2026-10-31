@@ -23,7 +23,10 @@ export function openCounts(tab: WorkflowTab, { decisionsUnavailable = false } = 
   return false;
 }
 
-export interface ReviewSummary { count: number; total: number; complete: boolean; text: string }
+export interface ReviewSummary { count: number; total: number; complete: boolean; text: string; auto?: boolean }
+
+/** A case the policy closed: finished, but nobody reviewed it. */
+export const AUTO_SUMMARY: ReviewSummary = { count: WORKFLOW_TABS.length, total: WORKFLOW_TABS.length, complete: true, text: "Auto-resolved", auto: true };
 
 /** "Reviewed 2 of 5 steps", or "Review complete" (Intake counts once a ruling exists). */
 export function reviewSummary(reviewed: Iterable<WorkflowTab>): ReviewSummary {

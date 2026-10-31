@@ -2,7 +2,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties
 
 import {
   decisionBar, overrideAmountCheck, INVESTIGATION_CHECKS, OVERRIDE_LABELS, overrideChoices, overrideError,
-  overrideLine, readHeld, REASON_PLACEHOLDER, rulingLine, secondApprovalLimit, writeHeld,
+  overrideLine, readHeld, readSaved, REASON_PLACEHOLDER, rulingLine, secondApprovalLimit, writeHeld, writeSaved,
   type FinalDecision, type HoldRecord, type OverrideChoice, type SavedDecision,
 } from "./decisionState";
 import { Icon } from "./Icon";
@@ -19,6 +19,8 @@ interface Entry {
 }
 
 export type DecisionController = ReturnType<typeof useReviewerDecision>;
+
+const blank: Entry = { mode: "idle", choice: null, amount: "", check: null, reason: "", busy: false, saved: null, error: null };
 
 const heldStorage = () => { try { return window.sessionStorage; } catch { return null; } };
 
@@ -38,7 +40,12 @@ export function useReviewerDecision({ runKey, dispute, resolution, onDecided, on
   runKey: string | null; dispute?: DisputeCase | null; resolution?: Resolution | null;
   onDecided?: () => void; onUnavailable?: () => void; locked?: boolean;
 }) {
-  const [entries, setEntries] = useState<Record<string, Entry>>({});
+  // A saved decision survives a reload, so the case stays decided and is not recorded twice.
+  const [entries, setEntries] = useState<Record<string, Entry>>(() =>
+    Object.fromEntries(Object.entries(readSaved(heldStorage())).map(([key, saved]) => [key, { ...blank, saved }])));
+  useEffect(() => {
+    writeSaved(heldStorage(), Object.fromEntries(Object.entries(entries).flatMap(([key, entry]) => entry.saved ? [[key, entry.saved]] : [])));
+  }, [entries]);
   /** Holds by dispute ID, so a case stays on hold across runs until a reviewer clears it. */
   const [restored] = useState(() => readHeld(heldStorage()));
   const [holds, setHolds] = useState<Record<string, HoldRecord>>(restored.holds);
@@ -47,7 +54,6 @@ export function useReviewerDecision({ runKey, dispute, resolution, onDecided, on
   useEffect(() => { writeHeld(heldStorage(), { holds, everHeld: [...everHeld.current] }); }, [holds]);
   const inFlight = useRef(new Set<string>());
   const escalated = resolution?.decision === "needs_review";
-  const blank: Entry = { mode: "idle", choice: null, amount: "", check: null, reason: "", busy: false, saved: null, error: null };
   const entry = (runKey && entries[runKey]) || blank;
   const caseId = dispute?.dispute_id ?? null;
   const hold = caseId ? holds[caseId] ?? null : null;
@@ -73,7 +79,7 @@ export function useReviewerDecision({ runKey, dispute, resolution, onDecided, on
       })
       .catch((e: Error) => {
         patch(key, { busy: false, error: e.message });
-        if (e instanceof ApiError && e.status === 403) onUnavailable?.();
+        if (e instanceof ApiError && (e.status === 401 || e.status === 403)) onUnavailable?.();
       })
       .finally(() => inFlight.current.delete(key));
   }
@@ -203,7 +209,7 @@ export function ReviewerDecision({ resolution, controller, onContinue }: { resol
               </>}
           </div>
           <ul className="decision-next">
-            <li><Icon name="send" />Both parties are notified when you continue</li>
+            <li><Icon name="send" />You review both messages before they are sent</li>
             <li><Icon name="books" />Saved as a <Term term="precedent">precedent</Term> for similar disputes</li>
           </ul>
           <div role="alert">{error && <p className="error small">{error}</p>}</div>
@@ -219,7 +225,7 @@ export function ReviewerDecision({ resolution, controller, onContinue }: { resol
           {saved ? (saved.kind === "accepted" ? "Ruling accepted" : saved.kind === "overridden" ? "Ruling overridden" : "Decision saved") : "On hold for a second reviewer"}</h2>
         <p className="decision-result-line">{saved ? resultLine(saved, resolution, controller.fare) : `${hold!.why} · nobody is notified yet`}</p>
         <div className="decision-result-actions">
-          {saved && onContinue && <button type="button" className="run-button" onClick={onContinue}>Notify both parties<Icon name="arrow" /></button>}
+          {saved && onContinue && <button type="button" className="run-button" onClick={onContinue}>Review messages<Icon name="arrow" /></button>}
           <button type="button" className="text-button" onClick={() => controller.reopen()}>Change decision</button>
         </div>
       </div>}

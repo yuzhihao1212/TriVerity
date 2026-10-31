@@ -22,7 +22,7 @@ function describe(status: number, retryAfter: number | null): string {
     case 422:
       return "Some fields are too long or out of range: claims and statements up to 2,000 characters, up to 50 chat messages of 500 characters, and realistic trip and fare numbers.";
     case 403:
-      return "Appeals and reviewer decisions need your judge access code on the public demo. Enter it in the Judge access code field (shown when you add a dispute and above Run agents on your own disputes).";
+      return "Appeals and reviewer decisions need your judge access code on the public demo. Enter it in the Judge access code field on this step. Your draft is kept.";
     case 429:
       return `Rate limit reached. Try again in ${retryAfter ?? 60} seconds.`;
     case 503:

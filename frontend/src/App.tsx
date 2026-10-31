@@ -8,7 +8,7 @@ import { WorkflowTabs } from "./WorkflowTabs";
 import { savedTab, type WorkflowTab } from "./workflow";
 import { FactLibrary } from "./FactLibrary";
 import { AGENT_ICONS, statusPill, type FinalHeaderOutcome } from "./stepVisuals";
-import { createReviewStore, openCounts, reviewKey, reviewSummary, reviewedSteps, REOPENED_STEPS, type ReviewSummary } from "./reviewProgress";
+import { AUTO_SUMMARY, createReviewStore, openCounts, reviewKey, reviewSummary, reviewedSteps, REOPENED_STEPS, type ReviewSummary } from "./reviewProgress";
 import { CaseBrief } from "./CaseBriefCard";
 import { caseHeadline, headerFinalOutcome } from "./caseBrief";
 import { RunCost } from "./RunCost";
@@ -37,7 +37,7 @@ import { initialSidebarState, openSidebarState, readGroupOpen, readSidebarOpen, 
 import { PresentationToggle, ThemeToggle } from "./ThemeToggle";
 import type { Theme } from "./theme";
 import { PartyPreview, sentRecords } from "./PartyPreview";
-import { autoSentRecord, clockText, DELIVERED_ANNOUNCEMENT, staysWithReviewer } from "./notifyState";
+import { autoSentRecord, clockText, DELIVERED_ANNOUNCEMENT, sentOutcomeText, staysWithReviewer } from "./notifyState";
 import { DisputeForm } from "./DisputeForm";
 import { ApiError, getSamples, listAppeals, resolveBatch, resolveDisputeLive, setReviewerAccessCode } from "./services/api";
 import { AutoResolvedNote } from "./AutoResolvedNote";
@@ -315,9 +315,10 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
     // Older closed cases have no known start: never start a timer after the send.
     if (active && !form && reviewId && !sent) reviews().markOpened(reviewId, Date.now());
   }, [active, form, reviewId, sent]);
+  const autoClosed = sent?.reviewer?.kind === "auto";
   const reviewed = useMemo(() => reviewedSteps(reviewId ? reviews().get(reviewId) : [], closed),
     [reviewId, reviewVersion, closed]);
-  const progress: ReviewSummary | null = resolution ? reviewSummary(reviewed) : null;
+  const progress: ReviewSummary | null = resolution ? autoClosed ? AUTO_SUMMARY : reviewSummary(reviewed) : null;
   function markReviewed(tab: WorkflowTab) {
     if (reviewId && reviews().add(reviewId, tab)) setReviewVersion(v => v + 1);
   }
@@ -331,6 +332,8 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
   function onDecisionsUnavailable() {
     // Recording is off (public demo, no judge code): opening Ruling is all the reviewer can do, so it counts.
     setDecisionsUnavailable(true);
+    setCodeNeeded(true);
+    setFocusAccessCode(true);
     markReviewed("ruling");
   }
 
@@ -340,6 +343,8 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
 
   // One status per case, the same wording on the home page and in the sidebar.
   const [appeals, setAppeals] = useState<Appeal[] | null>(null);
+  // Stays on once needed, so the field does not vanish as soon as the code works.
+  const [codeNeeded, setCodeNeeded] = useState(false);
   const waitingIds = useMemo(() => pendingAppealIds(appeals), [appeals]);
   const actions = allowedActions(closed ? "closed" : reopened ? "reopened" : "ready", closed);
   // Announced once through the polite status region when the phones switch to delivered.
@@ -394,7 +399,12 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
     if (!active) return;
     let live = true;
     listAppeals().then(list => { if (live) setAppeals(list); })
-      .catch(() => { if (live) setAppeals(null); });
+      .catch((e: unknown) => {
+        if (!live) return;
+        setAppeals(null);
+        // Refused for the code (public demo): show the field before anyone writes a decision.
+        if (e instanceof ApiError && (e.status === 401 || e.status === 403)) setCodeNeeded(true);
+      });
     return () => { live = false; };
   }, [active, selected?.dispute_id, appealsVersion]);
 
@@ -450,6 +460,9 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
     setFocusAccessCode(false);
     reveal(accessCodeInput.current, "center");
   }, [focusAccessCode, resolving]);
+
+  const judgeCodeField = (codeNeeded || decisionsUnavailable) && <AccessCodeField ref={accessCodeInput} id={ACCESS_CODE_FIELD_ID} review
+    value={accessCode} onChange={changeAccessCode} accepted={appeals !== null && !!accessCode.trim() && codeLoaded.current === accessCode} />;
 
   const disputeButton = (d: DisputeCase) => {
     const current = !form && selected?.dispute_id === d.dispute_id;
@@ -568,7 +581,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
               final={resolution ? headerFinalOutcome(resolution, selected, decision.saved, latestSent) : null} />
             <CaseBrief dispute={selected} resolution={resolution} showProposal={reviewed.has("ruling")} />
             <WorkflowTabs active={activeTab} resolution={resolution} busy={resolving === selected.dispute_id}
-              closed={closed} decisionRecorded={!!decision.saved}
+              closed={closed} auto={autoClosed} decisionRecorded={!!decision.saved}
               unlocking={completion?.id === selected.dispute_id}
               liveSteps={resolving === selected.dispute_id ? liveSteps : undefined} reviewed={reviewed} onChange={changeTab}
               render={tab => resolving === selected.dispute_id || completion?.id === selected.dispute_id
@@ -577,7 +590,6 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
                   onReviewEvidence={() => changeTab("evidence")} /> : <>
                 {/* Outcome first: each step's content, then how it was decided. */}
                 {tab === "intake" && <>
-                  <CasePanel dispute={selected} availableIds={factIds} onSelectFact={selectFact} />
                   {actions.run && needsAccessCode(selected.dispute_id, own) && <AccessCodeField ref={accessCodeInput} id={ACCESS_CODE_FIELD_ID}
                     value={accessCode} onChange={changeAccessCode} />}
                   {actions.run ? <div className="run-bar case-run-bar">
@@ -587,19 +599,23 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
                     <RunCost offline={aiMode === "offline"} hasResult={!!resolution} />
                     <button className="secondary-button" onClick={() => { setForm({ template: selected }); setError(null); }}>Edit as new dispute</button>
                   </div> : <p className="small muted">Closed. Reopen the case to run the agents again.</p>}
+                  <CasePanel dispute={selected} availableIds={factIds} onSelectFact={selectFact} />
                 </>}
                 {tab === "evidence" && resolution && <><FactLibrary facts={facts} activeId={activeFact} request={factRequest} expanded grouped onSelectFact={selectFact} dispute={selected} resolution={resolution} /><CollectorCalls collection={resolution.evidence_collection} /></>}
                 {tab === "hearing" && resolution && <Debate resolution={resolution} dispute={selected} availableIds={factIds} onSelectFact={selectFact} />}
                 {tab === "ruling" && resolution && <>
-                  <VerdictSummary key={`ruling-${reviewId}`} resolution={resolution} dispute={selected} availableIds={factIds} onSelectFact={selectFact} />
+                  <VerdictSummary key={`ruling-${reviewId}`} resolution={resolution} dispute={selected} final={decision.saved || sent ? headerFinalOutcome(resolution, selected, decision.saved, latestSent) : null} availableIds={factIds} onSelectFact={selectFact} />
                   <AutoResolvedNote autonomy={resolution.autonomy} closedAutomatically={sent?.reviewer?.kind === "auto"}
                     onSeeSent={() => changeTab("notify")} onReopen={reopenCase} />
                   {/* Nothing left to decide on a case the policy closed: the note above says why. */}
                   {sent?.reviewer?.kind !== "auto" && <RulingChecks key={reviewId} resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />}
+                  {judgeCodeField}
                   {actions.decide ? <ReviewerDecision resolution={resolution} controller={decision} onContinue={() => changeTab("notify")} /> : sent && <ClosedSummary record={sent} />}
-                  <AppealsPanel disputeId={selected.dispute_id} version={appealsVersion} onChanged={() => setAppealsVersion(v => v + 1)} />
+                  <AppealsPanel disputeId={selected.dispute_id} version={appealsVersion} onChanged={() => setAppealsVersion(v => v + 1)}
+                    current={latestSent ? { decision: latestSent.decision, text: sentOutcomeText(latestSent) } : null} closed={closed} onReopen={reopenCase} />
 
                 </>}
+                {tab === "notify" && resolution && reviewId && judgeCodeField}
                 {tab === "notify" && resolution && reviewId && <PartyPreview key={`${reviewId}-${sentRecords().events(reviewId).length}`} reviewKey={reviewId} resolution={resolution} dispute={selected}
                   previous={reopened ? latestSent : null} appealsAvailable={appeals !== null}
                   saved={decision.saved} held={!!decision.hold} unavailable={decisionsUnavailable} rulingVisited={reviewed.has("ruling")}
