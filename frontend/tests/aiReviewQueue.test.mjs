@@ -7,6 +7,7 @@ const q = await load('caseQueue');
 const hs = await load('homeState');
 const ad = await load('agentDisplay');
 const cb = await load('caseBrief');
+const presentation = await load('presentation');
 
 const row = (id, status, raisedAt, tier = null) => ({ id, status, raisedAt, tier });
 
@@ -34,16 +35,16 @@ test('next case follows the order on screen, not status alone', () => {
 
 test('the button names what it will do', () => {
   assert.equal(hs.reviewButtonLabel('live', { fresh: 9 }), 'AI Review');
-  assert.equal(hs.reviewButtonLabel('offline', { fresh: 9 }), 'Review with rules');
-  assert.equal(hs.reviewButtonLabel('live', { running: true, total: 9 }), 'Reviewing 9 cases…');
-  assert.equal(hs.reviewButtonLabel('offline', { running: true, total: 1 }), 'Reviewing 1 case…');
+  assert.equal(hs.reviewButtonLabel('offline', { fresh: 9 }), 'Review with Rules');
+  assert.equal(hs.reviewButtonLabel('live', { running: true, total: 9 }), 'Reviewing 9 Cases…');
+  assert.equal(hs.reviewButtonLabel('offline', { running: true, total: 1 }), 'Reviewing 1 Case…');
 });
 
 test('the button stays after a review: new cases are counted, otherwise it offers a re-run', () => {
-  assert.equal(hs.reviewButtonLabel('live', { fresh: 2, anyRun: true }), 'AI Review · 2 new');
-  assert.equal(hs.reviewButtonLabel('offline', { fresh: 2, anyRun: true }), 'Review with rules · 2 new');
+  assert.equal(hs.reviewButtonLabel('live', { fresh: 2, anyRun: true }), 'AI Review · 2 New');
+  assert.equal(hs.reviewButtonLabel('offline', { fresh: 2, anyRun: true }), 'Review with Rules · 2 New');
   assert.equal(hs.reviewButtonLabel('live', { anyRun: true }), 'Re-run AI Review');
-  assert.equal(hs.reviewButtonLabel('offline', { anyRun: true }), 'Re-run with rules');
+  assert.equal(hs.reviewButtonLabel('offline', { anyRun: true }), 'Re-run with Rules');
 });
 
 test('a re-run only touches cases waiting on a person with nothing saved', () => {
@@ -118,5 +119,16 @@ test('the brief shows the whole claim and says when the driver gave no statement
   const rows = cb.caseBriefRows({ type: 'route_deviation', rider_claim: claim, driver_statement: null, trip: {}, fare: {} });
   assert.equal(rows.find(row => row.label === 'Rider says').truncate, undefined);
   assert.equal(rows.find(row => row.label === 'Driver says').text, 'No statement provided');
+});
+
+test('title case keeps small words low, except first and last, and leaves hyphens and units alone', () => {
+  const { titleCase } = presentation;
+  assert.equal(titleCase('threat in chat'), 'Threat in Chat');
+  assert.equal(titleCase('6-min stop, long detour'), '6-min Stop, Long Detour');
+  assert.equal(titleCase('in plain words'), 'In Plain Words');
+  assert.equal(titleCase('rule they rely on'), 'Rule They Rely On');
+  assert.equal(titleCase('driver stopped 378 m away'), 'Driver Stopped 378 m Away');
+  assert.equal(titleCase("organisers' case: lobby no-show"), "Organisers' Case: Lobby No-show");
+  assert.equal(titleCase('re-run AI review'), 'Re-run AI Review');
 });
 

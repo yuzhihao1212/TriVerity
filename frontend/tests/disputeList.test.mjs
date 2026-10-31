@@ -54,22 +54,22 @@ test('filter labels: short for the chip, long for the menu and names', () => {
   assert.equal(dl.filterShortLabel('route_deviation'), 'Route');
   assert.equal(dl.filterShortLabel('no_show_charge'), 'No-show');
   assert.equal(dl.filterShortLabel('all'), null);
-  assert.equal(dl.filterLabel('route_deviation'), 'Route deviation');
-  assert.equal(dl.filterLabel('no_show_charge'), 'No-show charge');
-  assert.equal(dl.filterLabel('all'), 'All disputes');
-  assert.equal(dl.filterLabel('bogus'), 'All disputes');
+  assert.equal(dl.filterLabel('route_deviation'), 'Route Deviation');
+  assert.equal(dl.filterLabel('no_show_charge'), 'No-show Charge');
+  assert.equal(dl.filterLabel('all'), 'All Disputes');
+  assert.equal(dl.filterLabel('bogus'), 'All Disputes');
   assert.equal(dl.filterButtonLabel('all'), 'Filter disputes');
-  assert.equal(dl.filterButtonLabel('route_deviation'), 'Filter disputes: Route deviation');
-  assert.deepEqual(dl.FILTER_OPTIONS.map(o => o.label), ['All disputes', 'Route deviation', 'No-show charge']);
+  assert.equal(dl.filterButtonLabel('route_deviation'), 'Filter disputes: Route Deviation');
+  assert.deepEqual(dl.FILTER_OPTIONS.map(o => o.label), ['All Disputes', 'Route Deviation', 'No-show Charge']);
   assert.equal(dl.isFilter('no_show_charge'), true);
   assert.equal(dl.isFilter('toString'), false);
 });
 
 test('the item name keeps the type and status audible', () => {
   const d001 = { dispute_id: 'D001', type: 'route_deviation' };
-  assert.equal(dl.disputeItemName(d001, '6-min stop, long detour'), 'D001, Route deviation: 6-min stop, long detour');
-  assert.equal(dl.disputeItemName(d001, '6-min stop, long detour', 'partial_refund'), 'D001, Route deviation: 6-min stop, long detour. Ruling: Partial refund');
-  assert.equal(dl.disputeItemName({ dispute_id: 'D002', type: 'no_show_charge' }, 'Wait time missing', 'needs_review'), 'D002, No-show charge: Wait time missing. Ruling: A human reviewer will decide');
+  assert.equal(dl.disputeItemName(d001, '6-min stop, long detour'), 'D001, Route Deviation: 6-min stop, long detour');
+  assert.equal(dl.disputeItemName(d001, '6-min stop, long detour', 'partial_refund'), 'D001, Route Deviation: 6-min stop, long detour. Ruling: Partial refund');
+  assert.equal(dl.disputeItemName({ dispute_id: 'D002', type: 'no_show_charge' }, 'Wait time missing', 'needs_review'), 'D002, No-show Charge: Wait time missing. Ruling: A human reviewer will decide');
   assert.equal(dl.disputeItemName({ dispute_id: 'X', type: 'new_type' }, 'S'), 'X, new_type: S');
 });
 

@@ -107,12 +107,12 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
 
   if (gate === "locked" && !sent) return (
     <section className="card party-preview notify-locked" aria-labelledby={`${id}-heading`}>
-      <h2 id={`${id}-heading`}>Notify parties</h2>
+      <h2 id={`${id}-heading`}>Notify Parties</h2>
       <p className="notify-gate"><Icon name="lock" /><strong>{held ? "On hold for a second reviewer" : "Accept or override the ruling first"}</strong></p>
       <p className="small muted">{held
         ? "Nobody is notified yet. The case stays with you until the second reviewer decides."
         : "The messages go out with the final decision, so they open once you've decided on the Ruling step."}</p>
-      <div><button type="button" className="run-button" onClick={onGoToRuling}>Go to the Ruling step</button></div>
+      <div><button type="button" className="run-button" onClick={onGoToRuling}>Go to the Ruling Step</button></div>
     </section>
   );
 
@@ -130,11 +130,11 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
           }}>{item === "notify" ? "Notify" : "Customer view"}</button>)}
       </div>
       <div id={`${id}-view-panel`} role="tabpanel" aria-labelledby={`${id}-${view}-tab`}>
-      <h2 id={`${id}-heading`}>{view === "customer" ? "Customer view" : "Notify parties"}</h2>
+      <h2 id={`${id}-heading`}>{view === "customer" ? "Customer View" : "Notify Parties"}</h2>
       <p className="small muted">{view === "customer" ? "Try More info, Rate our support and Appeal case. Feedback is simulated for this browser session."
         : sent ? "These are the messages and notes delivered. Reopen the case to make a correction."
         : "Check what each person will see, add a note if you like, then send."}
-        {!sent && <> <span className="notify-outcome">{outcome.label}{outcome.amount != null ? ` · $${outcome.amount.toFixed(2)}` : ""} · </span><button type="button" className="text-button notify-change" onClick={onGoToRuling}>Change outcome</button></>}</p>
+        {!sent && <> <span className="notify-outcome">{outcome.label}{outcome.amount != null ? ` · $${outcome.amount.toFixed(2)}` : ""} · </span><button type="button" className="text-button notify-change" onClick={onGoToRuling}>Change Outcome</button></>}</p>
       {outcome.needsAmount && !sent && <div className="notify-amount">
         <label className="section-label" htmlFor={`${id}-amount`}>Partial refund amount</label>
         <input id={`${id}-amount`} inputMode="decimal" required aria-required="true" aria-invalid={!amountCheck.ok}
@@ -172,7 +172,7 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
                 <div className="notify-note-meta">
                   <span className={`small ${notes[party].length >= NOTE_LIMIT - 30 ? "note-near-limit" : "muted"}`} id={`${id}-${party}-count`} aria-live="off">{notes[party] ? noteCounter(notes[party]) : ""}</span>
                   {notes[party] && <button type="button" className="agents-toggle notify-reset"
-                    onClick={() => setNotes(previous => ({ ...previous, [party]: "" }))}>Clear note</button>}
+                    onClick={() => setNotes(previous => ({ ...previous, [party]: "" }))}>Clear Note</button>}
                 </div>
                 {warnings[party].length > 0 && <p className="notify-warning" id={`${id}-${party}-warn`} role="status">
                   <Icon name="warning" />{warnings[party].some(isInternalData)
@@ -189,20 +189,20 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
         {waitingAppeals.map(appeal => <div className="notify-appeal" key={appeal.id} role="status">
           <p><Icon name="warning" /><strong>{appealSummary(appeal)}</strong> · {appeal.id}</p>
           <p className="small">“{appeal.reason}”</p>
-          <div><button type="button" className="secondary-button" onClick={onGoToRuling}>Review the appeal on the Ruling step</button></div>
+          <div><button type="button" className="secondary-button" onClick={onGoToRuling}>Review the Appeal on the Ruling Step</button></div>
         </div>)}
         <section className="card review-complete" aria-label={closingTitle(dispute.dispute_id, progress)}>
           <p className="review-complete-title"><Icon name="check" />{closingTitle(dispute.dispute_id, progress)}</p>
           <div className="review-complete-actions">
-            {next && <button type="button" className="run-button" onClick={onNext}>{nextLabel ?? `Next case: ${next} →`}</button>}
-            <button type="button" className="secondary-button" onClick={onBack}>Back to queue</button>
+            {next && <button type="button" className="run-button" onClick={onNext}>{nextLabel ?? `Next Case: ${next} →`}</button>}
+            <button type="button" className="secondary-button" onClick={onBack}>Back to Queue</button>
           </div>
         </section>
       </div> : <div className="notify-actions">
         <button type="button" className="run-button" title={SEND_TOOLTIP} aria-describedby={`${id}-send-note`} onClick={() => send()}>
-          Approve &amp; send <span className="muted-on-accent">(simulated)</span></button>
+          Approve &amp; send <span className="muted-on-accent">(Simulated)</span></button>
         {/* Only everyday words can be waved through: there is no "Send anyway" for an ID. */}
-        {canWaive && <button type="button" className="secondary-button" onClick={() => send(true)}>Send anyway</button>}
+        {canWaive && <button type="button" className="secondary-button" onClick={() => send(true)}>Send Anyway</button>}
         <p className={`small ${sendAttempted && blocked ? "error-text" : "muted"}`} role={sendAttempted && blocked ? "alert" : undefined} id={`${id}-send-note`}>{blocked === "amount" ? (unknownRefund ? "The fare charged isn't recorded, so this refund has no amount. Change the outcome on the Ruling step." : "Enter the refund amount first.")
           : blocked === "second" ? "That amount needs a second reviewer: decide it on the Ruling step."
           : blocked === "held" ? "This case is on hold: nobody is notified until the second reviewer decides."

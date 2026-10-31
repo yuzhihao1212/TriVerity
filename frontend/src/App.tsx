@@ -13,13 +13,17 @@ import { CaseBrief } from "./CaseBriefCard";
 import { caseHeadline, headerFinalOutcome, usedFallback } from "./caseBrief";
 import { RunCost } from "./RunCost";
 import { CaseComparison } from "./CaseComparison";
+import { reportStatus } from "./caseReport";
+import { CaseReport } from "./CaseReportPage";
+import { ReportMenu } from "./ReportMenu";
 import { Debate } from "./Debate";
+import { RulesPanel, RulesRow } from "./RulesForCase";
 import { RulingChecks } from "./RulingChecks";
 import { VerdictSummary } from "./VerdictSummary";
-import { computedFacts, disputeLabel, money } from "./presentation";
+import { computedFacts, disputeLabel, disputeTitle, money } from "./presentation";
 import { caseHash, focusSection, HOME_HASH, missingCase, reveal, selectSample } from "./routes";
 import { allowedActions, caseStatus, pendingAppealIds, sortQueue, STATUS_WORDS, type CaseStatus, queueGroups } from "./caseQueue";
-import { nextAfterClose } from "./homeState";
+import { nextToReview } from "./homeState";
 import { Home, type HomeRow, type RunAllProgress } from "./Home";
 import { AppealsPanel } from "./Appeals";
 import { ClosedCase, ClosedSummary } from "./ClosedCase";
@@ -32,7 +36,7 @@ import { savedText } from "./decisionState";
 import { AiToggle } from "./AiToggle";
 import { readAiMode, writeAiMode, type AiMode } from "./aiMode";
 import { CurrentCaseShortcut, SidebarNewButton, SidebarToggle } from "./SidebarToggle";
-import { initialSidebarState, openSidebarState, readGroupOpen, readSidebarOpen, sidebarIsOpen, toggleSidebarState, writeGroupOpen, writeSidebarOpen, type SidebarState } from "./sidebar";
+import { readGroupOpen, readSidebarOpen, writeGroupOpen, writeSidebarOpen } from "./sidebar";
 import { PresentationToggle, ThemeToggle } from "./ThemeToggle";
 import type { Theme } from "./theme";
 import { PartyPreview, sentRecords } from "./PartyPreview";
@@ -96,30 +100,27 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
   const [filter, setFilter] = useState<DisputeFilter>("all");
   const [aiMode, setAiMode] = useState<AiMode>(() => readAiMode(localStorage));
   // Case pages keep the stored choice; home starts as the collapsed rail (see sidebar.ts).
-  const [sidebar, setSidebar] = useState(() => initialSidebarState(readSidebarOpen(localStorage)));
-  const onHomeRef = useRef(false);
+  // One choice for every page: the panel stays as the reviewer last left it.
+  const [sidebarOpen, setSidebarOpen] = useState(() => readSidebarOpen(localStorage));
   const [groupOpen, setGroupOpen] = useState<Record<Category, boolean>>(() => ({
     route: readGroupOpen("route"), "no-show": readGroupOpen("no-show"), other: readGroupOpen("other"),
   }));
   const [revealCurrent, setRevealCurrent] = useState(false);
   const currentCaseButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    if (!sidebar.caseOpen || !revealCurrent) return;
+    if (!sidebarOpen || !revealCurrent) return;
     reveal(currentCaseButton.current, "nearest", { instant: true });
     setRevealCurrent(false);
-  }, [sidebar.caseOpen, revealCurrent]);
+  }, [sidebarOpen, revealCurrent]);
   function setCategoryOpen(category: Category, open: boolean) {
     setGroupOpen(previous => ({ ...previous, [category]: open }));
     writeGroupOpen(category, open);
   }
-  function updateSidebar(change: (state: SidebarState, onHome: boolean) => { state: SidebarState; persist: boolean }) {
-    setSidebar(state => {
-      const next = change(state, onHomeRef.current);
-      if (next.persist) writeSidebarOpen(localStorage, next.state.caseOpen);
-      return next.state;
-    });
+  function changeSidebar(open: boolean) {
+    setSidebarOpen(open);
+    writeSidebarOpen(localStorage, open);
   }
-  const toggleSidebar = () => updateSidebar(toggleSidebarState);
+  const toggleSidebar = () => changeSidebar(!sidebarOpen);
   useEffect(() => {
     // Ctrl/Cmd+Shift+S, as in chat apps; ignored while typing in a field.
     function onKey(event: KeyboardEvent) {
@@ -151,6 +152,32 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
   const accessCodeInput = useRef<HTMLInputElement>(null);
   const [focusAccessCode, setFocusAccessCode] = useState(false);
   const [selected, setSelected] = useState<DisputeCase | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
+  const reportOrigin = useRef<"case" | "sidebar">("case");
+  const caseReportButton = useRef<HTMLButtonElement>(null);
+  const sidebarReportButton = useRef<HTMLButtonElement>(null);
+  // The case a report was asked for from the menu, opened once navigation reaches it.
+  const reportPending = useRef<string | null>(null);
+  useEffect(() => {
+    const arrived = !!selected && reportPending.current === selected.dispute_id;
+    if (arrived) reportPending.current = null;
+    setReportOpen(arrived);
+  }, [selected?.dispute_id, active, form]);
+  function openReport(origin: "case" | "sidebar") {
+    reportOrigin.current = origin;
+    setReportOpen(true);
+  }
+  function openReportFor(id: string) {
+    if (selected?.dispute_id === id) { openReport("sidebar"); return; }
+    reportOrigin.current = "sidebar";
+    reportPending.current = id;
+    setForm(null);
+    window.location.hash = caseHash(id);
+  }
+  function closeReport() {
+    setReportOpen(false);
+    requestAnimationFrame(() => (reportOrigin.current === "sidebar" ? sidebarReportButton : caseReportButton).current?.focus());
+  }
   // Results are kept per dispute so revisiting a case doesn't call the LLM again.
   const [results, setResults] = useState<Record<string, Resolution>>(() => sentRecords().results());
   const [liveSteps, setLiveSteps] = useState<AgentLogEntry[]>([]);
@@ -229,6 +256,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
     if (resolving !== null || runAll?.running) return;
     const previous = results[dispute.dispute_id];
     if (previous && sentRecords().get(reviewKey(dispute.dispute_id, previous))) return;
+    setReportOpen(false);
     setError(null);
     setResolving(dispute.dispute_id);
     const started = performance.now();
@@ -274,6 +302,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
    */
   async function reviewCases(pending: string[]) {
     if (resolving !== null || runAll?.running || pending.length === 0) return;
+    setReportOpen(false);
     setError(null);
     const mode = aiMode;
     const progress = { total: pending.length, ids: pending, mode };
@@ -398,15 +427,13 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [allCases, results, decision.savedFor, sentVersion, waitingIds]);
   const statusOf = (id: string) => queueRows.find(row => row.id === id)?.status ?? "not_run";
-  const following = selected ? nextAfterClose(queueRows, selected.dispute_id) : null;
+  const following = selected ? nextToReview(queueRows, selected.dispute_id, decision.holds().map(hold => hold.disputeId)) : null;
   const goToFollowing = () => { window.location.hash = following ? caseHash(following.row.id) : HOME_HASH; };
 
   // One appeal list feeds the queue and case banner; unavailable (403) shows neither.
   const onHome = active && !form && !selected && !loadingSamples;
-  onHomeRef.current = onHome;
-  const sidebarOpen = sidebarIsOpen(sidebar, onHome);
   // A filter picked from the collapsed rail opens the list, so its effect is visible.
-  const changeFilter = (value: DisputeFilter) => { setFilter(value); if (!sidebarOpen) updateSidebar(openSidebarState); };
+  const changeFilter = (value: DisputeFilter) => { setFilter(value); if (!sidebarOpen) changeSidebar(true); };
   useEffect(() => {
     if (!active) return;
     let live = true;
@@ -478,7 +505,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
 
   const disputeButton = (d: DisputeCase) => {
     const current = !form && selected?.dispute_id === d.dispute_id;
-    const summary = disputeLabel(d);
+    const summary = disputeTitle(d);
     const decision = results[d.dispute_id]?.decision;
     const status = statusOf(d.dispute_id);
     return <li key={d.dispute_id}>
@@ -500,16 +527,27 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
     select(selected);
     if (filter !== "all" && selected.type !== filter) setFilter("all");
     setCategoryOpen(disputeCategory(selected.type), true);
-    updateSidebar(openSidebarState);
+    changeSidebar(true);
     setRevealCurrent(true);
   }
+
+  const canReport = !form && !!selected && !!resolution && resolving === null && !runAll?.running;
+  const reportButton = <ReportMenu currentId={selected?.dispute_id ?? null} busy={resolving !== null || !!runAll?.running} reportOpen={reportOpen && canReport}
+    onOpen={openReportFor} buttonRef={sidebarReportButton} entries={() => queueRows.map(row => {
+      const result = results[row.id];
+      if (!result) return { id: row.id, status: null };
+      const key = reviewKey(row.id, result);
+      return { id: row.id, status: reportStatus({ resolution: result, saved: decision.savedFor(key), hold: decision.holds().find(hold => hold.disputeId === row.id) ?? null,
+        sent: sentRecords().get(key) ?? null, latest: sentRecords().latest(key) ?? null }) };
+    })} />;
+  const BrandHeading = reportOpen && canReport ? "div" : "h1";
 
   return (
     <div className={`app${presentation ? " presentation-mode" : ""}`}>
       <a className="skip-link" href="#main-content" onClick={event => { event.preventDefault(); focusSection("main-content"); }}>Skip to dispute</a>
       <header className="topbar">
         <div className="topbar-brand">
-          <h1 className="brand"><a className="console-home" href="#/">TriVerity<span className="brand-dot" aria-hidden="true">.</span><span className="sr-only"> home</span></a></h1>
+          <BrandHeading className="brand"><a className="console-home" href="#/">TriVerity<span className="brand-dot" aria-hidden="true">.</span><span className="sr-only"> Home</span></a></BrandHeading>
           <span className="topbar-context">
             <span className="byline">by <OeroMark /><strong>OeroAI</strong></span>
             {/* The context stays for screen readers; the bar itself shows only the brand. */}
@@ -536,8 +574,9 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
               ? <div className="sidebar-actions">
                   <FilterMenu value={filter} onChange={changeFilter} />
                   <SidebarNewButton onClick={newDispute} />
+                  {reportButton}
                 </div>
-              : <>{onHome && <FilterMenu value={filter} onChange={changeFilter} />}<SidebarNewButton onClick={newDispute} /></>}
+              : <>{onHome && <FilterMenu value={filter} onChange={changeFilter} />}<SidebarNewButton onClick={newDispute} />{reportButton}</>}
           </div>
           {!sidebarOpen && selected && <CurrentCaseShortcut id={selected.dispute_id} summary={disputeLabel(selected)} type={selected.type}
             icon={<TypeIcon type={selected.type} />} onOpen={openCurrentCase} />}
@@ -573,7 +612,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
           <div role="alert" aria-atomic="true">{error && <p className="error">{error}</p>}</div>
           {!form && (loadingSamples || samplesLoader) && <section className="card empty-state loading-disputes">
             {samplesLoader && <Loader3D size={112} />}
-            <div><h2>Loading disputes…</h2><p className="muted">The sample list is loading. No agents have run.</p></div>
+            <div><h2>Loading Disputes…</h2><p className="muted">The sample list is loading. No agents have run.</p></div>
           </section>}
           {onHome && <Home rows={queueRows} holds={decision.holds()} appealsWaiting={appeals === null ? null : waitingIds.size} showStart={Object.keys(results).length === 0}
             missing={missing} onDismissMissing={() => setMissing(null)} onReview={reviewCases} sampleIds={sampleIds} heldIds={decision.holds().map(hold => hold.disputeId)} runAllProgress={runAll} aiMode={aiMode} typeIcon={type => <TypeIcon type={type} />}
@@ -581,11 +620,16 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
           {!form && resolving && resolving !== selected?.dispute_id && <p className="small muted">Agents are working on {resolving}. This case remains available.</p>}
           {form && <DisputeForm key={form.template?.dispute_id ?? "blank"} template={form.template} onSubmit={addOwn} onCancel={() => setForm(null)}
             accessCode={accessCode} onAccessCodeChange={changeAccessCode} />}
-          {!form && selected && <section className="case-file" aria-labelledby="case-title">
-            <nav className="breadcrumb" aria-label="Breadcrumb"><ol>
+          {!form && selected && (reportOpen && canReport && resolution && reviewId
+            ? <CaseReport dispute={selected} resolution={resolution} saved={decision.saved} hold={decision.hold}
+                sent={sent} latest={latestSent} reviewNumber={sentRecords().earlier(selected.dispute_id, reviewId).length + 1} onBack={closeReport} />
+            : <section className="case-file" aria-labelledby="case-title">
+            <div className="case-breadcrumb-row"><nav className="breadcrumb" aria-label="Breadcrumb"><ol>
               <li><a href={HOME_HASH}>Console</a></li>
               <li aria-current="page">{selected.dispute_id}</li>
             </ol></nav>
+            {canReport && <button type="button" ref={caseReportButton} className="secondary-button case-report-trigger" onClick={() => openReport("case")}><Icon name="printer" />Case Report</button>}
+            </div>
             {reviewId && <ClosedCase disputeId={selected.dispute_id} sent={sent} latest={latestSent}
               events={sentRecords().events(reviewId)} earlier={sentRecords().earlier(selected.dispute_id, reviewId)}
               appealWaiting={waitingIds.has(selected.dispute_id)} openedAt={reviews().openedAt(reviewId)}
@@ -594,7 +638,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
               final={resolution ? headerFinalOutcome(resolution, selected, decision.saved, latestSent) : null} />
             <CaseBrief dispute={selected} resolution={resolution} showProposal={reviewed.has("ruling")} aiOff={aiMode === "offline"} />
             <WorkflowTabs active={activeTab} resolution={resolution} busy={resolving === selected.dispute_id}
-              closed={closed} auto={autoClosed} decisionRecorded={!!decision.saved}
+              closed={closed} auto={autoClosed} held={!!decision.hold} decisionRecorded={!!decision.saved}
               unlocking={completion?.id === selected.dispute_id}
               liveSteps={resolving === selected.dispute_id ? liveSteps : undefined} reviewed={reviewed} onChange={changeTab}
               render={tab => resolving === selected.dispute_id || completion?.id === selected.dispute_id
@@ -606,13 +650,13 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
                   {actions.run && needsAccessCode(selected.dispute_id, own) && <AccessCodeField ref={accessCodeInput} id={ACCESS_CODE_FIELD_ID}
                     value={accessCode} onChange={changeAccessCode} />}
                   <div className="run-bar case-run-bar">
-                    {resolution && <button className="run-button case-review-evidence" onClick={() => changeTab("evidence")}>Review evidence<Icon name="arrow" /></button>}
+                    {resolution && <button className="run-button case-review-evidence" onClick={() => changeTab("evidence")}>Review Evidence<Icon name="arrow" /></button>}
                     {actions.run ? <>
                       <button className={resolution ? "secondary-button" : "run-button"} onClick={() => resolve(selected)} disabled={resolving !== null}>
-                        {resolution ? "Re-run agents" : "Run agents"}
+                        {resolution ? "Re-run Agents" : "Run Agents"}
                       </button>
                       <RunCost offline={aiMode === "offline"} hasResult={!!resolution} />
-                      <button className="secondary-button" onClick={() => { setForm({ template: selected }); setError(null); }}>Edit as new dispute</button>
+                      <button className="secondary-button" onClick={() => { setForm({ template: selected }); setError(null); }}>Edit as New Dispute</button>
                     </> : <p className="small muted">Closed. Reopen the case to run the agents again.</p>}
                   </div>
                   <CasePanel dispute={selected} />
@@ -620,13 +664,15 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
                 {tab === "evidence" && resolution && <><FactLibrary facts={facts} activeId={activeFact} request={factRequest} expanded grouped onSelectFact={selectFact} dispute={selected} resolution={resolution} /><CollectorCalls collection={resolution.evidence_collection} /></>}
                 {tab === "hearing" && resolution && <Debate resolution={resolution} dispute={selected} aiOff={aiMode === "offline"} availableIds={factIds} onSelectFact={selectFact} />}
                 {tab === "ruling" && resolution && <>
-                  <VerdictSummary key={`ruling-${reviewId}`} resolution={resolution} dispute={selected} final={decision.saved || sent ? headerFinalOutcome(resolution, selected, decision.saved, latestSent) : null} availableIds={factIds} onSelectFact={selectFact} />
+                  {actions.decide && <RulesPanel resolution={resolution} />}
+                  <VerdictSummary key={`ruling-${reviewId}`} resolution={resolution} dispute={selected} final={decision.saved || sent ? headerFinalOutcome(resolution, selected, decision.saved, latestSent) : null} aiLive={aiMode === "live"} availableIds={factIds} onSelectFact={selectFact} />
                   <AutoResolvedNote autonomy={resolution.autonomy} closedAutomatically={sent?.reviewer?.kind === "auto"}
                     onSeeSent={() => changeTab("notify")} onReopen={reopenCase} />
                   {/* Nothing left to decide on a case the policy closed: the note above says why. */}
-                  {sent?.reviewer?.kind !== "auto" && <RulingChecks key={reviewId} resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />}
+                  {sent?.reviewer?.kind !== "auto" && <RulingChecks key={reviewId} resolution={resolution} extraRow={actions.decide ? <RulesRow resolution={resolution} /> : undefined} availableIds={factIds} onSelectFact={selectFact} />}
                   {judgeCodeField}
-                  {actions.decide ? <ReviewerDecision resolution={resolution} controller={decision} onContinue={() => changeTab("notify")} /> : sent && <ClosedSummary record={sent} />}
+                  {actions.decide ? <ReviewerDecision resolution={resolution} controller={decision} onContinue={() => changeTab("notify")}
+                    onNextCase={following ? goToFollowing : undefined} onHome={() => { window.location.hash = HOME_HASH; }} /> : sent && <ClosedSummary record={sent} />}
                   <AppealsPanel disputeId={selected.dispute_id} version={appealsVersion} onChanged={() => setAppealsVersion(v => v + 1)}
                     current={latestSent ? { decision: latestSent.decision, text: sentOutcomeText(latestSent) } : null} closed={closed} onReopen={reopenCase} />
 
@@ -643,7 +689,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
                 {(tab !== "ruling" || !resolution) && <AgentsStrip tab={tab} resolution={resolution} availableIds={factIds} onSelectFact={selectFact} />}
                 {tab === "ruling" && resolution && actions.decide && <DecisionBar resolution={resolution} controller={decision} unavailable={decisionsUnavailable} />}
               </>} />
-          </section>}
+          </section>)}
 
         </main>
         {cheer && (() => {
@@ -712,10 +758,10 @@ function CasePanel({ dispute }: { dispute: DisputeCase }) {
           ))}
         </dl>
       )}
-      <details className="case-details"><summary>Chat log and party history</summary>
+      <details className="case-details"><summary>Chat Log and Party History</summary>
       {dispute.chat_logs.length > 0 && (
         <>
-          <h3 className="section-label">Chat log</h3>
+          <h3 className="section-label">Chat Log</h3>
           <div className="chat">
             {dispute.chat_logs.map((m, i) => (
               <div key={i} className={`bubble ${m.sender}`}>

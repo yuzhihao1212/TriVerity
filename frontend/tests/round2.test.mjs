@@ -34,7 +34,7 @@ test('skip closed or unavailable guided cases and fall back after the last guide
 });
 
 test('non-guided cases keep the normal queue order and label', () => {
-  assert.deepEqual(nextAfterClose(rows, 'ordinary'), { row: rows[0], label: 'Next case: urgent →' });
+  assert.deepEqual(nextAfterClose(rows, 'ordinary'), { row: rows[0], label: 'Next Case: urgent →' });
   assert.equal(nextAfterClose([], 'ordinary'), null);
 });
 
@@ -132,5 +132,5 @@ test('every outcome has one wording, shared by the ruling, the lists and the age
 test('with the guided demo hidden, closing a guided case moves on in normal queue order', async () => {
   const { GUIDED_DEMO } = await load('homeState');
   assert.equal(GUIDED_DEMO, false);
-  assert.deepEqual(nextAfterClose(rows, 'D001'), { row: rows[0], label: 'Next case: urgent →' });
+  assert.deepEqual(nextAfterClose(rows, 'D001'), { row: rows[0], label: 'Next Case: urgent →' });
 });

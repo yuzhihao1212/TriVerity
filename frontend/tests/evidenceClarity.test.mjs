@@ -239,7 +239,7 @@ test('lookup merging, names, reasons and targets', () => {
   assert.equal(col.lookupReason('default plan'), 'Standard lookup (AI off)');
   assert.equal(col.lookupReason(''), null);
   assert.equal(col.lookupName({ tool: 'some_new_tool', args: {} }), 'Some new tool');
-  assert.deepEqual(col.lookupTarget({ source: 'trip', results: ['a', 'b'] }), { count: '2 facts', card: 'Trip finding', id: 'evidence-source-trip' });
+  assert.deepEqual(col.lookupTarget({ source: 'trip', results: ['a', 'b'] }), { count: '2 facts', card: 'Trip Finding', id: 'evidence-source-trip' });
   assert.equal(col.shortReason('x'.repeat(120)).length, 80);
   assert.ok(col.shortReason('x'.repeat(120)).endsWith('…'));
   assert.deepEqual([col.roundLabel(0, 1), col.roundLabel(0, 2), col.roundLabel(1, 2)], [null, 'First lookups', 'Follow-up lookups']);

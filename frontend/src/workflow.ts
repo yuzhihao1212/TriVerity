@@ -5,7 +5,7 @@ export const WORKFLOW_TABS = [
   { id: "evidence", label: "Evidence" },
   { id: "hearing", label: "Hearing" },
   { id: "ruling", label: "Ruling" },
-  { id: "notify", label: "Notify parties" },
+  { id: "notify", label: "Notify Parties" },
 ] as const;
 export type WorkflowTab = typeof WORKFLOW_TABS[number]["id"];
 

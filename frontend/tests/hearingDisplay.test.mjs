@@ -39,16 +39,16 @@ test('comparison combines both rounds, deduplicates and groups shared and exclus
     driver_case: opening(['GPS-1'], ['Steady movement'], reply(['TRIP-1', 'GPS-1'], ['Longer route', 'Steady movement'])),
   });
   assert.deepEqual(result, [
-    { title: 'Both sides cite', facts: [{ id: 'TRIP-1', text: 'Longer route' }], more: 0 },
-    { title: 'Only the rider', facts: [{ id: 'FARE-1', text: 'Higher fare' }, { id: 'CHAT-1', text: 'Rider asked why' }], more: 0 },
-    { title: 'Only the driver', facts: [{ id: 'GPS-1', text: 'Steady movement' }], more: 0 },
+    { title: 'Both Sides Cite', facts: [{ id: 'TRIP-1', text: 'Longer route' }], more: 0 },
+    { title: 'Only the Rider', facts: [{ id: 'FARE-1', text: 'Higher fare' }, { id: 'CHAT-1', text: 'Rider asked why' }], more: 0 },
+    { title: 'Only the Driver', facts: [{ id: 'GPS-1', text: 'Steady movement' }], more: 0 },
   ]);
 });
 
 test('comparison skips empty groups, including when neither side cites facts', () => {
   assert.deepEqual(comparisonGroups({ rider_case: opening(), driver_case: opening() }), []);
   assert.deepEqual(comparisonGroups({ rider_case: opening(['TRIP-1'], ['Longer route']), driver_case: opening() }), [
-    { title: 'Only the rider', facts: [{ id: 'TRIP-1', text: 'Longer route' }], more: 0 },
+    { title: 'Only the Rider', facts: [{ id: 'TRIP-1', text: 'Longer route' }], more: 0 },
   ]);
 });
 
@@ -81,7 +81,7 @@ test('three columns keep rider/both/driver order and count all unique IDs across
   const before = structuredClone(input);
   const view = hearingComparison(input);
   assert.deepEqual(view.columns.map(column => column.key), ['rider', 'both', 'driver']);
-  assert.deepEqual(view.columns.map(column => column.title), ['Only the rider', 'Both cited', 'Only the driver']);
+  assert.deepEqual(view.columns.map(column => column.title), ['Only the Rider', 'Both Cited', 'Only the Driver']);
   assert.deepEqual(view.counts, { rider: 2, both: 1, driver: 1 });
   assert.deepEqual(view.columns.map(column => column.facts.map(fact => fact.id)), [['FARE-1', 'CHAT-1'], ['TRIP-1'], ['GPS-1']]);
   assert.deepEqual(input, before);

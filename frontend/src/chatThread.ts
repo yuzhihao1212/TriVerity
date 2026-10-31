@@ -112,7 +112,7 @@ export function chatFactRows<T extends Fact>(facts: readonly T[], messages: read
 export const CHAT_CHECKS_NOTE = "Tone and disagreement are automated checks on the messages.";
 
 export function showFactsLabel(count: number, open: boolean): string {
-  return open ? `Hide ${count === 1 ? "the fact" : `${count} facts`}` : `Show ${count} ${count === 1 ? "fact" : "facts"}`;
+  return open ? `Hide ${count === 1 ? "the Fact" : `${count} Facts`}` : `Show ${count} ${count === 1 ? "Fact" : "Facts"}`;
 }
 
 export type FoldAction = { type: "toggle" } | { type: "reveal"; id: string | null };

@@ -4,6 +4,7 @@ import { AGENT_OPEN_KEY, readDetailOpen, writeDetailOpen } from "./detailDisclos
 import { EVIDENCE_FACTS_ID } from "./FactLibrary";
 import { reveal } from "./routes";
 import { agentLineParts, SOURCE_KEY, stepHeading } from "./agentDisplay";
+import { titleCase } from "./presentation";
 import { humanizeAgentMessage } from "./agentText";
 
 import { EvidenceText, type FactLinks } from "./EvidenceList";
@@ -40,9 +41,9 @@ export function AgentsStrip({ tab, resolution, availableIds, onSelectFact }: { t
     resolution={resolution} tab={tab} availableIds={availableIds} onSelectFact={onSelectFact} />;
   return <section className="agents-strip" aria-labelledby={`${id}-title`}>
     <div className="agents-head">
-      <div className="agents-title"><h3 className="section-label" id={`${id}-title`}>{stepHeading(tab)}</h3>{entries.length > 0 && <SourceKey />}</div>
+      <div className="agents-title"><h3 className="section-label" id={`${id}-title`}>{titleCase(stepHeading(tab))}</h3>{entries.length > 0 && <SourceKey />}</div>
       {entries.length > 0 && <button type="button" className="agents-toggle" aria-expanded={open} aria-controls={`${id}-body`} onClick={toggle}>
-        {open ? "Hide details" : "Show details"}<Icon name="arrow" className="agents-toggle-icon" />
+        {open ? "Hide Details" : "Show Details"}<Icon name="arrow" className="agents-toggle-icon" />
       </button>}
     </div>
     <div id={`${id}-body`}>
@@ -142,7 +143,7 @@ function ToolCalls({ calls }: { calls: NonNullable<NonNullable<Resolution["evide
       <h4 className="tool-column-title">{column.title}</h4>
       <ul className="tool-list">{column.calls.map((call, index) => <li key={`${call.round}-${call.tool}-${index}`}>
         <details className="tool-detail" title={toolTooltip(call)}>
-          <summary className={chipClass({ tone: "outline" })}><Icon name={toolIcon(call.tool)} />{toolName(call.tool)}{rounds > 1 && <span className="muted"> · round {call.round}</span>}</summary>
+          <summary className={chipClass({ tone: "outline" })}><Icon name={toolIcon(call.tool)} />{toolName(call.tool)}{rounds > 1 && <span className="muted"> · Round {call.round}</span>}</summary>
           <p>{toolTooltip(call)}</p>
         </details>
       </li>)}</ul>

@@ -4,11 +4,13 @@ import {
   decisionBar, overrideAmountCheck, INVESTIGATION_CHECKS, OVERRIDE_LABELS, overrideChoices, overrideError,
   overrideLine, readHeld, readSaved, REASON_PLACEHOLDER, rulingLine, secondApprovalLimit, writeHeld, writeSaved,
   type FinalDecision, type HoldRecord, type OverrideChoice, type SavedDecision,
+  panelShowing,
 } from "./decisionState";
 import { Icon } from "./Icon";
 import { clockText, maxRefund } from "./notifyState";
 import { ButtonLoader } from "./OeroAI";
 import { HunyuanMark } from "./SourceBadge";
+import { titleCase } from "./presentation";
 import { Term } from "./Term";
 import { ApiError, recordReviewerDecision } from "./services/api";
 import type { DisputeCase, Resolution } from "./types";
@@ -166,7 +168,9 @@ function useResize(phase: string) {
  * policy ruling struck through, your decision beside it); an investigation or a large refund
  * puts the case on hold for a second reviewer. Any decision can be changed until Notify.
  */
-export function ReviewerDecision({ resolution, controller, onContinue }: { resolution: Resolution; controller: DecisionController; onContinue?: () => void }) {
+export function ReviewerDecision({ resolution, controller, onContinue, onNextCase, onHome }: {
+  resolution: Resolution; controller: DecisionController; onContinue?: () => void; onNextCase?: () => void; onHome?: () => void;
+}) {
   const id = useId();
   const { escalated, mode, busy, saved, hold, error } = controller;
   const phase = saved ? "done" : hold ? "held" : mode === "override" ? "override" : "decide";
@@ -189,7 +193,7 @@ export function ReviewerDecision({ resolution, controller, onContinue }: { resol
       {phase === "decide" && <>
         <header className="decision-head">
           <Icon name="person" />
-          <h2 id={`${id}-title`}>Your call</h2>
+          <h2 id={`${id}-title`}>Your Call</h2>
           <p className="decision-head-sub">{escalated ? "The rules sent this dispute to you. A person makes the decision." : "The agents have finished. A person makes the final decision."}</p>
           <ol className="decision-chain" aria-label="Who did what">
             <li>{ai ? <><HunyuanMark />Hy3 argued</> : "Advocates argued"}</li>
@@ -201,10 +205,10 @@ export function ReviewerDecision({ resolution, controller, onContinue }: { resol
           <p className="decision-ruling"><span className="decision-ruling-label">Ruling</span> <strong>{ruling}</strong> · {confidence}% confidence</p>
           <div className="reviewer-actions">
             {escalated
-              ? <button type="button" className="run-button decision-main" disabled={busy} onClick={() => controller.startOverride()}>Make decision</button>
+              ? <button type="button" className="run-button decision-main" disabled={busy} onClick={() => controller.startOverride()}>Make Decision</button>
               : <>
                 <button type="button" className="run-button decision-main" disabled={busy} onClick={() => controller.accept()}>
-                  <ButtonLoader busy={busy} />{busy ? "Recording…" : <><Icon name="check" />{acceptLabel}</>}</button>
+                  <ButtonLoader busy={busy} />{busy ? "Recording…" : <><Icon name="check" />{titleCase(acceptLabel)}</>}</button>
                 <button type="button" className="secondary-button decision-alt" disabled={busy} onClick={() => controller.startOverride()}>Override…</button>
               </>}
           </div>
@@ -222,11 +226,14 @@ export function ReviewerDecision({ resolution, controller, onContinue }: { resol
         {/* The pencil means the rules were overridden; deciding an escalated case is a tick, like accepting. */}
         <DecisionMark kind={saved ? (saved.kind === "overridden" ? "overridden" : "accepted") : "held"} />
         <h2 id={`${id}-title`} ref={focusTarget} tabIndex={-1}>
-          {saved ? (saved.kind === "accepted" ? "Ruling accepted" : saved.kind === "overridden" ? "Ruling overridden" : "Decision saved") : "On hold for a second reviewer"}</h2>
+          {saved ? (saved.kind === "accepted" ? "Ruling Accepted" : saved.kind === "overridden" ? "Ruling Overridden" : "Decision Saved") : "On Hold for a Second Reviewer"}</h2>
         <p className="decision-result-line">{saved ? resultLine(saved, resolution, controller.fare) : `${hold!.why} · nobody is notified yet`}</p>
         <div className="decision-result-actions">
-          {saved && onContinue && <button type="button" className="run-button" onClick={onContinue}>Review messages<Icon name="arrow" /></button>}
-          <button type="button" className="text-button" onClick={() => controller.reopen()}>Change decision</button>
+          {saved && onContinue && <button type="button" className="run-button" onClick={onContinue}>Review Messages<Icon name="arrow" /></button>}
+          {/* On hold, this reviewer is done with the case: nothing more to do here until the second reviewer. */}
+          {!saved && onHome && <button type="button" className={onNextCase ? "secondary-button" : "run-button"} onClick={onHome}><Icon name="home" />Home</button>}
+          {!saved && onNextCase && <button type="button" className="run-button" onClick={onNextCase}>Next Case<Icon name="arrow" /></button>}
+          <button type="button" className="text-button" onClick={() => controller.reopen()}>Change Decision</button>
         </div>
       </div>}
     </section>
@@ -267,7 +274,7 @@ function OverrideForm({ id, resolution, controller, ruling, confidence, heading 
   return <>
     <header className="decision-head">
       <Icon name="warning" />
-      <h2 id={`${id}-title`} ref={heading} tabIndex={-1}>{escalated ? "Make your decision" : "Overriding the policy ruling"}</h2>
+      <h2 id={`${id}-title`} ref={heading} tabIndex={-1}>{escalated ? "Make Your Decision" : "Overriding the Policy Ruling"}</h2>
       <p className="decision-head-sub">Check this carefully before you confirm.</p>
     </header>
     <div className="decision-body">
@@ -291,12 +298,12 @@ function OverrideForm({ id, resolution, controller, ruling, confidence, heading 
       </div>
 
       <fieldset className="override-step">
-        <legend>1 · What should happen instead?</legend>
+        <legend>1 · What Should Happen Instead?</legend>
         <div className="override-chips">{choices.map(option =>
           <button key={option} type="button" className="override-chip" aria-pressed={choice === option} disabled={busy}
             onClick={() => controller.setChoice(option)}>
             {option === "investigate" && <Icon name="magnifier" />}
-            {option === "full_refund" && fare != null ? `Full refund $${fare.toFixed(2)}` : OVERRIDE_LABELS[option]}
+            {option === "full_refund" && fare != null ? `Full Refund $${fare.toFixed(2)}` : titleCase(OVERRIDE_LABELS[option])}
           </button>)}</div>
         {choice === "partial_refund" && <div className="override-sub">
           <label htmlFor={`${id}-amount`}>Refund amount</label>
@@ -324,7 +331,7 @@ function OverrideForm({ id, resolution, controller, ruling, confidence, heading 
           <p className="override-sub-title" id={`${id}-check`}>What needs checking?</p>
           <div className="override-chips" role="group" aria-labelledby={`${id}-check`}>{INVESTIGATION_CHECKS.map(item =>
             <button key={item} type="button" className="override-chip is-small" aria-pressed={check === item} disabled={busy}
-              onClick={() => controller.setCheck(item)}>{item}</button>)}</div>
+              onClick={() => controller.setCheck(item)}>{titleCase(item)}</button>)}</div>
           <p className="override-note is-warn"><Icon name="pause" />No one is notified yet. The case goes on hold in the home page list until a second reviewer decides.</p>
         </div>}
       </fieldset>
@@ -341,9 +348,9 @@ function OverrideForm({ id, resolution, controller, ruling, confidence, heading 
       </div>
       <div className="reviewer-actions">
         <button type="button" className="caution-button" disabled={busy} onClick={() => { setTried(true); if (!problem) controller.submit(); }}>
-          <ButtonLoader busy={busy} />{busy ? "Recording…" : <><Icon name={holds ? "pause" : "warning"} />{confirm}</>}</button>
+          <ButtonLoader busy={busy} />{busy ? "Recording…" : <><Icon name={holds ? "pause" : "warning"} />{titleCase(confirm)}</>}</button>
         <button type="button" className="secondary-button" disabled={busy} onClick={() => controller.setMode("idle")}>
-          {escalated ? "Cancel" : "Keep the policy ruling"}</button>
+          {escalated ? "Cancel" : "Keep the Policy Ruling"}</button>
       </div>
     </div>
   </>;
@@ -358,12 +365,16 @@ export function DecisionBar({ resolution, controller, unavailable }: { resolutio
   const view = decisionBar({ decision: resolution.decision, refund: resolution.refund_amount, busy: controller.busy, saved: controller.saved, unavailable, hold: controller.hold });
   const [panelInView, setPanelInView] = useState(false);
   useEffect(() => {
-    const panel = document.getElementById("reviewer-decision");
-    if (!panel || typeof IntersectionObserver === "undefined") return;
-    const observer = new IntersectionObserver(([entry]) => setPanelInView(entry.isIntersecting), { threshold: 0.15 });
-    observer.observe(panel);
-    return () => observer.disconnect();
-  }, []);
+    // Looked up on every check: the panel can be replaced while this bar stays mounted.
+    function check() {
+      const box = document.getElementById("reviewer-decision")?.getBoundingClientRect();
+      setPanelInView(!!box && panelShowing(box.top, box.bottom, window.innerHeight));
+    }
+    check();
+    window.addEventListener("scroll", check, { passive: true, capture: true });
+    window.addEventListener("resize", check);
+    return () => { window.removeEventListener("scroll", check, { capture: true }); window.removeEventListener("resize", check); };
+  }, [resolution, controller.mode, !!controller.saved, !!controller.hold]);
   const hidden = panelInView;
   function goToPanel() {
     controller.startOverride();
@@ -376,9 +387,9 @@ export function DecisionBar({ resolution, controller, unavailable }: { resolutio
       </p>
       {controller.mode !== "override" && view.actions.length > 0 && <div className="decision-bar-actions">
         {view.actions.includes("accept") && <button type="button" className="run-button" disabled={view.disabled} onClick={() => controller.accept()}>
-          <ButtonLoader busy={controller.busy} />{controller.busy ? "Recording…" : "Accept ruling"}</button>}
+          <ButtonLoader busy={controller.busy} />{controller.busy ? "Recording…" : "Accept Ruling"}</button>}
         {view.actions.includes("override") && <button type="button" className="secondary-button" disabled={view.disabled} onClick={goToPanel}>Override</button>}
-        {view.actions.includes("decide") && <button type="button" className="run-button" disabled={view.disabled} onClick={goToPanel}>Make decision</button>}
+        {view.actions.includes("decide") && <button type="button" className="run-button" disabled={view.disabled} onClick={goToPanel}>Make Decision</button>}
       </div>}
     </section>
   );

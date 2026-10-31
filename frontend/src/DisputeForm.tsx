@@ -165,7 +165,7 @@ export function DisputeForm({
   return (
     <form className="card dispute-form" onSubmit={submit}>
       <div className="card-head">
-        <h2>{template ? `New dispute based on ${template.dispute_id}` : "New dispute"}</h2>
+        <h2>{template ? `New Dispute Based on ${template.dispute_id}` : "New Dispute"}</h2>
       </div>
       <p className="small muted">
         Describe a dispute and the agents will resolve it. Facts you leave blank count as missing data.

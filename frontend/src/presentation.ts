@@ -4,6 +4,11 @@ export function disputeLabel(dispute: Pick<DisputeCase, "label" | "rider_claim">
   return dispute.label?.trim() || dispute.rider_claim;
 }
 
+/** A case's name as a title; a claim standing in for one stays as the rider wrote it. */
+export function disputeTitle(dispute: Pick<DisputeCase, "label" | "rider_claim">): string {
+  return dispute.label?.trim() ? titleCase(dispute.label.trim()) : dispute.rider_claim;
+}
+
 export function money(value: number | null | undefined): string {
   return value == null || !Number.isFinite(value) ? "Not provided" : `$${value.toFixed(2)}`;
 }
@@ -123,3 +128,25 @@ export function computedFacts(resolution: Resolution): EvidenceItem[] {
   // only the backend's own pairing (judge_evidence_ids) labels facts by position.
   return [...computed, ...referenced.filter(fact => !texts.has(fact.text))];
 }
+
+const SMALL_WORDS = new Set("a an and as at but by for from in into nor of on or per the to vs via with".split(" "));
+const UNITS = new Set(["m", "km", "min", "s"]);
+
+/**
+ * Title Case for buttons and titles built from data: each word capitalised, except small words
+ * like "in" or "of" (unless first, or after ":" or "·") and a unit after a number ("378 m").
+ * Hyphenated words keep their second part, as in "No-show" and "Re-run".
+ */
+export function titleCase(text: string): string {
+  let previous = "";
+  const parts = text.split(/(\s+)/);
+  return parts.map((word, index) => {
+    if (!word.trim()) return word;
+    const bare = word.replace(/[^A-Za-z]+$/, "").toLowerCase();
+    const opens = index === 0 || index === parts.length - 1 || /[:.·?]$/.test(previous);
+    const keep = !opens && (SMALL_WORDS.has(bare) || (UNITS.has(bare) && /\d$/.test(previous)));
+    previous = word;
+    return keep ? word : word.replace(/^[^A-Za-z0-9]*[a-z]/, lead => lead.toUpperCase());
+  }).join("");
+}
+

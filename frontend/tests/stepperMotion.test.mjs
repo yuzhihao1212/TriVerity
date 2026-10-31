@@ -24,7 +24,7 @@ test('after a run, steps 2-5 unlock in order, 180 ms apart, once the completion 
 
 test('the position line names the step', () => {
   assert.equal(m.positionText(1, 5, 'Evidence'), 'Step 2 of 5 · Evidence');
-  assert.equal(m.positionText(4, 5, 'Notify parties'), 'Step 5 of 5 · Notify parties');
+  assert.equal(m.positionText(4, 5, 'Notify Parties'), 'Step 5 of 5 · Notify Parties');
 });
 
 test('moves: forward and back, none for the same step; a running move is settled before the next', () => {

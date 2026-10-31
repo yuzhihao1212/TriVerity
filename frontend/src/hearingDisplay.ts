@@ -37,9 +37,9 @@ export function comparisonGroups(resolution: Resolution, limit = GROUP_LIMIT) {
   const rider = cited(resolution.rider_case), driver = cited(resolution.driver_case);
   const facts = factTexts(resolution);
   return [
-    { title: "Both sides cite", ids: [...rider].filter(id => driver.has(id)) },
-    { title: "Only the rider", ids: [...rider].filter(id => !driver.has(id)) },
-    { title: "Only the driver", ids: [...driver].filter(id => !rider.has(id)) },
+    { title: "Both Sides Cite", ids: [...rider].filter(id => driver.has(id)) },
+    { title: "Only the Rider", ids: [...rider].filter(id => !driver.has(id)) },
+    { title: "Only the Driver", ids: [...driver].filter(id => !rider.has(id)) },
   ].map(group => {
     const all = group.ids.map(id => ({ id, text: facts.get(id) ?? null }));
     // Facts with known text first, so the visible ones say something.
@@ -55,9 +55,9 @@ export const HEARING_CITATIONS_SEEN_KEY = "triverity.hearingCitationsSeen";
 export function hearingComparison(resolution: Resolution) {
   const groups = comparisonGroups(resolution, Infinity);
   const columns = ([
-    { key: "rider", title: "Only the rider", source: "Only the rider" },
-    { key: "both", title: "Both cited", source: "Both sides cite" },
-    { key: "driver", title: "Only the driver", source: "Only the driver" },
+    { key: "rider", title: "Only the Rider", source: "Only the Rider" },
+    { key: "both", title: "Both Cited", source: "Both Sides Cite" },
+    { key: "driver", title: "Only the Driver", source: "Only the Driver" },
   ] as const).map(column => {
     const group = groups.find(group => group.title === column.source);
     return { key: column.key, title: column.title, facts: group?.facts ?? [], count: group?.facts.length ?? 0 };
@@ -108,14 +108,14 @@ export const HEARING_INTRO_OFF = "AI is off, so each side's case uses template t
 
 /** The flow pills. The Ruling pill names the next step, never its outcome (evidence first). */
 export const HEARING_STEPS = [
-  { number: 1, label: "Each side makes its case", done: true },
-  { number: 2, label: "Each side replies", done: true },
-  { number: 3, label: "Ruling: the rules decide", done: false },
+  { number: 1, label: "Each Side Makes Its Case", done: true },
+  { number: 2, label: "Each Side Replies", done: true },
+  { number: 3, label: "Ruling: The Rules Decide", done: false },
 ] as const;
 
 export const HEARING_ROUNDS = {
-  opening: { title: "1 · Each side makes its case", sub: "What each advocate says happened, and the evidence and rule they lean on." },
-  replies: { title: "2 · Each side replies", sub: "Each advocate reads the other side's case once and answers its strongest point." },
+  opening: { title: "1 · Each Side Makes Its Case", sub: "What each advocate says happened, and the evidence and rule they lean on." },
+  replies: { title: "2 · Each Side Replies", sub: "Each advocate reads the other side's case once and answers its strongest point." },
 } as const;
 
 export const NO_RULE_CITED = "None: argues from the facts.";
@@ -128,8 +128,8 @@ export const RULE_CHECK_LABELS: Record<RuleCheck["verdict"], string> = {
 };
 
 export function partyHeading(side: "rider" | "driver", reply = false): string {
-  if (reply) return side === "rider" ? "Rider's reply" : "Driver's reply";
-  return side === "rider" ? "For the rider" : "For the driver";
+  if (reply) return side === "rider" ? "Rider's Reply" : "Driver's Reply";
+  return side === "rider" ? "For the Rider" : "For the Driver";
 }
 
 const CITATION_ID = /\b(?:TRIP|GPS|FARE|CHAT|HIST)-[1-9]\d*\b/g;
@@ -202,5 +202,34 @@ export function cardFacts(texts: string[], ids: string[], mention: string, other
   });
 }
 
-/** Facts shown under "Why" before the rest fold away. */
-export const WHY_LIMIT = 3;
+/** The link a reply opens with; the other side's words are in the card's fold. */
+export function replyLabel(other: "rider" | "driver"): string {
+  return `Answering the ${other === "rider" ? "Rider" : "Driver"}'s Point`;
+}
+
+export type CardFlag = { kind: "rule"; rule: string; text: string } | { kind: "fact"; text: string };
+
+const RULE_FLAGS: Partial<Record<RuleCheck["verdict"], string>> = {
+  does_not_apply: "does not apply to these facts",
+  favours_other_side: "favours the other side",
+};
+
+/**
+ * What stays visible when a card folds: a cited rule that doesn't help this side, and a fact
+ * only this side cites that its argument actually names (the rest would be noise).
+ */
+export function cardFlags(party: "rider" | "driver", rules: { rule: string; verdict?: RuleCheck["verdict"] }[], facts: CardFact[], mention: string): CardFlag[] {
+  const named = new Set(mention.match(CITATION_ID) ?? []);
+  return [
+    ...rules.flatMap(({ rule, verdict }): CardFlag[] => verdict && RULE_FLAGS[verdict] ? [{ kind: "rule", rule, text: RULE_FLAGS[verdict]! }] : []),
+    // One at most, and never account history: that isn't a fact about what happened on this trip.
+    ...facts.filter(fact => fact.only && fact.id && !fact.id.startsWith("HIST-") && named.has(fact.id)).slice(0, 1).map((fact): CardFlag => ({ kind: "fact", text: `Only the ${party} cites: ${fact.text}` })),
+  ];
+}
+
+/** Says what the fold holds, or null when it would be empty. */
+export function cardFoldLabel(what: "Argument" | "Reply", hasMore: boolean, facts: number, rules = 0): string | null {
+  const counts = [facts && `${facts} ${facts === 1 ? "Fact" : "Facts"}`, rules && `${rules} ${rules === 1 ? "Rule" : "Rules"}`].filter(Boolean);
+  if (!hasMore && !counts.length) return null;
+  return [hasMore ? (counts.length ? `Full ${what} and Evidence` : `Full ${what}`) : "Evidence", ...counts].join(" · ");
+}

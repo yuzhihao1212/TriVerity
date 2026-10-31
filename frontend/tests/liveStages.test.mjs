@@ -6,7 +6,7 @@ const s = await load('liveStages');
 const states = stages => stages.map(stage => `${stage.id}:${stage.state}`);
 
 test('the nine agents fall into four stages in run order', () => {
-  assert.deepEqual(s.LIVE_STAGES.map(stage => stage.title), ['Gather the evidence', 'Argue both sides', 'Answer each other', 'Check the policy']);
+  assert.deepEqual(s.LIVE_STAGES.map(stage => stage.title), ['Gather the Evidence', 'Argue Both Sides', 'Answer Each Other', 'Check the Policy']);
   assert.equal(s.LIVE_STAGES.flatMap(stage => stage.agents).length, 9);
 });
 

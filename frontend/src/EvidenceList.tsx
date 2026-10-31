@@ -76,7 +76,7 @@ function EvidenceRow({ item, related = [], only, isOnly, onlyLabel = "", availab
     <EvidenceText text={item.text} availableIds={availableIds} onSelectFact={onSelectFact} />
     {only && <>{" "}<Chip size="sm" tone="brand">{only}</Chip></>}
     {!!related.length && <details className="fact-related">
-      <summary>+{related.length} related<span className="sr-only"> {related.length === 1 ? "fact" : "facts"}</span></summary>
+      <summary>+{related.length} Related<span className="sr-only"> {related.length === 1 ? "fact" : "facts"}</span></summary>
       <ul>{related.map((fact, index) => <li key={`${fact.text}-${index}`} className="fact-original">
         {fact.id && <EvidenceId id={fact.id} availableIds={availableIds} onSelectFact={onSelectFact} />}
         <EvidenceText text={fact.text} availableIds={availableIds} onSelectFact={onSelectFact} />

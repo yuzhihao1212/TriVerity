@@ -23,15 +23,15 @@ export function groupByCategory<T extends { type: string }>(cases: readonly T[],
 }
 
 export const TYPE_LABELS: Record<DisputeCase["type"], string> = {
-  route_deviation: "Route deviation",
-  no_show_charge: "No-show charge",
+  route_deviation: "Route Deviation",
+  no_show_charge: "No-show Charge",
 };
 
 /** Menu order. `short` labels the removable chip shown while a filter is active. */
 export const FILTER_OPTIONS: { value: DisputeFilter; label: string; short: string | null }[] = [
-  { value: "all", label: "All disputes", short: null },
-  { value: "route_deviation", label: "Route deviation", short: "Route" },
-  { value: "no_show_charge", label: "No-show charge", short: "No-show" },
+  { value: "all", label: "All Disputes", short: null },
+  { value: "route_deviation", label: "Route Deviation", short: "Route" },
+  { value: "no_show_charge", label: "No-show Charge", short: "No-show" },
 ];
 
 const option = (value: string) => FILTER_OPTIONS.find(item => item.value === value) ?? FILTER_OPTIONS[0];
@@ -39,7 +39,7 @@ const option = (value: string) => FILTER_OPTIONS.find(item => item.value === val
 export function isFilter(value: string): value is DisputeFilter {
   return FILTER_OPTIONS.some(item => item.value === value);
 }
-/** "Route deviation"; "All disputes" for "all" or anything unknown. */
+/** "Route Deviation"; "All Disputes" for "all" or anything unknown. */
 export function filterLabel(value: string): string { return option(value).label; }
 /** "Route" / "No-show"; null when no filter is active. */
 export function filterShortLabel(value: string): string | null { return option(value).short; }

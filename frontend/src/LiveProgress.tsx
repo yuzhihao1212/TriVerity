@@ -16,8 +16,8 @@ import type { AgentLogEntry } from "./types";
 const SIDES: Record<string, { name: string; working: string }> = {
   rider_advocate: { name: "Rider", working: "Writing the rider's argument…" },
   driver_advocate: { name: "Driver", working: "Writing the driver's argument…" },
-  rider_rebuttal: { name: "Rider's reply", working: "Answering the driver…" },
-  driver_rebuttal: { name: "Driver's reply", working: "Answering the rider…" },
+  rider_rebuttal: { name: "Rider's Reply", working: "Answering the driver…" },
+  driver_rebuttal: { name: "Driver's Reply", working: "Answering the rider…" },
 };
 
 /**
@@ -134,8 +134,8 @@ export function LiveProgress({ disputeId, steps, startedAt, finishedAt = {}, end
     style={{ "--live-head": `${headHeight}px` } as CSSProperties}>
     {complete ? <div className="live-completion">
       <h2 ref={completionHeading} id="live-completed-title" tabIndex={-1}><Icon name="check" />{view.completionText}</h2>
-      <button type="button" className="run-button" onClick={onReviewEvidence}>Review the evidence →</button>
-    </div> : <div className="card-head"><div className="panel-head"><h2 id="loading-title" tabIndex={-1}>Agents working · {disputeId}</h2>
+      <button type="button" className="run-button" onClick={onReviewEvidence}>Review the Evidence →</button>
+    </div> : <div className="card-head"><div className="panel-head"><h2 id="loading-title" tabIndex={-1}>Agents Working · {disputeId}</h2>
       <Chip size="sm" tone="brand">{streaming ? "Live agent progress" : "Standard resolve"}</Chip></div></div>}
     <div ref={head} className={`live-progress-head${complete ? " complete" : ""}`}>
       <div className="live-progress-summary">
@@ -168,7 +168,7 @@ export function LiveProgress({ disputeId, steps, startedAt, finishedAt = {}, end
     {others.length > 0 && <ul className="live-lines live-others" aria-label="Other steps">
       {others.map(entry => <li key={entry.agent}><span>{progressName(entry.agent)}: {humanizeAgentMessage(entry.agent, stepMessage(entry)) || stepMessage(entry)}</span></li>)}
     </ul>}
-    {!complete && !follow && <button type="button" className="secondary-button live-jump" onClick={backToLive}>Back to live ↓</button>}
+    {!complete && !follow && <button type="button" className="secondary-button live-jump" onClick={backToLive}>Back to Live ↓</button>}
     {!complete && <p className="small muted">Previous saved results are retained until this run succeeds. Times are estimates from typical runs.</p>}
   </section>;
 }

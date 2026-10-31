@@ -201,10 +201,19 @@ def _user_prompt(case: DisputeCase, ruling: Ruling, rider_case: AgentCase, drive
     })
 
 
+# The narration is shown to people, so the Judge never sees the internal consistency labels.
+_CONSISTENCY_WORDS = {
+    "consistent": "consistent with similar past rulings",
+    "mixed": "similar past rulings went different ways",
+    "overridden": "reviewers decided similar past disputes differently",
+    "no_precedent": "no closely similar past ruling",
+}
+
+
 def _precedent_view(report: PrecedentReport) -> dict:
     """Retrieved precedents for the Judge: computed summaries only, never reviewer notes."""
     return {
-        "consistency": report.consistency,
+        "consistency": _CONSISTENCY_WORDS[report.consistency],
         "summary": report.summary,
         "similar_past_rulings": [
             {"id": m.id, "similarity": m.similarity, "decision": m.decision,

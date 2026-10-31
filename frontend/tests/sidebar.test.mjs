@@ -44,16 +44,16 @@ const source = await readFile(new URL('../src/sidebar.ts', import.meta.url), 'ut
 const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } });
 const { readSidebarOpen, writeSidebarOpen, SIDEBAR_KEY } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`);
 
-test('dispute list is open by default, remembers a collapse, and survives blocked storage', () => {
+test('dispute list is collapsed by default, remembers the choice, and survives blocked storage', () => {
   const store = new Map();
   const storage = { getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, v) };
-  assert.equal(readSidebarOpen(storage), true);
+  assert.equal(readSidebarOpen(storage), false);
   writeSidebarOpen(storage, false);
   assert.equal(store.get(SIDEBAR_KEY), 'collapsed');
   assert.equal(readSidebarOpen(storage), false);
   writeSidebarOpen(storage, true);
   assert.equal(readSidebarOpen(storage), true);
   const blocked = { getItem: () => { throw new Error('x'); }, setItem: () => { throw new Error('x'); } };
-  assert.equal(readSidebarOpen(blocked), true);
+  assert.equal(readSidebarOpen(blocked), false);
   assert.doesNotThrow(() => writeSidebarOpen(blocked, false));
 });

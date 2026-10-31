@@ -83,3 +83,17 @@ test('saved text: an automatic decision never claims a precedent', () => {
   assert.match(text, /Auto-resolved/);
   assert.match(text, /no precedent/);
 });
+
+test('next case passes over cases on hold, and is empty when only those are left', () => {
+  const rows = [{ id: 'held', status: 'decide', raisedAt: '2026-09-01' }, { id: 'open', status: 'decide', raisedAt: '2026-09-02' }, { id: 'current', status: 'decide', raisedAt: '2026-09-03' }];
+  assert.equal(hs.nextToReview(rows, 'current', ['held']).row.id, 'open');
+  assert.equal(hs.nextToReview(rows, 'current', []).row.id, 'held');
+  assert.equal(hs.nextToReview(rows, 'current', ['held', 'open']), null);
+});
+
+test('a case on hold is not counted as needing this reviewer', () => {
+  const rows = [{ id: 'held', status: 'decide' }, { id: 'open', status: 'decide' }, { id: 'auto', status: 'auto' }];
+  assert.equal(hs.greetingLine(rows, ['held']), '1 dispute needs your attention, out of 3 in your queue.');
+  assert.equal(hs.greetingLine(rows.slice(0, 1), ['held']), '1 dispute on hold, waiting for a second reviewer.');
+  assert.equal(hs.greetingLine(rows), '2 disputes need your attention, out of 3 in your queue.');
+});

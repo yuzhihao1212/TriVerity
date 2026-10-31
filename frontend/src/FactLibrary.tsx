@@ -60,12 +60,12 @@ export function FactLibrary({ facts, activeId, request, expanded = false, groupe
     : <ul className="fact-library-list">{facts.map((fact, index) => <FactRow key={fact.id ?? `${fact.source}-${index}`} fact={fact} context={context} />)}</ul>;
 
   return <section className={`card fact-library${grouped ? " evidence-display" : ""}`} id={grouped ? EVIDENCE_FACTS_ID : undefined} tabIndex={-1} aria-labelledby={`${id}-title`}>
-    <div className="panel-head"><h2 id={`${id}-title`}>{grouped ? "Evidence" : "Facts behind the citations"}</h2><InternalBadge detail="Computed facts · internal record" /></div>
+    <div className="panel-head"><h2 id={`${id}-title`}>{grouped ? "Evidence" : "Facts Behind the Citations"}</h2><InternalBadge detail="Computed facts · internal record" /></div>
     <p className="small muted evidence-intro">{grouped
       ? <>Pick a finding to see the facts behind it. <EvidenceInfo label="How evidence facts are matched">An ID is shown only when this response supplies an unambiguous ID/text pair. Facts that repeat the same value are shown once; open a related-facts link to read each original sentence.</EvidenceInfo></>
       : "Select an evidence ID in either round to find its exact fact here."}</p>
     <p className="sr-only" role="status" aria-live="polite">{activeId ? `Highlighted evidence ${activeId}` : ""}</p>
-    {!facts.length ? <p className="muted">No computed facts were returned.</p> : expanded ? body : <details ref={disclosure} className="disclosure"><summary>Browse {facts.length} referenced facts</summary>{body}</details>}
+    {!facts.length ? <p className="muted">No computed facts were returned.</p> : expanded ? body : <details ref={disclosure} className="disclosure"><summary>Browse {facts.length} Referenced Facts</summary>{body}</details>}
   </section>;
 }
 

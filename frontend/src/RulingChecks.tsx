@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 
 import { Chip } from "./Chip";
 import { EvidenceText, type FactLinks } from "./EvidenceList";
@@ -10,7 +10,7 @@ import { Term } from "./Term";
 import type { Resolution } from "./types";
 
 /** Ruling-only review questions. Counts and answers use only data supplied in this result. */
-export function RulingChecks({ resolution, availableIds, onSelectFact }: { resolution: Resolution } & FactLinks) {
+export function RulingChecks({ resolution, extraRow, availableIds, onSelectFact }: { resolution: Resolution; extraRow?: ReactNode } & FactLinks) {
   const id = useId();
   const [open, setOpen] = useState<Set<CheckRowId>>(() => new Set());
   const [opened, setOpened] = useState<Set<CheckRowId>>(() => new Set());
@@ -23,17 +23,18 @@ export function RulingChecks({ resolution, availableIds, onSelectFact }: { resol
   }
   return <section className="card ruling-checks" aria-labelledby={`${id}-title`}>
     <div className="ruling-checks-head">
-      <h2 id={`${id}-title`}>Check before you decide</h2>
+      <h2 id={`${id}-title`}>Check Before You Decide</h2>
       <Chip tone={priority.tone} size="sm">{priority.text}</Chip>
       <div className="ruling-checks-tools">
         <span className="small muted" role="status">{opened.size} of 4 opened</span>
         <button type="button" className="text-button" onClick={() => {
           setOpen(allOpen ? new Set() : new Set(rows.map(row => row.id)));
           if (!allOpen) setOpened(new Set(rows.map(row => row.id)));
-        }}>{allOpen ? "Close all" : "Open all"}</button>
+        }}>{allOpen ? "Close All" : "Open All"}</button>
       </div>
     </div>
     <div className="ruling-checks-list">
+      {extraRow}
       {rows.map(row => <div className={`ruling-check-row${row.tone === "warn" ? " look-closer" : ""}`} key={row.id}>
         <h3 className="ruling-check-question">
           <button type="button" className="ruling-check-trigger" aria-expanded={open.has(row.id)} aria-controls={`${id}-${row.id}-detail`}
@@ -41,7 +42,7 @@ export function RulingChecks({ resolution, availableIds, onSelectFact }: { resol
             <span className="ruling-check-marker" aria-hidden="true">▸</span>
             <span className={`ruling-check-status tone-${row.tone}`}><Icon name={row.icon} /></span>
             <span className="ruling-check-label">
-              <span className="ruling-check-title">{row.question}{row.id === "risk" && <Chip tone="outline" size="sm" icon="lock">Reviewer only</Chip>}</span>
+              <span className="ruling-check-title">{row.question}{row.id === "risk" && <Chip tone="outline" size="sm" icon="lock">Reviewer Only</Chip>}</span>
               <span className="ruling-check-answer">{row.answer}</span>
             </span>
           </button>
@@ -50,7 +51,7 @@ export function RulingChecks({ resolution, availableIds, onSelectFact }: { resol
           {...(!open.has(row.id) ? { inert: "" } : {})}>
           <div className="ruling-check-clip"><div className="ruling-check-body">
             {row.id === "why" && <>
-              <h4 className="ruling-plain-title">Judge’s explanation <SourceBadge source={resolution.explanation_source === "llm" ? "llm" : "fallback"} /></h4>
+              <h4 className="ruling-plain-title">Judge’s Explanation <SourceBadge source={resolution.explanation_source === "llm" ? "llm" : "fallback"} /></h4>
               <p className="ruling-plain-text"><EvidenceText text={resolution.explanation} availableIds={availableIds} onSelectFact={onSelectFact} /></p>
             </>}
             {row.id === "risk" && (resolution.risk.signals.length ? <>
@@ -74,6 +75,6 @@ export function RulingChecks({ resolution, availableIds, onSelectFact }: { resol
         </div>
       </div>)}
     </div>
-    {debugEnabled(window.location.search) && <details className="raw"><summary>Raw API response · internal record</summary><pre>{JSON.stringify(resolution, null, 2)}</pre></details>}
+    {debugEnabled(window.location.search) && <details className="raw"><summary>Raw API Response · Internal Record</summary><pre>{JSON.stringify(resolution, null, 2)}</pre></details>}
   </section>;
 }

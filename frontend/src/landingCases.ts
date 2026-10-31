@@ -13,11 +13,11 @@ type FeaturedCase = {
 
 // Curated snapshots of these synthetic samples, not a request to run the agents.
 const SAMPLES: readonly FeaturedCase[] = [
-  { id: "D001", icon: "route", title: "A detour and a refund", evidence: ["+44% route", "6-min stop"],
+  { id: "D001", icon: "route", title: "A Detour and a Refund", evidence: ["+44% route", "6-min stop"],
     evidenceSummary: "Route 44% longer, a 6-minute stop", decision: "partial_refund", refundAmount: 6.3 },
-  { id: "D007", icon: "shield", title: "When a human should step in", evidence: ["Threat in chat", "Fraud risk"],
+  { id: "D007", icon: "shield", title: "When a Human Should Step In", evidence: ["Threat in chat", "Fraud risk"],
     evidenceSummary: "Threat in chat, high bad-faith risk", decision: "needs_review" },
-  { id: "DISP-002", icon: "pin", title: "The organisers’ own case", evidence: ["0 m from pickup", "Waited 8 min"],
+  { id: "DISP-002", icon: "pin", title: "The Organisers’ Own Case", evidence: ["0 m from pickup", "Waited 8 min"],
     evidenceSummary: "Driver arrived 0 metres from pickup and waited 8 minutes", decision: "no_action" },
 ];
 

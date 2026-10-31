@@ -8,9 +8,9 @@ import { EvidenceInfo } from "./EvidenceDisclosure";
 import { EvidenceText, type FactLinks } from "./EvidenceList";
 import { Icon } from "./Icon";
 import { SourceBadge } from "./SourceBadge";
-import { money, outputSources, policyIds } from "./presentation";
+import { money, outputSources, policyIds, titleCase } from "./presentation";
 import { Term } from "./Term";
-import { CONFIDENCE_HELP, confidenceDisplay, refundSum, rulingConditionGroups, rulingCredits, rulingHero, decidedHero } from "./verdictDisplay";
+import { CONFIDENCE_HELP, confidenceDisplay, refundSum, rulingBrief, rulingConditionGroups, rulingCredits, rulingHero, rulingSides, decidedHero } from "./verdictDisplay";
 import type { FinalHeaderOutcome } from "./stepVisuals";
 import type { DisputeCase, Resolution } from "./types";
 
@@ -24,8 +24,8 @@ function seenRulings() {
   return seen;
 }
 
-export function VerdictSummary({ resolution, dispute, final = null, availableIds, onSelectFact }: {
-  resolution: Resolution; dispute: DisputeCase; final?: FinalHeaderOutcome | null;
+export function VerdictSummary({ resolution, dispute, final = null, aiLive = false, availableIds, onSelectFact }: {
+  resolution: Resolution; dispute: DisputeCase; final?: FinalHeaderOutcome | null; aiLive?: boolean;
 } & FactLinks) {
   const id = useId();
   const disputeId = dispute.dispute_id;
@@ -34,7 +34,7 @@ export function VerdictSummary({ resolution, dispute, final = null, availableIds
   const groups = rulingConditionGroups(resolution);
   const total = groups.reduce((sum, group) => sum + group.checks.length, 0);
   const sum = refundSum(resolution, dispute.fare);
-  const credits = rulingCredits(resolution);
+  const credits = rulingCredits(resolution, aiLive);
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [firstView] = useState(() => !window.matchMedia("(prefers-reduced-motion: reduce)").matches && !seenRulings().has(disputeId));
   const [intro, setIntro] = useState(false);
@@ -58,28 +58,64 @@ export function VerdictSummary({ resolution, dispute, final = null, availableIds
     media.addEventListener("change", reduce);
     return () => { cancelAnimationFrame(frame); media.removeEventListener("change", reduce); };
   }, [disputeId, hero.amount, firstView]);
-  const change = resolution.counterfactuals?.[0];
+  const brief = rulingBrief(resolution);
+  const sides = rulingSides(resolution);
+  const review = resolution.decision === "needs_review";
+  // The sentence describes the rules' result, which a reviewer may have gone against.
+  const overrode = !!final?.by && final.by !== "decided";
+  const warnBox = brief.triggers.length > 0 || !!brief.proposed;
   return <section id="ruling-summary" tabIndex={-1} className={`card verdict ruling ruling-revamp ${resolution.decision}${intro ? " ruling-intro" : ""}`} aria-labelledby={`${id}-title`}>
     <div className={`ruling-hero tone-${hero.tone}`}>
       <span className="ruling-outcome-icon"><Icon name={hero.icon} /></span>
       <div className="ruling-outcome">
-        <h2 id={`${id}-title`}>{hero.label}</h2>
-        <p className="ruling-amount"><span className="sr-only">{hero.headline} {hero.suffix}</span><span aria-hidden="true" className={`ruling-amount-number${hero.amount != null ? " money" : ""}`}>{animatedAmount != null ? money(animatedAmount) : hero.headline}</span>{hero.suffix && <span aria-hidden="true" className="ruling-amount-suffix">{hero.suffix}</span>}</p>
-      </div>
-      <div className={`ruling-confidence tone-${confidence.tone}`}>
-        <div className="ruling-confidence-title"><span>Confidence <EvidenceInfo label="About ruling confidence">{CONFIDENCE_HELP}</EvidenceInfo></span><strong>{confidence.percent}%</strong></div>
-        <div className="ruling-confidence-track" role="meter" aria-label="Ruling confidence" aria-valuemin={0} aria-valuemax={100} aria-valuenow={confidence.percent} aria-describedby={`${id}-confidence-note`}>
-          <span className="ruling-confidence-fill" style={{ width: `${confidence.percent}%` }} />
-          {confidence.thresholdPercent != null && <span className="ruling-confidence-marker" style={{ left: `${confidence.thresholdPercent}%` }} />}
-        </div>
-        <div className="ruling-confidence-scale" aria-hidden="true"><span>0%</span>{confidence.thresholdPercent != null && <span className={`ruling-confidence-threshold${confidence.thresholdPercent < 15 ? " near-start" : confidence.thresholdPercent > 85 ? " near-end" : ""}`} style={{ left: `${confidence.thresholdPercent}%` }}>{confidence.thresholdLabel} threshold</span>}<span>100%</span></div>
-        <p id={`${id}-confidence-note`} className="ruling-confidence-caption">{confidence.caption}</p>
+        {hero.solo ? <h2 id={`${id}-title`} className="ruling-solo-title">{hero.headline}</h2> : <>
+          <h2 id={`${id}-title`}>{titleCase(hero.label)}</h2>
+          <p className="ruling-amount"><span className="sr-only">{hero.headline} {hero.suffix}</span><span aria-hidden="true" className={`ruling-amount-number${hero.amount != null ? " money" : ""}`}>{animatedAmount != null ? money(animatedAmount) : hero.headline}</span>{hero.suffix && <span aria-hidden="true" className="ruling-amount-suffix">{hero.suffix}</span>}</p>
+        </>}
+        <p className="ruling-reason">{overrode ? `The rules alone found: ${brief.reason}` : brief.reason}</p>
       </div>
     </div>
-    {total > 0 && <div className="ruling-proof" aria-labelledby={`${id}-checks`}>
-      <h3 id={`${id}-checks`}>{hero.checklistTitle}</h3>
-      <div className="ruling-policy-summary"><span className="ruling-rule-tags">{policyIds(resolution.policy_refs).map(rule => <Chip key={rule} size="sm"><Term rule={rule} contained /></Chip>)}</span><p>{hero.summary}</p></div>
-      {groups.map((group, groupIndex) => {
+    {(brief.known.length > 0 || warnBox || (brief.changeLine && !review)) && <div className="ruling-brief">
+      {brief.known.length > 0 && <div className="ruling-brief-box">
+        <h3><Icon name="check" />{brief.knownTitle}</h3>
+        <ul>{brief.known.map(check => <li key={check.rule}><span className="sr-only">{check.status}: </span>{check.label}: <strong>{check.value}</strong></li>)}</ul>
+        {sum && <p className="ruling-sum">Charged <span>{sum.charged}</span> <span aria-hidden="true">−</span><span className="sr-only">minus</span> Expected <span>{sum.expected}</span> <span aria-hidden="true">=</span><span className="sr-only">equals</span> <strong>{sum.amount}</strong></p>}
+      </div>}
+      {brief.missing ? <div className="ruling-brief-box is-warn">
+        <h3><Icon name="warning" />What's Missing</h3>
+        <p><strong>{brief.missing.fact}.</strong> {brief.missing.changeLine}</p>
+      </div> : warnBox ? <div className="ruling-brief-box is-warn">
+        <h3><Icon name="warning" />{final?.by ? "Why It Needed You" : "Why It Needs You"}</h3>
+        <ul>{brief.triggers.map(check => <li key={check.rule}>{check.label}: <strong>{check.value}</strong>
+          {check.rule === "FRAUD-1" && brief.riskReasons.length > 0 && <>
+            <ul className="ruling-risk-reasons">{brief.riskReasons.map(reason => <li key={reason}>{reason}</li>)}</ul>
+            <p className="ruling-risk-note">A signal isn't proof. It's a reason to look closer.</p>
+          </>}
+        </li>)}</ul>
+        {brief.proposed && <p className="ruling-proposed"><strong>The Rules Propose:</strong> {brief.proposed}.</p>}
+      </div> : brief.changeLine && !review ? <div className="ruling-brief-box">
+        <h3><Icon name="swap" />What Would Change It</h3>
+        <p>{brief.changeLine}</p>
+      </div> : null}
+    </div>}
+    {sides && !final?.by && <div className="ruling-sides" aria-labelledby={`${id}-sides`}>
+      <h3 id={`${id}-sides`}>What Each Side Asks For</h3>
+      <div className="ruling-brief">
+        <div className="ruling-side"><h4><Icon name="person" />Rider</h4><p>{sides.rider}</p></div>
+        <div className="ruling-side"><h4><Icon name="wheel" />Driver</h4><p>{sides.driver}</p></div>
+      </div>
+    </div>}
+    <p className={`ruling-credit${credits.warn ? " is-warn" : ""}`}>
+      <span><SourceBadge source="code" /> decided the outcome.</span><span aria-hidden="true">·</span>
+      <span><SourceBadge source={credits.source} /> {credits.text}</span><span aria-hidden="true">·</span>
+      <span className="ruling-confidence-line">{confidence.label} · {confidence.percent}% <EvidenceInfo label="About ruling confidence">{CONFIDENCE_HELP}</EvidenceInfo></span>
+    </p>
+    <details className="ruling-details">
+      <summary>Rules and Sources</summary>
+      <p className="ruling-confidence-note">{confidence.caption}</p>
+      {brief.changeLine && review && !brief.missing && <p className="ruling-change"><Icon name="swap" /><span><strong>What would change it: </strong>{brief.changeLine}</span></p>}
+      <span className="ruling-rule-tags">{policyIds(resolution.policy_refs).map(rule => <Chip key={rule} size="sm"><Term rule={rule} contained /></Chip>)}</span>
+      {total > 0 && groups.map((group, groupIndex) => {
         const offset = groups.slice(0, groupIndex).reduce((sum, previous) => sum + previous.checks.length, 0);
         const list = <ul className="ruling-condition-list">{group.checks.map((check, index) => <li key={`${check.rule}-${index}`} style={{ "--condition-delay": `${200 + (offset + index) / Math.max(1, total - 1) * 850}ms` } as CSSProperties}>
             <span className={`ruling-condition-symbol${check.met ? " met" : ""}`} aria-hidden="true">{check.symbol}</span>
@@ -90,7 +126,7 @@ export function VerdictSummary({ resolution, dispute, final = null, availableIds
         // The deciding and other rule checks stay open; only the escalation checks fold.
         return group.key === "overlays" && groups.length > 1
           ? <details key={group.key} className={`ruling-condition-group is-${group.key}`}>
-              <summary className="ruling-condition-group-title">{group.title} · {group.checks.length} {group.checks.length === 1 ? "check" : "checks"}</summary>
+              <summary className="ruling-condition-group-title">{group.title} · {group.checks.length} {group.checks.length === 1 ? "Check" : "Checks"}</summary>
               {list}
             </details>
           : <section key={group.key} className={`ruling-condition-group is-${group.key}`} aria-labelledby={`${id}-${group.key}`}>
@@ -98,17 +134,11 @@ export function VerdictSummary({ resolution, dispute, final = null, availableIds
               {list}
             </section>;
       })}
-      {sum && <p className="ruling-sum">Charged <span>{sum.charged}</span> <span aria-hidden="true">−</span><span className="sr-only">minus</span> Expected <span>{sum.expected}</span> <span aria-hidden="true">=</span><span className="sr-only">equals</span> <strong>{sum.amount}</strong></p>}
-    </div>}
-    {change && <p className="ruling-change"><Icon name="swap" /><span><strong>What would change it: </strong>If {change.change}, the outcome would be {change.outcome}.</span></p>}
-    <footer className="ruling-credit">
-      <span><SourceBadge source="code" /> decided the outcome.</span><span aria-hidden="true">·</span>
-      <span><SourceBadge source={credits.source} /> {credits.text}</span><span aria-hidden="true">·</span>
-      <button type="button" className="text-button" aria-expanded={sourcesOpen} aria-controls={`${id}-sources`} onClick={() => setSourcesOpen(open => !open)}>See which steps used AI <span aria-hidden="true">{sourcesOpen ? "▾" : "▸"}</span></button>
-    </footer>
-    <div id={`${id}-sources`} className="ruling-source-details" hidden={!sourcesOpen}>
-      <div className="output-sources" aria-label="AI and fallback status">{outputSources(resolution).map(item => <span className="output-source small" key={item.label}>{item.label} {item.source ? <SourceBadge source={item.source} /> : <Chip size="sm" tone="outline">Not run</Chip>}</span>)}</div>
-      <AgentsStrip tab="ruling" resolution={resolution} availableIds={availableIds} onSelectFact={onSelectFact} />
-    </div>
+      <button type="button" className="text-button" aria-expanded={sourcesOpen} aria-controls={`${id}-sources`} onClick={() => setSourcesOpen(open => !open)}>See Which Steps Used AI <span aria-hidden="true">{sourcesOpen ? "▾" : "▸"}</span></button>
+      <div id={`${id}-sources`} className="ruling-source-details" hidden={!sourcesOpen}>
+        <div className="output-sources" aria-label="AI and fallback status">{outputSources(resolution).map(item => <span className="output-source small" key={item.label}>{item.label} {item.source ? <SourceBadge source={item.source} /> : <Chip size="sm" tone="outline">Not run</Chip>}</span>)}</div>
+        <AgentsStrip tab="ruling" resolution={resolution} availableIds={availableIds} onSelectFact={onSelectFact} />
+      </div>
+    </details>
   </section>;
 }

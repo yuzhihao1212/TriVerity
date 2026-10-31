@@ -51,7 +51,7 @@ export function CollectorCalls({ collection }: { collection?: Resolution["eviden
   });
   return <section className="card collector-calls" aria-labelledby={AUDIT_TITLE_ID}>
     <div className="card-head">
-      <div className="panel-head"><h2 id={AUDIT_TITLE_ID} tabIndex={-1}>How the evidence was gathered</h2><Chip size="sm" tone="outline">Audit trail</Chip></div>
+      <div className="panel-head"><h2 id={AUDIT_TITLE_ID} tabIndex={-1}>How the Evidence Was Gathered</h2><Chip size="sm" tone="outline">Audit trail</Chip></div>
       <span className="collector-source">
         <SourceBadge source={collection.source} />
       </span>
@@ -59,7 +59,7 @@ export function CollectorCalls({ collection }: { collection?: Resolution["eviden
     <p className="collector-summary"><strong>{summary.lead}</strong>{summary.rest}</p>
     {collection.source === "fallback" && <p className="small muted">{FALLBACK_EXPLANATION}</p>}
     {!!calls.length && <button type="button" className="agents-toggle collector-toggle" aria-expanded={open} aria-controls={AUDIT_BODY_ID} onClick={toggle}>
-      {open ? "Hide the lookups" : `Show the ${calls.length} lookups`}<Icon name="arrow" className="agents-toggle-icon" />
+      {open ? "Hide the Lookups" : `Show the ${calls.length} Lookups`}<Icon name="arrow" className="agents-toggle-icon" />
     </button>}
     <div id={AUDIT_BODY_ID} hidden={!open}>
       {rounds.map((round, index) => {
@@ -105,7 +105,7 @@ function LookupItem({ row, only = false }: { row: LookupRow; only?: boolean }) {
       }}>
         <strong>{target.card}</strong></a></p>}
     {!!results.length && <details className="disclosure lookup-raw">
-      <summary>Show the raw results</summary>
+      <summary>Show the Raw Results</summary>
       <ul className="small">{results.map((line, index) => <li key={index}><code>{line}</code></li>)}</ul>
     </details>}
   </li>;

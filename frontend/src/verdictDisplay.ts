@@ -1,4 +1,5 @@
 import { confidenceNote } from "./decisionState";
+import { bottomLine, withoutCitations } from "./hearingDisplay";
 import { decisionTone } from "./outcomeTone";
 import { PARTY_DECISION_LABELS } from "./partyView";
 import { money } from "./presentation";
@@ -23,7 +24,59 @@ export function confidenceDisplay(result: Pick<Resolution, "confidence" | "min_c
     // auto-resolve limits close without a person (the reasons are listed under the ruling).
     : result.autonomy?.eligible && !result.autonomy.audit ? "High enough, and within the limits, to close automatically."
     : `${result.confidence === threshold ? "At" : "Above"} the ${thresholdLabel} minimum: the rules decide, and a person confirms.`;
-  return { percent, thresholdPercent, thresholdLabel, tone, caption };
+  const label = known && result.confidence < threshold ? "Low Confidence" : "Confidence";
+  return { percent, thresholdPercent, thresholdLabel, tone, caption, label };
+}
+
+const TRIGGER_WORDS: Record<string, string> = {
+  "SAFE-1": "a threatening message in the chat",
+  "FRAUD-1": "a high bad-faith risk",
+  "PREC-1": "contrary reviewer decisions on similar cases",
+  "ESC-1": "confidence below the minimum",
+};
+
+const listWords = (items: string[]) => items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+const firstUpper = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
+/** Why FRAUD-1 fired: the signals of whichever party rated high, as the backend worded them. */
+function riskReasons({ risk }: Partial<Pick<Resolution, "risk">>, fraudFired: boolean): string[] {
+  if (!risk || !fraudFired) return [];
+  const high = [risk.rider_risk === "high" && "Rider", risk.driver_risk === "high" && "Driver"].filter(Boolean) as string[];
+  return risk.signals.filter(signal => high.some(party => signal.startsWith(party)));
+}
+
+/**
+ * The Ruling at a glance, in plain words: why this outcome, what the rules established, and
+ * what would settle or change it. Only rearranges what the engine supplied.
+ */
+export function rulingBrief(result: Pick<Resolution, "decision" | "policy_refs" | "conditions" | "recommended_action" | "counterfactuals"> & Partial<Pick<Resolution, "risk">>) {
+  const applied = appliedRuleIds(result.policy_refs);
+  const checks = rulingConditions(result);
+  const base = checks.filter(check => !OVERLAY_RULES.test(check.rule));
+  const review = result.decision === "needs_review";
+  const change = result.counterfactuals?.[0];
+  const changeLine = change ? `If ${change.change}, the outcome would be ${change.outcome}.` : null;
+  const known = review
+    ? base.filter(check => check.met && !/available$/i.test(check.label))
+    : base.filter(check => applied.includes(check.rule) && !/available$/i.test(check.label));
+  if (!review) return { reason: rulingSummary(result), knownTitle: "What the Rules Found", known, missing: null, triggers: [], riskReasons: [], proposed: null, changeLine };
+  const triggers = checks.filter(check => OVERLAY_RULES.test(check.rule) && check.met && applied.includes(check.rule));
+  const gap = /^Escalate to a human reviewer: (.+?)\.?$/.exec(result.recommended_action)?.[1] ?? null;
+  const proposed = /\(proposed: (.+?)\.?\)$/.exec(result.recommended_action)?.[1] ?? null;
+  const words = triggers.flatMap(check => TRIGGER_WORDS[check.rule] ? [TRIGGER_WORDS[check.rule]] : []);
+  const reason = gap ? `The system can't rule on this case, because ${gap}.`
+    : words.length ? `The system can't close this case, because of ${listWords(words)}.`
+    : rulingSummary(result);
+  const missing = gap ? { fact: firstUpper(gap.replace(/\s+(?:is|are)\s+(?:missing|incomplete)$/i, "")), changeLine } : null;
+  return { reason, knownTitle: "What We Know", known, missing, triggers, riskReasons: riskReasons(result, triggers.some(check => check.rule === "FRAUD-1")), proposed, changeLine };
+}
+
+/** What each side asks for: their opening sentence. Template text isn't a position, so AI runs only. */
+export function rulingSides(result: Pick<Resolution, "decision" | "rider_case" | "driver_case">) {
+  if (result.decision !== "needs_review" || result.rider_case.source !== "llm" || result.driver_case.source !== "llm") return null;
+  const ask = (summary: string) => withoutCitations(bottomLine(summary).first);
+  const rider = ask(result.rider_case.summary), driver = ask(result.driver_case.summary);
+  return rider && driver ? { rider, driver } : null;
 }
 
 /**
@@ -58,9 +111,11 @@ export function rulingHero(result: Pick<Resolution, "decision" | "refund_amount"
   return {
     label: PARTY_DECISION_LABELS[result.decision], tone: decisionTone(result.decision), amount,
     icon: refund ? "receipt" : result.decision === "needs_review" ? "warning" : "check",
-    headline: amount != null ? money(amount) : result.decision === "needs_review" ? "Awaiting human review" : refund ? "Refund approved" : "The charge stands",
+    headline: amount != null ? money(amount) : result.decision === "needs_review" ? "You Decide This Case" : refund ? "Refund Approved" : "The Charge Stands",
+    // A case waiting on the reviewer needs no label above the headline: it would say the same thing.
+    solo: result.decision === "needs_review",
     suffix: amount != null ? "back to the rider" : "",
-    checklistTitle: amount != null ? `Why the rider gets ${money(amount)}` : result.decision === "needs_review" ? "Why a human needs to decide" : refund ? "Why the refund is approved" : "Why the charge stands",
+    checklistTitle: amount != null ? `Why the rider gets ${money(amount)}` : result.decision === "needs_review" ? "Why a Human Needs to Decide" : refund ? "Why the Refund Is Approved" : "Why the charge stands",
     summary: rulingSummary(result),
   };
 }
@@ -72,12 +127,13 @@ export function decidedHero(hero: ReturnType<typeof rulingHero>, final: FinalHea
   const amount = refund && final.amount != null ? final.amount : null;
   return {
     ...hero,
-    label: final.by === "decided" ? "Reviewer decided" : "Reviewer overrode the rules",
+    label: final.by === "decided" ? "Reviewer Decided" : "Reviewer Overrode the Rules",
     tone: decisionTone(final.decision), amount,
     icon: refund ? "receipt" : "check",
     headline: amount != null ? money(amount) : PARTY_DECISION_LABELS[final.decision],
+    solo: false,
     suffix: amount != null ? "back to the rider" : "",
-    checklistTitle: final.by === "decided" ? "Why a human needed to decide" : "What the rules found",
+    checklistTitle: final.by === "decided" ? "Why a Human Needed to Decide" : "What the Rules Found",
   };
 }
 
@@ -98,9 +154,9 @@ export function rulingConditionGroups(result: Pick<Resolution, "conditions" | "p
   const rules = others.filter(check => !OVERLAY_RULES.test(check.rule));
   const overlays = others.filter(check => OVERLAY_RULES.test(check.rule));
   return [
-    { key: "deciding", title: "Decided the case", checks: rulingConditions({ conditions: deciding }) },
-    { key: "others", title: deciding.length ? "Also checked" : "Checked by the rules", checks: rulingConditions({ conditions: rules }) },
-    { key: "overlays", title: "Safety, fraud, precedent and confidence checks", checks: rulingConditions({ conditions: overlays }) },
+    { key: "deciding", title: "Decided the Case", checks: rulingConditions({ conditions: deciding }) },
+    { key: "others", title: deciding.length ? "Also Checked" : "Checked by the rules", checks: rulingConditions({ conditions: rules }) },
+    { key: "overlays", title: "Safety, Fraud, Precedent and Confidence Checks", checks: rulingConditions({ conditions: overlays }) },
   ].filter(group => group.checks.length > 0);
 }
 
@@ -114,9 +170,12 @@ export function refundSum(result: Pick<Resolution, "decision" | "refund_amount">
   return { charged: money(charged), expected: money(expected), amount: money(difference), text: `Charged ${money(charged)} − Expected ${money(expected)} = ${money(difference)}` };
 }
 
-export function rulingCredits(result: Pick<Resolution, "explanation_source" | "rider_case" | "driver_case">) {
+export function rulingCredits(result: Pick<Resolution, "explanation_source" | "rider_case" | "driver_case">, aiLive = false): { source: "llm" | "fallback"; text: string; warn?: boolean } {
   const rider = result.rider_case.source === "llm", driver = result.driver_case.source === "llm", judge = result.explanation_source === "llm";
-  if (rider && driver && judge) return { source: "llm" as const, text: "Hy3 wrote the arguments and this explanation." };
-  if (!rider && !driver && !judge) return { source: "fallback" as const, text: "Checked fallback text supplies the arguments and explanation." };
-  return { source: "llm" as const, text: "Hy3 and checked fallback text supplied these steps." };
+  if (rider && driver && judge) return { source: "llm", text: "Hy3 wrote the arguments and this explanation." };
+  // The pill says AI Live, so a result without any AI has to say so plainly.
+  if (!rider && !driver && !judge) return { source: "fallback", warn: aiLive, text: aiLive
+    ? "AI Live is on, but this result used fallback text. Re-run to try Hy3."
+    : "Checked fallback text supplies the arguments and explanation." };
+  return { source: "llm", text: "Hy3 and checked fallback text supplied these steps." };
 }

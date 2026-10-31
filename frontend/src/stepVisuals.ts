@@ -46,6 +46,7 @@ function liveDone(tab: WorkflowTab, agents: Set<string>): boolean {
 
 /** Text shown on Ruling instead of "Next: Notify parties" until the reviewer decides. */
 export const DECIDE_FIRST = "Accept or override the ruling to continue to Notify.";
+export const HOLD_NOTE = "Nobody is notified until a second reviewer decides.";
 
 /**
  * The step footer: "primary" when moving on is the next thing to do, "secondary" when
