@@ -1,0 +1,131 @@
+/* The owl's rig (Mascot.tsx): feet stay on the ground while the body, head and each wing move on
+   their own. Each part has two layers: a pose that eases between standing and sitting, and a
+   motion inside it for breathing and actions, so the two never fight over one property. */
+.owl-svg { display: block; overflow: visible; filter: drop-shadow(0 6px 10px rgb(80 30 40 / .14)); transition: opacity .2s ease; }
+.owl-svg.is-loading { opacity: 0; }
+.owl-rig g, .owl-feet { transform-box: view-box; }
+.owl-rig, .owl-torso-pose, .owl-torso { transform-origin: 432px 835px; }
+.owl-head-pose, .owl-head { transform-origin: 440px 490px; }
+/* Proportions: a smaller head on a fuller body, with the scarf fitted to the neck between them. */
+.owl-head-pose { scale: .86; }
+.owl-belly { transform-origin: 432px 820px; scale: 1.1 1.1; }
+.owl-band { transform-origin: 448px 500px; scale: .9 .94; translate: 0 4px; }
+/* How far the feathers have spread: 0 folded, 1 open. Registered so it can animate. */
+@property --fan { syntax: "<number>"; inherits: true; initial-value: 0; }
+.owl-wing-l-pose, .owl-wing-l { transform-origin: 280px 530px; }
+.owl-wing-r-pose, .owl-wing-r { transform-origin: 584px 530px; }
+.owl-feather { transform-origin: 280px 530px; }
+.owl-wing-l-pose { translate: -20px 8px; }
+.owl-wing-r-pose { translate: 20px 8px; }
+.owl-f-outer { rotate: calc(7deg + var(--fan) * 17deg); }
+.owl-f-mid { rotate: calc(var(--fan) * 3deg); }
+.owl-f-inner { rotate: calc(-8deg - var(--fan) * 11deg); }
+.owl-wing-shade { fill: #5a2f30; opacity: .26; translate: 12px 8px; }
+
+.owl-tail-pose { translate: -30px 6px; }
+.owl-tail-pose, .owl-tail { transform-origin: 712px 490px; }
+
+/* Sitting: the body settles over its feet, the head sinks and the wings fold in. */
+.mascot .mascot-body.is-asleep { rotate: none; }
+.is-asleep .owl-torso-pose { translate: 0 50px; scale: 1.05 .94; }
+.is-asleep .owl-head-pose { translate: 0 20px; rotate: 5deg; }
+.is-asleep .owl-wing-l-pose { translate: -14px 14px; rotate: -7deg; }
+.is-asleep .owl-wing-r-pose { translate: 14px 14px; rotate: 7deg; }
+.is-asleep .owl-tail-pose { rotate: 16deg; translate: -30px 6px; }
+.mascot-stage:has(.is-asleep) .mascot-shadow { scale: 1.2 1; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .owl-torso-pose, .owl-head-pose, .owl-wing-l-pose, .owl-wing-r-pose, .owl-tail-pose, .mascot-shadow {
+    transition: translate .7s ease, scale .7s ease, rotate .7s ease;
+    /* A soft settle with a small overshoot, where the browser supports it. */
+    transition-timing-function: linear(0, .1 8%, .37 18%, .72 32%, 1.02 48%, 1.08 58%, 1.05 70%, 1.01 84%, 1);
+  }
+  .is-asleep .owl-head-pose { transition-delay: .08s; }
+  .is-asleep .owl-wing-l-pose, .is-asleep .owl-wing-r-pose { transition-delay: .14s; }
+
+  /* Alive at rest: every part on its own slow rhythm, so nothing moves in lockstep. */
+  .owl-torso { animation: owl-breathe 3.8s ease-in-out infinite; }
+  .owl-head { animation: owl-head-idle 5.3s ease-in-out infinite; }
+  .owl-wing-l { animation: owl-wing-idle-l 4.7s ease-in-out infinite; }
+  .owl-wing-r { animation: owl-wing-idle-r 5.9s ease-in-out infinite; }
+  .owl-tail { animation: owl-tail-idle 3.1s ease-in-out infinite; }
+  .is-asleep .owl-tail { animation: none; }
+  .act-hop .owl-tail, .act-ruffled .owl-tail { animation: owl-tail-whip .62s ease-out; }
+
+  /* Asleep: a slower, deeper breath; the head rises and falls with it, and the wings keep still. */
+  .is-asleep .owl-torso { animation: owl-breathe-deep 5.4s ease-in-out infinite; }
+  .is-asleep .owl-head { animation: owl-head-doze 5.4s ease-in-out infinite; }
+  .is-asleep .owl-wing-l, .is-asleep .owl-wing-r { animation: none; }
+
+  /* Hop: crouch, spring up with the wings beating, land soft. The head trails the body. */
+  .act-hop .owl-rig { animation: owl-hop .62s cubic-bezier(.3, .7, .3, 1); }
+  .act-hop .owl-torso { animation: owl-hop-squash .62s ease-out; }
+  .act-hop .owl-head { animation: owl-head-lag .62s .04s ease-out; }
+  .act-hop .owl-wing-l { animation: owl-beat-l .62s ease-out, owl-fan .62s ease-out; }
+  .act-hop .owl-wing-r { animation: owl-beat-r .62s ease-out, owl-fan .62s ease-out; }
+  .mascot-stage:has(.act-hop) .mascot-shadow { animation: owl-shadow-hop .62s cubic-bezier(.3, .7, .3, 1); }
+
+  /* Wave: dips first, swings up with an overshoot, waves twice, and settles. The body leans away. */
+  .act-wave .owl-wing-l { animation: owl-wave 1.3s cubic-bezier(.4, 0, .3, 1), owl-fan-hold 1.3s ease-in-out; }
+  .act-wave .owl-wing-r { animation: owl-wave-balance 1.3s ease-in-out; }
+  .act-wave .owl-torso { animation: owl-wave-lean 1.3s ease-in-out; }
+  .act-wave .owl-head { animation: owl-wave-head 1.3s ease-in-out; }
+
+  .act-tilt .owl-head { animation: owl-tilt .9s ease-in-out; }
+  .act-tilt .owl-wing-r { animation: owl-tilt-wing .9s ease-in-out; }
+  .act-wiggle .owl-torso { animation: owl-wiggle .7s ease-in-out; }
+  .act-wiggle .owl-wing-l { animation: owl-wiggle-l .7s ease-in-out; }
+  .act-wiggle .owl-wing-r { animation: owl-wiggle-r .7s ease-in-out; }
+  .act-glance .owl-head { animation: owl-look 1.4s ease-in-out; }
+  .act-glance .owl-glance { animation: owl-glance 1.4s ease-in-out; }
+
+  /* Stretch: both wings open slowly, the body rises, and everything folds back. */
+  .act-stretch .owl-torso { animation: owl-stretch-body 1.5s ease-in-out; }
+  .act-stretch .owl-head { animation: owl-stretch-head 1.5s ease-in-out; }
+  .act-stretch .owl-wing-l { animation: owl-stretch-l 1.5s ease-in-out, owl-fan-hold 1.5s ease-in-out; }
+  .act-stretch .owl-wing-r { animation: owl-stretch-r 1.5s ease-in-out, owl-fan-hold 1.5s ease-in-out; }
+
+  .act-ruffled .owl-torso { animation: owl-ruffled .9s ease-in-out; }
+  .act-ruffled .owl-head { animation: owl-ruffled-head .9s ease-in-out; }
+  .act-ruffled .owl-wing-l { animation: owl-flutter-l .9s linear, owl-fan-hold .9s ease-in-out; }
+  .act-ruffled .owl-wing-r { animation: owl-flutter-r .9s linear, owl-fan-hold .9s ease-in-out; }
+}
+
+@keyframes owl-fan { 30%, 62% { --fan: 1; } 82%, 100% { --fan: 0; } }
+@keyframes owl-fan-hold { 26%, 72% { --fan: 1; } 92%, 100% { --fan: 0; } }
+@keyframes owl-breathe { 0%, 100% { scale: 1 1; } 50% { scale: 1.012 1.016; } }
+@keyframes owl-breathe-deep { 0%, 100% { scale: 1 1; } 45% { scale: 1.022 1.026; } }
+@keyframes owl-head-idle { 0%, 100% { translate: 0 0; rotate: 0deg; } 30% { translate: 1px -3px; rotate: .9deg; } 70% { translate: -1px -1px; rotate: -.8deg; } }
+@keyframes owl-head-doze { 0%, 100% { translate: 0 0; rotate: 0deg; } 45% { translate: 0 -7px; rotate: -1.4deg; } }
+@keyframes owl-wing-idle-l { 0%, 100% { rotate: 0deg; } 50% { rotate: 2.6deg; } }
+@keyframes owl-wing-idle-r { 0%, 100% { rotate: 0deg; } 50% { rotate: -2.2deg; } }
+
+@keyframes owl-tail-idle { 0%, 100% { rotate: 0deg; } 40% { rotate: -3.5deg; } 70% { rotate: 1.5deg; } }
+@keyframes owl-tail-whip { 30% { rotate: 16deg; } 55% { rotate: -14deg; } 80% { rotate: 6deg; } 100% { rotate: 0deg; } }
+@keyframes owl-hop { 0%, 18% { translate: 0 0; } 45% { translate: 0 -68px; } 74% { translate: 0 0; } 100% { translate: 0 0; } }
+@keyframes owl-hop-squash { 0% { scale: 1 1; } 16% { scale: 1.07 .91; } 42% { scale: .96 1.06; } 72% { scale: 1.07 .92; } 88% { scale: .99 1.02; } 100% { scale: 1 1; } }
+@keyframes owl-head-lag { 0% { translate: 0 0; } 18% { translate: 0 10px; } 45% { translate: 0 -9px; } 76% { translate: 0 11px; } 100% { translate: 0 0; } }
+@keyframes owl-beat-l { 0%, 12% { rotate: -5deg; } 32% { rotate: 58deg; } 48% { rotate: 12deg; } 62% { rotate: 44deg; } 82% { rotate: -6deg; } 100% { rotate: 0deg; } }
+@keyframes owl-beat-r { 0%, 12% { rotate: 5deg; } 32% { rotate: -58deg; } 48% { rotate: -12deg; } 62% { rotate: -44deg; } 82% { rotate: 6deg; } 100% { rotate: 0deg; } }
+@keyframes owl-shadow-hop { 45% { scale: .62 .62; opacity: .5; } }
+
+@keyframes owl-wave { 0% { rotate: 0deg; } 10% { rotate: -7deg; } 30% { rotate: 104deg; } 44% { rotate: 78deg; } 58% { rotate: 102deg; } 72% { rotate: 80deg; } 90% { rotate: -5deg; } 100% { rotate: 0deg; } }
+@keyframes owl-wave-balance { 30%, 72% { rotate: 6deg; } 90% { rotate: -2deg; } }
+@keyframes owl-wave-lean { 30%, 72% { rotate: 2.4deg; } 90% { rotate: -.6deg; } }
+@keyframes owl-wave-head { 30%, 72% { rotate: -5deg; translate: -4px 0; } 58% { rotate: -3deg; } 90% { rotate: 1deg; } }
+
+@keyframes owl-tilt { 30% { rotate: -9deg; translate: -4px 2px; } 66% { rotate: 7deg; translate: 3px 1px; } 100% { rotate: 0deg; translate: 0 0; } }
+@keyframes owl-tilt-wing { 30% { rotate: -9deg; } 66% { rotate: 3deg; } }
+@keyframes owl-wiggle { 20% { rotate: 3.5deg; } 40% { rotate: -3.5deg; } 60% { rotate: 2.5deg; } 80% { rotate: -1.5deg; } 100% { rotate: 0deg; } }
+@keyframes owl-wiggle-l { 20% { rotate: 14deg; } 40% { rotate: -4deg; } 60% { rotate: 11deg; } 80% { rotate: -2deg; } }
+@keyframes owl-wiggle-r { 20% { rotate: 4deg; } 40% { rotate: -14deg; } 60% { rotate: 2deg; } 80% { rotate: -11deg; } }
+@keyframes owl-look { 25% { rotate: -5deg; translate: -7px 0; } 60% { rotate: 5deg; translate: 7px 0; } 100% { rotate: 0deg; translate: 0 0; } }
+@keyframes owl-glance { 25% { translate: -14px 2px; } 60% { translate: 13px -2px; } 100% { translate: 0 0; } }
+@keyframes owl-stretch-body { 40%, 60% { scale: .97 1.05; } 82% { scale: 1.02 .98; } }
+@keyframes owl-stretch-head { 40%, 60% { translate: 0 -12px; rotate: -2deg; } }
+@keyframes owl-stretch-l { 40%, 60% { rotate: 46deg; } 82% { rotate: -4deg; } }
+@keyframes owl-stretch-r { 40%, 60% { rotate: -46deg; } 82% { rotate: 4deg; } }
+@keyframes owl-ruffled { 10% { rotate: -5deg; translate: 0 -24px; } 25% { rotate: 5deg; } 40% { rotate: -4deg; translate: 0 -12px; } 55% { rotate: 3deg; } 70% { rotate: -2deg; translate: 0 0; } 100% { rotate: 0deg; } }
+@keyframes owl-ruffled-head { 15% { rotate: 7deg; } 30% { rotate: -7deg; } 45% { rotate: 5deg; } 60% { rotate: -4deg; } 80% { rotate: 2deg; } 100% { rotate: 0deg; } }
+@keyframes owl-flutter-l { 0%, 100% { rotate: 0deg; } 8%, 24%, 40%, 56%, 72% { rotate: 62deg; } 16%, 32%, 48%, 64%, 80% { rotate: 22deg; } }
+@keyframes owl-flutter-r { 0%, 100% { rotate: 0deg; } 8%, 24%, 40%, 56%, 72% { rotate: -62deg; } 16%, 32%, 48%, 64%, 80% { rotate: -22deg; } }

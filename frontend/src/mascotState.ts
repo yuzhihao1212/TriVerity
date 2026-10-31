@@ -2,13 +2,13 @@
 // says. Pure functions, so the behaviour is testable without a browser.
 
 /** Idle actions, played one at a time every few seconds while nothing else is happening. */
-export const IDLE_ACTIONS = ["blink", "double-blink", "hop", "tilt", "wiggle", "glance", "wave"] as const;
+export const IDLE_ACTIONS = ["blink", "double-blink", "hop", "tilt", "wiggle", "glance", "wave", "stretch"] as const;
 export type IdleAction = typeof IDLE_ACTIONS[number];
 /** The owl's one action that isn't idle: being clicked too many times. */
 export type OwlAction = IdleAction | "ruffled";
 export const RUFFLED_MS = 900;
 /** How long each action's class stays on (ms); blinks are handled by the lids, not a class. */
-export const ACTION_MS: Record<IdleAction, number> = { blink: 180, "double-blink": 460, hop: 620, tilt: 900, wiggle: 700, glance: 1400, wave: 1300 };
+export const ACTION_MS: Record<IdleAction, number> = { blink: 180, "double-blink": 460, hop: 620, tilt: 900, wiggle: 700, glance: 1400, wave: 1300, stretch: 1500 };
 
 /** The next idle action: never the same one twice in a row. `random` is in [0, 1). */
 export function nextIdleAction(previous: IdleAction | null, random: number): IdleAction {
