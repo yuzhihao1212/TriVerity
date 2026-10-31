@@ -85,3 +85,42 @@
 .landing.presentation-mode .landing-rollout p:last-child, .landing.presentation-mode .landing-proof .landing-proof-detail { font-size: 16px; }
 .landing.presentation-mode .landing-note, .landing.presentation-mode .landing-hearing-head p, .landing.presentation-mode .landing-value dt,
 .landing.presentation-mode .landing-rollout-time, .landing.presentation-mode .landing-view-tag { font-size: 14px; }
+
+/* Getting around the page: a cue on the hero's seam, a section rail (wide screens) and back to top. */
+.landing-hero { position: relative; }
+.landing-sections > section[tabindex="-1"]:focus { outline: none; }
+.landing-scroll-cue { position: absolute; left: 50%; bottom: 0; z-index: 2; transform: translate(-50%, 50%); display: inline-flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-2) var(--space-4) var(--space-2) var(--space-5); border: 1px solid var(--border); border-radius: 999px; background: var(--bg); color: var(--accent-text);
+  font-size: 13px; font-weight: 600; box-shadow: 0 4px 14px rgb(0 0 0 / .08); }
+.landing-scroll-cue:hover { background: var(--accent-soft); }
+.landing-scroll-cue .icon { width: 16px; height: 16px; transform: rotate(90deg); animation: cue-nudge 2.4s ease-in-out infinite; }
+@keyframes cue-nudge { 0%, 70%, 100% { translate: 0 0; } 80% { translate: 0 3px; } 90% { translate: 0 0; } }
+
+.landing-rail, .landing-to-top { visibility: hidden; opacity: 0; transition: opacity .2s ease, visibility .2s; }
+.landing-rail.is-shown, .landing-to-top.is-shown { visibility: visible; opacity: 1; }
+.landing-rail { position: fixed; z-index: 20; right: var(--space-4); top: 50%; transform: translateY(-50%); }
+.landing-rail ol { position: relative; display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.landing-rail-track { position: absolute; left: 11px; top: 12px; bottom: 12px; width: 2px; border-radius: 2px; background: var(--border); }
+.landing-rail-fill { position: absolute; inset: 0; border-radius: inherit; background: var(--accent); transform-origin: top; transform: scaleY(var(--rail-fill, 0)); transition: transform .15s linear; }
+.landing-rail button { position: relative; z-index: 1; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%; background: none; }
+.landing-rail button::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--bg); box-shadow: inset 0 0 0 2px var(--control-border); transition: transform .15s ease; }
+.landing-rail button.is-read::before { background: var(--accent); box-shadow: none; }
+.landing-rail button[aria-current]::before { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); transform: scale(1.35); }
+.landing-rail-label { position: absolute; right: calc(100% + var(--space-2)); top: 50%; transform: translateY(-50%); padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 12px; font-weight: 500; white-space: nowrap;
+  opacity: 0; pointer-events: none; transition: opacity .15s ease; }
+.landing-rail button:hover .landing-rail-label, .landing-rail button:focus-visible .landing-rail-label { opacity: 1; }
+.landing-rail button[aria-current] .landing-rail-label { color: var(--accent-text); }
+
+.landing-to-top { position: fixed; z-index: 20; right: var(--space-5); bottom: var(--space-5); display: grid; place-items: center; width: 44px; height: 44px; padding: 0;
+  border: 1px solid var(--border); border-radius: 50%; background: var(--bg); color: var(--accent-text); box-shadow: 0 4px 14px rgb(0 0 0 / .1); }
+.landing-to-top:hover { background: var(--accent-soft); }
+.landing-to-top .icon { width: 20px; height: 20px; transform: rotate(-90deg); }
+
+@media (max-width: 1100px) { .landing .landing-rail { display: none; } }
+@media (max-width: 760px) { .landing-to-top { right: var(--space-4); bottom: var(--space-4); } }
+@media (prefers-reduced-motion: reduce) {
+  .landing-scroll-cue .icon { animation: none; }
+  .landing-rail, .landing-to-top, .landing-rail-fill, .landing-rail button::before, .landing-rail-label { transition: none; }
+}
+@media print { .landing-scroll-cue, .landing .landing-rail, .landing-to-top { display: none; } }

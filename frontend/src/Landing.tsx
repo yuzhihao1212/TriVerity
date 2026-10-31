@@ -16,6 +16,7 @@ import hunyuanLockupDark from "./assets/logos/tencent-hunyuan-lockup-dark.webp";
 import cloudLockup from "./assets/logos/tencent-cloud.webp";
 import cloudLockupDark from "./assets/logos/tencent-cloud-dark.webp";
 import { OeroMark } from "./OeroAI";
+import { LandingScrollNav, ScrollCue } from "./LandingScrollNav";
 import { HERO_ROTATE_MS, HERO_RULINGS, nextHeroIndex } from "./heroRulings";
 import { AUTOMATION_RING, REPEAT_DOTS, RESULTS_BOX, SAMPLE_TICKS, STOPWATCH } from "./resultsVisuals";
 import { CASE_VIEWS, ENGINEERING_PROOF, HEARING_ROUNDS, ROLLOUT, VALUE_STATS } from "./landingStory";
@@ -98,15 +99,16 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
           </div>
           <HeroVisual />
         </div>
+        <ScrollCue />
       </section>
       <div className="landing-wrap landing-sections">
-        <section className="landing-problem" aria-labelledby="problem-title">
+        <section className="landing-problem" id="section-problem" tabIndex={-1} aria-labelledby="problem-title">
           <div><p className="eyebrow">The problem</p><h2 id="problem-title">A Disputed Ride Shouldn’t Take Days to Review.</h2></div>
           <div><p>Ryde’s challenge brief describes <strong>24–72 hour resolutions</strong>, inconsistent rulings and costly manual review of GPS, chat, fares and history.</p>
             <p className="muted">TriVerity brings that evidence into one reviewable case, with clear rules and an explanation for each party.</p></div>
           <ProblemVisual />
         </section>
-        <section aria-labelledby="flow-title">
+        <section id="section-flow" tabIndex={-1} aria-labelledby="flow-title">
           <div className="landing-section-head"><p className="eyebrow">How it works</p><h2 id="flow-title">Two Sides Heard. One Accountable Decision.</h2><p className="muted">AI handles language. Rules verify the facts and apply policy.</p></div>
           <ol className="landing-stages">{STAGES.map((stage, index) => <li key={stage.verb} className="landing-stage">
             <span className="landing-stage-icon" aria-hidden="true"><Icon name={stage.icon} /></span>
@@ -125,7 +127,7 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
           </li>)}</ol>
           <HearingExcerpt />
         </section>
-        <section aria-labelledby="views-title">
+        <section id="section-views" tabIndex={-1} aria-labelledby="views-title">
           <div className="landing-section-head"><p className="eyebrow">Who it serves</p><h2 id="views-title">One Case. The Right View for Each Person.</h2><p className="muted">The same D001 ruling, as each person sees it.</p></div>
           <div className="landing-views">{CASE_VIEWS.map(view => <article className="landing-view" key={view.role}>
             <div className="landing-view-role"><span className="landing-stage-icon" aria-hidden="true"><Icon name={view.icon} /></span><h3>{view.role}</h3></div>
@@ -138,7 +140,7 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
           </article>)}</div>
           <p className="landing-note">Fraud signals, party history and internal evidence IDs stay out of the rider’s and driver’s messages.</p>
         </section>
-        <section aria-labelledby="trust-title">
+        <section id="section-trust" tabIndex={-1} aria-labelledby="trust-title">
           <div className="landing-section-head"><p className="eyebrow">What makes it trustworthy</p><h2 id="trust-title">A Ruling You Can Question, Inspect and Appeal.</h2><p className="muted">Select a card for details.</p></div>
           <TrustTiles />
           <div className="landing-governance">
@@ -151,7 +153,7 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
               <p><a href={`${GITHUB}/blob/main/docs/system-card.md`}>Read the System Card</a></p></div>
           </div>
         </section>
-        <section ref={resultsRef} className="landing-results" aria-labelledby="results-title">
+        <section ref={resultsRef} className="landing-results" id="section-results" tabIndex={-1} aria-labelledby="results-title">
           <div className="landing-section-head"><p className="eyebrow">Measured results</p><h2 id="results-title">Small Sample. Clear Benchmarks.</h2></div>
           <dl className="landing-metrics">{LANDING_RESULTS.map((result, index) => <div key={result.label} style={{ "--results-delay": `${index * 120}ms` } as CSSProperties}>
             <dt>{result.label}</dt>
@@ -162,7 +164,7 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
           </div>)}</dl>
           <p className="landing-footnote muted">Synthetic data, not production results. Sample accuracy, latency and cost come from live Hy3 measurements; automation and repeatability come from the offline simulation. <a href={`${GITHUB}/blob/main/docs/evaluation.md`}>Evaluation</a> · <a href={`${GITHUB}/blob/main/docs/simulation.md`}>500-dispute simulation</a></p>
         </section>
-        <section aria-labelledby="rollout-title">
+        <section id="section-rollout" tabIndex={-1} aria-labelledby="rollout-title">
           <div className="landing-section-head"><p className="eyebrow">Beyond the hackathon</p><h2 id="rollout-title">A Careful Path from Shadow Mode to Scale.</h2><p className="muted">It starts with no customer impact and widens as agreement with reviewers holds.</p></div>
           <ol className="landing-rollout">{ROLLOUT.map(step => <li key={step.title}>
             <h3>{step.title}</h3>
@@ -172,7 +174,7 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
           <dl className="landing-value">{VALUE_STATS.map(stat => <div key={stat.label}><dt>{stat.label}</dt><dd>{stat.value}</dd></div>)}</dl>
           <p className="landing-note">An illustrative model at 5,000 disputes a day, 78% automated, 5–15 minutes a review and $20–30 an hour. The volume, review time and hourly cost are our assumptions, not Ryde’s. <a href={`${GITHUB}/blob/main/docs/business-case.md`}>Business case</a></p>
         </section>
-        <section aria-labelledby="proof-title">
+        <section id="section-proof" tabIndex={-1} aria-labelledby="proof-title">
           <div className="landing-section-head"><p className="eyebrow">Under the hood</p><h2 id="proof-title">Built to Be Checked.</h2></div>
           <dl className="landing-proof">{ENGINEERING_PROOF.map(item => <div key={item.label}>
             <dt>{item.label}</dt>
@@ -182,7 +184,7 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
           <p className="landing-proof-links"><a href={`${GITHUB}/blob/main/docs/architecture.md`}>Architecture Diagram</a><a href={`${GITHUB}/blob/main/docs/security.md`}>Security</a><a href={`${GITHUB}/blob/main/docs/api-contract.md`}>API Contract</a></p>
           <p className="landing-note">Developed with Tencent Cloud CodeBuddy and WorkBuddy. The AI coding assistants Claude Code, OpenAI Codex and Kiro also helped build and review features. Every change went through a pull request, automated tests and CI. <a href={`${GITHUB}#built-with`}>How we built it</a></p>
         </section>
-        <section aria-labelledby="try-title">
+        <section id="section-try" tabIndex={-1} aria-labelledby="try-title">
           <div className="landing-section-head"><p className="eyebrow">Try these cases</p><h2 id="try-title">Start with a Case, Then Follow the Reasoning.</h2><p className="muted">Opening a case loads its evidence. Agents run only when you press “Run agents”.</p></div>
           <div className="landing-cases">{CASES.map(sample => <a className="landing-case" key={sample.id} href={sample.href} aria-label={sample.accessibleName}>
             <span className={`landing-case-icon${sample.tone === "warn" ? " warn" : ""}`} aria-hidden="true"><Icon name={sample.icon} /></span>
@@ -194,6 +196,7 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
         </section>
       </div>
     </main>
+    <LandingScrollNav />
     <footer className="landing-footer"><div className="landing-wrap"><div><strong>TriVerity</strong> <span className="byline">By OeroAI</span><p className="muted">a hackathon prototype</p></div>
       <nav aria-label="Documentation"><a href={`${GITHUB}/blob/main/docs/architecture.md`}>Architecture</a><a href={`${GITHUB}/blob/main/docs/security.md`}>Security</a><a href={`${GITHUB}/blob/main/docs/evaluation.md`}>Evaluation</a><a href={`${GITHUB}/blob/main/docs/responsible-ai.md`}>Responsible AI</a><a href={`${GITHUB}/blob/main/docs/system-card.md`}>System Card</a><a href={`${GITHUB}/blob/main/docs/business-case.md`}>Business Case</a></nav>
     </div>
