@@ -54,6 +54,7 @@ def to_dispute_case(raw: dict) -> DisputeCase:
         dispute_id=ticket["dispute_id"],
         type=ticket["dispute_type"],
         label="Organisers' case: lobby no-show" if ticket["dispute_id"] == "DISP-002" else None,
+        raised_at=(ticket.get("filed_at") or "")[:10] or None,
         rider_claim=ticket["description"],
         trip={
             "pickup_lat": pickup.get("lat"),

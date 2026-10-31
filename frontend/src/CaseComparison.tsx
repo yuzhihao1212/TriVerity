@@ -200,7 +200,6 @@ function DurationDial({ expectedMin, actualMin, gps }: { expectedMin: number | n
     </svg>
     <ul className="dial-key">
       {stops.map((s, i) => <li key={i}><i className="dial-key-stop" aria-hidden="true" />{Math.round(s.to - s.from)}-min stop</li>)}
-      <li>Inner ring: expected · outer ring: actual</li>
       <li>Full circle = {full} min</li>
     </ul>
   </div>;

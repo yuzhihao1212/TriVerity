@@ -10,18 +10,17 @@ import { FactLibrary } from "./FactLibrary";
 import { AGENT_ICONS, statusPill, type FinalHeaderOutcome } from "./stepVisuals";
 import { AUTO_SUMMARY, createReviewStore, openCounts, reviewKey, reviewSummary, reviewedSteps, REOPENED_STEPS, type ReviewSummary } from "./reviewProgress";
 import { CaseBrief } from "./CaseBriefCard";
-import { caseHeadline, headerFinalOutcome } from "./caseBrief";
+import { caseHeadline, headerFinalOutcome, usedFallback } from "./caseBrief";
 import { RunCost } from "./RunCost";
 import { CaseComparison } from "./CaseComparison";
 import { Debate } from "./Debate";
-import { EvidenceText, type FactLinks } from "./EvidenceList";
 import { RulingChecks } from "./RulingChecks";
 import { VerdictSummary } from "./VerdictSummary";
 import { computedFacts, disputeLabel, money } from "./presentation";
 import { caseHash, focusSection, HOME_HASH, missingCase, reveal, selectSample } from "./routes";
-import { allowedActions, caseStatus, pendingAppealIds, sortQueue, STATUS_WORDS, type CaseStatus } from "./caseQueue";
+import { allowedActions, caseStatus, pendingAppealIds, sortQueue, STATUS_WORDS, type CaseStatus, queueGroups } from "./caseQueue";
 import { nextAfterClose } from "./homeState";
-import { Home, type HomeRow } from "./Home";
+import { Home, type HomeRow, type RunAllProgress } from "./Home";
 import { AppealsPanel } from "./Appeals";
 import { ClosedCase, ClosedSummary } from "./ClosedCase";
 import { DecisionBar, ReviewerDecision, useReviewerDecision } from "./ReviewerDecision";
@@ -67,6 +66,9 @@ const REVIEWER_CONSOLE_NOTE = "Internal reviewer view: it shows fraud signals an
 // The judge types their access code; it is kept for this browser tab only and is
 // never part of the built bundle.
 const ACCESS_CODE_KEY = "triverity.accessCode";
+/** How long each row takes to settle after AI Review, and the pause before the lists rearrange. */
+const RUN_ALL_ROW_MS = 170;
+const RUN_ALL_REST_MS = 550;
 /** A result faster than this came from the cache: there was no run to watch. */
 const INSTANT_RESULT_MS = 1500;
 
@@ -160,7 +162,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
   const [streaming, setStreaming] = useState(true);
   const [resolving, setResolving] = useState<string | null>(null);
   // The queue's Run all: progress while it runs, kept afterwards for the summary line.
-  const [runAll, setRunAll] = useState<{ done: number; total: number; running: boolean; ids: string[] } | null>(null);
+  const [runAll, setRunAll] = useState<RunAllProgress | null>(null);
   const [completedId, setCompletedId] = useState<string | null>(null);
   const [loadingSamples, setLoadingSamples] = useState(true);
   const samplesLoader = useLoaderVisible(loadingSamples);
@@ -266,31 +268,40 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
   }
 
   /**
-   * Run every sample case that hasn't run yet, in one batch request: the server counts it once
-   * against the rate limit (3 a minute), however many cases it holds. Own disputes are left for
-   * Run agents, which sends the access code.
+   * Run these sample cases in one batch request: the server counts it once against the rate
+   * limit (3 a minute), however many cases it holds. Own disputes are left for Run agents,
+   * which sends the access code.
    */
-  async function runAllNew() {
-    if (resolving !== null || runAll?.running) return;
-    const sampleIds = new Set(samples.map(d => d.dispute_id));
-    const pending = queueRows.filter(row => row.status === "not_run" && sampleIds.has(row.id)).map(row => row.id);
-    if (pending.length === 0) return;
+  async function reviewCases(pending: string[]) {
+    if (resolving !== null || runAll?.running || pending.length === 0) return;
     setError(null);
-    setRunAll({ done: 0, total: pending.length, running: true, ids: pending });
+    const mode = aiMode;
+    const progress = { total: pending.length, ids: pending, mode };
+    setRunAll({ ...progress, done: 0, running: true });
     const failed: string[] = [];
+    // The batch answers all at once: the rows then settle one by one, top to bottom, in the
+    // order on screen, and the lists rearrange only after a short pause on the last one.
+    const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const pause = (ms: number) => calm ? Promise.resolve() : new Promise(done => window.setTimeout(done, ms));
     try {
-      for (const item of await resolveBatch(pending, aiMode)) {
-        if (item.result) {
-          const result = item.result;
-          sentRecords().saveResult(item.dispute_id, result);
-          setResults(prev => ({ ...prev, [item.dispute_id]: result }));
-        } else failed.push(item.dispute_id);
+      const items = new Map((await resolveBatch(pending, mode)).map(item => [item.dispute_id, item]));
+      let done = 0;
+      for (const id of pending) {
+        const result = items.get(id)?.result;
+        if (result) {
+          sentRecords().saveResult(id, result);
+          setResults(prev => ({ ...prev, [id]: result }));
+        } else failed.push(id);
+        done += 1;
+        setRunAll({ ...progress, done, running: true });
+        await pause(RUN_ALL_ROW_MS);
       }
-      if (failed.length) setError(`Run all: ${failed.join(", ")} could not be resolved. Open them and use Run agents.`);
+      await pause(RUN_ALL_REST_MS);
+      if (failed.length) setError(`AI Review: ${failed.join(", ")} could not be resolved. Open them and use Run agents.`);
     } catch (e) {
-      setError(`Run all: ${(e as Error).message}`);
+      setError(`AI Review: ${(e as Error).message}`);
     } finally {
-      setRunAll({ done: pending.length - failed.length, total: pending.length, running: false, ids: pending });
+      setRunAll({ ...progress, done: pending.length - failed.length, running: false });
     }
   }
 
@@ -357,6 +368,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
     return () => window.clearTimeout(timer);
   }, [cheer]);
   const allCases = useMemo(() => [...own, ...samples], [own, samples]);
+  const sampleIds = useMemo(() => new Set(samples.map(d => d.dispute_id)), [samples]);
   // Routine rulings the policy lets through close themselves: the parties get the ruling's
   // messages with the automatic-decision notice. Only a case with no history yet; one a
   // reviewer reopened or put on hold stays with the reviewer, in every later run of that
@@ -382,7 +394,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
     const status: CaseStatus = caseStatus(result, !!saved, !!closedRecord, { reopened: !!key && sentRecords().reopened(key),
       appealWaiting: waitingIds.has(d.dispute_id), autoClosed: closedRecord?.reviewer?.kind === "auto" });
     // The outcome dot follows the final decision: an override replaces the ruling's outcome.
-    return { id: d.dispute_id, dispute: d, status, tier: result?.triage?.tier ?? null, decision: saved?.decision ?? (key ? sentRecords().latest(key)?.decision : null) ?? result?.decision ?? null, audit };
+    return { id: d.dispute_id, dispute: d, status, tier: result?.triage?.tier ?? (d.safety_flag ? "safety" : null), raisedAt: d.raised_at ?? null, decision: saved?.decision ?? (key ? sentRecords().latest(key)?.decision : null) ?? result?.decision ?? null, audit };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [allCases, results, decision.savedFor, sentVersion, waitingIds]);
   const statusOf = (id: string) => queueRows.find(row => row.id === id)?.status ?? "not_run";
@@ -475,7 +487,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
         <span className="dispute-line"><span className="dispute-label">{summary}</span></span>
         <span className="dispute-sub">
           <span className="dispute-id">{d.dispute_id}</span>
-          {results[d.dispute_id]?.triage?.tier === "safety" && <Chip size="sm" tone="danger">Safety</Chip>}
+          {(results[d.dispute_id] ? results[d.dispute_id].triage?.tier === "safety" : d.safety_flag) && <Chip size="sm" tone="danger">Safety</Chip>}
           {decision && <Chip size="sm" dot tone={status === "appeal_waiting" ? "warn" : status === "closed" ? "ok" : decisionTone(decision)} title={DECISION_LABELS[decision]}>{STATUS_WORDS[status]}</Chip>}
         </span>
       </button>
@@ -564,7 +576,8 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
             <div><h2>Loading disputes…</h2><p className="muted">The sample list is loading. No agents have run.</p></div>
           </section>}
           {onHome && <Home rows={queueRows} holds={decision.holds()} appealsWaiting={appeals === null ? null : waitingIds.size} showStart={Object.keys(results).length === 0}
-            missing={missing} onDismissMissing={() => setMissing(null)} onNew={newDispute} onRunAll={runAllNew} runAllProgress={runAll} typeIcon={type => <TypeIcon type={type} />} />}
+            missing={missing} onDismissMissing={() => setMissing(null)} onReview={reviewCases} sampleIds={sampleIds} heldIds={decision.holds().map(hold => hold.disputeId)} runAllProgress={runAll} aiMode={aiMode} typeIcon={type => <TypeIcon type={type} />}
+            fallbacks={runAll ? runAll.ids.filter(id => results[id] && usedFallback(results[id])).length : 0} />}
           {!form && resolving && resolving !== selected?.dispute_id && <p className="small muted">Agents are working on {resolving}. This case remains available.</p>}
           {form && <DisputeForm key={form.template?.dispute_id ?? "blank"} template={form.template} onSubmit={addOwn} onCancel={() => setForm(null)}
             accessCode={accessCode} onAccessCodeChange={changeAccessCode} />}
@@ -579,7 +592,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
               nextLabel={following?.label ?? "Back to queue"} onNext={goToFollowing} nextPrimary={activeTab !== "notify" || !following} onReopen={reopenCase} />}
             <CaseHeader dispute={selected} resolution={resolution} busy={resolving === selected.dispute_id} streaming={streaming} progress={progress}
               final={resolution ? headerFinalOutcome(resolution, selected, decision.saved, latestSent) : null} />
-            <CaseBrief dispute={selected} resolution={resolution} showProposal={reviewed.has("ruling")} />
+            <CaseBrief dispute={selected} resolution={resolution} showProposal={reviewed.has("ruling")} aiOff={aiMode === "offline"} />
             <WorkflowTabs active={activeTab} resolution={resolution} busy={resolving === selected.dispute_id}
               closed={closed} auto={autoClosed} decisionRecorded={!!decision.saved}
               unlocking={completion?.id === selected.dispute_id}
@@ -592,17 +605,20 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
                 {tab === "intake" && <>
                   {actions.run && needsAccessCode(selected.dispute_id, own) && <AccessCodeField ref={accessCodeInput} id={ACCESS_CODE_FIELD_ID}
                     value={accessCode} onChange={changeAccessCode} />}
-                  {actions.run ? <div className="run-bar case-run-bar">
-                    <button className={resolution ? "secondary-button" : "run-button"} onClick={() => resolve(selected)} disabled={resolving !== null}>
-                      {resolution ? "Re-run agents" : "Run agents"}
-                    </button>
-                    <RunCost offline={aiMode === "offline"} hasResult={!!resolution} />
-                    <button className="secondary-button" onClick={() => { setForm({ template: selected }); setError(null); }}>Edit as new dispute</button>
-                  </div> : <p className="small muted">Closed. Reopen the case to run the agents again.</p>}
-                  <CasePanel dispute={selected} availableIds={factIds} onSelectFact={selectFact} />
+                  <div className="run-bar case-run-bar">
+                    {resolution && <button className="run-button case-review-evidence" onClick={() => changeTab("evidence")}>Review evidence<Icon name="arrow" /></button>}
+                    {actions.run ? <>
+                      <button className={resolution ? "secondary-button" : "run-button"} onClick={() => resolve(selected)} disabled={resolving !== null}>
+                        {resolution ? "Re-run agents" : "Run agents"}
+                      </button>
+                      <RunCost offline={aiMode === "offline"} hasResult={!!resolution} />
+                      <button className="secondary-button" onClick={() => { setForm({ template: selected }); setError(null); }}>Edit as new dispute</button>
+                    </> : <p className="small muted">Closed. Reopen the case to run the agents again.</p>}
+                  </div>
+                  <CasePanel dispute={selected} />
                 </>}
                 {tab === "evidence" && resolution && <><FactLibrary facts={facts} activeId={activeFact} request={factRequest} expanded grouped onSelectFact={selectFact} dispute={selected} resolution={resolution} /><CollectorCalls collection={resolution.evidence_collection} /></>}
-                {tab === "hearing" && resolution && <Debate resolution={resolution} dispute={selected} availableIds={factIds} onSelectFact={selectFact} />}
+                {tab === "hearing" && resolution && <Debate resolution={resolution} dispute={selected} aiOff={aiMode === "offline"} availableIds={factIds} onSelectFact={selectFact} />}
                 {tab === "ruling" && resolution && <>
                   <VerdictSummary key={`ruling-${reviewId}`} resolution={resolution} dispute={selected} final={decision.saved || sent ? headerFinalOutcome(resolution, selected, decision.saved, latestSent) : null} availableIds={factIds} onSelectFact={selectFact} />
                   <AutoResolvedNote autonomy={resolution.autonomy} closedAutomatically={sent?.reviewer?.kind === "auto"}
@@ -673,7 +689,7 @@ function CaseHeader({ dispute, resolution, busy, streaming, progress, final }: {
   </header>;
 }
 
-function CasePanel({ dispute, availableIds, onSelectFact }: { dispute: DisputeCase } & FactLinks) {
+function CasePanel({ dispute }: { dispute: DisputeCase }) {
   const { trip, fare } = dispute;
   const facts: [string, string][] = [];
   if (fare.cancellation_fee != null) facts.push(["No-show fee", money(fare.cancellation_fee)]);
@@ -685,11 +701,6 @@ function CasePanel({ dispute, availableIds, onSelectFact }: { dispute: DisputeCa
   return (
     <section className="card case-overview">
       <h2>Intake</h2>
-      <div className="statements">
-        <blockquote className="rider"><span className="who">Rider’s claim</span><EvidenceText text={dispute.rider_claim} availableIds={availableIds} onSelectFact={onSelectFact} /></blockquote>
-        <blockquote className="driver"><span className="who">Driver’s statement</span>{dispute.driver_statement
-          ? <EvidenceText text={dispute.driver_statement} availableIds={availableIds} onSelectFact={onSelectFact} /> : <em className="muted">No statement provided</em>}</blockquote>
-      </div>
       <CaseComparison dispute={dispute} />
       {facts.length > 0 && (
         <dl className="facts">

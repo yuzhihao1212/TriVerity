@@ -69,13 +69,13 @@ test('notice: a person\'s send never carries the automatic notice, even for an e
   assert.equal(ns.finalOutcome(eligible, { kind: 'auto', decision: 'partial_refund' }, fare).source, 'ruling');
 });
 
-test('run all summary: only the cases that batch ran, audit samples counted for review', () => {
+test('review summary: only the cases that batch ran, audit samples counted for attention', () => {
   const rows = [
     { id: 'D001', status: 'auto' }, { id: 'D002', status: 'decide' }, { id: 'D003', status: 'ready', audit: true },
     { id: 'MINE-1', status: 'decide' }, { id: 'D009', status: 'not_run' },
   ];
-  assert.equal(hs.runAllSummary(rows, ['D001', 'D002', 'D003']), 'Run all: 3 cases · 1 auto-resolved · 2 for review · 1 audit sample');
-  assert.equal(hs.runAllSummary(rows, []), null);
+  assert.equal(hs.reviewSummary(rows, ['D001', 'D002', 'D003']), 'Reviewed 3 cases: 2 require attention, 1 decided by policy.');
+  assert.equal(hs.reviewSummary(rows, []), null);
 });
 
 test('saved text: an automatic decision never claims a precedent', () => {

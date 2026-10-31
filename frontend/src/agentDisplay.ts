@@ -40,6 +40,11 @@ export function agentLineParts(entry: AgentLogEntry, resolution?: Resolution): A
     case "judge": action = "Checked the policy and explained the decision"; break;
     default: action = "Processed the recorded case information";
   }
+  // A reply round that produced nothing must not read as if it answered.
+  const replyParty = entry.agent === "rider_rebuttal" ? "rider" : entry.agent === "driver_rebuttal" ? "driver" : null;
+  if (replyParty && resolution && !resolution[`${replyParty}_case`]?.rebuttal?.text?.trim()) {
+    return { action: `No reply was generated for the ${replyParty}`, source: null, how: null, time: null };
+  }
   if (!["completed", "complete", "ok"].includes(entry.status)) {
     return { action: entry.status === "skipped" ? "This step was not run." : "This step did not complete.", source: null, how: null, time: null };
   }

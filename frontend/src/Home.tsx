@@ -1,18 +1,19 @@
-import { useState, type CSSProperties } from "react";
-import { tileCounts, sortQueue, STATUS_ICONS, STATUS_WORDS, type QueueRow } from "./caseQueue";
+import { useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
+import type { AiMode } from "./aiMode";
+import { queueGroups, STATUS_ICONS, STATUS_WORDS, type QueueRow } from "./caseQueue";
 import { Chip } from "./Chip";
 import { useIntroOnce } from "./EvidenceStories";
-import { amountAtStake, GUIDED_DEMO, greeting, greetingLine, guidedDemoSteps, queueSegments, queueSummary, runAllSummary } from "./homeState";
+import { GUIDED_DEMO, greeting, greetingLine, guidedDemoSteps, queueSegments, queueSummary, readFolded, rerunnable, reviewButtonLabel, reviewNote, reviewSummary, reviewTiles, shortDate, writeFolded } from "./homeState";
 import { Icon } from "./Icon";
 import { Mascot } from "./Mascot";
-import { NewDisputeIcon } from "./SidebarToggle";
-import { decisionTone, DECISION_LABELS } from "./outcomeTone";
+import { DECISION_LABELS } from "./outcomeTone";
 import { disputeLabel } from "./presentation";
 import { caseHash } from "./routes";
 import type { HoldRecord } from "./decisionState";
 import type { DisputeCase } from "./types";
 
 export interface HomeRow extends QueueRow { dispute: DisputeCase }
+export interface RunAllProgress { done: number; total: number; running: boolean; ids: string[]; mode: AiMode }
 
 const HOME_SEEN_KEY = "triverity.homeIntroSeen";
 
@@ -26,22 +27,37 @@ function writeDemoOpen(open: boolean) {
 }
 
 /** A status bar over the queue, a folded guided demo (hidden for now: GUIDED_DEMO), and the case list. */
-export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissing, onNew, onRunAll, runAllProgress, typeIcon }: {
-  rows: HomeRow[]; holds?: HoldRecord[]; appealsWaiting: number | null; showStart: boolean; onNew: () => void;
+export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissing, onReview, sampleIds, heldIds, runAllProgress, aiMode, fallbacks, typeIcon }: {
+  rows: HomeRow[]; holds?: HoldRecord[]; appealsWaiting: number | null; showStart: boolean;
   missing: string | null; onDismissMissing: () => void;
-  onRunAll?: () => void; runAllProgress?: { done: number; total: number; running: boolean; ids: string[] } | null;
+  onReview: (ids: string[]) => void; sampleIds: ReadonlySet<string>; heldIds: readonly string[]; runAllProgress?: RunAllProgress | null; aiMode: AiMode; fallbacks: number;
   typeIcon: (type: DisputeCase["type"]) => JSX.Element;
 }) {
   const summaryParts = queueSummary(rows, appealsWaiting != null);
-  const queue = sortQueue(rows);
+  const running = !!runAllProgress?.running;
+  const groups = queueGroups(rows);
+  // While a review runs the rows hold their places; they rearrange only once it has finished.
+  const heldOrder = useRef<string[] | null>(null);
+  if (!running) heldOrder.current = null;
+  else heldOrder.current ??= [...groups.review, ...groups.fresh, ...groups.resolved].map(row => row.id);
+  const held = (heldOrder.current ?? []).flatMap(id => rows.filter(row => row.id === id));
+  const tiles = reviewTiles(rows);
+  const reviewed = !running && tiles.attention + tiles.policy > 0;
+  // Only samples run in a batch: own disputes use Run agents, which sends the access code.
+  const newIds = groups.fresh.filter(row => sampleIds.has(row.id)).map(row => row.id);
+  const rerunIds = rerunnable(groups.review, heldIds).filter(row => sampleIds.has(row.id)).map(row => row.id);
+  const [confirming, setConfirming] = useState(false);
+  const stay = !running && confirming && newIds.length === 0 && rerunIds.length > 0;
   const segments = queueSegments(rows, appealsWaiting != null);
   const starts = guidedDemoSteps(rows);
-  const counts = tileCounts(rows);
   const [demoOpen, setDemoOpen] = useState(readDemoOpen);
   function toggleDemo() {
     setDemoOpen(open => { writeDemoOpen(!open); return !open; });
   }
-  const ranSummary = runAllProgress && !runAllProgress.running ? runAllSummary(rows, runAllProgress.ids) : null;
+  const ranSummary = runAllProgress && !running ? reviewSummary(rows, runAllProgress.ids) : null;
+  const ranNote = runAllProgress && !running ? reviewNote(runAllProgress.mode, runAllProgress.ids.length, fallbacks) : null;
+  const casesBox = useRef<HTMLElement>(null);
+  useRearrange(casesBox, running);
   // The page eases in once per tab (greeting, summary, actions, then the queue row by row);
   // coming back to the queue later shows it at once.
   const play = useIntroOnce(HOME_SEEN_KEY, "home");
@@ -60,23 +76,37 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
     </div>
     <div className="home-head">
       <h2 id="home-title">Your queue</h2>
-      <div className="home-meter" role="img" aria-label={[summaryParts[0].text, ...segments.map(segment => `${segment.count} ${segment.label}`)].join(", ")}>
+      {!reviewed && !running && <div className="home-meter" role="img" aria-label={[summaryParts[0].text, ...segments.map(segment => `${segment.count} ${segment.label}`)].join(", ")}>
         <span className="home-meter-bar" aria-hidden="true">{segments.map((segment, index) =>
           <span key={segment.key} className={`tone-${segment.tone}`} style={{ flexGrow: segment.count, "--meter-delay": `${index * 80}ms` } as CSSProperties} />)}</span>
         <span className="home-meter-legend" aria-hidden="true">
           <span className="home-meter-total">{summaryParts[0].text}</span>
           {segments.map(segment => <span key={segment.key}><span className={`home-meter-dot tone-${segment.tone}`} /><strong>{segment.count}</strong> {segment.label}</span>)}
         </span>
-      </div>
+      </div>}
       <div className="home-head-actions">
-        <button type="button" className="run-button home-new" onClick={onNew}><NewDisputeIcon />New case</button>
-        {onRunAll && <button type="button" className="secondary-button home-run-all" onClick={onRunAll}
-          disabled={runAllProgress?.running || !rows.some(row => row.status === "not_run")}>
-          <Icon name="scales" />{runAllProgress?.running ? `Running ${runAllProgress.total} cases…` : "Run all"}
-        </button>}
+        {reviewed && groups.review[0] && <a className="run-button home-start-reviewing" href={caseHash(groups.review[0].id)}>Start reviewing<Icon name="arrow" /></a>}
+        <button type="button" className={`${reviewed && groups.review[0] ? "secondary-button" : "run-button"} home-run-all`} disabled={running || (newIds.length === 0 && rerunIds.length === 0)}
+          title={!running && newIds.length === 0 && rerunIds.length === 0 ? "Nothing is open to re-run" : undefined}
+          onClick={() => newIds.length > 0 ? onReview(newIds) : setConfirming(true)}>
+          <Icon name="scales" />{reviewButtonLabel(aiMode, { running, total: runAllProgress?.total ?? 0, fresh: newIds.length, anyRun: reviewed })}
+        </button>
       </div>
     </div>
-    {ranSummary && <p className="home-run-summary" role="status"><Icon name="queue" />{ranSummary}</p>}
+    {stay && <div className="home-confirm" role="group" aria-label="Confirm re-run" onKeyDown={event => { if (event.key === "Escape") setConfirming(false); }}>
+      <p>Re-run the {rerunIds.length} open {rerunIds.length === 1 ? "case" : "cases"}? Resolved cases and saved decisions stay as they are.</p>
+      <div className="home-confirm-actions">
+        <button type="button" className="run-button" autoFocus onClick={() => { setConfirming(false); onReview(rerunIds); }}>Re-run</button>
+        <button type="button" className="secondary-button" onClick={() => setConfirming(false)}>Cancel</button>
+      </div>
+    </div>}
+    {running && runAllProgress && <ReviewProgress done={runAllProgress.done} total={runAllProgress.total} />}
+    {reviewed && <div className="home-tiles">
+      <p className="home-tile"><strong>{tiles.attention}</strong> require attention</p>
+      <p className="home-tile"><strong>{tiles.policy}</strong> decided by policy</p>
+    </div>}
+    {ranSummary && <p className="sr-only" role="status">{ranSummary}</p>}
+    {ranNote && <p className="home-run-note"><Icon name="info" />{ranNote}</p>}
     {GUIDED_DEMO && <section className={`home-start${demoOpen ? " open" : ""}`} aria-labelledby="home-start-title">
       <h3 id="home-start-title"><button type="button" className="home-start-toggle" aria-expanded={demoOpen} aria-controls="home-start-body" onClick={toggleDemo}>
         <Icon name="chevron" className="home-start-chevron" />Guided demo · 3 cases
@@ -112,30 +142,102 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
         </li>;
       })}</ul>
     </section>}
-    <section className="home-cases" aria-labelledby="home-cases-title">
-      <h3 id="home-cases-title">All cases</h3>
-      <ul className="home-queue" aria-label="Cases, most urgent first">{queue.map((row, index) => {
-        const summary = disputeLabel(row.dispute);
-        const outcome = row.decision ? DECISION_LABELS[row.decision] : null;
-        const stake = amountAtStake(row.dispute.fare);
-        return <li key={row.id} style={{ "--row": Math.min(index, 12) } as CSSProperties}>
-          <a className="home-row" href={caseHash(row.id)}
-            aria-label={`${row.id}: ${summary}${stake ? `, ${stake}` : ""}. ${STATUS_WORDS[row.status]}${outcome ? `, ${outcome}` : ""}`}>
-            <span className={`home-category category-${row.dispute.type === "route_deviation" ? "route" : "no-show"}`}>{row.dispute.type === "route_deviation" ? "Route" : "No-show"}</span>
-            <span className="home-row-main"><span className="home-row-summary">{summary}</span><span className="home-row-id">{row.id}{stake && <> · {stake}</>}</span></span>
-            <span className="home-row-meta">
-              {row.tier === "safety" && <Chip size="sm" tone="danger">Safety</Chip>}
-              {row.audit && row.status === "ready" && <Chip size="sm" tone="outline">Audit sample</Chip>}
-              <span className={`home-row-status status-${row.status}`}>
-                {row.decision && <span className={`outcome-dot tone-${decisionTone(row.decision)}`} title={outcome ?? undefined} aria-hidden="true" />}
-                <Icon name={STATUS_ICONS[row.status]} />{STATUS_WORDS[row.status]}
-              </span>
-            </span>
-            <Icon name="chevron" className="home-row-chevron" />
-          </a>
-        </li>;
-      })}</ul>
+    <section className="home-cases" ref={casesBox}>
+      {running
+        ? <QueueList title="All cases" rows={held} kind="fresh" ran={runAllProgress?.ids ?? []} settled={runAllProgress?.done ?? 0} typeIcon={typeIcon} />
+        : <>
+          {groups.review.length > 0 && <QueueList title="Human Review Required" note="Safety first, then oldest." rows={groups.review} kind="review" typeIcon={typeIcon} />}
+          {groups.fresh.length > 0 && <QueueList title={groups.fresh.length === rows.length ? "All cases" : "New cases"} rows={groups.fresh} kind="fresh" typeIcon={typeIcon} />}
+          {groups.resolved.length > 0 && <QueueList title={groups.resolved.some(row => row.status === "closed") ? "Resolved" : "Resolved automatically"} rows={groups.resolved} kind="resolved" typeIcon={typeIcon} />}
+        </>}
     </section>
   </section>;
 }
 
+/** One batch answers all at once: a gliding bar while waiting, then a real count as rows settle. */
+function ReviewProgress({ done, total }: { done: number; total: number }) {
+  return <div className="home-progress">
+    <div className={`live-progress-track home-progress-track${done === 0 ? " is-waiting" : ""}`} role="progressbar" aria-label="AI Review progress"
+      aria-valuemin={0} aria-valuemax={total} aria-valuenow={done === 0 ? undefined : done}>
+      <span className={`live-progress-fill${done === total ? " complete" : ""}`} style={done === 0 ? undefined : { width: `${done / total * 100}%` }} />
+    </div>
+    <span className="home-progress-count" role="status">{done === 0 ? "Working…" : `${done} of ${total} ready`}</span>
+  </div>;
+}
+
+/** Rows slide from where they were to their new list when a review finishes; the headings fade in after. */
+function useRearrange(box: React.RefObject<HTMLElement>, running: boolean) {
+  const wasRunning = useRef(false);
+  const places = useRef(new Map<string, number>());
+  useLayoutEffect(() => {
+    const root = box.current;
+    if (!root) return;
+    const base = root.getBoundingClientRect().top;
+    const rows = [...root.querySelectorAll<HTMLElement>("[data-row]")];
+    const now = new Map(rows.map(el => [el.dataset.row!, el.getBoundingClientRect().top - base]));
+    if (wasRunning.current && !running && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      rows.forEach((el, index) => {
+        const shift = (places.current.get(el.dataset.row!) ?? now.get(el.dataset.row!)!) - now.get(el.dataset.row!)!;
+        if (shift) el.animate?.([{ transform: `translateY(${shift}px)` }, { transform: "none" }], { duration: 620, delay: index * 35, easing: "cubic-bezier(.2, .8, .2, 1)", fill: "backwards" });
+      });
+      root.querySelectorAll(".home-panel-head").forEach(head => head.animate?.([{ opacity: 0 }, { opacity: 1 }], { duration: 450, delay: 360, fill: "backwards" }));
+    }
+    wasRunning.current = running;
+    places.current = now;
+  });
+}
+
+/** Up and down move between rows, so a reviewer can work the list from the keyboard. */
+function moveAlongList(event: KeyboardEvent<HTMLUListElement>) {
+  if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+  const links = [...event.currentTarget.querySelectorAll<HTMLAnchorElement>("a")];
+  const next = links[links.indexOf(document.activeElement as HTMLAnchorElement) + (event.key === "ArrowDown" ? 1 : -1)];
+  if (next) { event.preventDefault(); next.focus(); }
+}
+
+function foldStore() { try { return window.sessionStorage; } catch { return null; } }
+
+function QueueList({ title, note, rows, kind, ran = [], settled = 0, typeIcon }: {
+  title: string; note?: string; rows: HomeRow[]; kind: "review" | "fresh" | "resolved"; ran?: readonly string[]; settled?: number;
+  typeIcon: (type: DisputeCase["type"]) => JSX.Element;
+}) {
+  const foldable = kind === "resolved";
+  const [folded, setFolded] = useState(() => foldable && readFolded(foldStore()));
+  const list = <ul className="home-queue" onKeyDown={moveAlongList}>{rows.map((row, index) => <li key={row.id} data-row={row.id} style={{ "--row": Math.min(index, 12), "--wave": `${index * 120}ms` } as CSSProperties}>
+    <QueueLine row={row} kind={kind} ran={ran} settled={settled} typeIcon={typeIcon} />
+  </li>)}</ul>;
+  return <section className={`home-panel is-${kind}${folded ? " is-folded" : ""}`} aria-label={title}>
+    {foldable
+      ? <header className="home-panel-head home-panel-fold"><h3>
+        <button type="button" aria-expanded={!folded} onClick={() => { writeFolded(foldStore(), !folded); setFolded(!folded); }}>
+          {title}<Icon name="chevron" className="home-fold-chevron" /></button></h3></header>
+      : <header className="home-panel-head"><h3>{title}</h3>{note && <p>{note}</p>}</header>}
+    {foldable ? <div className="home-fold-body"><div>{list}</div></div> : list}
+  </section>;
+}
+
+function QueueLine({ row, kind, ran, settled, typeIcon }: { row: HomeRow; kind: "review" | "fresh" | "resolved"; ran: readonly string[]; settled: number; typeIcon: (type: DisputeCase["type"]) => JSX.Element }) {
+  const summary = disputeLabel(row.dispute);
+  const outcome = row.decision ? DECISION_LABELS[row.decision] : null;
+  const date = shortDate(row.raisedAt);
+  const inBatch = ran.includes(row.id);
+  const working = inBatch && ran.indexOf(row.id) >= settled;
+  const finished = row.status === "auto" || row.status === "closed";
+  const quiet = row.status === "decide" || row.status === "ready";
+  return <a className={`home-row home-line${working ? " is-working" : ""}${inBatch && !working ? " is-landed" : ""}`} href={caseHash(row.id)}
+    aria-label={`${row.id}: ${summary}. ${working ? "Working" : STATUS_WORDS[row.status]}${outcome ? `, ${outcome}` : ""}${row.tier === "safety" ? ", safety" : ""}${date ? `, raised ${date}` : ""}`}>
+    <span className={`home-line-icon sidebar-category-${row.dispute.type === "route_deviation" ? "route" : "no-show"}`}>{typeIcon(row.dispute.type)}</span>
+    <span className="home-row-main"><span className="home-row-summary">{summary}</span></span>
+    <span className="home-row-meta">
+      {row.tier === "safety" && <Chip size="sm" tone="danger" className="home-safety"><Icon name="warning" />Safety</Chip>}
+      {row.audit && row.status === "ready" && <Chip size="sm" tone="outline">Audit sample</Chip>}
+      {working
+        ? <span className="home-row-status status-working"><span className="home-working-dot" aria-hidden="true" />Working</span>
+        : finished
+          ? <span className="home-line-done" title={STATUS_WORDS[row.status]}><Icon name="check" /></span>
+          : !quiet && <span className={`home-row-status status-${row.status}`}>{row.status !== "not_run" && <Icon name={STATUS_ICONS[row.status]} />}{STATUS_WORDS[row.status]}</span>}
+    </span>
+    {date && <span className="home-row-date">{date}</span>}
+    {kind !== "resolved" && <Icon name="arrow" className="home-row-chevron" />}
+  </a>;
+}

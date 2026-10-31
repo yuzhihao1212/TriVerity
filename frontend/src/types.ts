@@ -34,6 +34,8 @@ export interface DisputeCase {
   dispute_id: string;
   type: DisputeType;
   label?: string | null; // Display-only navigation text; not evidence for the agents.
+  raised_at?: string | null; // YYYY-MM-DD, for the queue order.
+  safety_flag?: boolean; // Samples only: a threat in the chat, known before any run.
   rider_claim: string;
   driver_statement?: string | null;
   trip: Trip;

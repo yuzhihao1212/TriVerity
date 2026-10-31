@@ -77,12 +77,12 @@ test('what happened uses trip/fare facts, never either party’s allegation', ()
     'Expected trip distance was 10 km; expected fare was $18.00.');
 });
 
-test('brief retains full claims for tooltips and shows first policy ID and confidence', () => {
+test('brief shows full claims and first policy ID and confidence', () => {
   assert.deepEqual(b.caseBriefRows(route, ruling).map(row => row.label), ['What happened', 'Rider says', 'Driver says'],
     'the proposal waits until the Ruling step is reviewed');
   const rows = b.caseBriefRows(route, ruling, { showProposal: true });
   assert.deepEqual(rows.map(row => row.label), ['What happened', 'Rider says', 'Driver says', 'Proposed ruling']);
-  assert.deepEqual(rows[1], { label: 'Rider says', text: route.rider_claim, truncate: true });
+  assert.deepEqual(rows[1], { label: 'Rider says', text: route.rider_claim });
   assert.equal(rows[3].text, 'partial refund $6.30 · RD-3 · 80% confidence');
   assert.equal(b.caseBriefRows(noShow, { ...ruling, decision: 'no_action', policy_refs: [' NS-1: Fee valid', 'NS-2: Other'], confidence: 0.95 }, { showProposal: true }).at(-1).text,
     'no change to the charge · NS-1 · 95% confidence');
@@ -120,9 +120,9 @@ test('fallback checks use recorded AI sources without labelling absent replies a
 });
 
 test('cost remains visible with distinct explanations for live reruns, first runs and offline runs', () => {
-  assert.deepEqual(b.runCostText(false, true), { note: 'Uses AI · about $0.002',
+  assert.deepEqual(b.runCostText(false, true), { note: 'Uses AI · About $0.002/run',
     detail: 'This case already has a saved result. Re-running calls the AI agents again and uses real tokens (about $0.002 per run).' });
   assert.equal(b.runCostText(false, false).detail, 'Running calls the AI agents and uses real tokens (about $0.002 per run).');
-  for (const hasResult of [false, true]) assert.deepEqual(b.runCostText(true, hasResult), { note: 'AI offline · free',
+  for (const hasResult of [false, true]) assert.deepEqual(b.runCostText(true, hasResult), { note: 'AI offline · No usage',
     detail: 'AI is offline: the ruling is the same; arguments and explanations use template text. No tokens are used.' });
 });

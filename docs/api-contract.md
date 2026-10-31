@@ -4,7 +4,7 @@
 
 ### Input: `DisputeCase`
 
-See `backend/app/models/dispute.py` and the samples in `data/disputes/`.
+See `backend/app/models/dispute.py` and the samples in `data/disputes/`. `raised_at` (`YYYY-MM-DD`, optional) sets the queue order and is never evidence for the agents. `GET /api/disputes/samples` also returns `safety_flag` on each case: true when its chat holds a message the SAFE-1 keyword check matches, so the queue can tag it before any run.
 
 ```json
 {
@@ -244,7 +244,7 @@ See `backend/app/models/resolution.py`.
 
 ## POST `/api/disputes/resolve/batch`
 
-The queue's **Run all**: resolves several sample disputes in one request. Body:
+The queue's **AI Review** button (new cases, or a re-run of open ones): resolves several sample disputes in one request. Body:
 `{"dispute_ids": ["D001", "D003"]}` (1 to 10 IDs; duplicates resolve once). Accepts `?ai=off`.
 
 - **Samples only.** Every ID must be one of the server's samples, or the whole request gets 404. Each is

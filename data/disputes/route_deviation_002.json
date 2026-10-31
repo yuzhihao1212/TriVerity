@@ -2,6 +2,7 @@
   "dispute_id": "D003",
   "label": "Slightly different route",
   "type": "route_deviation",
+  "raised_at": "2026-09-19",
   "rider_claim": "The driver went a slightly different way than the app suggested.",
   "driver_statement": "I followed the navigation app.",
   "trip": {
