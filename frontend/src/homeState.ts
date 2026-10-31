@@ -111,6 +111,25 @@ export function reviewButtonLabel(mode: AiMode, { running = false, total = 0, fr
   return mode === "offline" ? "Re-run with Rules" : "Re-run AI Review";
 }
 
+/** About what one case costs with Hy3; the same figure the Run Agents note gives. */
+const COST_PER_CASE = 0.002;
+
+/**
+ * What the queue button is about to do, said before it does it. New cases can close on their
+ * own and notify the parties, which matters more than the tokens; a re-run only touches open cases.
+ */
+export function reviewConfirm(mode: AiMode, { count, fresh }: { count: number; fresh: boolean }) {
+  const cases = `${count} ${count === 1 ? "case" : "cases"}`;
+  const cost = mode === "offline" ? "No AI and no cost."
+    : `Uses AI tokens, up to about $${(Math.ceil(count * COST_PER_CASE * 100) / 100).toFixed(2)}.`;
+  if (!fresh) return { title: `Re-run the ${count} open ${count === 1 ? "case" : "cases"}?`, body: `${cost} Resolved cases and saved decisions stay as they are.`, action: "Re-run" };
+  return {
+    title: mode === "offline" ? `Review ${cases} with rules only?` : `Review ${cases} with Hy3?`,
+    body: `${cost} Routine cases will close automatically and notify the rider and driver. Cases that need a person stay in your queue.`,
+    action: mode === "offline" ? "Review with Rules" : "Run AI Review",
+  };
+}
+
 /**
  * What a re-run may touch: a case still waiting on a person with nothing saved. Closed cases go
  * through Reopen (the parties were told), and a re-run would wipe a saved decision or a hold.

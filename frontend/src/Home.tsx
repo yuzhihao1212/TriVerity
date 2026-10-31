@@ -3,7 +3,7 @@ import type { AiMode } from "./aiMode";
 import { queueGroups, STATUS_ICONS, STATUS_WORDS, type QueueRow } from "./caseQueue";
 import { Chip } from "./Chip";
 import { useIntroOnce } from "./EvidenceStories";
-import { GUIDED_DEMO, greeting, greetingLine, guidedDemoSteps, queueSegments, queueSummary, readFolded, rerunnable, reviewButtonLabel, reviewNote, reviewSummary, reviewTiles, shortDate, writeFolded } from "./homeState";
+import { GUIDED_DEMO, greeting, greetingLine, guidedDemoSteps, queueSegments, queueSummary, readFolded, rerunnable, reviewButtonLabel, reviewConfirm, reviewNote, reviewSummary, reviewTiles, shortDate, writeFolded } from "./homeState";
 import { Icon } from "./Icon";
 import { Mascot } from "./Mascot";
 import { DECISION_LABELS } from "./outcomeTone";
@@ -51,7 +51,13 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
   // A case on hold is waiting for someone else, so a reviewer can't start there.
   const startWith = groups.review[0] ?? null;
   const [confirming, setConfirming] = useState(false);
-  const stay = !running && confirming && newIds.length === 0 && rerunIds.length > 0;
+  const pendingIds = newIds.length > 0 ? newIds : rerunIds;
+  const confirm = !running && confirming && pendingIds.length > 0 ? reviewConfirm(aiMode, { count: pendingIds.length, fresh: newIds.length > 0 }) : null;
+  const runButton = useRef<HTMLButtonElement>(null);
+  function cancelConfirm() {
+    setConfirming(false);
+    runButton.current?.focus();
+  }
   const segments = queueSegments(rows, appealsWaiting != null);
   const starts = guidedDemoSteps(rows);
   const [demoOpen, setDemoOpen] = useState(readDemoOpen);
@@ -90,18 +96,18 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
       </div>}
       <div className="home-head-actions">
         {reviewed && startWith && <a className="run-button home-start-reviewing" href={caseHash(startWith.id)}>Start Reviewing<Icon name="arrow" /></a>}
-        <button type="button" className={`${reviewed && startWith ? "secondary-button" : "run-button"} home-run-all`} disabled={running || (newIds.length === 0 && rerunIds.length === 0)}
+        <button type="button" ref={runButton} aria-expanded={!!confirm} className={`${reviewed && startWith ? "secondary-button" : "run-button"} home-run-all`} disabled={running || (newIds.length === 0 && rerunIds.length === 0)}
           title={!running && newIds.length === 0 && rerunIds.length === 0 ? "Nothing is open to re-run" : undefined}
-          onClick={() => newIds.length > 0 ? onReview(newIds) : setConfirming(true)}>
+          onClick={() => setConfirming(true)}>
           <Icon name="scales" />{reviewButtonLabel(aiMode, { running, total: runAllProgress?.total ?? 0, fresh: newIds.length, anyRun: reviewed })}
         </button>
       </div>
     </div>
-    {stay && <div className="home-confirm" role="group" aria-label="Confirm re-run" onKeyDown={event => { if (event.key === "Escape") setConfirming(false); }}>
-      <p>Re-run the {rerunIds.length} open {rerunIds.length === 1 ? "case" : "cases"}? Resolved cases and saved decisions stay as they are.</p>
+    {confirm && <div className="home-confirm" role="group" aria-label={confirm.title} onKeyDown={event => { if (event.key === "Escape") cancelConfirm(); }}>
+      <div className="home-confirm-text"><p className="home-confirm-title">{confirm.title}</p><p>{confirm.body}</p></div>
       <div className="home-confirm-actions">
-        <button type="button" className="run-button" autoFocus onClick={() => { setConfirming(false); onReview(rerunIds); }}>Re-run</button>
-        <button type="button" className="secondary-button" onClick={() => setConfirming(false)}>Cancel</button>
+        <button type="button" className="run-button" autoFocus onClick={() => { setConfirming(false); onReview(pendingIds); }}>{confirm.action}</button>
+        <button type="button" className="secondary-button" onClick={cancelConfirm}>Cancel</button>
       </div>
     </div>}
     {running && runAllProgress && <ReviewProgress done={runAllProgress.done} total={runAllProgress.total} />}
