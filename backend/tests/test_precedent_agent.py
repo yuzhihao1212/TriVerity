@@ -136,7 +136,7 @@ def test_judge_cites_retrieved_precedents_in_the_record():
     result, mock = narrated(GOOD)
     assert result.explanation_source == "llm"
     prompt = json.loads(mock.call_args.args[1])
-    assert prompt["precedents"]["consistency"] == "consistent"
+    assert prompt["precedents"]["consistency"] == "consistent with similar past rulings"
     assert [p["id"] for p in prompt["precedents"]["similar_past_rulings"]] == ["P-063", "P-056", "P-070"]
 
 
@@ -244,3 +244,9 @@ def test_precedents_stay_out_of_party_views():
         body = client.post(f"/api/disputes/resolve?view={view}", json=D001.model_dump()).json()
         assert set(body) == set(PartyResolution.model_fields)
         assert "P-0" not in json.dumps(body)
+
+
+def test_judge_never_sees_a_raw_consistency_label():
+    from app.agents.judge_narration import _CONSISTENCY_WORDS
+    assert set(_CONSISTENCY_WORDS) == {"consistent", "mixed", "overridden", "no_precedent"}
+    assert all("_" not in words for words in _CONSISTENCY_WORDS.values())

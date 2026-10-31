@@ -61,7 +61,7 @@ export function AppealForm({ dispute, party, decision, onFiled, available = true
       <textarea id={`${id}-reason`} rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} />
       <div className="appeal-actions">
         <button type="button" className="run-button" disabled={sending || !reason.trim()} onClick={submit}>
-          <ButtonLoader busy={sending} />{sending ? "Sending…" : "Send appeal"}
+          <ButtonLoader busy={sending} />{sending ? "Sending…" : "Send Appeal"}
         </button>
         <button type="button" className="secondary-button" onClick={() => setOpen(false)}>Cancel</button>
       </div>
@@ -130,12 +130,12 @@ function AppealItem({ appeal, onDecided, current, closed, onReopen }: {
         <>
           <p className="reviewer-appeal-result">{decidedAppealLine(appeal)}</p>
           {followUp && <p className="small muted">{followUp}</p>}
-          {correctable && closed && onReopen && <button type="button" className="secondary-button" onClick={onReopen}>Reopen to send a correction</button>}
+          {correctable && closed && onReopen && <button type="button" className="secondary-button" onClick={onReopen}>Reopen to Send a Correction</button>}
         </>
       ) : (
         <>
           <button type="button" ref={trigger} className="secondary-button reviewer-appeal-trigger"
-            onClick={() => { setError(null); dialog.current?.showModal(); }}>Decide appeal {appeal.id}</button>
+            onClick={() => { setError(null); dialog.current?.showModal(); }}>Decide Appeal {appeal.id}</button>
           <dialog className="closed-dialog appeal-dialog" ref={dialog}
             aria-labelledby={`${id}-title`} aria-describedby={`${id}-reason ${id}-original`}
             onClose={() => trigger.current?.focus()}
@@ -146,7 +146,7 @@ function AppealItem({ appeal, onDecided, current, closed, onReopen }: {
               if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
               else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
             }}>
-            <h2 id={`${id}-title`}>Decide appeal {appeal.id}</h2>
+            <h2 id={`${id}-title`}>Decide Appeal {appeal.id}</h2>
             <div id={`${id}-reason`}>
               <p>{appeal.party === "rider" ? "Rider" : "Driver"} appealed:</p>
               <blockquote className="reviewer-appeal-reason">“{appeal.reason}”</blockquote>
@@ -163,7 +163,7 @@ function AppealItem({ appeal, onDecided, current, closed, onReopen }: {
             <div role="alert">{error && <p className="error">{error}</p>}</div>
             <div className="closed-dialog-actions">
               <button type="button" className="secondary-button" autoFocus onClick={() => dialog.current?.close()}>Cancel</button>
-              <button type="button" className="run-button" disabled={saving} onClick={record}><ButtonLoader busy={saving} />{saving ? "Recording…" : "Record decision"}</button>
+              <button type="button" className="run-button" disabled={saving} onClick={record}><ButtonLoader busy={saving} />{saving ? "Recording…" : "Record Decision"}</button>
             </div>
           </dialog>
         </>

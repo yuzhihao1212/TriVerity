@@ -4,10 +4,10 @@ import type { FinishedTimes } from "./progressEstimate";
 // tests can load it. Evidence first: nothing here names or hints at the ruling.
 
 export const LIVE_STAGES = [
-  { id: "gather", title: "Gather the evidence", live: "Gathering the evidence", agents: ["evidence_loader", "evidence_collector"] },
-  { id: "argue", title: "Argue both sides", live: "Arguing both sides", agents: ["rider_advocate", "driver_advocate", "fraud_detector"] },
-  { id: "answer", title: "Answer each other", live: "Each side is answering the other", agents: ["rider_rebuttal", "driver_rebuttal"] },
-  { id: "decide", title: "Check the policy", live: "Checking the policy and explaining", agents: ["precedent_agent", "judge"] },
+  { id: "gather", title: "Gather the Evidence", live: "Gathering the evidence", agents: ["evidence_loader", "evidence_collector"] },
+  { id: "argue", title: "Argue Both Sides", live: "Arguing both sides", agents: ["rider_advocate", "driver_advocate", "fraud_detector"] },
+  { id: "answer", title: "Answer Each Other", live: "Each side is answering the other", agents: ["rider_rebuttal", "driver_rebuttal"] },
+  { id: "decide", title: "Check the Policy", live: "Checking the policy and explaining", agents: ["precedent_agent", "judge"] },
 ] as const;
 export type StageId = typeof LIVE_STAGES[number]["id"];
 export type StageState = "done" | "active" | "pending";

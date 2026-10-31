@@ -26,7 +26,7 @@ export function HearingComparison({ resolution, disputeId, availableIds, onSelec
     </li>;
   };
   return <section className="hearing-comparison" aria-labelledby={`${id}-title`}>
-    <h3 id={`${id}-title`}>Who cited what</h3>
+    <h3 id={`${id}-title`}>Who Cited What</h3>
     <figure className="hearing-venn">
       <svg viewBox="0 0 130 78" width="130" height="78" role="img" aria-label={`Citation counts: ${counts.rider} only the rider, ${counts.both} both cited, ${counts.driver} only the driver`}>
         <circle cx="48" cy="39" r="34" /><circle cx="82" cy="39" r="34" />
@@ -48,7 +48,7 @@ export function HearingComparison({ resolution, disputeId, availableIds, onSelec
             </ul>
             <button type="button" className="hearing-more-facts" aria-expanded={expanded.has(column.key)} aria-controls={`${id}-${column.key}-more`}
               onClick={() => setExpanded(previous => { const next = new Set(previous); if (next.has(column.key)) next.delete(column.key); else next.add(column.key); return next; })}>
-              {expanded.has(column.key) ? "Show fewer" : `Show ${column.count - GROUP_LIMIT} more facts`}
+              {expanded.has(column.key) ? "Show Fewer" : `Show ${column.count - GROUP_LIMIT} More Facts`}
             </button>
           </>}
         </> : <p className="hearing-citation-empty">{column.key === "both" ? overlapEmpty : hasCitations ? `No facts cited only by the ${column.key}.` : "No citation IDs supplied in this result."}</p>}

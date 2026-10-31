@@ -7,7 +7,7 @@ import { GUIDED_DEMO, greeting, greetingLine, guidedDemoSteps, queueSegments, qu
 import { Icon } from "./Icon";
 import { Mascot } from "./Mascot";
 import { DECISION_LABELS } from "./outcomeTone";
-import { disputeLabel } from "./presentation";
+import { disputeTitle } from "./presentation";
 import { caseHash } from "./routes";
 import type { HoldRecord } from "./decisionState";
 import type { DisputeCase } from "./types";
@@ -35,17 +35,21 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
 }) {
   const summaryParts = queueSummary(rows, appealsWaiting != null);
   const running = !!runAllProgress?.running;
-  const groups = queueGroups(rows);
+  const all = queueGroups(rows);
+  // A case on hold has its own section above: it isn't waiting on this reviewer, so it isn't listed or counted here.
+  const groups = { ...all, review: all.review.filter(row => !heldIds.includes(row.id)) };
   // While a review runs the rows hold their places; they rearrange only once it has finished.
   const heldOrder = useRef<string[] | null>(null);
   if (!running) heldOrder.current = null;
   else heldOrder.current ??= [...groups.review, ...groups.fresh, ...groups.resolved].map(row => row.id);
   const held = (heldOrder.current ?? []).flatMap(id => rows.filter(row => row.id === id));
-  const tiles = reviewTiles(rows);
-  const reviewed = !running && tiles.attention + tiles.policy > 0;
+  const tiles = reviewTiles(rows.filter(row => !heldIds.includes(row.id)));
+  const reviewed = !running && tiles.attention + tiles.policy + holds.length > 0;
   // Only samples run in a batch: own disputes use Run agents, which sends the access code.
   const newIds = groups.fresh.filter(row => sampleIds.has(row.id)).map(row => row.id);
-  const rerunIds = rerunnable(groups.review, heldIds).filter(row => sampleIds.has(row.id)).map(row => row.id);
+  const rerunIds = rerunnable(groups.review, []).filter(row => sampleIds.has(row.id)).map(row => row.id);
+  // A case on hold is waiting for someone else, so a reviewer can't start there.
+  const startWith = groups.review[0] ?? null;
   const [confirming, setConfirming] = useState(false);
   const stay = !running && confirming && newIds.length === 0 && rerunIds.length > 0;
   const segments = queueSegments(rows, appealsWaiting != null);
@@ -71,11 +75,11 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
     <div className="home-greeting">
       <Mascot size={112}>
         <p className="home-hello">{hello}!</p>
-        <p className="home-hello-line">{greetingLine(rows)}</p>
+        <p className="home-hello-line">{greetingLine(rows, heldIds)}</p>
       </Mascot>
     </div>
     <div className="home-head">
-      <h2 id="home-title">Your queue</h2>
+      <h2 id="home-title">Your Queue</h2>
       {!reviewed && !running && <div className="home-meter" role="img" aria-label={[summaryParts[0].text, ...segments.map(segment => `${segment.count} ${segment.label}`)].join(", ")}>
         <span className="home-meter-bar" aria-hidden="true">{segments.map((segment, index) =>
           <span key={segment.key} className={`tone-${segment.tone}`} style={{ flexGrow: segment.count, "--meter-delay": `${index * 80}ms` } as CSSProperties} />)}</span>
@@ -85,8 +89,8 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
         </span>
       </div>}
       <div className="home-head-actions">
-        {reviewed && groups.review[0] && <a className="run-button home-start-reviewing" href={caseHash(groups.review[0].id)}>Start reviewing<Icon name="arrow" /></a>}
-        <button type="button" className={`${reviewed && groups.review[0] ? "secondary-button" : "run-button"} home-run-all`} disabled={running || (newIds.length === 0 && rerunIds.length === 0)}
+        {reviewed && startWith && <a className="run-button home-start-reviewing" href={caseHash(startWith.id)}>Start Reviewing<Icon name="arrow" /></a>}
+        <button type="button" className={`${reviewed && startWith ? "secondary-button" : "run-button"} home-run-all`} disabled={running || (newIds.length === 0 && rerunIds.length === 0)}
           title={!running && newIds.length === 0 && rerunIds.length === 0 ? "Nothing is open to re-run" : undefined}
           onClick={() => newIds.length > 0 ? onReview(newIds) : setConfirming(true)}>
           <Icon name="scales" />{reviewButtonLabel(aiMode, { running, total: runAllProgress?.total ?? 0, fresh: newIds.length, anyRun: reviewed })}
@@ -128,14 +132,14 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
       </div></div>
     </section>}
     {holds.length > 0 && <section className="home-holds" aria-labelledby="home-holds-title">
-      <h3 id="home-holds-title"><Icon name="pause" />On hold · waiting for a second reviewer <span className="home-holds-count">{holds.length}</span></h3>
+      <h3 id="home-holds-title"><Icon name="pause" />On Hold · Waiting for a Second Reviewer <span className="home-holds-count">{holds.length}</span></h3>
       <p className="home-holds-note small muted">Simulated in this browser: a hold isn't saved or sent anywhere.</p>
       <ul className="home-holds-list">{holds.map(hold => {
         const row = rows.find(r => r.id === hold.disputeId);
         return <li key={hold.disputeId}>
           <a className="home-hold" href={caseHash(hold.disputeId)}>
             <span className="home-hold-icon" aria-hidden="true"><Icon name="magnifier" /></span>
-            <span className="home-row-main"><span className="home-row-summary">{hold.disputeId}{row && <> · {disputeLabel(row.dispute)}</>}</span>
+            <span className="home-row-main"><span className="home-row-summary">{hold.disputeId}{row && <> · {disputeTitle(row.dispute)}</>}</span>
               <span className="home-row-id">{hold.why} · held by you · {hold.at}</span></span>
             <span className="home-hold-review">Review<Icon name="chevron" /></span>
           </a>
@@ -144,11 +148,11 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
     </section>}
     <section className="home-cases" ref={casesBox}>
       {running
-        ? <QueueList title="All cases" rows={held} kind="fresh" ran={runAllProgress?.ids ?? []} settled={runAllProgress?.done ?? 0} typeIcon={typeIcon} />
+        ? <QueueList title="All Cases" rows={held} kind="fresh" ran={runAllProgress?.ids ?? []} settled={runAllProgress?.done ?? 0} typeIcon={typeIcon} />
         : <>
           {groups.review.length > 0 && <QueueList title="Human Review Required" note="Safety first, then oldest." rows={groups.review} kind="review" typeIcon={typeIcon} />}
-          {groups.fresh.length > 0 && <QueueList title={groups.fresh.length === rows.length ? "All cases" : "New cases"} rows={groups.fresh} kind="fresh" typeIcon={typeIcon} />}
-          {groups.resolved.length > 0 && <QueueList title={groups.resolved.some(row => row.status === "closed") ? "Resolved" : "Resolved automatically"} rows={groups.resolved} kind="resolved" typeIcon={typeIcon} />}
+          {groups.fresh.length > 0 && <QueueList title={groups.fresh.length === rows.length ? "All Cases" : "New Cases"} rows={groups.fresh} kind="fresh" typeIcon={typeIcon} />}
+          {groups.resolved.length > 0 && <QueueList title={groups.resolved.some(row => row.status === "closed") ? "Resolved" : "Resolved Automatically"} rows={groups.resolved} kind="resolved" typeIcon={typeIcon} />}
         </>}
     </section>
   </section>;
@@ -217,7 +221,7 @@ function QueueList({ title, note, rows, kind, ran = [], settled = 0, typeIcon }:
 }
 
 function QueueLine({ row, kind, ran, settled, typeIcon }: { row: HomeRow; kind: "review" | "fresh" | "resolved"; ran: readonly string[]; settled: number; typeIcon: (type: DisputeCase["type"]) => JSX.Element }) {
-  const summary = disputeLabel(row.dispute);
+  const summary = disputeTitle(row.dispute);
   const outcome = row.decision ? DECISION_LABELS[row.decision] : null;
   const date = shortDate(row.raisedAt);
   const inBatch = ran.includes(row.id);

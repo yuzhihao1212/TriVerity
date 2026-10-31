@@ -99,7 +99,7 @@ test('F02: the dispute\'s own public case ID is not internal data', () => {
   assert.deepEqual(ns.noteWarnings({ rider: 'Case D001 under RD-3', driver: '' }, 'D001'), { rider: ['internal rule IDs'], driver: [] });
 });
 
-test('F02: internal data blocks sending, and "Send anyway" cannot clear it', () => {
+test('F02: internal data blocks sending, and "Send Anyway" cannot clear it', () => {
   const warnings = { rider: ['internal rule IDs'], driver: [] };
   assert.equal(ns.sendBlock({ amountMissing: false, warnings }), 'privacy');
   assert.equal(ns.sendBlock({ amountMissing: false, warnings, sendAnyway: true }), 'privacy', 'no override for an ID');

@@ -193,3 +193,10 @@ def test_advocate_listing_ids_without_the_field_cites_them():
     with patch("app.agents._advocate.complete", return_value=json.dumps(reply)):
         result = build_rider_case(D006, FACTS)
     assert result.summary == "The driver waited 7 minutes." and result.evidence_ids == ["TRIP-2"]
+
+
+def test_advocates_open_with_their_own_clients_ask():
+    assert "why the charge should be refunded to the rider" in advocate_system_prompt("rider", "claim")
+    driver = advocate_system_prompt("driver", "account")
+    assert "why the charge should stand" in driver and "refunded to the driver" not in driver
+

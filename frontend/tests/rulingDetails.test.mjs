@@ -10,7 +10,7 @@ const base = {
 
 test('the rows under the card point to the Judge\'s words and the alternatives, not a second verdict', () => {
   const rows = d.reviewRows(base);
-  assert.equal(rows[0].question, 'In plain words');
+  assert.equal(rows[0].question, 'In Plain Words');
   assert.doesNotMatch(rows[0].answer, /RD-3|Decided by/);
   assert.equal(rows[3].answer, 'No alternative conditions supplied in this result');
   assert.equal(d.reviewRows({ ...base, counterfactuals: [{ change: 'x', outcome: 'y' }] })[3].answer, 'Explore alternative facts and their outcomes.');

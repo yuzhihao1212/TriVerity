@@ -84,14 +84,14 @@ test('the privacy check runs on the notes only; the generated message is never c
   const flagged = ns.noteWarnings({ rider: 'Your fraud risk is high', driver: '' });
   assert.deepEqual(flagged, { rider: ['fraud', 'risk'], driver: [] });
   assert.equal(ns.sendBlock({ ...none, warnings: flagged }), 'privacy');
-  assert.equal(ns.sendBlock({ ...none, warnings: flagged, sendAnyway: true }), 'privacy', 'internal data: "Send anyway" cannot clear it');
+  assert.equal(ns.sendBlock({ ...none, warnings: flagged, sendAnyway: true }), 'privacy', 'internal data: "Send Anyway" cannot clear it');
   assert.equal(ns.sendBlock({ ...none, warnings: ns.noteWarnings({ rider: 'Sorry for the trouble on this trip.', driver: '' }) }), null);
   assert.equal(ns.sendBlock({ amountMissing: true, warnings: clean, sendAnyway: true }), 'amount', 'the partial-refund amount still comes first');
 });
 
-test('"Clear note" empties the note, which removes its warning and its phone block', () => {
+test('"Clear Note" empties the note, which removes its warning and its phone block', () => {
   let notes = { rider: 'Your fraud risk is high', driver: 'Thanks' };
-  notes = { ...notes, rider: '' }; // the "Clear note" action
+  notes = { ...notes, rider: '' }; // the "Clear Note" action
   assert.deepEqual(ns.noteWarnings(notes).rider, []);
   assert.equal(ns.cleanNote(notes.rider), '', 'an empty note shows no "Note from your reviewer" block');
   assert.equal(ns.hasNote({ notes }), true, 'the other note stays');
@@ -194,7 +194,7 @@ test('next case: the next not-done case in queue order, none when all are closed
 test('tile counts', () => {
   assert.deepEqual(q.tileCounts(rows), { queue: 7, ready: 2, decide: 2, auto: 0, done: 1, appeals: 0 });
   assert.deepEqual(q.tileCounts([]), { queue: 0, ready: 0, decide: 0, auto: 0, done: 0, appeals: 0 });
-  assert.deepEqual(q.START_HERE.map(s => [s.id, s.title]), [['D001', 'A route dispute'], ['D006', 'A no-show fee'], ['D007', 'A safety flag']]);
+  assert.deepEqual(q.START_HERE.map(s => [s.id, s.title]), [['D001', 'A Route Dispute'], ['D006', 'A No-show Fee'], ['D007', 'A Safety Flag']]);
 });
 
 test('an appeal from a phone gets a reviewer line, flagged when it is a safety appeal', () => {

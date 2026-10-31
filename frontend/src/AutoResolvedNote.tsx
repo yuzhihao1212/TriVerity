@@ -21,8 +21,8 @@ export function AutoResolvedNote({ autonomy, closedAutomatically, onSeeSent, onR
     {!autonomy.audit && closedAutomatically && <>
       <p className="small muted">No person was needed: the rider and driver were notified (simulated), with how to appeal. No precedent is saved for automatic decisions.</p>
       {(onSeeSent || onReopen) && <div className="auto-note-actions">
-        {onSeeSent && <button type="button" className="secondary-button" onClick={onSeeSent}>See what was sent<Icon name="arrow" /></button>}
-        {onReopen && <button type="button" className="text-button" onClick={onReopen}>Reopen to review</button>}
+        {onSeeSent && <button type="button" className="secondary-button" onClick={onSeeSent}>See What Was Sent<Icon name="arrow" /></button>}
+        {onReopen && <button type="button" className="text-button" onClick={onReopen}>Reopen to Review</button>}
       </div>}
     </>}
     {!autonomy.audit && !closedAutomatically && <p className="small muted">Your decision replaces the automatic one when you send it.</p>}

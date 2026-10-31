@@ -77,7 +77,12 @@ export function nextAfterClose<T extends QueueRow>(rows: T[], currentId: string,
     }
   }
   const row = nextCase(rows, currentId);
-  return row ? { row, label: `Next case: ${row.id} →` } : null;
+  return row ? { row, label: `Next Case: ${row.id} →` } : null;
+}
+
+/** What comes after this case, passing over cases on hold: nobody can act on those yet. */
+export function nextToReview<T extends QueueRow>(rows: T[], currentId: string, heldIds: readonly string[], guided = GUIDED_DEMO) {
+  return nextAfterClose(rows.filter(row => !heldIds.includes(row.id)), currentId, guided);
 }
 
 /** Announced when AI Review ends, about the cases that batch ran; null while running or before any run. */
@@ -96,14 +101,14 @@ export function reviewTiles(rows: Pick<QueueRow, "status">[]) {
 }
 
 /**
- * The queue button says what it will do, and never leaves: with Hy3 off the rules still rule
+ * The queue button says what it will do, and never leaves: with AI off the rules still rule
  * but no AI runs; new cases can always arrive; with none waiting it re-runs the open cases.
  */
 export function reviewButtonLabel(mode: AiMode, { running = false, total = 0, fresh = 0, anyRun = false }): string {
-  if (running) return `Reviewing ${total} ${total === 1 ? "case" : "cases"}…`;
-  const verb = mode === "offline" ? "Review with rules" : "AI Review";
-  if (fresh > 0) return anyRun ? `${verb} · ${fresh} new` : verb;
-  return mode === "offline" ? "Re-run with rules" : "Re-run AI Review";
+  if (running) return `Reviewing ${total} ${total === 1 ? "Case" : "Cases"}…`;
+  const verb = mode === "offline" ? "Review with Rules" : "AI Review";
+  if (fresh > 0) return anyRun ? `${verb} · ${fresh} New` : verb;
+  return mode === "offline" ? "Re-run with Rules" : "Re-run AI Review";
 }
 
 /**
@@ -149,14 +154,16 @@ export function greeting(hour: number): string {
 }
 
 /** One plain line under the greeting: what's waiting, and what needs the reviewer. */
-export function greetingLine(rows: Pick<QueueRow, "status">[]): string {
+export function greetingLine(rows: Pick<QueueRow, "id" | "status">[], heldIds: readonly string[] = []): string {
   const counts = tileCounts(rows);
   const fresh = rows.filter(row => row.status === "not_run").length;
   const cases = (n: number) => `${n} ${n === 1 ? "dispute" : "disputes"}`;
   if (!counts.queue) return "Your queue is empty.";
-  const { attention } = reviewTiles(rows);
+  // Cases on hold wait on a second reviewer, not on this one.
+  const { attention } = reviewTiles(rows.filter(row => !heldIds.includes(row.id)));
   if (attention > 0) return `${cases(attention)} ${attention === 1 ? "needs" : "need"} your attention, out of ${counts.queue} in your queue.`;
   if (fresh === counts.queue) return `${cases(fresh)} ${fresh === 1 ? "is" : "are"} waiting. Routine ones can close themselves; you'll see the rest.`;
   if (fresh > 0) return `${cases(fresh)} still to run, out of ${counts.queue} in your queue.`;
+  if (heldIds.length) return `${cases(heldIds.length)} on hold, waiting for a second reviewer.`;
   return `All ${cases(counts.queue)} in your queue have been handled.`;
 }

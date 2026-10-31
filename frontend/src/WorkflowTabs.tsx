@@ -2,7 +2,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties
 
 import { Icon } from "./Icon";
 import { reveal } from "./routes";
-import { DECIDE_FIRST, nextStepMode, SHORT_TAB_LABELS, stepStates, stepStatusText } from "./stepVisuals";
+import { DECIDE_FIRST, HOLD_NOTE, nextStepMode, SHORT_TAB_LABELS, stepStates, stepStatusText } from "./stepVisuals";
 import { ARRIVE_MS, LINE_MS, lineFraction, nextMove, positionText, unlockSchedule, type Move } from "./stepperMotion";
 import { navigateTab, tabLocked, tabProgress, WORKFLOW_TABS, type WorkflowTab } from "./workflow";
 import type { AgentLogEntry, Resolution } from "./types";
@@ -13,7 +13,7 @@ const STEP_ICONS: Record<WorkflowTab, string> = {
 
 const prefersReducedMotion = () => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, auto = false, decisionRecorded = false, closed = false, unlocking = false, onChange, render }: {
+export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, auto = false, held = false, decisionRecorded = false, closed = false, unlocking = false, onChange, render }: {
   active: WorkflowTab;
   resolution?: Resolution;
   busy: boolean;
@@ -23,6 +23,8 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, au
   reviewed?: Iterable<WorkflowTab>;
   /** Closed by the policy: the steps ran, but no person reviewed them. */
   auto?: boolean;
+  /** On hold for a second reviewer: there is nothing to accept or override here. */
+  held?: boolean;
   /** A run just finished: steps 2-5 unlock one after another. */
   unlocking?: boolean;
   decisionRecorded?: boolean;
@@ -129,7 +131,7 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, au
               <Icon name={STEP_ICONS[tab.id]} className="step-icon" />
               <span className="tab-label"><span className="label-full">{tab.label}</span><span className="label-short" aria-hidden="true">{SHORT_TAB_LABELS[tab.id]}</span></span>
             </span>
-            <span className="sr-only">, step {index + 1} of {WORKFLOW_TABS.length}{locked && !state.working ? ", locked" : `, ${auto && state.reviewed ? "completed automatically" : stepStatusText(state)}`}{state.next ? ", next to review" : ""}. </span>
+            <span className="sr-only">, Step {index + 1} Of {WORKFLOW_TABS.length}{locked && !state.working ? ", locked" : `, ${auto && state.reviewed ? "completed automatically" : stepStatusText(state)}`}{state.next ? ", next to review" : ""}. </span>
             {/* Only when it says something: "12 facts", "2 arguments"; locked steps stay quiet. */}
             {tabProgress(tab.id, resolution) && <span className="tab-progress">{tabProgress(tab.id, resolution)}</span>}
             {state.next && <span className="step-next" aria-hidden="true">Next</span>}
@@ -147,7 +149,7 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, au
         {render(tab.id)}
         {!busy && !unlocking && index < WORKFLOW_TABS.length - 1 && <div className="next-step">
           {nextStepMode({ tab: tab.id, hasResult: !!resolution, closed, decisionRecorded }) === "hint"
-            ? <p className="small muted next-step-hint">{DECIDE_FIRST}</p>
+            ? <p className="small muted next-step-hint">{held ? HOLD_NOTE : DECIDE_FIRST}</p>
             : <button type="button" className={nextStepMode({ tab: tab.id, hasResult: !!resolution, closed, decisionRecorded }) === "primary" ? "run-button" : "secondary-button"}
             aria-disabled={tabLocked(WORKFLOW_TABS[index + 1].id, !!resolution)}
             disabled={tabLocked(WORKFLOW_TABS[index + 1].id, !!resolution)}

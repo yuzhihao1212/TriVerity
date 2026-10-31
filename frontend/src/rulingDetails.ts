@@ -54,10 +54,10 @@ export function reviewRows(resolution: Pick<Resolution, "risk" | "precedents" | 
   const signals = resolution.risk.signals;
   // The card above shows the outcome and the checks, so "why" here is only the Judge's own words.
   const rows: { id: CheckRowId; question: string; answer: string; tone: "ok" | "warn" | "neutral"; icon: string }[] = [
-    { id: "why", question: "In plain words", answer: "How the Judge explains the rules and each side’s argument.", tone: "neutral", icon: "scales" },
-    { id: "risk", question: "Anything suspicious?", answer: signals.length ? `${signals.length} ${signals.length === 1 ? "signal" : "signals"}: ${signals[0]}` : "No risk signals", tone: signals.length ? "warn" : "ok", icon: signals.length ? "warning" : "shield" },
-    { id: "precedents", question: "Has this happened before?", answer: precedentSummary(resolution.precedents), tone: "neutral", icon: "history" },
-    { id: "changes", question: "What would change the outcome?", answer: resolution.counterfactuals?.length ? "Explore alternative facts and their outcomes." : "No alternative conditions supplied in this result", tone: "neutral", icon: "arrow" },
+    { id: "why", question: "In Plain Words", answer: "How the Judge explains the rules and each side’s argument.", tone: "neutral", icon: "scales" },
+    { id: "risk", question: "Anything Suspicious?", answer: signals.length ? `${signals.length} ${signals.length === 1 ? "signal" : "signals"}: ${signals[0]}` : "No risk signals", tone: signals.length ? "warn" : "ok", icon: signals.length ? "warning" : "shield" },
+    { id: "precedents", question: "Has This Happened Before?", answer: precedentSummary(resolution.precedents), tone: "neutral", icon: "history" },
+    { id: "changes", question: "What Would Change the Outcome?", answer: resolution.counterfactuals?.length ? "Explore alternative facts and their outcomes." : "No alternative conditions supplied in this result", tone: "neutral", icon: "arrow" },
   ];
   return signals.length ? [rows[1], rows[0], ...rows.slice(2)] : rows;
 }

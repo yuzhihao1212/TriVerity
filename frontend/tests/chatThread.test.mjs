@@ -31,9 +31,9 @@ test('the summary sentence comes from the case\'s own messages and chat checks',
 });
 
 test('the fold line counts every chat fact', () => {
-  assert.equal(c.showFactsLabel(4, false), 'Show 4 facts');
-  assert.equal(c.showFactsLabel(1, false), 'Show 1 fact');
-  assert.equal(c.showFactsLabel(4, true), 'Hide 4 facts');
+  assert.equal(c.showFactsLabel(4, false), 'Show 4 Facts');
+  assert.equal(c.showFactsLabel(1, false), 'Show 1 Fact');
+  assert.equal(c.showFactsLabel(4, true), 'Hide 4 Facts');
 });
 
 test('tone chips come from the real tone facts, and none appear without them', () => {

@@ -53,12 +53,12 @@ test('checklist groups the deciding checks first, then the rest, keeping engine 
   const safe = { rule: 'SAFE-1', label: 'Threat', met: false, value: 'None', fact_ids: [] };
   const groups = v.rulingConditionGroups({ ...base, conditions: [rd5, rd3, safe] });
   assert.deepEqual(groups.map(g => g.key), ['deciding', 'others', 'overlays']);
-  assert.deepEqual(groups.map(g => g.title), ['Decided the case', 'Also checked', 'Safety, fraud, precedent and confidence checks']);
+  assert.deepEqual(groups.map(g => g.title), ['Decided the Case', 'Also Checked', 'Safety, Fraud, Precedent and Confidence Checks']);
   assert.deepEqual(groups[0].checks.map(c => c.rule), ['RD-3']);
   // What didn't apply stays in an open group; only the escalation checks fold.
   assert.deepEqual(groups[1].checks.map(c => [c.rule, c.symbol]), [['RD-5', '⊖']]);
   assert.deepEqual(groups[2].checks.map(c => [c.rule, c.symbol]), [['SAFE-1', '⊖']]);
-  // Escalated: the overlays decide; the base refund rule moves to "Also checked".
+  // Escalated: the overlays decide; the base refund rule moves to "Also Checked".
   const threat = { ...safe, met: true, value: '1 threatening message' };
   const escalated = v.rulingConditionGroups({ ...base, decision: 'needs_review', policy_refs: ['RD-3: x', 'SAFE-1: y'], conditions: [rd3, threat] });
   assert.deepEqual(escalated.map(g => g.checks.map(c => c.rule)), [['SAFE-1'], ['RD-3']]);
@@ -116,3 +116,64 @@ test('rule tooltip placement stays inside a phone viewport at either edge', asyn
     assert.ok(left + offset + tip <= viewport - 12);
   }
 });
+
+const check = (rule, label, value, met) => ({ rule, label, value, met, fact_ids: [] });
+const noShowGap = {
+  decision: 'needs_review', policy_refs: ['NS-4: Missing'], recommended_action: "Escalate to a human reviewer: the driver's waiting time is missing.",
+  counterfactuals: [{ change: "the driver's waiting time had been recorded", outcome: 'an automatic ruling', rules: [] }],
+  conditions: [check('NS-1', 'Driver arrived within 100 m of pickup', '87 m from pickup', true), check('NS-4', 'Arrival location and waiting time available', 'Waiting time missing', false), check('SAFE-1', 'Threat', 'None', false)],
+};
+
+test('a case with a missing fact says what is missing, and what that would change', () => {
+  const brief = v.rulingBrief(noShowGap);
+  assert.equal(brief.reason, "The system can't rule on this case, because the driver's waiting time is missing.");
+  assert.equal(brief.missing.fact, "The driver's waiting time");
+  assert.equal(brief.missing.changeLine, "If the driver's waiting time had been recorded, the outcome would be an automatic ruling.");
+  assert.deepEqual(brief.known.map(item => item.rule), ['NS-1']);
+});
+
+test('a case escalated by a trigger names the trigger and keeps the proposed action', () => {
+  const brief = v.rulingBrief({
+    decision: 'needs_review', policy_refs: ['RD-3: Detour', 'SAFE-1: Threat', 'FRAUD-1: Risk'], recommended_action: 'Escalate to a human reviewer (proposed: Refund $6.90, the fare charged above the expected fare.)',
+    conditions: [check('RD-4', 'Route distances available', 'Available', true), check('RD-3', 'Route longer', '+40%', true), check('SAFE-1', 'Threat', '1 threatening message', true), check('FRAUD-1', 'Risk', 'Driver: high', true), check('PREC-1', 'Precedent', 'Not enough', false)],
+  });
+  assert.equal(brief.reason, "The system can't close this case, because of a threatening message in the chat and a high bad-faith risk.");
+  assert.equal(brief.proposed, 'Refund $6.90, the fare charged above the expected fare');
+  assert.deepEqual(brief.triggers.map(item => item.rule), ['SAFE-1', 'FRAUD-1']);
+  assert.deepEqual(brief.known.map(item => item.rule), ['RD-3']);
+  assert.equal(brief.missing, null);
+});
+
+test('a ruled case keeps its deciding checks, met or not, and drops availability checks', () => {
+  const brief = v.rulingBrief({ decision: 'full_refund', policy_refs: ['NS-1: Arrival'], recommended_action: 'Refund the no-show fee.',
+    conditions: [check('NS-1', 'Driver arrived within 100 m of pickup', '378 m', false), check('NS-4', 'Waiting time available', 'Available', true), check('SAFE-1', 'Threat', 'None', false)] });
+  assert.deepEqual(brief.known.map(item => item.rule), ['NS-1']);
+  assert.equal(brief.reason, 'A no-show fee condition was not met, so the fee is refunded.');
+});
+
+test('each side only asks for something when the AI wrote it', () => {
+  const side = (summary, source = 'llm') => ({ summary, source });
+  const result = { decision: 'needs_review', rider_case: side('Refund the fee, as no wait was recorded (GPS-1). More detail.'), driver_case: side('Keep the fee. More detail.') };
+  assert.deepEqual(v.rulingSides(result), { rider: 'Refund the fee, as no wait was recorded.', driver: 'Keep the fee.' });
+  assert.equal(v.rulingSides({ ...result, driver_case: side('Keep the fee.', 'fallback') }), null);
+  assert.equal(v.rulingSides({ ...result, decision: 'no_action' }), null);
+});
+
+test('with AI Live on, a result with no AI in it says so', () => {
+  const side = { source: 'fallback' };
+  const all = { explanation_source: 'fallback', rider_case: side, driver_case: side };
+  assert.equal(v.rulingCredits(all, true).warn, true);
+  assert.match(v.rulingCredits(all, true).text, /AI Live is on, but this result used fallback text/);
+  assert.ok(!v.rulingCredits(all, false).warn);
+});
+
+test('a bad-faith escalation lists the high-risk party\'s reasons, and only theirs', () => {
+  const fraud = { decision: 'needs_review', policy_refs: ['RD-3: Detour', 'FRAUD-1: Risk'], recommended_action: 'Escalate to a human reviewer (proposed: Refund $6.30.)',
+    conditions: [check('FRAUD-1', 'Risk', 'Rider: high; driver: medium', true)],
+    risk: { rider_risk: 'high', driver_risk: 'medium', signals: ['Rider has 3 disputes in the last 90 days', "Rider's rating is 4, below 4.3", 'Driver has 3 disputes in the last 90 days'] } };
+  assert.deepEqual(v.rulingBrief(fraud).riskReasons, ['Rider has 3 disputes in the last 90 days', "Rider's rating is 4, below 4.3"]);
+  // Signals alone are not an escalation: they only explain FRAUD-1 when it fired.
+  assert.deepEqual(v.rulingBrief({ ...noShowGap, risk: fraud.risk }).riskReasons, []);
+  assert.deepEqual(v.rulingBrief({ ...fraud, risk: undefined }).riskReasons, []);
+});
+

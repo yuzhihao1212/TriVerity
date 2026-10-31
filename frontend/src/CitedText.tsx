@@ -39,7 +39,7 @@ function CiteMarker({ id, text, availableIds, onSelectFact }: { id: string; text
       onClick={() => { place(); setState(s => trustTileState(s, { type: "toggle", id: tipId })); }}>{id}</button>
     <span role="tooltip" id={tipId} className="cite-marker-tip" hidden={!open} style={{ left }}>
       <span>{text ?? "Fact text unavailable in this result."}</span>
-      {canJump && <button type="button" className="text-button" onClick={() => onSelectFact!(id)}>Show {id} in Evidence</button>}
+      {canJump && <button type="button" className="text-button" onClick={() => onSelectFact!(id)}>Show {id} In Evidence</button>}
     </span>
   </span>;
 }

@@ -32,17 +32,17 @@ export const LANDING_RESULTS = [
 
 // Three stages people can grasp at a glance; the six real steps sit under them as chips.
 const STAGES = [
-  { icon: "magnifier", verb: "Gather", rest: "the evidence", line: "GPS · chat · fares · history", steps: [
-    { title: "Evidence collection", ai: true, code: true, detail: "Rules verify GPS, chat, fares and history; each advocate’s AI requests the records it needs." },
+  { icon: "magnifier", verb: "Gather", rest: "the Evidence", line: "GPS · chat · fares · history", steps: [
+    { title: "Evidence Collection", ai: true, code: true, detail: "Rules verify GPS, chat, fares and history; each advocate’s AI requests the records it needs." },
   ] },
-  { icon: "bubbles", verb: "Argue", rest: "both sides", line: "Rider AI vs driver AI, one reply each", steps: [
+  { icon: "bubbles", verb: "Argue", rest: "Both Sides", line: "Rider AI vs driver AI, one reply each", steps: [
     { title: "Advocates", ai: true, detail: "Each side builds its case from the same verified evidence." },
     { title: "Rebuttal", ai: true, detail: "Each advocate answers the other side once." },
   ] },
-  { icon: "scales", verb: "Decide", rest: "fairly", line: "Rules decide, AI explains", steps: [
-    { title: "Fraud & precedent checks", code: true, detail: "Rules check bad-faith signals and retrieve similar past rulings." },
-    { title: "Policy rules", code: true, detail: "A refund, compensation or no action, with confidence; uncertain or risky cases go to a human." },
-    { title: "Judge explains", ai: true, detail: "AI explains the ruling and prepares a separate message for each party." },
+  { icon: "scales", verb: "Decide", rest: "Fairly", line: "Rules Decide, AI Explains", steps: [
+    { title: "Fraud & Precedent Checks", code: true, detail: "Rules check bad-faith signals and retrieve similar past rulings." },
+    { title: "Policy Rules", code: true, detail: "A refund, compensation or no action, with confidence; uncertain or risky cases go to a human." },
+    { title: "Judge Explains", ai: true, detail: "AI explains the ruling and prepares a separate message for each party." },
   ] },
 ] as const;
 
@@ -55,12 +55,12 @@ interface TrustTile {
 }
 
 export const TRUST_TILES: readonly TrustTile[] = [
-  { icon: "scales", title: "Rules decide, AI explains", detail: "Decisions and amounts come from fixed rules. The same facts produce the same ruling, whoever argues the case." },
-  { icon: "magnifier", title: "Every argument fact-checked", detail: "Every argument cites evidence and policy rules, and the Judge checks each cited rule against the facts: it holds for that side, favours the other, or doesn't apply." },
-  { icon: "person", title: "Fair to both sides", proof: "500/500 fairness checks", detail: "Party history never changed a policy ruling: 500 of 500 simulated disputes got the same decision with histories removed or swapped. History is only used to check for bad-faith patterns." },
-  { icon: "shield", title: "Humans for risky cases", detail: "Uncertain or high-risk cases go to a human reviewer with a priority tier. Safety cases come first." },
-  { icon: "books", title: "Appeals teach the system", detail: "A reviewer's appeal decision becomes a precedent for similar future cases.", note: "Needs a judge access code in the public demo." },
-  { icon: "lock", title: "Tested against prompt injection", proof: "0 of 68 live runs swayed", detail: "23 attack scenarios tested offline. Across 17 attacks and 68 live Hy3 runs, no injection changed a ruling." },
+  { icon: "scales", title: "Rules Decide, AI Explains", detail: "Decisions and amounts come from fixed rules. The same facts produce the same ruling, whoever argues the case." },
+  { icon: "magnifier", title: "Every Argument Fact-checked", detail: "Every argument cites evidence and policy rules, and the Judge checks each cited rule against the facts: it holds for that side, favours the other, or doesn't apply." },
+  { icon: "person", title: "Fair to Both Sides", proof: "500/500 fairness checks", detail: "Party history never changed a policy ruling: 500 of 500 simulated disputes got the same decision with histories removed or swapped. History is only used to check for bad-faith patterns." },
+  { icon: "shield", title: "Humans for Risky Cases", detail: "Uncertain or high-risk cases go to a human reviewer with a priority tier. Safety cases come first." },
+  { icon: "books", title: "Appeals Teach the System", detail: "A reviewer's appeal decision becomes a precedent for similar future cases.", note: "Needs a judge access code in the public demo." },
+  { icon: "lock", title: "Tested Against Prompt Injection", proof: "0 of 68 live runs swayed", detail: "23 attack scenarios tested offline. Across 17 attacks and 68 live Hy3 runs, no injection changed a ruling." },
 ];
 
 export function Landing({ presentation, onTogglePresentation, theme, onToggleTheme, onOpenConsole }: {
@@ -73,7 +73,7 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
     <a className="skip-link" href="#landing-main" onClick={event => { event.preventDefault(); focusSection("landing-main"); }}>Skip to content</a>
     <header className="landing-header">
       <div className="landing-wrap landing-nav">
-        <nav aria-label="Project"><a href={`${GITHUB}#readme`}>Project docs</a>
+        <nav aria-label="Project"><a href={`${GITHUB}#readme`}>Project Docs</a>
           <ThemeToggle theme={theme} onToggle={onToggleTheme} />
           <PresentationToggle presentation={presentation} onToggle={onTogglePresentation} />
         </nav>
@@ -88,8 +88,8 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
           <p className="landing-byline"><OeroMark />By OeroAI</p>
           <p className="landing-lead"><span>Ride disputes resolved fairly</span> <span>in seconds, not days.</span></p>
           <p className="landing-intro muted">AI agents argue both sides; policy rules decide fairly. Follow the evidence and see why each ruling holds.</p>
-          <div className="landing-actions"><a className="landing-primary" href="#/console" onClick={onOpenConsole}>Open the reviewer console <span aria-hidden="true">↗</span></a>
-            <a href={GITHUB}>View the source on GitHub <span aria-hidden="true">↗</span></a></div>
+          <div className="landing-actions"><a className="landing-primary" href="#/console" onClick={onOpenConsole}>Open the Reviewer Console <span aria-hidden="true">↗</span></a>
+            <a href={GITHUB}>View the Source on GitHub <span aria-hidden="true">↗</span></a></div>
           <BuiltOn />
           </div>
           <HeroVisual />
@@ -97,13 +97,13 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
       </section>
       <div className="landing-wrap landing-sections">
         <section className="landing-problem" aria-labelledby="problem-title">
-          <div><p className="eyebrow">The problem</p><h2 id="problem-title">A disputed ride shouldn’t take days to review.</h2></div>
+          <div><p className="eyebrow">The problem</p><h2 id="problem-title">A Disputed Ride Shouldn’t Take Days to Review.</h2></div>
           <div><p>Ryde’s challenge brief describes <strong>24–72 hour resolutions</strong>, inconsistent rulings and costly manual review of GPS, chat, fares and history.</p>
             <p className="muted">TriVerity brings that evidence into one reviewable case, with clear rules and an explanation for each party.</p></div>
           <ProblemVisual />
         </section>
         <section aria-labelledby="flow-title">
-          <div className="landing-section-head"><p className="eyebrow">How it works</p><h2 id="flow-title">Two sides heard. One accountable decision.</h2><p className="muted">AI handles language. Rules verify the facts and apply policy.</p></div>
+          <div className="landing-section-head"><p className="eyebrow">How it works</p><h2 id="flow-title">Two Sides Heard. One Accountable Decision.</h2><p className="muted">AI handles language. Rules verify the facts and apply policy.</p></div>
           <ol className="landing-stages">{STAGES.map((stage, index) => <li key={stage.verb} className="landing-stage">
             <span className="landing-stage-icon" aria-hidden="true"><Icon name={stage.icon} /></span>
             <h3><span className="sr-only">Stage {index + 1}: </span><span className="landing-stage-verb">{stage.verb}</span> {stage.rest}</h3>
@@ -121,11 +121,11 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
           </li>)}</ol>
         </section>
         <section aria-labelledby="trust-title">
-          <div className="landing-section-head"><p className="eyebrow">What makes it trustworthy</p><h2 id="trust-title">A ruling you can question, inspect and appeal.</h2><p className="muted">Select a card for details.</p></div>
+          <div className="landing-section-head"><p className="eyebrow">What makes it trustworthy</p><h2 id="trust-title">A Ruling You Can Question, Inspect and Appeal.</h2><p className="muted">Select a card for details.</p></div>
           <TrustTiles />
         </section>
         <section ref={resultsRef} className="landing-results" aria-labelledby="results-title">
-          <div className="landing-section-head"><p className="eyebrow">Measured results</p><h2 id="results-title">Small sample. Clear benchmarks.</h2></div>
+          <div className="landing-section-head"><p className="eyebrow">Measured results</p><h2 id="results-title">Small Sample. Clear Benchmarks.</h2></div>
           <dl className="landing-metrics">{LANDING_RESULTS.map((result, index) => <div key={result.label} style={{ "--results-delay": `${index * 120}ms` } as CSSProperties}>
             <dt>{result.label}</dt>
             <dd className="landing-result-visual" aria-hidden="true"><ResultVisual index={index} /></dd>
@@ -136,7 +136,7 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
           <p className="landing-footnote muted">Synthetic data, not production results. Sample accuracy, latency and cost come from live Hy3 measurements; automation and repeatability come from the offline simulation. <a href={`${GITHUB}/blob/main/docs/evaluation.md`}>Evaluation</a> · <a href={`${GITHUB}/blob/main/docs/simulation.md`}>500-dispute simulation</a></p>
         </section>
         <section aria-labelledby="try-title">
-          <div className="landing-section-head"><p className="eyebrow">Try these cases</p><h2 id="try-title">Start with a case, then follow the reasoning.</h2><p className="muted">Opening a case loads its evidence. Agents run only when you press “Run agents”.</p></div>
+          <div className="landing-section-head"><p className="eyebrow">Try these cases</p><h2 id="try-title">Start with a Case, Then Follow the Reasoning.</h2><p className="muted">Opening a case loads its evidence. Agents run only when you press “Run agents”.</p></div>
           <div className="landing-cases">{CASES.map(sample => <a className="landing-case" key={sample.id} href={sample.href} aria-label={sample.accessibleName}>
             <span className={`landing-case-icon${sample.tone === "warn" ? " warn" : ""}`} aria-hidden="true"><Icon name={sample.icon} /></span>
             <h3>{sample.title}</h3>
@@ -334,7 +334,7 @@ function HeroRulingCard() {
         {HERO_RULINGS.map((item, i) => <button key={item.id} type="button" className="hero-pick" aria-pressed={i === index}
           aria-label={`Show example ${i + 1} of ${HERO_RULINGS.length}: ${item.id}`} onClick={() => { setIndex(i); setStopped(true); }} />)}
         {!reduced && HERO_RULINGS.length > 1 && <button type="button" className="hero-pause" onClick={() => setStopped(s => !s)}
-          aria-label={stopped ? "Play example rulings" : "Pause example rulings"}>
+          aria-label={stopped ? "Play Example Rulings" : "Pause Example Rulings"}>
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
             {stopped ? <path d="M8 5.5v13l10-6.5Z" /> : <path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" />}
           </svg>

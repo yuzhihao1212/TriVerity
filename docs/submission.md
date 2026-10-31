@@ -107,7 +107,7 @@ TriVerity targets each of these:
   only after receiving the outcome.
 - **Closed cases**: a sent case reopens read-only with a "Case closed" banner; a deliberate Reopen allows a
   correction, and the history keeps every message that was sent.
-- A **Hy3 live / off** switch lets the whole flow run without AI cost; rulings are identical, and only
+- An **AI Live / Off** switch lets the whole flow run without AI cost; rulings are identical, and only
   the wording falls back to templates.
 
 **How prompts drive the generation** (full prompts: [prompts.md](prompts.md)):

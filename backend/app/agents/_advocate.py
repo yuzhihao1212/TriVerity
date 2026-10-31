@@ -68,6 +68,10 @@ _FACT_ID_RE = re.compile(r"\b[A-Z]+-\d+\b", re.IGNORECASE)
 _ID_LIST_RE = re.compile(r"^\W*[A-Z]+-\d+(?:(?:\W|\band\b)+[A-Z]+-\d+)*\W*$", re.IGNORECASE)
 
 
+# Spelled out per party: left open, the driver's advocate argued for a refund "to the driver".
+_OPENING_ASK = {"rider": "why the charge should be refunded to the rider", "driver": "why the charge should stand"}
+
+
 def advocate_system_prompt(party: str, own_account: str) -> str:
     """System prompt for the advocate representing ``party`` ("rider" or "driver").
 
@@ -101,7 +105,10 @@ def advocate_system_prompt(party: str, own_account: str) -> str:
         f"(rider: or driver:): only say a party said, agreed, asked or promised something if "
         f"that party sent the message you cite, and never credit one party with the other's words.\n"
         f"6. Write plain text only: no links, email addresses, phone numbers, HTML or markdown.\n"
-        f"7. Keep the summary concise: at most 120 words, focused on your strongest points. "
+        f"7. Open the summary with one sentence of at most 20 words saying {_OPENING_ASK[party]}, "
+        f"and the main reason. It is shown alone as your client's point, so it must not start "
+        f"with background or with a fact that helps the other side.\n"
+        f"8. Keep the summary concise: at most 120 words, focused on your strongest points. "
         f"The evidence list carries the detail.\n"
         f"Respond with a JSON object only: "
         f'{{"summary": str, "evidence_ids": [str], "policy_refs": [str]}}. '

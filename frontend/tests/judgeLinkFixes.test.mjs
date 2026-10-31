@@ -49,10 +49,10 @@ test('a decided appeal that matches, or one still waiting, asks for nothing', ()
 
 test('the hero stops awaiting review once a person has decided', () => {
   const hero = vd.rulingHero({ decision: 'needs_review', refund_amount: null, policy_refs: [] });
-  assert.equal(hero.headline, 'Awaiting human review');
+  assert.equal(hero.headline, 'You Decide This Case');
   const decided = vd.decidedHero(hero, { decision: 'no_action', amount: null, by: 'decided' });
-  assert.equal(decided.label, 'Reviewer decided');
-  assert.notEqual(decided.headline, 'Awaiting human review');
+  assert.equal(decided.label, 'Reviewer Decided');
+  assert.notEqual(decided.headline, 'You Decide This Case');
   assert.equal(vd.decidedHero(hero, { decision: 'partial_refund', amount: 6.9, by: 'decided' }).amount, 6.9);
 });
 
@@ -65,6 +65,6 @@ test('accepting a ruling or having no decision leaves the hero alone', () => {
 test('an override keeps the larger amount in the hero, labelled as an override', () => {
   const hero = vd.rulingHero({ decision: 'partial_refund', refund_amount: 6.3, policy_refs: [] });
   const over = vd.decidedHero(hero, { decision: 'partial_refund', amount: 8, by: 'overridden' });
-  assert.equal(over.label, 'Reviewer overrode the rules');
+  assert.equal(over.label, 'Reviewer Overrode the Rules');
   assert.equal(over.amount, 8);
 });
