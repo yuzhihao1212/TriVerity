@@ -4,7 +4,7 @@ import belly from "./assets/mascot/owl-belly.webp";
 import feet from "./assets/mascot/owl-feet.webp";
 import head from "./assets/mascot/owl-head.webp";
 import "./mascot.css";
-import { ACTION_MS, idleDelay, lookAt, nextIdleAction, registerPoke, RUFFLED_MS, shouldNap, tiltToward, WATCH_LOOK, type IdleAction, type OwlAction } from "./mascotState";
+import { ACTION_MS, ARRIVAL, idleDelay, lookAt, nextIdleAction, registerPoke, RUFFLED_MS, shouldNap, tiltToward, WATCH_LOOK, type IdleAction, type OwlAction } from "./mascotState";
 
 // The owl is three painted layers (feet, body, head) on one 943 × 877 canvas, plus drawn wings and scarf, with its printed pupils painted out; the live pupils are drawn on top
 // in the same units. Pupil centres at rest, how far they may travel, and the eye whites for the lids.
@@ -85,9 +85,11 @@ const layersLoaded = Promise.race([
   new Promise(done => window.setTimeout(done, 1200)),
 ]).then(() => { layersReady = true; });
 
-export function Mascot({ size = 120, cheer, className = "", children, bubbleSide = "right", onPoke, pokeLabel, watching = false, naps = false }: {
+export function Mascot({ size = 120, cheer, className = "", children, bubbleSide = "right", onPoke, pokeLabel, watching = false, naps = false, entrance, onArrived }: {
   size?: number; cheer?: string | number | null; className?: string; children?: ReactNode; bubbleSide?: "right" | "left";
   onPoke?: (ruffled: boolean) => void; pokeLabel?: string; watching?: boolean; naps?: boolean;
+  /** Fly in, `delay` ms after mounting (the ARRIVAL sequence); `onArrived` runs when it ends or is skipped. */
+  entrance?: { delay: number } | null; onArrived?: () => void;
 }) {
   const id = useId().replace(/:/g, "");
   const body = useRef<HTMLDivElement>(null);
@@ -114,6 +116,38 @@ export function Mascot({ size = 120, cheer, className = "", children, bubbleSide
     actionTimer.current = window.setTimeout(() => setAction(null), ms);
   }
   useEffect(() => () => window.clearTimeout(actionTimer.current), []);
+
+  // The entrance, played once from mount: CSS flies and lands it; these timers add the sparkles,
+  // the blink and the wave. Any click or key skips straight to the owl standing with its line.
+  const [arriving, setArriving] = useState(() => !!entrance && !reducedMotion());
+  const [arrived, setArrived] = useState(false);
+  const arrivedRef = useRef(onArrived);
+  arrivedRef.current = onArrived;
+  useEffect(() => {
+    if (!arriving || !entrance) return;
+    const at = (ms: number) => entrance.delay + ms;
+    const timers = [
+      window.setTimeout(() => setBurst(count => count + 1), at(ARRIVAL.fly)),
+      window.setTimeout(() => setBlink(true), at(ARRIVAL.blink)),
+      window.setTimeout(() => setBlink(false), at(ARRIVAL.blink + 140)),
+      window.setTimeout(() => play("wave", ACTION_MS.wave), at(ARRIVAL.wave)),
+      window.setTimeout(finish, at(ARRIVAL.done)),
+    ];
+    function finish() {
+      timers.forEach(timer => window.clearTimeout(timer));
+      ["pointerdown", "keydown"].forEach(name => window.removeEventListener(name, finish, true));
+      setArriving(false);
+      setArrived(true);
+      arrivedRef.current?.();
+    }
+    ["pointerdown", "keydown"].forEach(name => window.addEventListener(name, finish, true));
+    return () => {
+      timers.forEach(timer => window.clearTimeout(timer));
+      ["pointerdown", "keydown"].forEach(name => window.removeEventListener(name, finish, true));
+    };
+    // Once, from mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Eyes and tilt follow the cursor, eased every frame.
   useEffect(() => {
@@ -223,7 +257,8 @@ export function Mascot({ size = 120, cheer, className = "", children, bubbleSide
   const wrapStage = (stage: ReactNode) => onPoke
     ? <button type="button" className="mascot-stage mascot-poke" aria-label={pokeLabel} title={pokeLabel} onPointerEnter={waveBack} onClick={poke}><span aria-hidden="true">{stage}</span></button>
     : <div className="mascot-stage" aria-hidden="true" onPointerEnter={waveBack}>{stage}</div>;
-  return <div className={`mascot bubble-${bubbleSide} ${className}`} style={{ "--mascot-w": `${size}px`, "--mascot-h": `${height}px` } as CSSProperties}>
+  return <div className={`mascot bubble-${bubbleSide}${arriving ? " is-arriving" : ""}${arrived ? " has-arrived" : ""} ${className}`}
+    style={{ "--mascot-w": `${size}px`, "--mascot-h": `${height}px`, "--arrive-delay": `${entrance?.delay ?? 0}ms` } as CSSProperties}>
     {wrapStage(<>
       <span className="mascot-shadow" />
       <div ref={body} className={`mascot-body${action ? ` act-${action}` : ""}${asleep ? " is-asleep" : ""}`}>

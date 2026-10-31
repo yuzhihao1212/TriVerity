@@ -2,18 +2,34 @@ import { useEffect, useRef, useState } from "react";
 
 import { GUIDE_STEPS, type HomeGuide } from "./firstVisitGuide";
 import { Mascot } from "./Mascot";
-import { OWL_TIPS, reviewedLine, RUFFLED_LINE, TIP_MS, watchLine, WATCH_LINE_MS } from "./mascotState";
+import { ARRIVAL, arrivalDelay, OWL_TIPS, reviewedLine, RUFFLED_LINE, TIP_MS, typedLength, watchLine, WATCH_LINE_MS } from "./mascotState";
 
 /**
  * The owl on the home page, and what it says: a tip when clicked, what's happening during AI
  * Review and how it went, otherwise the greeting. Below that, on a first visit, the guide's next step.
- * It stays awake in Presentation mode.
+ * It stays awake in Presentation mode. With `arrive` (once per tab) it flies in and its line types itself out.
  */
-export function HomeOwl({ hello, greeting, rows, progress, presentation, guide, onSkipGuide }: {
+export function HomeOwl({ hello, greeting, rows, progress, presentation, guide, onSkipGuide, arrive = false }: {
   hello: string; greeting: string; rows: { id: string; status: string }[];
   progress?: { done: number; total: number; running: boolean; ids: string[] } | null; presentation: boolean;
-  guide?: HomeGuide | null; onSkipGuide?: () => void;
+  guide?: HomeGuide | null; onSkipGuide?: () => void; arrive?: boolean;
 }) {
+  // Wait for the landing page's intro, if it is still fading over the console.
+  const [entrance] = useState(() => arrive ? { delay: arrivalDelay(!!document.querySelector(".console-intro")) } : null);
+  const [typedAt, setTypedAt] = useState<number | null>(() => entrance ? 0 : null);
+  const stopTyping = useRef(() => {});
+  useEffect(() => {
+    if (!entrance) return;
+    let timer = 0;
+    const start = window.setTimeout(() => {
+      const began = performance.now();
+      timer = window.setInterval(() => setTypedAt(performance.now() - began), 30);
+    }, entrance.delay + ARRIVAL.type);
+    stopTyping.current = () => { window.clearTimeout(start); window.clearInterval(timer); };
+    return () => stopTyping.current();
+  }, [entrance]);
+  // Typed out, or skipped: the whole line, from then on.
+  function arrived() { stopTyping.current(); setTypedAt(null); }
   const running = !!progress?.running;
   const [tip, setTip] = useState<string | null>(null);
   const nextTip = useRef(Math.floor(Math.random() * OWL_TIPS.length));
@@ -60,9 +76,16 @@ export function HomeOwl({ hello, greeting, rows, progress, presentation, guide, 
   const finishedLine = showFinished && finished ? reviewedLine(rows, finished.ids) : null;
   const line = running && progress ? watchLine({ done: progress.done, total: progress.total, tick })
     : tip ?? finishedLine ?? greeting;
-  return <Mascot size={112} cheer={finished?.key} watching={running} naps={!presentation} onPoke={onPoke} pokeLabel="Click the owl for a tip">
+  // While it types, the rest of the line holds its space (so the bubble never grows), and screen readers get it whole.
+  const typed = typedAt === null ? null : typedLength(line, typedAt);
+  const typedAll = typed !== null && typed >= line.length;
+  useEffect(() => { if (typedAll) arrived(); }, [typedAll]);
+  return <Mascot size={112} cheer={finished?.key} watching={running} naps={!presentation} onPoke={onPoke} pokeLabel="Click the owl for a tip"
+    entrance={entrance} onArrived={arrived}>
     <p className="home-hello">{hello}!</p>
-    <p className="home-hello-line" aria-hidden={tip ? true : undefined}>{line}</p>
+    {typed === null
+      ? <p className="home-hello-line" aria-hidden={tip ? true : undefined}>{line}</p>
+      : <p className="home-hello-line"><span aria-hidden="true">{line.slice(0, typed)}<span className="home-hello-rest">{line.slice(typed)}</span></span><span className="sr-only">{line}</span></p>}
     <p className="sr-only" role="status">{tip}</p>
     {guide && <p className="owl-guide" role="status"><strong>Step {guide.step} of {GUIDE_STEPS}.</strong> {guide.text} <button type="button" className="text-button" onClick={onSkipGuide}>Skip</button></p>}
   </Mascot>;
