@@ -17,7 +17,7 @@ const PHRASES: Record<string, string> = {
 const NAMES: Record<string, string> = {
   trip_record: "Trip record", gps_window: "GPS", gps_stops: "GPS stops", fare_lines: "Fare breakdown", chat_window: "Chat", app_events: "App events",
 };
-const CARDS: Record<string, string> = { trip: "Trip card", gps: "GPS card", fare: "Fare card", chat: "Chat card", history: "History card" };
+const CARDS: Record<string, string> = { trip: "Trip finding", gps: "GPS finding", fare: "Fare finding", chat: "Chat finding", history: "History finding" };
 
 const titleCase = (tool: string) => { const words = tool.replace(/[_-]+/g, " ").trim(); return words ? words[0].toUpperCase() + words.slice(1) : "Lookup"; };
 const windowOf = (call: Pick<ToolCallRecord, "args">) => call.args?.start && call.args?.end ? ` (${call.args.start}–${call.args.end})` : "";

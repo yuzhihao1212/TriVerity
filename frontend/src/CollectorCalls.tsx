@@ -96,7 +96,13 @@ function LookupItem({ row, only = false }: { row: LookupRow; only?: boolean }) {
     </div>
     {reasons.map(reason => <p className="small muted lookup-reason" key={reason}>{reason}</p>)}
     {target && <p className="small lookup-target">{target.count} <span aria-hidden="true">→</span>{" "}
-      <a href={`#${target.id}`} onClick={event => { event.preventDefault(); reveal(document.getElementById(target.id), "start", { flash: true }); }}>
+      <a href={`#${target.id}`} onClick={event => {
+        event.preventDefault();
+        // The card may sit in a finding that isn't open: open it first, then land on it.
+        const card = document.getElementById(target.id);
+        card?.closest(".finding-panel")?.dispatchEvent(new CustomEvent("reveal-fact"));
+        requestAnimationFrame(() => reveal(card, "start", { flash: true }));
+      }}>
         <strong>{target.card}</strong></a></p>}
     {!!results.length && <details className="disclosure lookup-raw">
       <summary>Show the raw results</summary>

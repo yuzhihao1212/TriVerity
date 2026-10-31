@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 
 import {
   centsToMoney, factParts, fareReceipt, groupFacts, parseTile,
@@ -9,6 +10,7 @@ import { EvidenceDisclosure, EvidenceInfo } from "./EvidenceDisclosure";
 import { Chip, InternalBadge } from "./Chip";
 import { valueChipTone } from "./chipStyle";
 import { GpsTimeline, RouteSketch } from "./EvidenceStories";
+import { caseFindings, nextFinding } from "./evidenceFindings";
 import { fareChecks, fareHeadline, fareTotalLine } from "./fareStory";
 import { gpsHeadline } from "./gpsStory";
 import { Icon } from "./Icon";
@@ -44,7 +46,7 @@ export function FactLibrary({ facts, activeId, request, expanded = false, groupe
       let parent = target?.parentElement;
       while (parent) {
         if (parent.matches("details.fact-related")) (parent as HTMLDetailsElement).open = true;
-        else if (parent.matches(".evidence-related, .chat-facts")) parent.dispatchEvent(new CustomEvent("reveal-fact", { detail: activeId }));
+        else if (parent.matches(".evidence-related, .chat-facts, .finding-panel")) parent.dispatchEvent(new CustomEvent("reveal-fact", { detail: activeId }));
         parent = parent.parentElement;
       }
       // Let controlled disclosures render before measuring and scrolling the selected fact.
@@ -54,13 +56,13 @@ export function FactLibrary({ facts, activeId, request, expanded = false, groupe
   }, [activeId, request, grouped]);
 
   const context: RowContext = { activeId, onSelectFact, dispute, resolution, neutral: grouped };
-  const body = grouped ? <SourceGrid facts={facts} context={context} />
+  const body = grouped ? <Findings key={dispute?.dispute_id} facts={facts} context={context} />
     : <ul className="fact-library-list">{facts.map((fact, index) => <FactRow key={fact.id ?? `${fact.source}-${index}`} fact={fact} context={context} />)}</ul>;
 
   return <section className={`card fact-library${grouped ? " evidence-display" : ""}`} id={grouped ? EVIDENCE_FACTS_ID : undefined} tabIndex={-1} aria-labelledby={`${id}-title`}>
     <div className="panel-head"><h2 id={`${id}-title`}>{grouped ? "Evidence" : "Facts behind the citations"}</h2><InternalBadge detail="Computed facts · internal record" /></div>
     <p className="small muted evidence-intro">{grouped
-      ? <>Facts the agents can cite, grouped by where they came from. <EvidenceInfo label="How evidence facts are matched">An ID is shown only when this response supplies an unambiguous ID/text pair. Facts that repeat the same value are shown once; open a related-facts link to read each original sentence.</EvidenceInfo></>
+      ? <>Pick a finding to see the facts behind it. <EvidenceInfo label="How evidence facts are matched">An ID is shown only when this response supplies an unambiguous ID/text pair. Facts that repeat the same value are shown once; open a related-facts link to read each original sentence.</EvidenceInfo></>
       : "Select an evidence ID in either round to find its exact fact here."}</p>
     <p className="sr-only" role="status" aria-live="polite">{activeId ? `Highlighted evidence ${activeId}` : ""}</p>
     {!facts.length ? <p className="muted">No computed facts were returned.</p> : expanded ? body : <details ref={disclosure} className="disclosure"><summary>Browse {facts.length} referenced facts</summary>{body}</details>}
@@ -69,19 +71,60 @@ export function FactLibrary({ facts, activeId, request, expanded = false, groupe
 
 // ---- Cards --------------------------------------------------------------
 
-function SourceGrid({ facts, context }: { facts: EvidenceItem[]; context: RowContext }) {
+/**
+ * One line per source, and the facts behind the selected one. The other panels stay in the page,
+ * hidden, so a citation can find its fact by ID and open the finding it belongs to.
+ */
+function Findings({ facts, context }: { facts: EvidenceItem[]; context: RowContext }) {
+  const id = useId();
   const groups = groupFacts(facts);
   const cards = SOURCE_ORDER.map(source => ({ source, groups: groups.filter(group => group.source === source) }))
     .filter(card => card.groups.length);
-  // GPS always spans the grid; any half-width card left alone on its row spans too.
-  let column = 0;
-  const wide = cards.map((card, index) => {
-    const isWide = card.source === "gps" || (column === 0 && (index === cards.length - 1 || cards[index + 1].source === "gps"));
-    column = isWide ? 0 : (column + 1) % 2;
-    return isWide;
-  });
-  return <div className="fact-grid">{cards.map((card, index) =>
-    <SourceCard key={card.source} source={card.source} groups={card.groups} wide={wide[index]} context={context} />)}</div>;
+  const findings = caseFindings(cards.map(card => ({ source: card.source, facts: texts(card.groups) })), context.dispute);
+  const [picked, setPicked] = useState<string | null>(null);
+  const selected = picked && findings.some(finding => finding.source === picked) ? picked : findings[0]?.source;
+  const list = useRef<HTMLDivElement>(null);
+  const panels = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const root = panels.current;
+    const open = (event: Event) => {
+      const source = (event.currentTarget as HTMLElement).dataset.source;
+      if (source) flushSync(() => setPicked(source));
+    };
+    const each = root ? [...root.querySelectorAll<HTMLElement>(".finding-panel")] : [];
+    each.forEach(panel => panel.addEventListener("reveal-fact", open));
+    return () => each.forEach(panel => panel.removeEventListener("reveal-fact", open));
+  }, [facts]);
+  /** The facts appear beside the list, or under it on a phone: bring them into view when they're off screen. */
+  function pick(source: string) {
+    flushSync(() => setPicked(source));
+    const top = panels.current?.getBoundingClientRect().top ?? 0;
+    if (top < 0 || top > window.innerHeight * 0.6) panels.current?.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  }
+  function onKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    const next = nextFinding(index, findings.length, event.key);
+    if (next === null) return;
+    event.preventDefault();
+    setPicked(findings[next].source);
+    list.current?.querySelectorAll<HTMLButtonElement>("[role=tab]")[next]?.focus();
+  }
+  return <div className="findings">
+    <div className="findings-list" ref={list} role="tablist" aria-orientation="vertical" aria-label="Findings">
+      {findings.map((finding, index) => {
+        const on = finding.source === selected;
+        return <button type="button" key={finding.source} role="tab" id={`${id}-${finding.source}-tab`} aria-controls={`${id}-${finding.source}`} aria-selected={on} tabIndex={on ? 0 : -1}
+          className={`finding${on ? " is-selected" : ""}`} onClick={() => pick(finding.source)} onKeyDown={event => onKeyDown(event, index)}>
+          <span className="finding-icon" aria-hidden="true"><SourceIcon source={finding.source} /></span>
+          <span className="finding-name">{finding.label}{finding.flagged && <Chip size="sm" tone="danger" className="finding-flag">Flagged</Chip>}</span>
+          <span className="finding-line">{finding.line}</span>
+        </button>;
+      })}
+    </div>
+    <div className="findings-panels" ref={panels}>{cards.map(card =>
+      <div key={card.source} className="finding-panel" data-source={card.source} id={`${id}-${card.source}`} role="tabpanel" aria-labelledby={`${id}-${card.source}-tab`} hidden={card.source !== selected}>
+        <SourceCard source={card.source} groups={card.groups} wide context={context} />
+      </div>)}</div>
+  </div>;
 }
 
 function SourceCard({ source, groups, wide, context }: { source: string; groups: FactGroup[]; wide: boolean; context: RowContext }) {
@@ -212,7 +255,7 @@ function HistoryBody({ groups, context }: { groups: FactGroup[]; context: RowCon
       return <li key={key(fact)} id={fact.id ? `fact-${fact.id}` : undefined} tabIndex={fact.id ? -1 : undefined} className="history-evidence-line" title={fact.text}>
         <strong>{who}</strong>
         <span className="history-evidence-summary">{history ? <>
-          <span aria-hidden="true">{historyLine(history)}</span><span className="sr-only">{historySentence(history)}</span>
+          <span aria-hidden="true">{historyLine(history).split("★").map((part, index) => <span key={index}>{index > 0 && <span className="history-star">★</span>}{part}</span>)}</span><span className="sr-only">{historySentence(history)}</span>
         </> : fact.text.replace(/^(Rider|Driver) history:\s*/, "")}</span>
         {fact.id && <IdBadge id={fact.id} onSelectFact={context.onSelectFact} />}
         {!!group.related.length && <EvidenceDisclosure label={relatedLinkLabel(group.related, fact)}>
@@ -224,6 +267,9 @@ function HistoryBody({ groups, context }: { groups: FactGroup[]; context: RowCon
     <p className="fairness-note"><Icon name="info" />{"Context only: account history does not establish what happened on this trip."}</p>
   </>;
 }
+
+/** A message the keyword check flagged: the fact quotes it, so the thread can mark the same one. */
+const flaggedMessage = (message: ChatMessage, facts: EvidenceItem[]) => !!message.message && facts.some(fact => /^Threatening message:/i.test(fact.text) && fact.text.includes(message.message));
 
 function ChatBody({ groups, context }: { groups: FactGroup[]; context: RowContext }) {
   const threadId = useId();
@@ -247,12 +293,13 @@ function ChatBody({ groups, context }: { groups: FactGroup[]; context: RowContex
   return <>
     <p className="story-headline">{chatSummary(messages, all) ?? chatTakeaway(messages)}</p>
     <div className="chat evidence-chat" aria-label="Recorded chat exchange">{messages.map((message, i) =>
-      <div className={`bubble ${message.sender}`} key={i} title={messageFacts[i]?.text}
+      <div className={`bubble ${message.sender}${flaggedMessage(message, all) ? " is-flagged" : ""}`} key={i} title={messageFacts[i]?.text}
         id={!context.neutral && messageFacts[i]?.id ? `fact-${messageFacts[i]!.id}` : messageId(i)} tabIndex={-1}>
         <span className="who">
           {message.sender === "system" ? <Icon name="info" />
             : <span className={`hearing-party-avatar chat-avatar hearing-avatar-${message.sender}`} aria-hidden="true"><Icon name={message.sender === "rider" ? "person" : "wheel"} /></span>}
           {message.sender === "rider" ? "Rider" : message.sender === "driver" ? "Driver" : "System"}
+          {flaggedMessage(message, all) && <Chip size="sm" tone="danger">Flagged</Chip>}
           {chatTime(message.timestamp) && <time dateTime={message.timestamp ?? undefined}>{chatTime(message.timestamp)}</time>}
         </span>{message.message}
         {!context.neutral && messageFacts[i]?.id && <IdBadge id={messageFacts[i]!.id!} onSelectFact={context.onSelectFact} />}
