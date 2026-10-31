@@ -132,3 +132,26 @@ test('title case keeps small words low, except first and last, and leaves hyphen
   assert.equal(titleCase('re-run AI review'), 'Re-run AI Review');
 });
 
+test('AI Review says what it will do first: the cost, and that routine cases close', () => {
+  const live = hs.reviewConfirm('live', { count: 9, fresh: true });
+  assert.equal(live.title, 'Review 9 cases with Hy3?');
+  assert.match(live.body, /^Uses AI tokens, up to about \$0\.02\./);
+  assert.match(live.body, /Routine cases will close automatically and notify the rider and driver/);
+  assert.equal(live.action, 'Run AI Review');
+  const off = hs.reviewConfirm('offline', { count: 1, fresh: true });
+  assert.equal(off.title, 'Review 1 case with rules only?');
+  assert.match(off.body, /^No AI and no cost\./);
+  assert.match(off.body, /close automatically/);
+  assert.equal(off.action, 'Review with Rules');
+});
+
+test('a re-run warns about the cost but not closing, and never rounds a cost down to nothing', () => {
+  const rerun = hs.reviewConfirm('live', { count: 1, fresh: false });
+  assert.equal(rerun.title, 'Re-run the 1 open case?');
+  assert.match(rerun.body, /up to about \$0\.01/);
+  assert.match(rerun.body, /Resolved cases and saved decisions stay as they are/);
+  assert.doesNotMatch(rerun.body, /close automatically/);
+  assert.equal(rerun.action, 'Re-run');
+  assert.match(hs.reviewConfirm('offline', { count: 3, fresh: false }).body, /^No AI and no cost\./);
+});
+
