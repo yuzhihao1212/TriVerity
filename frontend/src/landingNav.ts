@@ -1,10 +1,10 @@
 /** The landing page's sections, in page order, as the side rail names them. */
 export const LANDING_SECTIONS = [
+  { id: "results", label: "Results" },
   { id: "problem", label: "The Problem" },
   { id: "flow", label: "How It Works" },
   { id: "views", label: "Who It Serves" },
   { id: "trust", label: "Trust" },
-  { id: "results", label: "Results" },
   { id: "rollout", label: "Rollout" },
   { id: "proof", label: "Under the Hood" },
   { id: "try", label: "Try a Case" },

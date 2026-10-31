@@ -39,3 +39,23 @@ test('the value figures follow from the business-case model', () => {
   assert.equal(Math.round(disputes * aiCost), 10);
   assert.ok(VALUE_STATS[2].value.includes('$10'));
 });
+
+test('the hero replay runs in order inside its length and ends on D001’s real ruling', async () => {
+  const { HEARING_REPLAY, REPLAY_LENGTH } = await load('landingStory');
+  const times = HEARING_REPLAY.map(step => step.at);
+  assert.deepEqual(times, [...times].sort((a, b) => a - b));
+  assert.ok(times.every(at => at > 0 && at <= REPLAY_LENGTH));
+  const ruling = HEARING_REPLAY.at(-1);
+  assert.equal(ruling.kind, 'ruling');
+  assert.equal(expected.D001.decision, 'partial_refund');
+  assert.ok(ruling.text.includes(`$${expected.D001.refund.toFixed(2)}`));
+  assert.ok(HEARING_REPLAY.some(step => step.text.includes(expected.D001.policy_refs[0])));
+});
+
+test('the savings calculator scales the business-case model with volume', async () => {
+  const { valueAt, VALUE_RANGE, VALUE_MODEL } = await load('landingStory');
+  assert.deepEqual(valueAt(VALUE_MODEL.disputes).map(stat => stat.value), ['325–975 h', '$6,500–29,250', 'About $10']);
+  assert.deepEqual(valueAt(10000).map(stat => stat.value), ['650–1,950 h', '$13,000–58,500', 'About $20']);
+  assert.ok(VALUE_RANGE.min <= VALUE_MODEL.disputes && VALUE_MODEL.disputes <= VALUE_RANGE.max);
+  assert.equal((VALUE_MODEL.disputes - VALUE_RANGE.min) % VALUE_RANGE.step, 0);
+});

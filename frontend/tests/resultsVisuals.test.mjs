@@ -44,3 +44,11 @@ test('all geometry, including strokes, watch hand and button, stays in the viewB
     [x-1.5,x+1.5,y-1.5,y+1.5].forEach(inside);
   }
 });
+
+test('the cost coins and the injection shield stay in the viewBox', async () => {
+  const { COINS, SHIELD } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`);
+  for (const coin of COINS) [coin.x - coin.radius - 1, coin.x + coin.radius + 1, coin.y - coin.radius - 1, coin.y + coin.radius + 1].forEach(inside);
+  const { left, right, top, bottom } = SHIELD.bounds;
+  [left - 1.25, right + 1.25, top - 1.25, bottom + 1.25].forEach(inside);
+  for (const n of SHIELD.outline.match(/\d+/g).map(Number)) inside(n);
+});

@@ -39,11 +39,36 @@ export const ROLLOUT = [
 
 // docs/business-case.md: 5,000 disputes a day, 78% automated, 5–15 min a review, $20–30 an hour.
 export const VALUE_MODEL = { disputes: 5000, automated: 0.78, minutes: [5, 15], hourly: [20, 30], aiCost: 0.002 } as const;
-export const VALUE_STATS = [
-  { value: "325–975 h", label: "Reviewer time freed a day" },
-  { value: "$6,500–29,250", label: "Value of that time a day" },
-  { value: "About $10", label: "AI cost a day" },
-] as const;
+
+/** The business-case figures at any daily volume: reviewer time freed, what it is worth, and the AI cost. */
+export function valueAt(disputes: number) {
+  const { automated, minutes, hourly, aiCost } = VALUE_MODEL;
+  const hours = minutes.map(m => disputes * automated * m / 60);
+  const money = (n: number) => Math.round(n).toLocaleString("en-US");
+  return [
+    { value: `${money(hours[0])}–${money(hours[1])} h`, label: "Reviewer time freed a day" },
+    { value: `$${money(hours[0] * hourly[0])}–${money(hours[1] * hourly[1])}`, label: "Value of that time a day" },
+    { value: `About $${money(disputes * aiCost)}`, label: "AI cost a day" },
+  ];
+}
+
+export const VALUE_STATS = valueAt(VALUE_MODEL.disputes);
+export const VALUE_RANGE = { min: 500, max: 50000, step: 500 } as const;
+
+export type ReplayKind = "evidence" | "ai" | "rules" | "ruling";
+
+// A replay of the live D001 run, condensed: the facts and citations are the run's
+// (docs/prompts.md, data/expected_rulings.json), the timings are paced to its ~16 s.
+export const HEARING_REPLAY: readonly { at: number; kind: ReplayKind; who: string; text: string }[] = [
+  { at: 0.4, kind: "evidence", who: "Evidence", text: "GPS, chat, fare and history collected" },
+  { at: 2.6, kind: "rules", who: "GPS check", text: "Route 44% longer, trip 59% slower" },
+  { at: 5.2, kind: "ai", who: "Rider AI", text: "Unjustified detour under RD-3: refund the overcharge" },
+  { at: 7.8, kind: "ai", who: "Driver AI", text: "Diverted for congestion, 22 km/h off-route" },
+  { at: 10.4, kind: "rules", who: "Precedents", text: "P-063, P-056, P-070 retrieved" },
+  { at: 13.0, kind: "rules", who: "Policy rules", text: "RD-3 holds for the rider" },
+  { at: 15.8, kind: "ruling", who: "Ruling", text: "Partial refund $6.30 · 80% confident" },
+];
+export const REPLAY_LENGTH = 16;
 
 // README.md, docs/security.md and docs/responsible-ai.md. Accessibility: axe-core on this page.
 export const ENGINEERING_PROOF = [
