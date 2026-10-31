@@ -120,9 +120,9 @@ test('fallback checks use recorded AI sources without labelling absent replies a
 });
 
 test('cost remains visible with distinct explanations for live reruns, first runs and offline runs', () => {
-  assert.deepEqual(b.runCostText(false, true), { note: 'Uses AI · about $0.002',
+  assert.deepEqual(b.runCostText(false, true), { note: 'Uses AI · About $0.002/run',
     detail: 'This case already has a saved result. Re-running calls the AI agents again and uses real tokens (about $0.002 per run).' });
   assert.equal(b.runCostText(false, false).detail, 'Running calls the AI agents and uses real tokens (about $0.002 per run).');
-  for (const hasResult of [false, true]) assert.deepEqual(b.runCostText(true, hasResult), { note: 'AI offline · free',
+  for (const hasResult of [false, true]) assert.deepEqual(b.runCostText(true, hasResult), { note: 'AI offline · No usage',
     detail: 'AI is offline: the ruling is the same; arguments and explanations use template text. No tokens are used.' });
 });

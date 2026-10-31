@@ -146,7 +146,7 @@ export function caseBriefRows(dispute: DisputeCase, resolution?: Resolution, { s
 
 export function runCostText(offline: boolean, hasResult: boolean) {
   return {
-    note: offline ? "AI offline · free" : "Uses AI · about $0.002",
+    note: offline ? "AI offline · No usage" : "Uses AI · About $0.002/run",
     detail: offline ? "AI is offline: the ruling is the same; arguments and explanations use template text. No tokens are used."
       : hasResult ? "This case already has a saved result. Re-running calls the AI agents again and uses real tokens (about $0.002 per run)."
         : "Running calls the AI agents and uses real tokens (about $0.002 per run).",
