@@ -162,7 +162,8 @@ thinking is disabled.
 | Per access code | 3 per minute, 20 per day | 429 + `Retry-After` | `test_judges_sharing_one_ip_are_limited_per_code`, `test_per_code_daily_quota` |
 | Global | 10 resolves per minute (the model allows 60 requests; a resolve is up to 9) | 429 + `Retry-After` | `test_global_limit_applies_across_ips` |
 | Daily LLM budget | 300,000 tokens (about 30 resolves at ~10,000 tokens) or 75 resolves, whichever comes first, counted from the provider's `usage` | 200 with Fallback badges | `test_budget_spent_still_returns_full_fallback_ruling`, `test_real_token_usage_is_counted` |
-| Per call | `max_tokens` 600 (advocates), 800 (Judge); timeout 25 s; no retries | — | `test_max_tokens_and_timeout_sent`, `test_no_retry_on_4xx` |
+| Per call | `max_tokens` 600 (advocates), 800 (Judge); timeout 25 s; provider errors are not retried; an advocate or reply that is cut off, invalid or too long gets one retry | — | `test_max_tokens_and_timeout_sent`, `test_no_retry_on_4xx` |
+| LLM request pace | 55 calls per minute per process, under the model's 60; a call waits for a slot, and gives up after 60 s and uses its fallback | — | `test_call_over_the_limit_waits_for_the_oldest_to_leave_the_window`, `test_complete_raises_rather_than_calling_when_the_queue_is_too_long` |
 | Concurrency | 3 resolves at once | 503 + `Retry-After: 5` | `test_full_semaphore_gives_503_and_health_still_works` |
 | Refund cap | never above `fare.actual`: policy rule REF-1, cited in `policy_refs` when it applies | — | `test_refund_never_exceeds_fare_actual` |
 | Errors | no traceback in a 500 | 500 | `test_500_has_no_traceback` |

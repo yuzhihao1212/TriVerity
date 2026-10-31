@@ -7,6 +7,7 @@ from app.core.config import settings
 from app.core.rate_limit import limiter
 from app.services import orchestrator
 from app.services.budget import budget
+from app.services.llm_client import pacer
 
 @pytest.fixture(autouse=True)
 def offline_llm(monkeypatch):
@@ -24,6 +25,7 @@ def fresh_limits(monkeypatch):
     """
     limiter.reset()
     budget.reset()
+    pacer.reset()
     monkeypatch.setattr(
         orchestrator, "resolve_slots", threading.BoundedSemaphore(limits.MAX_CONCURRENT_RESOLVES)
     )

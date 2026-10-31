@@ -36,6 +36,8 @@ from app.services.text_safety import echoes, find_link_or_markup, normalise, san
 
 logger = logging.getLogger(__name__)
 
+_RETRYABLE = ("parse failed", "length:")
+
 # Extracts a leading rule ID like "RD-3" or "SAFE-1" from a citation string.
 _RULE_ID_RE = re.compile(r"^([A-Z]+-\d+)")
 _NUMBER_RE = re.compile(r"(\d+(?:\.\d+)?)(\s*%)?")
@@ -205,6 +207,20 @@ def _fallback(
     )
 
 
+def _with_one_retry(agent: str, attempt):
+    """Run ``attempt``, again if its reply was cut off, invalid or too long; returns (result, problem).
+
+    Hy3 occasionally rambles until it hits the token limit or the length check, and a second
+    try usually doesn't. Other problems aren't retried: a provider error needs time, and a
+    reply that fails a safety check should not get another go.
+    """
+    result, problem = attempt()
+    if problem and problem.startswith(_RETRYABLE):
+        logger.warning("%s retrying once: %s", agent, problem)
+        result, problem = attempt()
+    return result, problem
+
+
 def build_advocate_case(
     *,
     agent: str,
@@ -235,13 +251,21 @@ def build_advocate_case(
     case_data
         The raw trip and fare data as text; its numbers count as grounded evidence.
     """
+    case, problem = _with_one_retry(
+        agent, lambda: _advocate_attempt(agent, system, user, claim_line, facts, section, case_data))
+    return case or _fallback(agent, claim_line, fallback_summary, facts, problem)
+
+
+def _advocate_attempt(agent: str, system: str, user: str, claim_line: str, facts: CaseFacts,
+                      section: dict, case_data: str) -> tuple[AgentCase | None, str | None]:
+    """One LLM call and its checks: the case, or None and what was wrong."""
     try:
         raw = complete(system, user, max_tokens=limits.ADVOCATE_MAX_TOKENS)
     except Exception as exc:
-        return _fallback(agent, claim_line, fallback_summary, facts, f"complete() raised {safe_reason(exc)}")
+        return None, f"complete() raised {safe_reason(exc)}"
 
     if raw == OFFLINE_PLACEHOLDER:
-        return _fallback(agent, claim_line, fallback_summary, facts, "no API key configured")
+        return None, "no API key configured"
 
     try:
         parsed = json.loads(_strip_fences(raw))
@@ -253,13 +277,13 @@ def build_advocate_case(
             source="llm",
         )
     except (json.JSONDecodeError, KeyError, TypeError, ValidationError, AttributeError) as exc:
-        return _fallback(agent, claim_line, fallback_summary, facts, f"parse failed: {safe_reason(exc)}")
+        return None, f"parse failed: {safe_reason(exc)}"
 
     summary, listed_ids = strip_id_lists(strip_leaked_rules(case.summary, agent))
     case = case.model_copy(update={"summary": summary})
     problem = _check_output(case, system) or misattributed_chat(case.summary, chat_senders(facts))
     if problem:
-        return _fallback(agent, claim_line, fallback_summary, facts, problem)
+        return None, problem
     index = evidence_index(facts)
     inline_ids = _inline_ids(case.summary, index)
     if "evidence_ids" in parsed or listed_ids or inline_ids or not case.evidence:
@@ -274,7 +298,7 @@ def build_advocate_case(
             "evidence": [index[i][1] for i in ids],
             "evidence_ids": ids,
             "sources": _sources_of(ids, index),
-        })
+        }), None
     # Legacy free-text evidence. H6b: an item may only use numbers found in the case, so it can't state an invented
     # fact such as "Route was +90%". If none is left, show the computed facts instead.
     known = _numbers(" ".join([claim_line, case_data, json.dumps(section), *facts.describe()]))
@@ -284,7 +308,7 @@ def build_advocate_case(
     ][:limits.ADVOCATE_MAX_EVIDENCE_ITEMS]
     if case.evidence and not evidence:
         evidence = [claim_line, *facts.describe()]
-    return case.model_copy(update={"summary": sanitise(case.summary), "evidence": evidence})
+    return case.model_copy(update={"summary": sanitise(case.summary), "evidence": evidence}), None
 
 
 def _numbers(text: str) -> set[tuple[float, bool]]:
@@ -413,30 +437,35 @@ def build_rebuttal(*, party: str, own_case: AgentCase, other_case: AgentCase,
         f"{other}_advocate_policy_cited": other_case.policy_refs,
         "evidence": evidence_payload(facts),
     })
+    reply, problem = _with_one_retry(agent, lambda: _rebuttal_attempt(agent, system, user, facts))
+    if problem:
+        logger.warning("%s fell back: %s", agent, problem)
+    return reply or Rebuttal()
+
+
+def _rebuttal_attempt(agent: str, system: str, user: str, facts: CaseFacts) -> tuple[Rebuttal | None, str | None]:
+    """One LLM call and its checks: the reply, or None and what was wrong (None for both when offline)."""
     try:
         raw = complete(system, user, max_tokens=limits.REBUTTAL_MAX_TOKENS)
     except Exception as exc:
-        logger.warning("%s fell back: complete() raised %s", agent, safe_reason(exc))
-        return Rebuttal()
+        return None, f"complete() raised {safe_reason(exc)}"
     if raw == OFFLINE_PLACEHOLDER:
-        return Rebuttal()
+        return None, None
     try:
         parsed = json.loads(_strip_fences(raw))
         text = parsed["rebuttal"]
         if not isinstance(text, str):
             raise TypeError("rebuttal is not a string")
     except (json.JSONDecodeError, KeyError, TypeError, AttributeError) as exc:
-        logger.warning("%s fell back: parse failed: %s", agent, safe_reason(exc))
-        return Rebuttal()
+        return None, f"parse failed: {safe_reason(exc)}"
 
     text, listed_ids = strip_id_lists(strip_leaked_rules(text, agent))
     problem = _check_rebuttal(text, system) or misattributed_chat(text, chat_senders(facts))
     if problem:
-        logger.warning("%s fell back: %s", agent, problem)
-        return Rebuttal()
+        return None, problem
     index = evidence_index(facts)
     ids = _resolve_ids(parsed.get("evidence_ids") or listed_ids or _inline_ids(text, index), index)
-    return Rebuttal(text=sanitise(text), evidence=[index[i][1] for i in ids], evidence_ids=ids, source="llm")
+    return Rebuttal(text=sanitise(text), evidence=[index[i][1] for i in ids], evidence_ids=ids, source="llm"), None
 
 
 def _check_rebuttal(text: str, system: str) -> str | None:

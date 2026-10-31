@@ -54,7 +54,7 @@ counterfactuals are deterministic code. Architecture: [architecture.md](architec
 - The precedent set is generated from the rules plus a few synthetic reviewer decisions; its value grows
   only with real reviewer decisions. Feedback and appeals are kept in memory in this prototype.
 - The client currently supplies the case facts; production would look cases up server-side.
-- An occasional AI step falls back (a timeout or an over-long reply); the ruling is unaffected, and the
+- An occasional AI step falls back (a timeout, or a reply that is still cut off or over-long after one retry); the ruling is unaffected, and the
   badge shows it.
 
 ## Contacts and responsibility
