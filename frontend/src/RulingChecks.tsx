@@ -42,7 +42,7 @@ export function RulingChecks({ resolution, extraRow, availableIds, onSelectFact 
             <span className="ruling-check-marker" aria-hidden="true">▸</span>
             <span className={`ruling-check-status tone-${row.tone}`}><Icon name={row.icon} /></span>
             <span className="ruling-check-label">
-              <span className="ruling-check-title">{row.question}{row.id === "risk" && <Chip tone="outline" size="sm" icon="lock">Reviewer Only</Chip>}</span>
+              <span className="ruling-check-title">{row.question}{row.id === "risk" && <Chip tone="outline" size="sm" icon="lock">Hidden From Rider and Driver</Chip>}</span>
               <span className="ruling-check-answer">{row.answer}</span>
             </span>
           </button>

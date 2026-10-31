@@ -204,7 +204,7 @@ The full threat model is in [docs/security.md](docs/security.md).
 [Documentation index](docs/README.md): architecture, responsible AI, security, evaluation, business case,
 API, deployment, submission and milestones, each with a short description.
 
-**Verified on 31 Oct 2026:** 975 backend tests and 451 frontend tests pass. Tests never call a real LLM.
+**Verified on 31 Oct 2026:** 975 backend tests and 453 frontend tests pass. Tests never call a real LLM.
 
 ## Run it locally
 
@@ -326,7 +326,7 @@ with tests and CI, and measured on live Hy3 before claiming any number.
 - **Turn failures into rules.** Every rule in our prompts and output checks exists because live Hy3 output broke
   it once. For example, advocates cited rules that favoured the other side (9 times in 14 cases) until a prompt
   change cut it to 2 ([prompts.md](docs/prompts.md)).
-- **Verify everything.** We checked every AI change with tests (1,426 in total) and every AI-written claim against
+- **Verify everything.** We checked every AI change with tests (1,428 in total) and every AI-written claim against
   the code. WorkBuddy's consistency review of our own docs found facts that had drifted between files.
 - **Use tools for what they're good at.** CodeBuddy for the AI core, WorkBuddy as a reviewer of our writing,
   Miora for visuals, and Claude Code, OpenAI Codex and Kiro for features, refactors and code review, all

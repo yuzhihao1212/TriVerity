@@ -142,6 +142,11 @@ export function rulingLine(decision: Decision, refund: number | null): string {
   return FINAL_LABELS[decision];
 }
 
+/** "Refund $6.30, the fare charged above the expected fare" -> "Refund $6.30": the action, without its reason. */
+export function shortProposal(proposed: string | null): string | null {
+  return proposed ? proposed.split(",")[0].trim() : null;
+}
+
 /** The reviewer's override in one line, for the comparison card and the result. */
 export function overrideLine(choice: OverrideChoice, amount: number | null, fare: number | null): string {
   if (choice === "partial_refund") return amount != null ? `$${amount.toFixed(2)} back to the rider` : "Partial refund";
