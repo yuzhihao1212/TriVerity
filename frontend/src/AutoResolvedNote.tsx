@@ -19,7 +19,7 @@ export function AutoResolvedNote({ autonomy, closedAutomatically, onSeeSent, onR
     <p className="auto-note-title"><Icon name={autonomy.audit ? "magnifier" : "check"} />{title}</p>
     {reasons.length > 0 && <ul className="auto-note-reasons">{reasons.map(reason => <li key={reason}>{reason}</li>)}</ul>}
     {!autonomy.audit && closedAutomatically && <>
-      <p className="small muted">No person was needed: the rider and driver were notified, with how to appeal. No precedent is saved for automatic decisions.</p>
+      <p className="small muted">No person was needed: the rider and driver were notified (simulated), with how to appeal. No precedent is saved for automatic decisions.</p>
       {(onSeeSent || onReopen) && <div className="auto-note-actions">
         {onSeeSent && <button type="button" className="secondary-button" onClick={onSeeSent}>See what was sent<Icon name="arrow" /></button>}
         {onReopen && <button type="button" className="text-button" onClick={onReopen}>Reopen to review</button>}

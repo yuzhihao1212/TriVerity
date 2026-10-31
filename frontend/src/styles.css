@@ -268,6 +268,7 @@ textarea { width: 100%; resize: vertical; }
 .bubble.system { align-self: center; }
 .history { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
 .run-bar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-6); }
+.case-run-bar { margin-block: var(--space-4) var(--space-6); }
 .token-warning { color: var(--muted); font-size: 11px; }
 .dispute-form { max-width: 900px; }
 .dispute-form label { display: grid; gap: var(--space-1); font-size: 13px; font-weight: 500; }
@@ -752,6 +753,9 @@ textarea { width: 100%; resize: vertical; }
 .access-code-field label { font-size: 12px; font-weight: 600; }
 .access-code-field input { width: 260px; max-width: 100%; padding-block: 7px; font-size: 13px; }
 .access-code-help { margin: 0; color: var(--muted); font-size: 11px; }
+.access-code-accepted { margin: 0; color: var(--ok-text); font-size: 12px; }
+.access-code-accepted:empty { display: none; }
+.access-code-field.is-review { max-width: none; margin-block: var(--space-4); }
 .presentation-mode .access-code-field label, .presentation-mode .access-code-help { font-size: 13px; }
 .presentation-mode .topbar .icon-button svg, .landing.presentation-mode .landing-nav .icon-button svg { width: 22px; height: 22px; }
 .presentation-mode .ai-toggle { font-size: 14px; }

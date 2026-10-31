@@ -13,7 +13,7 @@ const STEP_ICONS: Record<WorkflowTab, string> = {
 
 const prefersReducedMotion = () => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, decisionRecorded = false, closed = false, unlocking = false, onChange, render }: {
+export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, auto = false, decisionRecorded = false, closed = false, unlocking = false, onChange, render }: {
   active: WorkflowTab;
   resolution?: Resolution;
   busy: boolean;
@@ -21,6 +21,8 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, de
   liveSteps?: AgentLogEntry[];
   /** Steps the reviewer has completed for this ruling. */
   reviewed?: Iterable<WorkflowTab>;
+  /** Closed by the policy: the steps ran, but no person reviewed them. */
+  auto?: boolean;
   /** A run just finished: steps 2-5 unlock one after another. */
   unlocking?: boolean;
   decisionRecorded?: boolean;
@@ -127,7 +129,7 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, de
               <Icon name={STEP_ICONS[tab.id]} className="step-icon" />
               <span className="tab-label"><span className="label-full">{tab.label}</span><span className="label-short" aria-hidden="true">{SHORT_TAB_LABELS[tab.id]}</span></span>
             </span>
-            <span className="sr-only">, step {index + 1} of {WORKFLOW_TABS.length}{locked && !state.working ? ", locked" : `, ${stepStatusText(state)}`}{state.next ? ", next to review" : ""}. </span>
+            <span className="sr-only">, step {index + 1} of {WORKFLOW_TABS.length}{locked && !state.working ? ", locked" : `, ${auto && state.reviewed ? "completed automatically" : stepStatusText(state)}`}{state.next ? ", next to review" : ""}. </span>
             {/* Only when it says something: "12 facts", "2 arguments"; locked steps stay quiet. */}
             {tabProgress(tab.id, resolution) && <span className="tab-progress">{tabProgress(tab.id, resolution)}</span>}
             {state.next && <span className="step-next" aria-hidden="true">Next</span>}

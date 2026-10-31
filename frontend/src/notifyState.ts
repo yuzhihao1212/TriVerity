@@ -430,7 +430,8 @@ export function phoneState(party: Party, sent: Pick<SentRecord, "at"> | null): P
 export const DELIVERED_ANNOUNCEMENT = "Messages delivered; parties can now appeal";
 
 /** "Messages sent for D001", or "Review complete for D001" once all five steps are reviewed. */
-export function closingTitle(disputeId: string, summary: { complete: boolean } | null): string {
+export function closingTitle(disputeId: string, summary: { complete: boolean; auto?: boolean } | null): string {
+  if (summary?.auto) return `Closed automatically: ${disputeId}`;
   return summary?.complete ? `Review complete for ${disputeId}` : `Messages sent for ${disputeId}`;
 }
 

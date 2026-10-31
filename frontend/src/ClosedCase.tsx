@@ -22,7 +22,8 @@ export function ClosedCase({ disputeId, sent, latest, events, earlier, appealWai
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const history = useRef<HTMLDetailsElement>(null);
-  const duration = latest ? reviewedIn(openedAt, latest.timestamp) : null;
+  // Nobody reviewed an automatic close, so it has no review time.
+  const duration = latest && latest.reviewer?.kind !== "auto" ? reviewedIn(openedAt, latest.timestamp) : null;
   if (!latest && !earlier.length) return null;
   return <section className={`closed-case${sent ? " is-closed" : ""}`} aria-labelledby={`${id}-title`}>
     <div className="closed-case-head">

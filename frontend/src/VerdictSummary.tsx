@@ -10,7 +10,8 @@ import { Icon } from "./Icon";
 import { SourceBadge } from "./SourceBadge";
 import { money, outputSources, policyIds } from "./presentation";
 import { Term } from "./Term";
-import { CONFIDENCE_HELP, confidenceDisplay, refundSum, rulingConditionGroups, rulingCredits, rulingHero } from "./verdictDisplay";
+import { CONFIDENCE_HELP, confidenceDisplay, refundSum, rulingConditionGroups, rulingCredits, rulingHero, decidedHero } from "./verdictDisplay";
+import type { FinalHeaderOutcome } from "./stepVisuals";
 import type { DisputeCase, Resolution } from "./types";
 
 let seen: ReturnType<typeof createSeenCases> | undefined;
@@ -23,12 +24,12 @@ function seenRulings() {
   return seen;
 }
 
-export function VerdictSummary({ resolution, dispute, availableIds, onSelectFact }: {
-  resolution: Resolution; dispute: DisputeCase;
+export function VerdictSummary({ resolution, dispute, final = null, availableIds, onSelectFact }: {
+  resolution: Resolution; dispute: DisputeCase; final?: FinalHeaderOutcome | null;
 } & FactLinks) {
   const id = useId();
   const disputeId = dispute.dispute_id;
-  const hero = rulingHero(resolution);
+  const hero = decidedHero(rulingHero(resolution), final);
   const confidence = confidenceDisplay(resolution);
   const groups = rulingConditionGroups(resolution);
   const total = groups.reduce((sum, group) => sum + group.checks.length, 0);

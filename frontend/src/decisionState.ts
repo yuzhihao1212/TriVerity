@@ -36,7 +36,24 @@ export interface HeldState {
   everHeld: string[];
 }
 export const HELD_KEY = "triverity.holds";
+/** Saved decisions by review key, kept for the browser session: a reload must not undo one. */
+export const SAVED_KEY = "triverity.decisions";
 type HeldBackend = Pick<Storage, "getItem" | "setItem">;
+
+export function readSaved(storage: HeldBackend | null): Record<string, SavedDecision> {
+  try {
+    const saved: Record<string, SavedDecision> = {};
+    for (const [key, value] of Object.entries(JSON.parse(storage?.getItem(SAVED_KEY) ?? "{}") ?? {})) {
+      const entry = value as SavedDecision | null;
+      if (entry && ["accepted", "overridden", "decided"].includes(entry.kind) && entry.decision in FINAL_LABELS && typeof entry.precedentId === "string") saved[key] = entry;
+    }
+    return saved;
+  } catch { return {}; }
+}
+
+export function writeSaved(storage: HeldBackend | null, saved: Record<string, SavedDecision>): void {
+  try { storage?.setItem(SAVED_KEY, JSON.stringify(saved)); } catch { /* Blocked: memory only. */ }
+}
 
 export function readHeld(storage: HeldBackend | null): HeldState {
   try {

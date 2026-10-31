@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Chip, InternalBadge } from "./Chip";
 import { Icon } from "./Icon";
 import { FINAL_LABELS as FINAL } from "./decisionState";
-import { appealLine, decidedAppealLine, originalDecisionText } from "./appealState";
+import { appealFollowUp, appealLine, decidedAppealLine, originalDecisionText } from "./appealState";
 import { ButtonLoader } from "./OeroAI";
 import { ApiError, decideAppeal, fileAppeal, listAppeals } from "./services/api";
 import type { Appeal, Decision, DisputeCase } from "./types";
@@ -71,7 +71,11 @@ export function AppealForm({ dispute, party, decision, onFiled, available = true
 }
 
 /** Reviewer console: appeals for this dispute; a decision becomes a precedent. */
-export function AppealsPanel({ disputeId, version, onChanged }: { disputeId: string; version: number; onChanged: () => void }) {
+export function AppealsPanel({ disputeId, version, onChanged, current = null, closed = false, onReopen }: {
+  disputeId: string; version: number; onChanged: () => void;
+  /** The decision the parties were last sent, and whether the case is still closed on it. */
+  current?: { decision: Decision; text: string } | null; closed?: boolean; onReopen?: () => void;
+}) {
   const [appeals, setAppeals] = useState<Appeal[]>([]);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -85,13 +89,17 @@ export function AppealsPanel({ disputeId, version, onChanged }: { disputeId: str
       <InternalBadge detail="Internal review only · learning feedback loop" />
       <div role="alert">{error && <p className="error small">{error}</p>}</div>
       <ul className="appeal-list">
-        {appeals.map((appeal) => <AppealItem key={appeal.id} appeal={appeal} onDecided={onChanged} />)}
+        {appeals.map((appeal) => <AppealItem key={appeal.id} appeal={appeal} onDecided={onChanged} current={current} closed={closed} onReopen={onReopen} />)}
       </ul>
     </section>
   );
 }
 
-function AppealItem({ appeal, onDecided }: { appeal: Appeal; onDecided: () => void }) {
+function AppealItem({ appeal, onDecided, current, closed, onReopen }: {
+  appeal: Appeal; onDecided: () => void; current: { decision: Decision; text: string } | null; closed: boolean; onReopen?: () => void;
+}) {
+  const followUp = appealFollowUp(appeal, current, closed);
+  const correctable = !!current && appeal.reviewer_decision !== current.decision;
   const id = useId();
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -119,7 +127,11 @@ function AppealItem({ appeal, onDecided }: { appeal: Appeal; onDecided: () => vo
       </p>
       <blockquote className="reviewer-appeal-reason">“{appeal.reason}”</blockquote>
       {appeal.status === "decided" ? (
-        <p className="reviewer-appeal-result">{decidedAppealLine(appeal)}</p>
+        <>
+          <p className="reviewer-appeal-result">{decidedAppealLine(appeal)}</p>
+          {followUp && <p className="small muted">{followUp}</p>}
+          {correctable && closed && onReopen && <button type="button" className="secondary-button" onClick={onReopen}>Reopen to send a correction</button>}
+        </>
       ) : (
         <>
           <button type="button" ref={trigger} className="secondary-button reviewer-appeal-trigger"
