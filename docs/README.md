@@ -32,11 +32,11 @@ A judge's route: [product and results](../README.md) → [architecture](architec
 
 ## Visual evidence
 
-- [Curated screenshots](screenshots/README.md): fourteen judge-facing views, image provenance and size checks.
+- [Curated screenshots](screenshots/README.md): fifteen judge-facing views, image provenance and size checks.
 - [Review screenshots per feature](review/): the original before/after design-review record, retained in place.
 
 ## Verified build
 
-On 31 Oct 2026, `main` passed **975 backend tests** and **433 frontend tests**,
+On 31 Oct 2026, `main` passed **975 backend tests** and **441 frontend tests**,
 TypeScript checking and the production frontend build. Backend tests ran with `LLM_API_KEY=''`;
 no real LLM was called. [Local setup and commands](../README.md#run-it-locally).

@@ -155,3 +155,16 @@ test('the report menu puts the open case first, then final, then not final, and 
   assert.equal(reportMenuGroups([], null).noResult, 0);
 });
 
+
+test('the report says when the rules closed a case with no person involved', () => {
+  const auto = { decision: 'partial_refund', amount: 6.3, reviewer: { kind: 'auto' } };
+  const closed = reportStatus({ resolution: { decision: 'partial_refund' }, sent: auto, latest: auto });
+  assert.equal(closed.label, 'Final: Closed Automatically');
+  assert.equal(closed.final, true);
+  assert.match(closed.note, /no person involved/);
+  const reopened = reportStatus({ resolution: { decision: 'partial_refund' }, latest: auto });
+  assert.equal(reopened.final, false);
+  assert.match(reopened.note, /no person involved/);
+  const byPerson = { decision: 'partial_refund', amount: 6.3, reviewer: { kind: 'accepted' } };
+  assert.doesNotMatch(reportStatus({ resolution: { decision: 'partial_refund' }, sent: byPerson }).note, /no person/);
+});

@@ -97,3 +97,17 @@ test('a case on hold is not counted as needing this reviewer', () => {
   assert.equal(hs.greetingLine(rows.slice(0, 1), ['held']), '1 dispute on hold, waiting for a second reviewer.');
   assert.equal(hs.greetingLine(rows), '2 disputes need your attention, out of 3 in your queue.');
 });
+
+test('the review summary gives the time each case took, from the run that made its result', () => {
+  const rows = [{ id: 'A', status: 'auto' }, { id: 'B', status: 'decide' }];
+  assert.equal(hs.reviewSummary(rows, ['A', 'B'], 15.4), 'Reviewed 2 cases, about 15 s each: 1 requires attention, 1 decided by policy.');
+  assert.equal(hs.reviewSummary(rows, ['A', 'B'], .1), 'Reviewed 2 cases, under 1 s each: 1 requires attention, 1 decided by policy.');
+  assert.equal(hs.reviewSummary(rows, ['A'], 12), 'Reviewed 1 case, about 12 s to run: 0 require attention, 1 decided by policy.');
+  const t = second => `2026-10-31T10:00:${String(second).padStart(2, '0')}Z`;
+  const log = [{ started_at: t(0), duration_ms: 4000 }, { started_at: t(4), duration_ms: 3000 }, { started_at: t(4), duration_ms: 6000 }];
+  assert.equal(hs.runSeconds(log), 10, 'parallel steps overlap, so durations are not summed');
+  assert.equal(hs.runSeconds([{ started_at: null, duration_ms: 500 }]), null);
+  assert.equal(hs.runSeconds([]), null);
+  assert.equal(hs.averageRunSeconds([log, [{ started_at: t(0), duration_ms: 20000 }], []]), 15);
+  assert.equal(hs.averageRunSeconds([[]]), null);
+});

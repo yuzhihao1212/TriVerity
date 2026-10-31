@@ -23,7 +23,7 @@ import { VerdictSummary } from "./VerdictSummary";
 import { computedFacts, disputeLabel, disputeTitle, money } from "./presentation";
 import { caseHash, focusSection, HOME_HASH, missingCase, reveal, selectSample } from "./routes";
 import { allowedActions, caseStatus, pendingAppealIds, sortQueue, STATUS_WORDS, type CaseStatus, queueGroups } from "./caseQueue";
-import { nextToReview } from "./homeState";
+import { averageRunSeconds, nextToReview } from "./homeState";
 import { Home, type HomeRow, type RunAllProgress } from "./Home";
 import { AppealsPanel } from "./Appeals";
 import { ClosedCase, ClosedSummary } from "./ClosedCase";
@@ -49,6 +49,7 @@ import { ACCESS_CODE_FIELD_ID, accessCodeMessage, accessCodeProblem, needsAccess
 import { disputeCategory, groupByCategory, type Category, disputeItemName, filterLabel, filterShortLabel, TYPE_LABELS, type DisputeFilter } from "./disputeList";
 import { FilterMenu } from "./FilterMenu";
 import { Icon } from "./Icon";
+import { caseGuideShows, compactCaseHead, GUIDE_STEPS, LAST_STEP_TEXT, readGuideDone, writeGuideDone } from "./firstVisitGuide";
 import { Mascot } from "./Mascot";
 import { cheerLine } from "./mascotState";
 import type { AgentLogEntry, Appeal, Decision, DisputeCase, PartyHistory, Resolution } from "./types";
@@ -92,6 +93,8 @@ function saveAccessCode(code: string) {
     // Storage blocked: the code still works until the page reloads.
   }
 }
+
+function guideStore() { try { return window.localStorage; } catch { return null; } }
 
 export default function App({ active, sampleId, navigation = 0, presentation, onTogglePresentation, theme, onToggleTheme }: {
   active: boolean; sampleId?: string; navigation?: number; presentation: boolean; onTogglePresentation: () => void;
@@ -339,6 +342,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
   const factIds = useMemo(() => new Set(facts.flatMap(fact => fact.id ? [fact.id] : [])), [facts]);
 
   const activeTab = savedTab(selected ? activeTabs[selected.dispute_id] : undefined, !!resolution);
+  const compactHead = !!selected && compactCaseHead(activeTab, resolving === selected.dispute_id || completion?.id === selected.dispute_id);
 
   // Reviewer progress. A step counts once the reviewer has been on it: marked when they
   // navigate to it or move on from it (the automatic switch to Evidence after a run is
@@ -389,6 +393,14 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
   const actions = allowedActions(closed ? "closed" : reopened ? "reopened" : "ready", closed);
   // Announced once through the polite status region when the phones switch to delivered.
   const [deliveredFor, setDeliveredFor] = useState<string | null>(null);
+  // The first-visit guide: finished or skipped once, for good in this browser.
+  const [guideDone, setGuideDone] = useState(() => readGuideDone(guideStore()));
+  function endGuide() {
+    writeGuideDone(guideStore());
+    setGuideDone(true);
+  }
+  // A first decision finishes the guide.
+  useEffect(() => { if (decision.saved && !guideDone) endGuide(); }, [decision.saved, guideDone]);
   // The owl cheers when the reviewer closes a case (Notify sent); it says what they did.
   const [cheer, setCheer] = useState<{ caseId: string; key: number } | null>(null);
   useEffect(() => {
@@ -616,7 +628,8 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
           </section>}
           {onHome && <Home rows={queueRows} holds={decision.holds()} appealsWaiting={appeals === null ? null : waitingIds.size} showStart={Object.keys(results).length === 0}
             missing={missing} onDismissMissing={() => setMissing(null)} onReview={reviewCases} sampleIds={sampleIds} heldIds={decision.holds().map(hold => hold.disputeId)} runAllProgress={runAll} aiMode={aiMode} typeIcon={type => <TypeIcon type={type} />}
-            fallbacks={runAll ? runAll.ids.filter(id => results[id] && usedFallback(results[id])).length : 0} presentation={presentation} />}
+            fallbacks={runAll ? runAll.ids.filter(id => results[id] && usedFallback(results[id])).length : 0} presentation={presentation} guideDone={guideDone} onEndGuide={endGuide}
+            runSeconds={runAll ? averageRunSeconds(runAll.ids.flatMap(id => results[id] ? [results[id].agent_log] : [])) : null} />}
           {!form && resolving && resolving !== selected?.dispute_id && <p className="small muted">Agents are working on {resolving}. This case remains available.</p>}
           {form && <DisputeForm key={form.template?.dispute_id ?? "blank"} template={form.template} onSubmit={addOwn} onCancel={() => setForm(null)}
             accessCode={accessCode} onAccessCodeChange={changeAccessCode} />}
@@ -636,9 +649,16 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
               nextLabel={following?.label ?? "Back to queue"} onNext={goToFollowing} nextPrimary={activeTab !== "notify" || !following} onReopen={reopenCase} />}
             <CaseHeader dispute={selected} resolution={resolution} busy={resolving === selected.dispute_id} streaming={streaming} progress={progress}
               final={resolution ? headerFinalOutcome(resolution, selected, decision.saved, latestSent) : null} />
-            <CaseBrief dispute={selected} resolution={resolution} showProposal={reviewed.has("ruling")} aiOff={aiMode === "offline"} />
+            <CaseBrief key={selected.dispute_id} dispute={selected} resolution={resolution} showProposal={reviewed.has("ruling")} aiOff={aiMode === "offline"} compact={compactHead} />
+            {caseGuideShows({ done: guideDone, presentation, hasResult: !!resolution, canDecide: actions.decide, decided: !!decision.saved }) && <div className="case-guide" role="status">
+              <p><strong>Step {GUIDE_STEPS} of {GUIDE_STEPS}.</strong> {LAST_STEP_TEXT}</p>
+              <div className="case-guide-actions">
+                {activeTab !== "ruling" && <button type="button" className="secondary-button" onClick={() => changeTab("ruling")}>Go to Ruling</button>}
+                <button type="button" className="secondary-button" onClick={endGuide}>Got It</button>
+              </div>
+            </div>}
             <WorkflowTabs active={activeTab} resolution={resolution} busy={resolving === selected.dispute_id}
-              closed={closed} auto={autoClosed} held={!!decision.hold} decisionRecorded={!!decision.saved}
+              closed={closed} auto={autoClosed} held={!!decision.hold} decisionRecorded={!!decision.saved} compact={compactHead}
               unlocking={completion?.id === selected.dispute_id}
               liveSteps={resolving === selected.dispute_id ? liveSteps : undefined} reviewed={reviewed} onChange={changeTab}
               render={tab => resolving === selected.dispute_id || completion?.id === selected.dispute_id

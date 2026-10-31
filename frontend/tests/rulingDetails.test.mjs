@@ -16,13 +16,13 @@ test('the rows under the card point to the Judge\'s words and the alternatives, 
   assert.equal(d.reviewRows({ ...base, counterfactuals: [{ change: 'x', outcome: 'y' }] })[3].answer, 'Explore alternative facts and their outcomes.');
 });
 
-test('risk row moves first only when signals exist, with amber status and the real first signal', () => {
+test('risk row moves first only when signals exist, with amber status and every signal', () => {
   assert.deepEqual(d.reviewRows(base).map(row => row.id), ['why', 'risk', 'precedents', 'changes']);
   assert.equal(d.reviewRows(base)[1].answer, 'No risk signals');
   assert.equal(d.reviewRows(base)[1].tone, 'ok');
   const risk = d.reviewRows({ ...base, risk: { signals: ['Repeated disputes', 'Another signal'] } });
   assert.deepEqual(risk.map(row => row.id), ['risk', 'why', 'precedents', 'changes']);
-  assert.equal(risk[0].answer, '2 signals: Repeated disputes');
+  assert.equal(risk[0].answer, '2 signals: Repeated disputes; Another signal');
   assert.equal(risk[0].tone, 'warn');
   assert.equal(base.risk.signals.length, 0);
 });
