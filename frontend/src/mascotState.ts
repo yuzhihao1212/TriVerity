@@ -10,6 +10,21 @@ export const RUFFLED_MS = 900;
 /** How long each action's class stays on (ms); blinks are handled by the lids, not a class. */
 export const ACTION_MS: Record<IdleAction, number> = { blink: 180, "double-blink": 460, hop: 620, tilt: 900, wiggle: 700, glance: 1400, wave: 1300, stretch: 1500 };
 
+/**
+ * The owl's entrance on the console home, once per tab (ms from its start): it swoops in flapping,
+ * lands with a squash and sparkles, blinks and waves, and its bubble pops open while the line types.
+ */
+export const ARRIVAL = { fly: 900, land: 1300, blink: 1350, wave: 1450, bubble: 1500, type: 1750, done: 3200 } as const;
+export const TYPE_MS = 16; // per character
+/** Wait before the entrance: longer while the landing page's intro is still fading over the console. */
+export function arrivalDelay(introShowing: boolean): number {
+  return introShowing ? 800 : 150;
+}
+/** How many characters of the line show `elapsed` ms after typing starts. */
+export function typedLength(text: string, elapsed: number): number {
+  return Math.max(0, Math.min(text.length, Math.floor(elapsed / TYPE_MS)));
+}
+
 /** The next idle action: never the same one twice in a row. `random` is in [0, 1). */
 export function nextIdleAction(previous: IdleAction | null, random: number): IdleAction {
   const choices = IDLE_ACTIONS.filter(action => action !== previous);

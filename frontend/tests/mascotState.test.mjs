@@ -88,3 +88,23 @@ test('the tips are short enough for the bubble, and none repeats', () => {
   assert.equal(new Set(m.OWL_TIPS).size, m.OWL_TIPS.length);
   for (const tip of m.OWL_TIPS) assert.ok(tip.length <= 80, tip);
 });
+
+test('the entrance runs in order: fly, land, blink, wave, bubble, type, done', () => {
+  const { fly, land, blink, wave, bubble, type, done } = m.ARRIVAL;
+  const steps = [fly, land, blink, wave, bubble, type, done];
+  assert.deepEqual(steps, [...steps].sort((a, b) => a - b));
+  assert.ok(done - wave >= m.ACTION_MS.wave, 'the wave finishes before the entrance ends');
+});
+
+test('the entrance waits longer while the landing intro is still fading', () => {
+  assert.ok(m.arrivalDelay(true) > m.arrivalDelay(false));
+  assert.ok(m.arrivalDelay(false) > 0);
+});
+
+test('the greeting types out one character per step, never past its end', () => {
+  const line = '9 disputes are waiting.';
+  assert.equal(m.typedLength(line, 0), 0);
+  assert.equal(m.typedLength(line, m.TYPE_MS * 5), 5);
+  assert.equal(m.typedLength(line, 1e6), line.length);
+  assert.equal(m.typedLength(line, -50), 0);
+});

@@ -129,3 +129,36 @@
 @keyframes owl-ruffled-head { 15% { rotate: 7deg; } 30% { rotate: -7deg; } 45% { rotate: 5deg; } 60% { rotate: -4deg; } 80% { rotate: 2deg; } 100% { rotate: 0deg; } }
 @keyframes owl-flutter-l { 0%, 100% { rotate: 0deg; } 8%, 24%, 40%, 56%, 72% { rotate: 62deg; } 16%, 32%, 48%, 64%, 80% { rotate: 22deg; } }
 @keyframes owl-flutter-r { 0%, 100% { rotate: 0deg; } 8%, 24%, 40%, 56%, 72% { rotate: -62deg; } 16%, 32%, 48%, 64%, 80% { rotate: -22deg; } }
+
+/* Entrance (ARRIVAL in mascotState.ts), once per tab: the owl swoops in from the upper right on a
+   curve with its wings beating and its shadow gathering under it, lands with a squash, and its
+   bubble pops open after it. Every step waits for --arrive-delay, so nothing shows before it starts. */
+@media (prefers-reduced-motion: no-preference) {
+  .mascot.is-arriving .mascot-body { animation: owl-swoop .9s var(--arrive-delay) cubic-bezier(.3, .1, .3, 1) both; }
+  .mascot.is-arriving .owl-wing-l { animation: owl-flutter-l .9s var(--arrive-delay) linear both, owl-fan-hold .9s var(--arrive-delay) ease-in-out both; }
+  .mascot.is-arriving .owl-wing-r { animation: owl-flutter-r .9s var(--arrive-delay) linear both, owl-fan-hold .9s var(--arrive-delay) ease-in-out both; }
+  .mascot.is-arriving .owl-tail { animation: owl-tail-stream .9s var(--arrive-delay) ease-out both; }
+  .mascot.is-arriving .owl-torso { animation: owl-land-squash .45s calc(var(--arrive-delay) + .9s) ease-out; }
+  .mascot.is-arriving .owl-head { animation: owl-head-lag .5s calc(var(--arrive-delay) + .92s) ease-out; }
+  .mascot.is-arriving .mascot-shadow { animation: owl-shadow-arrive .9s var(--arrive-delay) ease-in both; }
+  .mascot.is-arriving .mascot-bubble { animation: owl-bubble-pop .45s calc(var(--arrive-delay) + 1.5s) cubic-bezier(.3, 1.4, .5, 1) both; }
+  /* Once the wave starts, the rig's own wave takes the wings, body and head back. */
+  .mascot.is-arriving .act-wave .owl-wing-l { animation: owl-wave 1.3s cubic-bezier(.4, 0, .3, 1), owl-fan-hold 1.3s ease-in-out; }
+  .mascot.is-arriving .act-wave .owl-wing-r { animation: owl-wave-balance 1.3s ease-in-out; }
+  .mascot.is-arriving .act-wave .owl-torso { animation: owl-wave-lean 1.3s ease-in-out; }
+  .mascot.is-arriving .act-wave .owl-head { animation: owl-wave-head 1.3s ease-in-out; }
+}
+@keyframes owl-swoop {
+  0% { opacity: 0; translate: min(560px, 55vw) -240px; rotate: -16deg; scale: .5; }
+  12% { opacity: 1; }
+  55% { translate: 150px -120px; rotate: -10deg; scale: .82; }
+  85% { translate: 12px -8px; rotate: 4deg; scale: 1; }
+  100% { opacity: 1; translate: 0 0; rotate: 0deg; scale: 1; }
+}
+@keyframes owl-tail-stream { 0%, 70% { rotate: 22deg; } 85% { rotate: -8deg; } 100% { rotate: 0deg; } }
+@keyframes owl-land-squash { 0% { scale: 1.12 .84; } 40% { scale: .95 1.06; } 70% { scale: 1.03 .97; } 100% { scale: 1 1; } }
+@keyframes owl-shadow-arrive { 0% { opacity: 0; scale: .2 .2; } 100% { opacity: 1; scale: 1 1; } }
+.home-hello-rest { visibility: hidden; }
+@keyframes owl-bubble-pop { from { opacity: 0; scale: .85; } }
+/* After the entrance, the bubble stays as it is rather than popping in a second time. */
+.mascot.has-arrived .mascot-bubble { animation: none; }

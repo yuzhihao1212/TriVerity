@@ -81,7 +81,7 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
         <Icon name="cross" /></button>
     </p>}
     <div className="home-greeting">
-      <HomeOwl hello={hello} greeting={greetingLine(rows, heldIds)} rows={rows} progress={runAllProgress} presentation={presentation} guide={guide} onSkipGuide={onEndGuide} />
+      <HomeOwl hello={hello} greeting={greetingLine(rows, heldIds)} rows={rows} progress={runAllProgress} presentation={presentation} guide={guide} onSkipGuide={onEndGuide} arrive={play} />
     </div>
     <div className="home-head">
       <h2 id="home-title">Your Queue</h2>
