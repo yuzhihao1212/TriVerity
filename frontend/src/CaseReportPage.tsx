@@ -20,7 +20,7 @@ export function CaseReport({ onBack, ...input }: CaseReportInput & { onBack: () 
   return <article className="case-report" aria-labelledby="case-report-title">
     <div className="case-report-actions">
       <button type="button" className="secondary-button" onClick={onBack}>{titleCase("Back to case")}</button>
-      <button type="button" className="run-button" onClick={() => window.print()}><Icon name="printer" />{titleCase("Save as PDF")}</button>
+      <button type="button" className="run-button" onClick={() => window.print()}><Icon name="printer" />Export PDF</button>
     </div>
     <header className="case-report-header">
       <p className="case-report-internal"><Icon name="lock" />Internal: includes reviewer-only signals. Do not share with the rider or driver.</p>

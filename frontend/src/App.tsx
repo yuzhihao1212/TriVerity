@@ -35,7 +35,7 @@ import { Loader3D, OeroMark, useLoaderVisible } from "./OeroAI";
 import { savedText } from "./decisionState";
 import { AiToggle } from "./AiToggle";
 import { readAiMode, writeAiMode, type AiMode } from "./aiMode";
-import { CurrentCaseShortcut, SidebarNewButton, SidebarToggle } from "./SidebarToggle";
+import { CaseTypeShortcut, SidebarNewButton, SidebarToggle } from "./SidebarToggle";
 import { readGroupOpen, readSidebarOpen, writeGroupOpen, writeSidebarOpen } from "./sidebar";
 import { PresentationToggle, ThemeToggle } from "./ThemeToggle";
 import type { Theme } from "./theme";
@@ -46,7 +46,7 @@ import { ApiError, getSamples, listAppeals, resolveBatch, resolveDisputeLive, se
 import { AutoResolvedNote } from "./AutoResolvedNote";
 import { AccessCodeField } from "./AccessCodeField";
 import { ACCESS_CODE_FIELD_ID, accessCodeMessage, accessCodeProblem, needsAccessCode } from "./consoleHeader";
-import { disputeCategory, groupByCategory, type Category, disputeItemName, filterLabel, filterShortLabel, TYPE_LABELS, type DisputeFilter } from "./disputeList";
+import { disputeCategory, groupByCategory, railShortcuts, type Category, disputeItemName, filterLabel, filterShortLabel, TYPE_LABELS, type DisputeFilter } from "./disputeList";
 import { FilterMenu } from "./FilterMenu";
 import { Icon } from "./Icon";
 import { caseGuideShows, compactCaseHead, GUIDE_STEPS, LAST_STEP_TEXT, readGuideDone, writeGuideDone } from "./firstVisitGuide";
@@ -544,6 +544,18 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
     setRevealCurrent(true);
   }
 
+  /** Another kind of case from the rail: the list opens on that group, with its heading focused. */
+  function openCategory(category: Category) {
+    if (filter !== "all" && disputeCategory(filter) !== category) setFilter("all");
+    setCategoryOpen(category, true);
+    changeSidebar(true);
+    window.setTimeout(() => {
+      const heading = document.getElementById(`sidebar-group-${category}`);
+      heading?.focus({ preventScroll: true });
+      heading?.scrollIntoView({ block: "nearest" });
+    }, 0);
+  }
+
   const canReport = !form && !!selected && !!resolution && resolving === null && !runAll?.running;
   const reportButton = <ReportMenu currentId={selected?.dispute_id ?? null} busy={resolving !== null || !!runAll?.running} reportOpen={reportOpen && canReport}
     onOpen={openReportFor} buttonRef={sidebarReportButton} entries={() => queueRows.map(row => {
@@ -591,8 +603,11 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
                 </div>
               : <>{onHome && <FilterMenu value={filter} onChange={changeFilter} />}<SidebarNewButton onClick={newDispute} />{reportButton}</>}
           </div>
-          {!sidebarOpen && selected && <CurrentCaseShortcut id={selected.dispute_id} summary={disputeLabel(selected)} type={selected.type}
-            icon={<TypeIcon type={selected.type} />} onOpen={openCurrentCase} />}
+          {!sidebarOpen && selected && <div className="sidebar-shortcuts">
+            {railShortcuts(queueRows.map(row => row.dispute), { id: selected.dispute_id, summary: disputeLabel(selected), type: selected.type }).map(item =>
+              <CaseTypeShortcut key={item.category} category={item.category} label={item.label} current={item.current}
+                icon={<TypeIcon type={item.type as DisputeCase["type"]} />} onOpen={() => item.current ? openCurrentCase() : openCategory(item.category)} />)}
+          </div>}
           <div className="sidebar-body" id="dispute-list" hidden={!sidebarOpen}>
           {filter !== "all" && <button type="button" className={chipClass({ tone: "brand", className: "chip-button" })} aria-label={`Clear filter: ${filterLabel(filter)}`} onClick={() => setFilter("all")}>
             {filterShortLabel(filter)}
@@ -642,7 +657,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
               <li><a href={HOME_HASH}>Console</a></li>
               <li aria-current="page">{selected.dispute_id}</li>
             </ol></nav>
-            {canReport && <button type="button" ref={caseReportButton} className="secondary-button case-report-trigger" onClick={() => openReport("case")}><Icon name="printer" />Case Report</button>}
+            {canReport && <button type="button" ref={caseReportButton} className="secondary-button case-report-trigger" onClick={() => openReport("case")}><Icon name="printer" />Export PDF</button>}
             </div>
             {reviewId && <ClosedCase disputeId={selected.dispute_id} sent={sent} latest={latestSent}
               events={sentRecords().events(reviewId)} earlier={sentRecords().earlier(selected.dispute_id, reviewId)}

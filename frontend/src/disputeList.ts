@@ -22,6 +22,19 @@ export function groupByCategory<T extends { type: string }>(cases: readonly T[],
   }).filter(group => group.count > 0);
 }
 
+/** The collapsed rail: one icon per kind of case in the queue, with the open case's kind marked. */
+export function railShortcuts<T extends { type: string }>(cases: readonly T[], current: { id: string; summary: string; type: string }) {
+  return groupByCategory(cases).map(group => {
+    const isCurrent = group.id === disputeCategory(current.type);
+    return {
+      category: group.id,
+      type: group.items[0].type,
+      current: isCurrent,
+      label: `${group.label} cases: ${group.count}${isCurrent ? `. Current case: ${current.id} · ${current.summary}` : ""}`,
+    };
+  });
+}
+
 export const TYPE_LABELS: Record<DisputeCase["type"], string> = {
   route_deviation: "Route Deviation",
   no_show_charge: "No-show Charge",

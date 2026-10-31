@@ -56,13 +56,13 @@ export function ReportMenu({ entries, currentId, busy, reportOpen, onOpen, butto
 
   return <div className="filter-menu report-menu" ref={wrapper} onKeyDown={event => { if (event.key === "Escape" && open) close(); }}>
     <button type="button" ref={buttonRef} className={`icon-button home-button case-report-button${reportOpen ? " is-current" : ""}`}
-      aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined} aria-label="Case Reports" title="Case Reports"
+      aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined} aria-label="Export PDF" title="Export PDF"
       onClick={() => setOpen(previous => !previous)}
       onKeyDown={event => { if (event.key === "ArrowDown" && !open) { event.preventDefault(); setOpen(true); } }}>
       <Icon name="printer" />
     </button>
-    {groups && <div className="filter-popover report-popover" id={menuId} role={rows.length && !busy ? "menu" : undefined} aria-label="Case Reports" onKeyDown={onMenuKey}>
-      <p className="report-popover-title">Case Reports</p>
+    {groups && <div className="filter-popover report-popover" id={menuId} role={rows.length && !busy ? "menu" : undefined} aria-label="Export PDF" onKeyDown={onMenuKey}>
+      <p className="report-popover-title">Export PDF</p>
       {busy ? <p className="report-popover-note" role="status">Available when the agents finish.</p> : <>
         {rows.length > 0 && <p className="report-popover-note">Cases that have a result</p>}
         {groups.current && row(groups.current, true)}

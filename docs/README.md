@@ -37,6 +37,6 @@ A judge's route: [product and results](../README.md) → [architecture](architec
 
 ## Verified build
 
-On 31 Oct 2026, `main` passed **975 backend tests** and **453 frontend tests**,
+On 31 Oct 2026, `main` passed **975 backend tests** and **464 frontend tests**,
 TypeScript checking and the production frontend build. Backend tests ran with `LLM_API_KEY=''`;
 no real LLM was called. [Local setup and commands](../README.md#run-it-locally).

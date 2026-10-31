@@ -836,6 +836,7 @@ textarea { width: 100%; resize: vertical; }
   overflow: hidden; box-sizing: border-box; border: var(--decision-border); border-radius: 16px; background: var(--bg); }
 /* Not the divider between stacked cards: the panel has its own border all round. */
 .workflow-panel > .card.decision-panel { padding-top: 0; border-top: var(--decision-border); }
+#reviewer-decision { scroll-margin-top: var(--space-4); }
 .decision-panel.phase-override { --decision-border: 2px solid var(--warn-text); background: var(--warn-soft); }
 .decision-panel.phase-done, .decision-panel.phase-held { width: min(400px, 100%); }
 .decision-panel.phase-done { --decision-border: 1.5px solid color-mix(in srgb, var(--ok-text) 60%, var(--border)); }
@@ -1071,10 +1072,12 @@ main[tabindex="-1"]:focus { outline: none; }
 .icon-button svg { width: 20px; height: 20px; }
 .sidebar-collapsed .sidebar { align-items: center; padding-inline: var(--space-2); overflow: visible; }
 .sidebar-collapsed .sidebar-head { flex-direction: column; }
-.sidebar-current { position: relative; flex: none; margin-top: var(--space-2); }
+.sidebar-shortcuts { display: flex; flex-direction: column; flex: none; gap: var(--space-2); margin-top: var(--space-2); }
+.sidebar-current { position: relative; flex: none; }
 .sidebar-current-button { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid var(--border); border-radius: 8px; color: var(--muted); background: var(--surface); }
 .sidebar-current-button .icon { width: 18px; height: 18px; }
-.sidebar-current-button:hover { border-color: currentColor; }
+.sidebar-current-button:not([aria-current]) { border-color: transparent; background: transparent; }
+.sidebar-current-button:hover, .sidebar-current-button:not([aria-current]):hover { border-color: currentColor; }
 .sidebar-current-tooltip { display: none; position: absolute; z-index: 50; left: 100%; top: 0; width: max-content; max-width: min(260px, calc(100vw - 80px)); padding: var(--space-2) var(--space-3); border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .sidebar-current:hover .sidebar-current-tooltip:not([hidden]), .sidebar-current:focus-within .sidebar-current-tooltip:not([hidden]) { display: block; }
 .sidebar-current-button .type-icon { margin: 0; color: inherit; }
@@ -1083,7 +1086,7 @@ main[tabindex="-1"]:focus { outline: none; }
   .layout.sidebar-collapsed { grid-template-columns: minmax(0, 1fr); }
   .sidebar-collapsed .sidebar { flex-direction: row; align-items: center; padding: var(--space-2) var(--space-4); }
   .layout.sidebar-collapsed .sidebar .sidebar-head { flex-direction: row; }
-  .sidebar-current { margin: 0 0 0 auto; }
+  .sidebar-shortcuts { flex-direction: row; margin: 0 0 0 auto; }
   .sidebar-current-tooltip { left: auto; right: 0; top: 100%; max-width: min(260px, calc(100vw - 32px)); }
 }
 @media (prefers-reduced-motion: reduce) { .layout { transition: none; } }
