@@ -3,7 +3,7 @@ import test from 'node:test';
 import { load } from './_load.mjs';
 
 const g = await load('firstVisitGuide');
-const base = { done: false, presentation: false, running: false, canReview: true, toReview: false, aiLive: true };
+const base = { done: false, running: false, canReview: true, toReview: false, aiLive: true };
 
 test('the guide starts with running the queue, naming the button the reviewer can see', () => {
   const first = g.homeGuide(base);
@@ -17,16 +17,16 @@ test('once a case needs a person, the guide moves on, even with new cases left',
   assert.deepEqual([next.step, next.target], [2, 'start']);
 });
 
-test('the guide stays out of the way when done, presenting, running or with nothing to do', () => {
-  for (const change of [{ done: true }, { presentation: true }, { running: true }, { canReview: false }]) {
+test('the guide stays out of the way when done, running or with nothing to do', () => {
+  for (const change of [{ done: true }, { running: true }, { canReview: false }]) {
     assert.equal(g.homeGuide({ ...base, ...change }), null, JSON.stringify(change));
   }
 });
 
 test('the last step shows only on a case waiting for this reviewer to decide', () => {
-  const ready = { done: false, presentation: false, hasResult: true, canDecide: true, decided: false };
+  const ready = { done: false, hasResult: true, canDecide: true, decided: false };
   assert.equal(g.caseGuideShows(ready), true);
-  for (const change of [{ done: true }, { presentation: true }, { hasResult: false }, { canDecide: false }, { decided: true }]) {
+  for (const change of [{ done: true }, { hasResult: false }, { canDecide: false }, { decided: true }]) {
     assert.equal(g.caseGuideShows({ ...ready, ...change }), false, JSON.stringify(change));
   }
 });
