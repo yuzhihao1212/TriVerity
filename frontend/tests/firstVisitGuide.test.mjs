@@ -8,8 +8,8 @@ const base = { done: false, running: false, canReview: true, toReview: false, ai
 test('the guide starts with running the queue, naming the button the reviewer can see', () => {
   const first = g.homeGuide(base);
   assert.deepEqual([first.step, first.target], [1, 'review']);
-  assert.match(first.text, /AI Review/);
-  assert.match(g.homeGuide({ ...base, aiLive: false }).text, /Review with Rules/);
+  assert.match(first.text, /Run Agents/);
+  assert.match(g.homeGuide({ ...base, aiLive: false }).text, /Run with Rules/);
 });
 
 test('once a case needs a person, the guide moves on, even with new cases left', () => {

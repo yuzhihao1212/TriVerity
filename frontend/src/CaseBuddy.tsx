@@ -1,8 +1,8 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 
 import face from "./assets/mascot/owl-face.webp";
 import { buddyAnswers, type BuddyStage } from "./buddyAnswers";
-import { clampSpot, panelBox, readSpot, spotOf, writeSpot, type BuddySpot, type PanelBox } from "./buddyPosition";
+import { clampSpot, panelBox, readSpot, readTucked, spotOf, writeSpot, writeTucked, type BuddySpot, type PanelBox } from "./buddyPosition";
 import { Chip } from "./Chip";
 import { EvidenceText, type FactLinks } from "./EvidenceList";
 import { Icon } from "./Icon";
@@ -12,6 +12,7 @@ import type { DisputeCase, Resolution } from "./types";
 function storage(): Storage | null { try { return window.localStorage; } catch { return null; } }
 // Without the scrollbar, like the right and bottom that position the owl.
 function viewport() { return { width: document.documentElement.clientWidth, height: document.documentElement.clientHeight }; }
+const NARROW = "(max-width: 560px)";
 const ARROWS: Record<string, [number, number]> = { ArrowLeft: [1, 0], ArrowRight: [-1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
 
 /** The owl in the corner of a case: questions a lost reviewer would ask, answered from the case's own records. */
@@ -21,26 +22,56 @@ export function CaseBuddy({ resolution, dispute, stage, tab, availableIds, onSel
   const [open, setOpen] = useState(false);
   const [chosen, setChosen] = useState<string | null>(null);
   const id = useId();
-  const button = useRef<HTMLButtonElement>(null);
+  // The owl is a pill of two buttons: its face (tucks the owl away, or brings it back with the panel) and its label (the panel).
+  const pill = useRef<HTMLDivElement>(null);
+  const faceButton = useRef<HTMLButtonElement>(null);
+  const labelButton = useRef<HTMLButtonElement>(null);
+  const [tucked, setTucked] = useState(() => readTucked(storage()));
+  // On a phone the label is never shown, so the face opens the panel itself.
+  const [narrow, setNarrow] = useState(() => window.matchMedia?.(NARROW).matches ?? false);
+  useEffect(() => {
+    const query = window.matchMedia?.(NARROW);
+    if (!query) return;
+    const change = () => setNarrow(query.matches);
+    query.addEventListener("change", change);
+    return () => query.removeEventListener("change", change);
+  }, []);
+  const faceOnly = tucked || narrow;
+  // Bumped when the pill finishes growing or shrinking, so the panel lines up with its new width.
+  const [resized, setResized] = useState(0);
   const heading = useRef<HTMLHeadingElement>(null);
   // Wherever the reviewer last left it (null: the corner the CSS gives it), and where its panel opens from there.
   const [spot, setSpot] = useState<BuddySpot | null>(() => readSpot(storage()));
   const [panel, setPanel] = useState<PanelBox | null>(null);
   const [dragging, setDragging] = useState(false);
-  const drag = useRef<{ x: number; y: number; from: BuddySpot; to: BuddySpot; moved: boolean; owl: boolean } | null>(null);
-  const dragged = useRef(false);
+  const drag = useRef<{ x: number; y: number; from: BuddySpot; to: BuddySpot; moved: boolean; part: "face" | "label" | null } | null>(null);
   const answers = buddyAnswers({ resolution, dispute, stage, tab });
   const answer = answers.find(item => item.id === chosen);
 
   function close() {
     setOpen(false);
-    button.current?.focus();
+    (faceOnly ? faceButton : labelButton).current?.focus();
   }
+  function pressFace() {
+    if (narrow) return open ? close() : setOpen(true);
+    const next = !tucked;
+    setTucked(next);
+    writeTucked(storage(), next);
+    // Tucking away closes the panel; bringing the owl back opens it, as the label would.
+    setOpen(!next);
+    if (next) faceButton.current?.focus();
+  }
+  function pressLabel() {
+    if (open) close(); else setOpen(true);
+  }
+  // Keyboard presses arrive as clicks (detail 0); pointer presses are settled in endDrag, which knows
+  // whether the pointer moved, so the click a captured pointer may still send is ignored.
+  const keyboardOnly = (press: () => void) => (event: ReactMouseEvent) => { if (event.detail === 0) press(); };
 
   useEffect(() => { if (open) heading.current?.focus(); }, [open]);
 
   function owlBox() {
-    const { left, top, width, height } = button.current!.getBoundingClientRect();
+    const { left, top, width, height } = pill.current!.getBoundingClientRect();
     return { left, top, width, height };
   }
   function moveTo(next: BuddySpot) {
@@ -52,7 +83,7 @@ export function CaseBuddy({ resolution, dispute, stage, tab, availableIds, onSel
   // Before paint: a saved spot is pulled back on screen, and the panel opens on the roomier side.
   useLayoutEffect(() => {
     const fit = () => {
-      if (!button.current) return;
+      if (!pill.current) return;
       if (spot) {
         const fitted = clampSpot(spot, owlBox(), viewport());
         if (fitted.right !== spot.right || fitted.bottom !== spot.bottom) return setSpot(fitted);
@@ -62,13 +93,16 @@ export function CaseBuddy({ resolution, dispute, stage, tab, availableIds, onSel
     fit();
     window.addEventListener("resize", fit);
     return () => window.removeEventListener("resize", fit);
-  }, [open, spot]);
+  }, [open, spot, faceOnly, resized]);
 
-  // The owl and the panel's header both move it. A press that barely moves is still a click.
+  // The owl and the panel's header both move it. A press that barely moves is a press on the part it
+  // landed on: the face or the label.
   function startDrag(event: ReactPointerEvent<HTMLElement>) {
     if (event.button !== 0 || (event.target as HTMLElement).closest(".case-buddy-head button")) return;
+    const target = event.target as HTMLElement;
+    const part = event.currentTarget !== pill.current ? null : target.closest(".case-buddy-face") ? "face" : target.closest(".case-buddy-label") ? "label" : null;
     const from = spotOf(owlBox(), viewport());
-    drag.current = { x: event.clientX, y: event.clientY, from, to: from, moved: false, owl: event.currentTarget === button.current };
+    drag.current = { x: event.clientX, y: event.clientY, from, to: from, moved: false, part };
     event.currentTarget.setPointerCapture(event.pointerId);
   }
   function moveDrag(event: ReactPointerEvent<HTMLElement>) {
@@ -80,13 +114,16 @@ export function CaseBuddy({ resolution, dispute, stage, tab, availableIds, onSel
     current.moved = true;
     current.to = moveTo({ right: current.from.right - dx, bottom: current.from.bottom - dy });
   }
-  function endDrag() {
+  function endDrag(event: ReactPointerEvent<HTMLElement>) {
     const current = drag.current;
     drag.current = null;
-    if (!current?.moved) return;
+    if (!current) return;
+    if (!current.moved) {
+      if (event.type === "pointerup" && current.part === "face") pressFace();
+      if (event.type === "pointerup" && current.part === "label") pressLabel();
+      return;
+    }
     setDragging(false);
-    // The click that ends a drag on the owl is not a press: the panel stays as it was.
-    dragged.current = current.owl;
     // The last spot the drag asked for: the page may not have drawn it yet.
     writeSpot(storage(), current.to);
   }
@@ -138,12 +175,18 @@ export function CaseBuddy({ resolution, dispute, stage, tab, availableIds, onSel
       </div>
       <p className="case-buddy-foot"><Icon name="info" />No AI call and no cost. It never recommends an outcome.</p>
     </section>}
-    <button type="button" ref={button} className="case-buddy-button" aria-expanded={open} aria-controls={open ? id : undefined}
-      aria-describedby={`${id}-move`} title="Drag to move" {...drags} onKeyDown={nudge}
-      onClick={() => { if (dragged.current) dragged.current = false; else if (open) close(); else setOpen(true); }}>
-      <img src={face} alt="" width={54} height={40} draggable={false} />
-      <span className="case-buddy-label">Ask about this case</span>
-    </button>
+    <div ref={pill} className={`case-buddy-pill${faceOnly ? " is-tucked" : ""}`} title="Drag to move" {...drags}
+      onTransitionEnd={event => { if (event.propertyName === "max-width") setResized(count => count + 1); }}>
+      <button type="button" ref={faceButton} className="case-buddy-face" onClick={keyboardOnly(pressFace)} onKeyDown={nudge}
+        aria-label={faceOnly ? "Ask about this case" : "Tuck the owl away"} aria-describedby={`${id}-move`}
+        aria-expanded={faceOnly ? open : undefined} aria-controls={faceOnly && open ? id : undefined}>
+        <img src={face} alt="" width={54} height={40} draggable={false} />
+      </button>
+      <button type="button" ref={labelButton} className="case-buddy-label" onClick={keyboardOnly(pressLabel)} onKeyDown={nudge}
+        aria-expanded={open} aria-controls={open ? id : undefined} aria-describedby={`${id}-move`} tabIndex={faceOnly ? -1 : undefined}>
+        <span>Ask about this case</span>
+      </button>
+    </div>
     <span id={`${id}-move`} className="sr-only">Drag it, or use the arrow keys, to move it.</span>
   </div>;
 }

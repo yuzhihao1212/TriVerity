@@ -10,22 +10,29 @@ import { Icon } from "./Icon";
 import { HunyuanMark, SourceBadge } from "./SourceBadge";
 import { money, outputSources, policyIds, titleCase } from "./presentation";
 import { Term } from "./Term";
-import { CONFIDENCE_HELP, confidenceDisplay, refundSum, rulingBrief, rulingConditionGroups, rulingCredits, rulingHero, rulingSides, decidedHero } from "./verdictDisplay";
+import { CONFIDENCE_HELP, confidenceDisplay, refundSum, rulingBrief, rulingConditionGroups, rulingCredits, rulingHero, rulingSides, decidedHero, stampWord } from "./verdictDisplay";
 import type { FinalHeaderOutcome } from "./stepVisuals";
 import type { DisputeCase, Resolution } from "./types";
 
 let seen: ReturnType<typeof createSeenCases> | undefined;
+let stamped: ReturnType<typeof createSeenCases> | undefined;
+function sessionStore(): Storage | null {
+  try { return window.sessionStorage; } catch { return null; /* In-memory tracking when storage is blocked. */ }
+}
 function seenRulings() {
-  if (!seen) {
-    let storage: Storage | null = null;
-    try { storage = window.sessionStorage; } catch { /* In-memory tracking when storage is blocked. */ }
-    seen = createSeenCases(storage, "triverity.rulingIntroSeen");
-  }
+  seen ??= createSeenCases(sessionStore(), "triverity.rulingIntroSeen");
   return seen;
 }
+/** Cases whose ruling has been stamped in presentation mode: the stamp lands once, then stays put. */
+function stampedRulings() {
+  stamped ??= createSeenCases(sessionStore(), "triverity.rulingStamped");
+  return stamped;
+}
 
-export function VerdictSummary({ resolution, dispute, final = null, aiLive = false, availableIds, onSelectFact }: {
+export function VerdictSummary({ resolution, dispute, final = null, aiLive = false, presenting = false, availableIds, onSelectFact }: {
   resolution: Resolution; dispute: DisputeCase; final?: FinalHeaderOutcome | null; aiLive?: boolean;
+  /** Presentation mode: the outcome is stamped on, with the reveal, the first time; after that it is just there. */
+  presenting?: boolean;
 } & FactLinks) {
   const id = useId();
   const disputeId = dispute.dispute_id;
@@ -36,7 +43,10 @@ export function VerdictSummary({ resolution, dispute, final = null, aiLive = fal
   const sum = refundSum(resolution, dispute.fare);
   const credits = rulingCredits(resolution, aiLive, !!final?.by);
   const [sourcesOpen, setSourcesOpen] = useState(false);
-  const [firstView] = useState(() => !window.matchMedia("(prefers-reduced-motion: reduce)").matches && !seenRulings().has(disputeId));
+  // The stamp lands once per case: the first time its Ruling opens in presentation mode, with the reveal.
+  const [stampLands] = useState(() => presenting && !stampedRulings().has(disputeId));
+  const [firstView] = useState(() => !window.matchMedia("(prefers-reduced-motion: reduce)").matches && (stampLands || !seenRulings().has(disputeId)));
+  useEffect(() => { if (stampLands) stampedRulings().mark(disputeId); }, [stampLands, disputeId]);
   const [intro, setIntro] = useState(false);
   const [animatedAmount, setAnimatedAmount] = useState<number | null>(null);
   useEffect(() => {
@@ -66,6 +76,7 @@ export function VerdictSummary({ resolution, dispute, final = null, aiLive = fal
   const warnBox = brief.triggers.length > 0 || !!brief.proposed;
   return <section id="ruling-summary" tabIndex={-1} className={`card verdict ruling ruling-revamp ${resolution.decision}${intro ? " ruling-intro" : ""}`} aria-labelledby={`${id}-title`}>
     <div className={`ruling-hero tone-${hero.tone}`}>
+      {presenting && <span className={`ruling-stamp tone-${hero.tone}${stampLands && firstView ? "" : " is-placed"}`} aria-hidden="true">{stampWord(final?.decision ?? resolution.decision)}</span>}
       <span className="ruling-outcome-icon"><Icon name={hero.icon} /></span>
       <div className="ruling-outcome">
         {hero.solo ? <h2 id={`${id}-title`} className="ruling-solo-title">{hero.headline}</h2> : <>

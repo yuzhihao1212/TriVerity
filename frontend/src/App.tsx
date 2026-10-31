@@ -23,7 +23,7 @@ import { VerdictSummary } from "./VerdictSummary";
 import { computedFacts, disputeLabel, disputeTitle, money } from "./presentation";
 import { caseHash, focusSection, HOME_HASH, missingCase, reveal, selectSample } from "./routes";
 import { allowedActions, caseStatus, pendingAppealIds, sortQueue, STATUS_WORDS, type CaseStatus, queueGroups } from "./caseQueue";
-import { averageRunSeconds, nextToReview } from "./homeState";
+import { averageRunSeconds, nextToReview, runAgentsLabel } from "./homeState";
 import { Home, type HomeRow, type RunAllProgress } from "./Home";
 import { AppealsPanel } from "./Appeals";
 import { ClosedCase, ClosedSummary } from "./ClosedCase";
@@ -38,7 +38,7 @@ import { readAiMode, writeAiMode, type AiMode } from "./aiMode";
 import { CaseTypeShortcut, SidebarNewButton, SidebarToggle } from "./SidebarToggle";
 import { readGroupOpen, readSidebarOpen, writeGroupOpen, writeSidebarOpen } from "./sidebar";
 import { PresentationToggle, ThemeToggle } from "./ThemeToggle";
-import type { Theme } from "./theme";
+import type { Point, Theme } from "./theme";
 import { PartyPreview, sentRecords } from "./PartyPreview";
 import { autoSentRecord, clockText, DELIVERED_ANNOUNCEMENT, sentOutcomeText, staysWithReviewer } from "./notifyState";
 import { DisputeForm } from "./DisputeForm";
@@ -99,7 +99,7 @@ function guideStore() { try { return window.localStorage; } catch { return null;
 
 export default function App({ active, sampleId, navigation = 0, presentation, onTogglePresentation, theme, onToggleTheme }: {
   active: boolean; sampleId?: string; navigation?: number; presentation: boolean; onTogglePresentation: () => void;
-  theme: Theme; onToggleTheme: () => void;
+  theme: Theme; onToggleTheme: (origin: Point | null) => void;
 }) {
   const [filter, setFilter] = useState<DisputeFilter>("all");
   const [aiMode, setAiMode] = useState<AiMode>(() => readAiMode(localStorage));
@@ -330,9 +330,9 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
         await pause(RUN_ALL_ROW_MS);
       }
       await pause(RUN_ALL_REST_MS);
-      if (failed.length) setError(`AI Review: ${failed.join(", ")} could not be resolved. Open them and use Run agents.`);
+      if (failed.length) setError(`Run Agents: ${failed.join(", ")} could not be resolved. Open them and use Run Agents on each.`);
     } catch (e) {
-      setError(`AI Review: ${(e as Error).message}`);
+      setError(`Run Agents: ${(e as Error).message}`);
     } finally {
       setRunAll({ ...progress, done: pending.length - failed.length, running: false });
     }
@@ -661,8 +661,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
             </div>
             {reviewId && <ClosedCase disputeId={selected.dispute_id} sent={sent} latest={latestSent}
               events={sentRecords().events(reviewId)} earlier={sentRecords().earlier(selected.dispute_id, reviewId)}
-              appealWaiting={waitingIds.has(selected.dispute_id)} openedAt={reviews().openedAt(reviewId)}
-              nextLabel={following?.label ?? "Home"} onNext={goToFollowing} nextPrimary={activeTab !== "notify" || !following} onReopen={reopenCase} />}
+              appealWaiting={waitingIds.has(selected.dispute_id)} openedAt={reviews().openedAt(reviewId)} onReopen={reopenCase} />}
             <CaseHeader dispute={selected} resolution={resolution} busy={resolving === selected.dispute_id} streaming={streaming} progress={progress}
               final={resolution ? headerFinalOutcome(resolution, selected, decision.saved, latestSent) : null} />
             <CaseBrief key={selected.dispute_id} dispute={selected} resolution={resolution} showProposal={reviewed.has("ruling")} aiOff={aiMode === "offline"} compact={compactHead} />
@@ -675,7 +674,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
             </div>}
             <WorkflowTabs active={activeTab} resolution={resolution} busy={resolving === selected.dispute_id}
               closed={closed} auto={autoClosed} held={!!decision.hold} decisionRecorded={!!decision.saved}
-              unlocking={completion?.id === selected.dispute_id}
+              unlocking={completion?.id === selected.dispute_id} presenting={presentation}
               liveSteps={resolving === selected.dispute_id ? liveSteps : undefined} reviewed={reviewed} onChange={changeTab}
               render={tab => resolving === selected.dispute_id || completion?.id === selected.dispute_id
                 ? <LiveProgress disputeId={selected.dispute_id} steps={liveSteps} startedAt={runStartedAt} finishedAt={finishedAt}
@@ -688,8 +687,8 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
                   <div className="run-bar case-run-bar">
                     {resolution && <button className="run-button case-review-evidence" onClick={() => changeTab("evidence")}>Review Evidence<Icon name="arrow" /></button>}
                     {actions.run ? <>
-                      <button className={resolution ? "secondary-button" : "run-button"} onClick={() => resolve(selected)} disabled={resolving !== null}>
-                        {resolution ? "Re-run Agents" : "Run Agents"}
+                      <button className={`${resolution ? "secondary-button" : "run-button"} case-run-agents`} onClick={() => resolve(selected)} disabled={resolving !== null}>
+                        <Icon name={aiMode === "offline" ? "scales" : "agent"} />{runAgentsLabel(aiMode, !!resolution)}
                       </button>
                       <RunCost offline={aiMode === "offline"} hasResult={!!resolution} />
                       <button className="secondary-button" onClick={() => { setForm({ template: selected }); setError(null); }}>Edit as New Dispute</button>
@@ -701,7 +700,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
                 {tab === "hearing" && resolution && <Debate resolution={resolution} dispute={selected} aiOff={aiMode === "offline"} availableIds={factIds} onSelectFact={selectFact} />}
                 {tab === "ruling" && resolution && <>
                   {actions.decide && <RulesPanel resolution={resolution} />}
-                  <VerdictSummary key={`ruling-${reviewId}`} resolution={resolution} dispute={selected} final={decision.saved || sent ? headerFinalOutcome(resolution, selected, decision.saved, latestSent) : null} aiLive={aiMode === "live"} availableIds={factIds} onSelectFact={selectFact} />
+                  <VerdictSummary key={`ruling-${reviewId}`} resolution={resolution} dispute={selected} final={decision.saved || sent ? headerFinalOutcome(resolution, selected, decision.saved, latestSent) : null} aiLive={aiMode === "live"} presenting={presentation} availableIds={factIds} onSelectFact={selectFact} />
                   <AutoResolvedNote autonomy={resolution.autonomy} closedAutomatically={sent?.reviewer?.kind === "auto"}
                     onSeeSent={() => changeTab("notify")} onReopen={reopenCase} />
                   {/* Nothing left to decide on a case the policy closed: the note above says why. */}

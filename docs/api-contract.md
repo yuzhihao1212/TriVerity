@@ -244,7 +244,7 @@ See `backend/app/models/resolution.py`.
 
 ## POST `/api/disputes/resolve/batch`
 
-The queue's **AI Review** button (new cases, or a re-run of open ones): resolves several sample disputes in one request. Body:
+The queue's **Run Agents** button (new cases, or a re-run of open ones): resolves several sample disputes in one request. Body:
 `{"dispute_ids": ["D001", "D003"]}` (1 to 10 IDs; duplicates resolve once). Accepts `?ai=off`.
 
 - **Samples only.** Every ID must be one of the server's samples, or the whole request gets 404. Each is

@@ -25,6 +25,8 @@ const PATHS: Record<string, ReactNode> = {
   arrow: <path d="M4 12h15m-5-5 5 5-5 5" />,
   chevron: <path d="m9 5 7 7-7 7" />,
   // Agents
+  // The mascot robot as a line icon: head, ear cups, visor and the logo's three dots. For Run Agents.
+  agent: <><path d="M5 9.5A4.5 4.5 0 0 1 9.5 5h5A4.5 4.5 0 0 1 19 9.5V15a4.5 4.5 0 0 1-4.5 4.5h-5A4.5 4.5 0 0 1 5 15Z" /><path d="M2.75 11v4.5M21.25 11v4.5" /><rect x="7.75" y="11.5" width="8.5" height="5" rx="2.5" /><path d="M12 7.6h.01M10.6 9.2h.01M13.4 9.2h.01" /></>,
   database: <><ellipse cx="12" cy="5.5" rx="7" ry="2.5" /><path d="M5 5.5v13c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-13" /><path d="M5 12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5" /></>,
   shield: <><path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6Z" /><path d="m9 12 2 2 4-4" /></>,
   person: <><circle cx="12" cy="8" r="4" /><path d="M4 21c.8-4 4-6 8-6s7.2 2 8 6" /></>,

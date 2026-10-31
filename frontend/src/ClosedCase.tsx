@@ -13,10 +13,10 @@ export function ClosedSummary({ record }: { record: SentRecord }) {
   </section>;
 }
 
-export function ClosedCase({ disputeId, sent, latest, events, earlier, appealWaiting, openedAt = null, nextLabel, onNext, nextPrimary = true, onReopen }: {
+export function ClosedCase({ disputeId, sent, latest, events, earlier, appealWaiting, openedAt = null, onReopen }: {
   disputeId: string; sent: SentRecord | null; latest: SentRecord | null; events: ReviewEvent[];
   earlier: { key: string; events: ReviewEvent[] }[]; appealWaiting: boolean;
-  openedAt?: number | null; nextLabel?: string; onNext?: () => void; nextPrimary?: boolean; onReopen: () => void;
+  openedAt?: number | null; onReopen: () => void;
 }) {
   const id = useId();
   const dialog = useRef<HTMLDialogElement>(null);
@@ -35,7 +35,6 @@ export function ClosedCase({ disputeId, sent, latest, events, earlier, appealWai
         {latest && !sent && <p className="small muted">The earlier messages remain below. Send a correction when this review is ready.</p>}
       </div>
       <div className="closed-case-actions">
-        {sent && nextLabel && onNext && <button type="button" className={nextPrimary ? "run-button" : "secondary-button"} onClick={onNext}>{nextLabel}</button>}
         {sent && <button type="button" ref={trigger} className="secondary-button closed-reopen" onClick={() => dialog.current?.showModal()}>Reopen Case</button>}
       </div>
     </div>

@@ -5,7 +5,7 @@ import { Icon } from "./Icon";
 import { HunyuanMark } from "./SourceBadge";
 import { focusSection } from "./routes";
 import { PresentationToggle, ThemeToggle } from "./ThemeToggle";
-import type { Theme } from "./theme";
+import type { Point, Theme } from "./theme";
 import heroLarge from "./assets/hero-ride-1536.webp";
 import heroSmall from "./assets/hero-ride-768.webp";
 import problemLarge from "./assets/problem-rider-1400.webp";
@@ -70,7 +70,7 @@ export const TRUST_TILES: readonly TrustTile[] = [
 ];
 
 export function Landing({ presentation, onTogglePresentation, theme, onToggleTheme, onOpenConsole }: {
-  presentation: boolean; onTogglePresentation: () => void; theme: Theme; onToggleTheme: () => void;
+  presentation: boolean; onTogglePresentation: () => void; theme: Theme; onToggleTheme: (origin: Point | null) => void;
   /** CTA click handler: plays the console intro on a plain left-click, otherwise leaves the link alone. */
   onOpenConsole?: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {

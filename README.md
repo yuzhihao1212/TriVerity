@@ -46,11 +46,11 @@ Select an image to view it full size. [All fifteen screenshots and their provena
 Added on 31 Oct 2026, after the hackathon submission. None of this changes the policy rules or how a ruling is decided;
 it makes the console easier for a real reviewer to use. The demo video was recorded before these changes.
 
-- **AI Review for the whole queue:** one button runs the waiting sample cases. Routine ones close themselves, and the
+- **Run Agents on the whole queue:** one button runs the waiting sample cases. Routine ones close themselves, and the
   rest stay in your queue, [safety first, then oldest](docs/screenshots/02-reviewer-home.png).
 - **A first-visit guide:** [three short steps](docs/screenshots/15-first-visit-guide.png) from the queue to a decision,
   following what you've actually done. The owl gives the first two; the last is a plain note on the case.
-- **A confirmation before it runs:** [AI Review says what it will do](docs/screenshots/14-ai-review-confirm.png), with
+- **A confirmation before it runs:** [Run Agents says what it will do](docs/screenshots/14-ai-review-confirm.png), with
   the approximate AI cost and a warning that routine cases close and notify the rider and driver.
 - **A measured result:** after a run, [the queue says how many cases ran, how long each took](docs/screenshots/02-reviewer-home.png)
   and how many need a person. The time comes from the agents' own log, so a saved sample reports its real run.
@@ -65,7 +65,7 @@ it makes the console easier for a real reviewer to use. The demo video was recor
   browser. It opens from the case page or the side menu, says whether the outcome is final, says when no person was involved, and is marked internal.
 - **Shorter Hearing cards:** [each side's point first](docs/screenshots/05-hearing.png), with the argument and evidence folded beneath it.
 - **A simpler Evidence step:** [a list of findings](docs/screenshots/04-evidence.png), one source at a time, with flagged items first.
-- **A livelier owl:** click it for a tip about how TriVerity works, watch it follow AI Review from the progress bar, and
+- **A livelier owl:** click it for a tip about how TriVerity works, watch it follow the agent run from the progress bar, and
   leave it alone for a minute to find it asleep. All of this happens on the home page, away from the cases themselves.
 - **An owl to ask when you're lost:** on any case with a result, the owl in the corner answers questions such as "Why is this case with me?" and "What would change the outcome?". Answers come from the case's own rules and records and link to their sources. It makes no AI call and never recommends an outcome.
 - **Clearer AI labels:** if AI Live is on but a result used fallback text, the Ruling says so and suggests a re-run.
@@ -143,7 +143,7 @@ same facts always give the same ruling, and every ruling is explained.
   case, and automatic decisions never become precedents
 - **Observable**: the demo UI shows the evidence, each agent's argument and citations, the fraud risk, and
   whether the AI or the fallback produced each step
-- **Reviewer workflow**: home queue (**AI Review** runs the waiting cases, after a confirmation) → Evidence → Hearing → Ruling (accept or override) → Notify
+- **Reviewer workflow**: home queue (**Run Agents** runs the waiting cases, after a confirmation) → Evidence → Hearing → Ruling (accept or override) → Notify
   (optional reviewer note and privacy check). Internal IDs and assessments in a note block sending;
   everyday words such as "history" only warn. Sending closes the case; a deliberate reopen permits a
   correction, while history keeps every sent message. An investigation or a refund above the reviewer's

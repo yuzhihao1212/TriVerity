@@ -68,6 +68,20 @@ export function tabLocked(tab: WorkflowTab, hasResult: boolean): boolean {
   return tab !== "intake" && !hasResult;
 }
 
+/**
+ * Presentation mode: the left and right arrows step through the case like slides. Unlike the tab
+ * list's keys it never wraps round, and it skips locked steps; null when there is nowhere to go.
+ */
+export function presentationStep(current: WorkflowTab, key: string, hasResult: boolean): WorkflowTab | null {
+  const step = key === "ArrowRight" ? 1 : key === "ArrowLeft" ? -1 : 0;
+  if (!step) return null;
+  const index = WORKFLOW_TABS.findIndex(tab => tab.id === current);
+  for (let next = index + step; next >= 0 && next < WORKFLOW_TABS.length; next += step) {
+    if (!tabLocked(WORKFLOW_TABS[next].id, hasResult)) return WORKFLOW_TABS[next].id;
+  }
+  return null;
+}
+
 export function navigateTab(current: WorkflowTab, key: string, hasResult: boolean): WorkflowTab {
   const available = WORKFLOW_TABS.filter(tab => !tabLocked(tab.id, hasResult));
   const index = Math.max(0, available.findIndex(tab => tab.id === current));
