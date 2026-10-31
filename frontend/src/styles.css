@@ -1688,6 +1688,8 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .presentation-mode .home-meter-legend, .presentation-mode .home-start-blurb, .presentation-mode .home-start-id, .presentation-mode .home-start-next, .presentation-mode .home-category, .presentation-mode .home-row-id, .presentation-mode .home-cases h3 { font-size: 14px; }
 @media (max-width: 760px) {
   .home-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+  .home-head h2:has(+ .home-head-actions) { grid-column: 1 / -1; }
+  .home-head h2 + .home-head-actions { grid-column: 1 / -1; }
   .home-head .home-new { grid-column: 2; grid-row: 1; }
   .home-meter, .home-intro { grid-column: 1 / -1; }
   .home-meter-bar { width: 100%; }
@@ -2329,6 +2331,12 @@ details.ruling-condition-group[open] > summary::before { transform: rotate(90deg
 .mascot-shadow { position: absolute; left: 22%; right: 22%; bottom: 0; height: 12px; border-radius: 50%; background: radial-gradient(closest-side, rgb(60 20 30 / .22), transparent); }
 .mascot-lid { transform-box: fill-box; transform: translateY(-101%); transition: transform 70ms ease-in; }
 .mascot-lid.closed { transform: translateY(0); }
+.mascot-poke { display: block; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; border-radius: 16px; }
+.mascot-poke > span { display: block; }
+.mascot-poke:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 4px; }
+.mascot-sleep-eye { fill: none; stroke: #3d1c10; stroke-width: 11; stroke-linecap: round; }
+.mascot-zzz { position: absolute; left: 72%; top: 0; pointer-events: none; color: var(--muted); font-weight: 700; font-size: 15px; line-height: 1; }
+.mascot-zzz i { position: absolute; font-style: normal; opacity: 0; }
 .mascot-bubble { position: relative; max-width: 460px; padding: var(--space-3) var(--space-4); border: 1px solid var(--border); border-radius: 18px; background: var(--bg);
   box-shadow: 0 6px 18px rgb(0 0 0 / .06); }
 .mascot-bubble::before { content: ""; position: absolute; top: 50%; left: -8px; width: 14px; height: 14px; margin-top: -7px; border-left: 1px solid var(--border); border-bottom: 1px solid var(--border);
@@ -2344,6 +2352,13 @@ details.ruling-condition-group[open] > summary::before { transform: rotate(90deg
   .mascot-body.is-tilt { animation: mascot-tilt .9s ease-in-out; }
   .mascot-body.is-wiggle { animation: mascot-wiggle .7s ease-in-out; }
   .mascot-body.is-glance .mascot-glance { animation: mascot-glance 1.4s ease-in-out; }
+  .mascot-body.is-ruffled { animation: mascot-ruffled .9s ease-in-out; }
+  .mascot-body.is-asleep { rotate: 4deg; transition: rotate .8s ease; }
+  .mascot-body.is-asleep .mascot-svg { animation-duration: 6s; }
+  .mascot-body.is-asleep .mascot-wing { animation: none; }
+  .mascot-zzz i { animation: mascot-z 3s ease-out infinite; }
+  .mascot-zzz i:nth-child(2) { animation-delay: 1s; }
+  .mascot-zzz i:nth-child(3) { animation-delay: 2s; }
   .mascot-burst i { animation: mascot-spark .8s cubic-bezier(.2, .8, .3, 1) both; }
   .mascot-bubble { animation: mascot-bubble-in .45s .25s cubic-bezier(.3, 1.4, .5, 1) both; transform-origin: left center; }
   .mascot.bubble-left .mascot-bubble { transform-origin: right center; }
@@ -2365,6 +2380,8 @@ details.ruling-condition-group[open] > summary::before { transform: rotate(90deg
 @keyframes mascot-shadow-hop { 45% { scale: .6 .6; opacity: .5; } }
 @keyframes mascot-tilt { 30% { rotate: -7deg; } 65% { rotate: 5deg; } 100% { rotate: 0deg; } }
 @keyframes mascot-wiggle { 20% { rotate: 4deg; } 40% { rotate: -4deg; } 60% { rotate: 3deg; } 80% { rotate: -2deg; } 100% { rotate: 0deg; } }
+@keyframes mascot-ruffled { 10% { rotate: -9deg; translate: 0 -5%; } 25% { rotate: 9deg; } 40% { rotate: -7deg; translate: 0 -3%; } 55% { rotate: 6deg; } 70% { rotate: -3deg; translate: 0 0; } 100% { rotate: 0deg; } }
+@keyframes mascot-z { 0% { opacity: 0; transform: translate(0, 0) scale(.7); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(18px, -34px) scale(1.25); } }
 @keyframes mascot-glance { 25% { translate: -16px 2px; } 60% { translate: 15px -2px; } 100% { translate: 0 0; } }
 @keyframes mascot-spark { 0% { opacity: 1; transform: rotate(calc(var(--n) * 45deg)) translateY(0) scale(.4); }
   100% { opacity: 0; transform: rotate(calc(var(--n) * 45deg)) translateY(calc(var(--mascot-w) * -.55)) scale(1); } }

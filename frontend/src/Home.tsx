@@ -5,7 +5,7 @@ import { Chip } from "./Chip";
 import { useIntroOnce } from "./EvidenceStories";
 import { GUIDED_DEMO, greeting, greetingLine, guidedDemoSteps, queueSegments, queueSummary, readFolded, rerunnable, reviewButtonLabel, reviewConfirm, reviewNote, reviewSummary, reviewTiles, shortDate, writeFolded } from "./homeState";
 import { Icon } from "./Icon";
-import { Mascot } from "./Mascot";
+import { HomeOwl } from "./HomeOwl";
 import { DECISION_LABELS } from "./outcomeTone";
 import { disputeTitle } from "./presentation";
 import { caseHash } from "./routes";
@@ -27,11 +27,11 @@ function writeDemoOpen(open: boolean) {
 }
 
 /** A status bar over the queue, a folded guided demo (hidden for now: GUIDED_DEMO), and the case list. */
-export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissing, onReview, sampleIds, heldIds, runAllProgress, aiMode, fallbacks, typeIcon }: {
+export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissing, onReview, sampleIds, heldIds, runAllProgress, aiMode, fallbacks, typeIcon, presentation = false }: {
   rows: HomeRow[]; holds?: HoldRecord[]; appealsWaiting: number | null; showStart: boolean;
   missing: string | null; onDismissMissing: () => void;
   onReview: (ids: string[]) => void; sampleIds: ReadonlySet<string>; heldIds: readonly string[]; runAllProgress?: RunAllProgress | null; aiMode: AiMode; fallbacks: number;
-  typeIcon: (type: DisputeCase["type"]) => JSX.Element;
+  typeIcon: (type: DisputeCase["type"]) => JSX.Element; presentation?: boolean;
 }) {
   const summaryParts = queueSummary(rows, appealsWaiting != null);
   const running = !!runAllProgress?.running;
@@ -79,10 +79,7 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
         <Icon name="cross" /></button>
     </p>}
     <div className="home-greeting">
-      <Mascot size={112}>
-        <p className="home-hello">{hello}!</p>
-        <p className="home-hello-line">{greetingLine(rows, heldIds)}</p>
-      </Mascot>
+      <HomeOwl hello={hello} greeting={greetingLine(rows, heldIds)} rows={rows} progress={runAllProgress} presentation={presentation} />
     </div>
     <div className="home-head">
       <h2 id="home-title">Your Queue</h2>
