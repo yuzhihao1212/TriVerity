@@ -2620,7 +2620,32 @@ details.ruling-condition-group[open] > summary::before { transform: rotate(90deg
   .case-report-rules th:first-child { width: 54px; }
   .case-report-evidence th:first-child { width: 80px; }
 }
+.case-buddy { position: fixed; right: var(--space-5); bottom: 92px; z-index: 30; display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); max-width: calc(100vw - 32px); }
+.case-buddy-button { display: grid; place-items: center; width: 68px; height: 56px; padding: 0; border: 1px solid var(--border); border-radius: 28px; background: var(--bg); box-shadow: 0 6px 18px rgb(0 0 0 / .14); cursor: pointer; }
+.case-buddy-button:hover { border-color: var(--accent); }
+.case-buddy-button img { display: block; }
+.case-buddy-panel { display: flex; flex-direction: column; gap: var(--space-3); width: 340px; max-width: 100%; max-height: calc(100dvh - 190px); overflow-y: auto; padding: var(--space-4); border: 1px solid var(--border); border-radius: 14px; background: var(--bg); box-shadow: 0 10px 28px rgb(0 0 0 / .16); }
+.case-buddy-head { display: flex; align-items: center; gap: var(--space-2); }
+.case-buddy-head > div { flex: 1; min-width: 0; }
+.case-buddy-head h2 { margin: 0; font-size: 1rem; }
+.case-buddy-head h2:focus { outline: none; }
+.case-buddy-head p { margin: 0; font-size: .75rem; color: var(--muted); }
+.case-buddy-answer { padding: var(--space-3); border-radius: 10px; background: var(--surface); font-size: .875rem; line-height: 1.5; }
+.case-buddy-answer p { margin: 0; }
+.case-buddy-answer .case-buddy-lead { font-weight: 600; }
+.case-buddy-answer ul { margin: var(--space-2) 0 0; padding-left: 1.1em; }
+.case-buddy-answer .case-buddy-note { margin-top: var(--space-2); font-size: .8125rem; color: var(--muted); }
+.case-buddy-sources { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); margin-top: var(--space-2); }
+.case-buddy-questions { display: grid; gap: var(--space-1); }
+.case-buddy-questions button { padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--text); font: inherit; font-size: .8125rem; text-align: left; cursor: pointer; }
+.case-buddy-questions button:hover { border-color: var(--accent); }
+.case-buddy-questions button.is-chosen { border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+.case-buddy-foot { display: flex; align-items: center; gap: 6px; margin: 0; font-size: .75rem; color: var(--muted); }
+.case-buddy-foot svg { flex: none; width: 14px; height: 14px; }
+@media (max-width: 560px) { .case-buddy { right: var(--space-3); bottom: 84px; } .case-buddy-panel { width: calc(100vw - 32px); } }
+
 @media print {
+  .case-buddy { display: none; }
   @page { margin: 16mm; }
   html, body { background: #fff !important; }
   body:has(.case-report) .topbar, body:has(.case-report) .sidebar, body:has(.case-report) .skip-link,

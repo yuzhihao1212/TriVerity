@@ -51,6 +51,7 @@ import { FilterMenu } from "./FilterMenu";
 import { Icon } from "./Icon";
 import { caseGuideShows, compactCaseHead, GUIDE_STEPS, LAST_STEP_TEXT, readGuideDone, writeGuideDone } from "./firstVisitGuide";
 import { Mascot } from "./Mascot";
+import { CaseBuddy } from "./CaseBuddy";
 import { cheerLine } from "./mascotState";
 import type { AgentLogEntry, Appeal, Decision, DisputeCase, PartyHistory, Resolution } from "./types";
 
@@ -712,6 +713,10 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
           </section>)}
 
         </main>
+        {selected && resolution && !form && !reportOpen && !cheer && resolving !== selected.dispute_id && !runAll?.running
+          && <CaseBuddy key={selected.dispute_id} resolution={resolution} dispute={selected} tab={activeTab}
+            stage={closed ? "closed" : decision.hold ? "held" : "open"} availableIds={factIds} onSelectFact={selectFact}
+            onOpenHearing={() => changeTab("hearing")} />}
         {cheer && (() => {
           const line = cheerLine({ caseId: cheer.caseId, closedByYou: Math.max(1, queueRows.filter(row => row.status === "closed").length),
             left: queueRows.filter(row => !["closed", "auto"].includes(row.status)).length });
