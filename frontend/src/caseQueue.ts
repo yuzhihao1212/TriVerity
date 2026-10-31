@@ -60,6 +60,17 @@ export function oldestFirst<T extends QueueRow>(rows: T[]): T[] {
     || a.index - b.index).map(item => item.row);
 }
 
+export interface QueueSection<T> { label: string | null; rows: T[] }
+/**
+ * A list holding a safety case splits under two labels, so the case sitting above older dates reads
+ * as moved up on purpose. Without one, or with nothing else, it stays a single unlabelled list.
+ */
+export function safetySections<T extends QueueRow>(rows: T[]): QueueSection<T>[] {
+  const safety = rows.filter(row => row.tier === "safety");
+  if (safety.length === 0 || safety.length === rows.length) return [{ label: null, rows }];
+  return [{ label: "Safety First", rows: safety }, { label: "Oldest First", rows: rows.filter(row => row.tier !== "safety") }];
+}
+
 /** The queue's three lists: what a person still has to act on, what hasn't run, and what is finished. */
 export function queueGroups<T extends QueueRow>(rows: T[]) {
   const resolved = (row: T) => row.status === "auto" || row.status === "closed";

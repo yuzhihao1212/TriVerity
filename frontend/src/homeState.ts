@@ -120,15 +120,22 @@ export function reviewTiles(rows: Pick<QueueRow, "status">[]) {
   return { attention, policy };
 }
 
+/** The case page's run button: the agents with AI, the rules alone without it (as the queue's button). */
+export function runAgentsLabel(mode: AiMode, hasResult: boolean): string {
+  if (mode === "offline") return hasResult ? "Re-run with Rules" : "Run with Rules";
+  return hasResult ? "Re-run Agents" : "Run Agents";
+}
+
 /**
  * The queue button says what it will do, and never leaves: with AI off the rules still rule
  * but no AI runs; new cases can always arrive; with none waiting it re-runs the open cases.
  */
 export function reviewButtonLabel(mode: AiMode, { running = false, total = 0, fresh = 0, anyRun = false }): string {
-  if (running) return `Reviewing ${total} ${total === 1 ? "Case" : "Cases"}…`;
-  const verb = mode === "offline" ? "Review with Rules" : "AI Review";
+  if (running) return `Running ${total} ${total === 1 ? "Case" : "Cases"}…`;
+  // "Run", like Run Agents on a case: "Review" is the person's step (Start Reviewing).
+  const verb = mode === "offline" ? "Run with Rules" : "Run Agents";
   if (fresh > 0) return anyRun ? `${verb} · ${fresh} New` : verb;
-  return mode === "offline" ? "Re-run with Rules" : "Re-run AI Review";
+  return mode === "offline" ? "Re-run with Rules" : "Re-run Agents";
 }
 
 /** About what one case costs with Hy3; the same figure the Run Agents note gives. */
@@ -144,9 +151,9 @@ export function reviewConfirm(mode: AiMode, { count, fresh }: { count: number; f
     : `Uses AI tokens, up to about $${(Math.ceil(count * COST_PER_CASE * 100) / 100).toFixed(2)}.`;
   if (!fresh) return { title: `Re-run the ${count} open ${count === 1 ? "case" : "cases"}?`, body: `${cost} Resolved cases and saved decisions stay as they are.`, action: "Re-run" };
   return {
-    title: mode === "offline" ? `Review ${cases} with rules only?` : `Review ${cases} with Hy3?`,
+    title: mode === "offline" ? `Run ${cases} with rules only?` : `Run the agents on ${cases} with Hy3?`,
     body: `${cost} Routine cases will close automatically and notify the rider and driver. Cases that need a person stay in your queue.`,
-    action: mode === "offline" ? "Review with Rules" : "Run AI Review",
+    action: mode === "offline" ? "Run with Rules" : "Run Agents",
   };
 }
 

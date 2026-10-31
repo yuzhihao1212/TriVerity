@@ -1,6 +1,6 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { Fragment, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import type { AiMode } from "./aiMode";
-import { queueGroups, STATUS_ICONS, STATUS_WORDS, type QueueRow } from "./caseQueue";
+import { queueGroups, safetySections, STATUS_ICONS, STATUS_WORDS, type QueueRow } from "./caseQueue";
 import { Chip } from "./Chip";
 import { useIntroOnce } from "./EvidenceStories";
 import { GUIDED_DEMO, greeting, greetingLine, guidedDemoSteps, queueSegments, queueSummary, readFolded, rerunnable, reviewButtonLabel, reviewConfirm, reviewNote, reviewSummary, reviewTiles, shortDate, writeFolded } from "./homeState";
@@ -98,7 +98,7 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
         <button type="button" ref={runButton} aria-expanded={!!confirm} className={`${reviewed && startWith ? "secondary-button" : "run-button"} home-run-all${guide?.target === "review" && !confirm ? " is-guide-target" : ""}`} disabled={running || (newIds.length === 0 && rerunIds.length === 0)}
           title={!running && newIds.length === 0 && rerunIds.length === 0 ? "Nothing is open to re-run" : undefined}
           onClick={() => setConfirming(true)}>
-          <Icon name="scales" />{reviewButtonLabel(aiMode, { running, total: runAllProgress?.total ?? 0, fresh: newIds.length, anyRun: reviewed })}
+          <Icon name={aiMode === "offline" ? "scales" : "agent"} />{reviewButtonLabel(aiMode, { running, total: runAllProgress?.total ?? 0, fresh: newIds.length, anyRun: reviewed })}
         </button>
       </div>
     </div>
@@ -153,7 +153,7 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
     </section>}
     <section className="home-cases" ref={casesBox}>
       {running
-        ? <QueueList title="All Cases" rows={held} kind="fresh" ran={runAllProgress?.ids ?? []} settled={runAllProgress?.done ?? 0} typeIcon={typeIcon} />
+        ? <QueueList title="All Cases" rows={held} kind="fresh" split={false} ran={runAllProgress?.ids ?? []} settled={runAllProgress?.done ?? 0} typeIcon={typeIcon} />
         : <>
           {groups.review.length > 0 && <QueueList title="Human Review Required" note="Safety first, then oldest." rows={groups.review} kind="review" typeIcon={typeIcon} />}
           {groups.fresh.length > 0 && <QueueList title={groups.fresh.length === rows.length ? "All Cases" : "New Cases"} rows={groups.fresh} kind="fresh" typeIcon={typeIcon} />}
@@ -166,7 +166,7 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
 /** One batch answers all at once: a gliding bar while waiting, then a real count as rows settle. */
 function ReviewProgress({ done, total }: { done: number; total: number }) {
   return <div className="home-progress">
-    <div className={`live-progress-track home-progress-track${done === 0 ? " is-waiting" : ""}`} role="progressbar" aria-label="AI Review progress"
+    <div className={`live-progress-track home-progress-track${done === 0 ? " is-waiting" : ""}`} role="progressbar" aria-label="Agent run progress"
       aria-valuemin={0} aria-valuemax={total} aria-valuenow={done === 0 ? undefined : done}>
       <span className={`live-progress-fill${done === total ? " complete" : ""}`} style={done === 0 ? undefined : { width: `${done / total * 100}%` }} />
     </div>
@@ -196,8 +196,8 @@ function useRearrange(box: React.RefObject<HTMLElement>, running: boolean) {
   });
 }
 
-/** Up and down move between rows, so a reviewer can work the list from the keyboard. */
-function moveAlongList(event: KeyboardEvent<HTMLUListElement>) {
+/** Up and down move between rows, across the safety label too, so a reviewer can work the list from the keyboard. */
+function moveAlongList(event: KeyboardEvent<HTMLElement>) {
   if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
   const links = [...event.currentTarget.querySelectorAll<HTMLAnchorElement>("a")];
   const next = links[links.indexOf(document.activeElement as HTMLAnchorElement) + (event.key === "ArrowDown" ? 1 : -1)];
@@ -206,21 +206,31 @@ function moveAlongList(event: KeyboardEvent<HTMLUListElement>) {
 
 function foldStore() { try { return window.sessionStorage; } catch { return null; } }
 
-function QueueList({ title, note, rows, kind, ran = [], settled = 0, typeIcon }: {
-  title: string; note?: string; rows: HomeRow[]; kind: "review" | "fresh" | "resolved"; ran?: readonly string[]; settled?: number;
+function QueueList({ title, note, rows, kind, split = true, ran = [], settled = 0, typeIcon }: {
+  title: string; note?: string; rows: HomeRow[]; kind: "review" | "fresh" | "resolved"; split?: boolean; ran?: readonly string[]; settled?: number;
   typeIcon: (type: DisputeCase["type"]) => JSX.Element;
 }) {
   const foldable = kind === "resolved";
   const [folded, setFolded] = useState(() => foldable && readFolded(foldStore()));
-  const list = <ul className="home-queue" onKeyDown={moveAlongList}>{rows.map((row, index) => <li key={row.id} data-row={row.id} style={{ "--row": Math.min(index, 12), "--wave": `${index * 120}ms` } as CSSProperties}>
-    <QueueLine row={row} kind={kind} ran={ran} settled={settled} typeIcon={typeIcon} />
-  </li>)}</ul>;
+  // While a review runs, rows keep their places, so the list isn't split under labels.
+  const sections = split ? safetySections(rows) : [{ label: null, rows }];
+  let offset = 0;
+  const list = <div onKeyDown={moveAlongList}>{sections.map(section => {
+    const start = offset;
+    offset += section.rows.length;
+    return <Fragment key={section.label ?? "all"}>
+      {section.label && <h4 className={`home-queue-label${start === 0 ? " is-safety" : ""}`}>{start === 0 && <Icon name="warning" />}{section.label}</h4>}
+      <ul className="home-queue">{section.rows.map((row, index) => <li key={row.id} data-row={row.id} style={{ "--row": Math.min(start + index, 12), "--wave": `${(start + index) * 120}ms` } as CSSProperties}>
+        <QueueLine row={row} kind={kind} ran={ran} settled={settled} typeIcon={typeIcon} />
+      </li>)}</ul>
+    </Fragment>;
+  })}</div>;
   return <section className={`home-panel is-${kind}${folded ? " is-folded" : ""}`} aria-label={title}>
     {foldable
       ? <header className="home-panel-head home-panel-fold"><h3>
         <button type="button" aria-expanded={!folded} onClick={() => { writeFolded(foldStore(), !folded); setFolded(!folded); }}>
           {title}<Icon name="chevron" className="home-fold-chevron" /></button></h3></header>
-      : <header className="home-panel-head"><h3>{title}</h3>{note && <p>{note}</p>}</header>}
+      : <header className="home-panel-head"><h3>{title}</h3>{note && sections.length === 1 && <p>{note}</p>}</header>}
     {foldable ? <div className="home-fold-body"><div>{list}</div></div> : list}
   </section>;
 }

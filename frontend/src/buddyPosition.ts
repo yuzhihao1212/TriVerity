@@ -24,6 +24,15 @@ export function writeSpot(store: Store, spot: BuddySpot): void {
   try { store?.setItem(SPOT_KEY, JSON.stringify(spot)); } catch { /* Storage may be blocked: the owl just goes back to its corner next visit. */ }
 }
 
+const TUCKED_KEY = "triverity.buddyTucked";
+/** Whether the reviewer tucked the owl down to its face; it stays that way across cases and visits. */
+export function readTucked(store: Store): boolean {
+  try { return store?.getItem(TUCKED_KEY) === "1"; } catch { return false; }
+}
+export function writeTucked(store: Store, tucked: boolean): void {
+  try { store?.setItem(TUCKED_KEY, tucked ? "1" : "0"); } catch { /* Storage may be blocked: it is just for this visit. */ }
+}
+
 /** Keeps the whole owl on screen, however it was dragged or however small the window became. */
 export function clampSpot(spot: BuddySpot, owl: Size, viewport: Size): BuddySpot {
   const clamp = (value: number, max: number) => Math.round(Math.min(Math.max(value, EDGE), Math.max(EDGE, max)));

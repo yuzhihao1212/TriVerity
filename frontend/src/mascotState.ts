@@ -78,6 +78,8 @@ export const OWL_TIPS = [
   "A reviewer can reopen any case, even one that closed itself.",
 ];
 export const RUFFLED_LINE = "Okay, okay, I'm awake!";
+/** What the owl says when the viewer switches the theme. */
+export const THEME_LINES = { dark: "Night mode. Owls see best in the dark.", light: "Morning! Back to daylight." } as const;
 /** How long a tip stays in the bubble before the greeting returns (ms). */
 export const TIP_MS = 10000;
 

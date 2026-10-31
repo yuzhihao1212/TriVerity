@@ -1,11 +1,9 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import ts from 'typescript';
+import { load } from './_load.mjs';
 
-const source = await readFile(new URL('../src/routes.ts', import.meta.url), 'utf8');
-const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } });
-const { parseRoute, selectSample, missingCase, caseHash, HOME_HASH, scrollBehavior } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`);
+// Through the shared loader: routes.ts imports the glide timing from stepperMotion.ts.
+const { parseRoute, selectSample, missingCase, caseHash, HOME_HASH, scrollBehavior } = await load('routes');
 
 test('empty, root and unknown hashes show the landing page', () => {
   for (const hash of ['', '#/', '#', '#/unknown', '#/console/D007/extra', '#console', '#/console/%ZZ']) {

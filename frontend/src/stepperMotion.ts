@@ -42,3 +42,16 @@ export function unlockSchedule<T extends { id: WorkflowTab }>(tabs: readonly T[]
 export function positionText(activeIndex: number, count: number, label: string): string {
   return `Step ${activeIndex + 1} of ${count} · ${label}`;
 }
+
+/**
+ * The glide back up to the stepper: longer for a longer way, but never a rush and never a crawl.
+ * Native smooth scrolling covers a long page in one lurch; this eases in and out instead.
+ */
+export function glideMs(distance: number): number {
+  return Math.round(Math.min(900, Math.max(380, 300 + Math.abs(distance) * .3)));
+}
+/** Ease-in-out cubic: a gentle start and a gentle landing. */
+export function easeInOut(t: number): number {
+  const x = Math.min(1, Math.max(0, t));
+  return x < .5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2;
+}

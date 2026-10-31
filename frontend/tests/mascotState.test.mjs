@@ -65,14 +65,14 @@ test('the owl naps only after a quiet minute, when allowed and not watching a ru
   assert.equal(m.shouldNap(90000, { naps: true, watching: true }), false);
 });
 
-test('during AI Review the owl has no count until the batch answers', () => {
+test('during an agent run the owl has no count until the batch answers', () => {
   const lines = new Set([0, 1, 2, 3].map(tick => m.watchLine({ done: 0, total: 9, tick })));
   assert.equal(lines.size, 3);
   for (const line of lines) assert.doesNotMatch(line, /\d/);
   assert.equal(m.watchLine({ done: 3, total: 9, tick: 5 }), '3 of 9 ready…');
 });
 
-test('the owl reports how AI Review went, counting only the cases that ran and got a result', () => {
+test('the owl reports how the agent run went, counting only the cases that ran and got a result', () => {
   const row = (id, status) => ({ id, status });
   const rows = [row('A', 'auto'), row('B', 'decide'), row('C', 'auto'), row('D', 'not_run'), row('E', 'decide')];
   assert.equal(m.reviewedLine(rows, ['A', 'B', 'C', 'D']), 'Done. 1 needs you, 2 closed themselves.');
@@ -107,4 +107,9 @@ test('the greeting types out one character per step, never past its end', () => 
   assert.equal(m.typedLength(line, m.TYPE_MS * 5), 5);
   assert.equal(m.typedLength(line, 1e6), line.length);
   assert.equal(m.typedLength(line, -50), 0);
+});
+
+test('the owl has a line for each theme it can be switched to', () => {
+  assert.match(m.THEME_LINES.dark, /Night/);
+  assert.match(m.THEME_LINES.light, /Morning/);
 });

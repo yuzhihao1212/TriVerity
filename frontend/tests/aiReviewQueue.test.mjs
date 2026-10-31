@@ -34,16 +34,16 @@ test('next case follows the order on screen, not status alone', () => {
 });
 
 test('the button names what it will do', () => {
-  assert.equal(hs.reviewButtonLabel('live', { fresh: 9 }), 'AI Review');
-  assert.equal(hs.reviewButtonLabel('offline', { fresh: 9 }), 'Review with Rules');
-  assert.equal(hs.reviewButtonLabel('live', { running: true, total: 9 }), 'Reviewing 9 Cases…');
-  assert.equal(hs.reviewButtonLabel('offline', { running: true, total: 1 }), 'Reviewing 1 Case…');
+  assert.equal(hs.reviewButtonLabel('live', { fresh: 9 }), 'Run Agents');
+  assert.equal(hs.reviewButtonLabel('offline', { fresh: 9 }), 'Run with Rules');
+  assert.equal(hs.reviewButtonLabel('live', { running: true, total: 9 }), 'Running 9 Cases…');
+  assert.equal(hs.reviewButtonLabel('offline', { running: true, total: 1 }), 'Running 1 Case…');
 });
 
 test('the button stays after a review: new cases are counted, otherwise it offers a re-run', () => {
-  assert.equal(hs.reviewButtonLabel('live', { fresh: 2, anyRun: true }), 'AI Review · 2 New');
-  assert.equal(hs.reviewButtonLabel('offline', { fresh: 2, anyRun: true }), 'Review with Rules · 2 New');
-  assert.equal(hs.reviewButtonLabel('live', { anyRun: true }), 'Re-run AI Review');
+  assert.equal(hs.reviewButtonLabel('live', { fresh: 2, anyRun: true }), 'Run Agents · 2 New');
+  assert.equal(hs.reviewButtonLabel('offline', { fresh: 2, anyRun: true }), 'Run with Rules · 2 New');
+  assert.equal(hs.reviewButtonLabel('live', { anyRun: true }), 'Re-run Agents');
   assert.equal(hs.reviewButtonLabel('offline', { anyRun: true }), 'Re-run with Rules');
 });
 
@@ -132,17 +132,17 @@ test('title case keeps small words low, except first and last, and leaves hyphen
   assert.equal(titleCase('re-run AI review'), 'Re-run AI Review');
 });
 
-test('AI Review says what it will do first: the cost, and that routine cases close', () => {
+test('Run Agents says what it will do first: the cost, and that routine cases close', () => {
   const live = hs.reviewConfirm('live', { count: 9, fresh: true });
-  assert.equal(live.title, 'Review 9 cases with Hy3?');
+  assert.equal(live.title, 'Run the agents on 9 cases with Hy3?');
   assert.match(live.body, /^Uses AI tokens, up to about \$0\.02\./);
   assert.match(live.body, /Routine cases will close automatically and notify the rider and driver/);
-  assert.equal(live.action, 'Run AI Review');
+  assert.equal(live.action, 'Run Agents');
   const off = hs.reviewConfirm('offline', { count: 1, fresh: true });
-  assert.equal(off.title, 'Review 1 case with rules only?');
+  assert.equal(off.title, 'Run 1 case with rules only?');
   assert.match(off.body, /^No AI and no cost\./);
   assert.match(off.body, /close automatically/);
-  assert.equal(off.action, 'Review with Rules');
+  assert.equal(off.action, 'Run with Rules');
 });
 
 test('a re-run warns about the cost but not closing, and never rounds a cost down to nothing', () => {
@@ -155,3 +155,38 @@ test('a re-run warns about the cost but not closing, and never rounds a cost dow
   assert.match(hs.reviewConfirm('offline', { count: 3, fresh: false }).body, /^No AI and no cost\./);
 });
 
+
+test('a safety case gets its own label, so it reads as moved up on purpose; otherwise no labels', () => {
+  const rows = q.oldestFirst([row('new', 'not_run', '2026-09-25'), row('old', 'not_run', '2026-09-13'), row('threat', 'not_run', '2026-09-22', 'safety')]);
+  assert.deepEqual(q.safetySections(rows).map(s => [s.label, s.rows.map(r => r.id)]), [['Safety First', ['threat']], ['Oldest First', ['old', 'new']]]);
+  assert.deepEqual(q.safetySections(rows.filter(r => r.id !== 'threat')).map(s => s.label), [null]);
+  assert.deepEqual(q.safetySections(rows.filter(r => r.id === 'threat')).map(s => s.label), [null]);
+});
+
+test('in presentation mode the arrows step through the case without wrapping, skipping locked steps', async () => {
+  const w = await load('workflow');
+  assert.equal(w.presentationStep('intake', 'ArrowRight', true), 'evidence');
+  assert.equal(w.presentationStep('ruling', 'ArrowLeft', true), 'hearing');
+  assert.equal(w.presentationStep('notify', 'ArrowRight', true), null);
+  assert.equal(w.presentationStep('intake', 'ArrowLeft', true), null);
+  assert.equal(w.presentationStep('intake', 'ArrowRight', false), null);
+  assert.equal(w.presentationStep('evidence', 'Enter', true), null);
+});
+
+test('the case page button says Run with Rules when AI is off, like the queue', () => {
+  assert.equal(hs.runAgentsLabel('live', false), 'Run Agents');
+  assert.equal(hs.runAgentsLabel('live', true), 'Re-run Agents');
+  assert.equal(hs.runAgentsLabel('offline', false), 'Run with Rules');
+  assert.equal(hs.runAgentsLabel('offline', true), 'Re-run with Rules');
+});
+
+test('the glide back to the stepper eases in and out, timed to the distance within limits', async () => {
+  const sm = await load('stepperMotion');
+  assert.equal(sm.glideMs(100), 380);
+  assert.equal(sm.glideMs(-1000), 600);
+  assert.equal(sm.glideMs(8000), 900);
+  assert.equal(sm.easeInOut(0), 0);
+  assert.equal(sm.easeInOut(.5), .5);
+  assert.equal(sm.easeInOut(1), 1);
+  assert.ok(sm.easeInOut(.1) < .1 && sm.easeInOut(.9) > .9);
+});

@@ -37,3 +37,16 @@ test('a saved spot survives a reload, and junk or blocked storage falls back to 
   assert.equal(b.readSpot(blocked), null);
   assert.doesNotThrow(() => b.writeSpot(blocked, { right: 1, bottom: 1 }));
 });
+
+test('a tucked owl stays tucked across visits, and blocked storage leaves it out', () => {
+  const saved = new Map();
+  const store = { getItem: key => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value) };
+  assert.equal(b.readTucked(store), false);
+  b.writeTucked(store, true);
+  assert.equal(b.readTucked(store), true);
+  b.writeTucked(store, false);
+  assert.equal(b.readTucked(store), false);
+  const blocked = { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } };
+  assert.equal(b.readTucked(blocked), false);
+  assert.doesNotThrow(() => b.writeTucked(blocked, true));
+});

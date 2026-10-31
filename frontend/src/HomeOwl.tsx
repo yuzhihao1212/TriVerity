@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 
 import { GUIDE_STEPS, type HomeGuide } from "./firstVisitGuide";
 import { Mascot } from "./Mascot";
-import { ARRIVAL, arrivalDelay, OWL_TIPS, reviewedLine, RUFFLED_LINE, TIP_MS, typedLength, watchLine, WATCH_LINE_MS } from "./mascotState";
+import { ARRIVAL, arrivalDelay, OWL_TIPS, reviewedLine, RUFFLED_LINE, THEME_LINES, TIP_MS, typedLength, watchLine, WATCH_LINE_MS } from "./mascotState";
+import { THEME_EVENT, type Theme } from "./theme";
 
 /**
  * The owl on the home page, and what it says: a tip when clicked, what's happening during AI
@@ -40,6 +41,14 @@ export function HomeOwl({ hello, greeting, rows, progress, presentation, guide, 
     window.clearTimeout(tipTimer.current);
     tipTimer.current = window.setTimeout(() => setTip(null), TIP_MS);
   }
+  // A theme switch gets a line, unless a run is out (then the owl is reporting on it).
+  const runningRef = useRef(running);
+  runningRef.current = running;
+  useEffect(() => {
+    const say = (event: Event) => { if (!runningRef.current) showTip(THEME_LINES[(event as CustomEvent<Theme>).detail]); };
+    window.addEventListener(THEME_EVENT, say);
+    return () => window.removeEventListener(THEME_EVENT, say);
+  }, []);
   function onPoke(ruffled: boolean) {
     if (running) return;
     if (ruffled) return showTip(RUFFLED_LINE);

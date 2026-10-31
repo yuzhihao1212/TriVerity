@@ -4,6 +4,7 @@ import belly from "./assets/mascot/owl-belly.webp";
 import feet from "./assets/mascot/owl-feet.webp";
 import head from "./assets/mascot/owl-head.webp";
 import "./mascot.css";
+import { THEME_EVENT, type Theme } from "./theme";
 import { ACTION_MS, ARRIVAL, idleDelay, lookAt, nextIdleAction, registerPoke, RUFFLED_MS, shouldNap, tiltToward, WATCH_LOOK, type IdleAction, type OwlAction } from "./mascotState";
 
 // The owl is three painted layers (feet, body, head) on one 943 × 877 canvas, plus drawn wings and scarf, with its printed pupils painted out; the live pupils are drawn on top
@@ -236,6 +237,25 @@ export function Mascot({ size = 120, cheer, className = "", children, bubbleSide
   }, [naps]);
   // Watching beats sleeping: a run that starts by keyboard or from another tab wakes it.
   useEffect(() => { if (watching) setAsleep(false); }, [watching]);
+
+  // The viewer switches the theme: at night it tilts its head with a slow, sleepy blink; by day it hops up with sparkles.
+  useEffect(() => {
+    if (reducedMotion()) return;
+    const timers: number[] = [];
+    function react(event: Event) {
+      if (mode.current.watching) return;
+      timers.forEach(timer => window.clearTimeout(timer));
+      if ((event as CustomEvent<Theme>).detail === "dark") {
+        play("tilt", ACTION_MS.tilt);
+        timers.push(window.setTimeout(() => setBlink(true), 200), window.setTimeout(() => setBlink(false), 900));
+      } else {
+        setBurst(count => count + 1);
+        play("hop", ACTION_MS.hop);
+      }
+    }
+    window.addEventListener(THEME_EVENT, react);
+    return () => { window.removeEventListener(THEME_EVENT, react); timers.forEach(timer => window.clearTimeout(timer)); };
+  }, []);
 
   // Hover the owl and it waves back (not while it is already doing something).
   const busy = useRef(false);

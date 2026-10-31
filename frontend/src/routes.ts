@@ -1,3 +1,5 @@
+import { easeInOut, glideMs } from "./stepperMotion";
+
 export type Route = { page: "landing" } | { page: "console"; sampleId?: string };
 
 export function parseRoute(hash: string): Route {
@@ -43,6 +45,35 @@ export function reveal(target: HTMLElement | null | undefined, block: ScrollLogi
   target.scrollIntoView({ block, behavior: instant ? "auto" : scrollBehavior(prefersReducedMotion()) });
   target.focus({ preventScroll: true });
   if (flash) flashTarget(target);
+}
+
+/**
+ * Glide the page until `target` sits at the top (its scroll margin respected), then resolve. Eased and
+ * timed to the distance (stepperMotion.glideMs). The viewer's own wheel, touch or key stops it where it
+ * is; reduced motion jumps. Resolves at once when the target is already in place.
+ */
+export function glideTo(target: HTMLElement | null | undefined): Promise<void> {
+  if (!target) return Promise.resolve();
+  const margin = parseFloat(getComputedStyle(target).scrollMarginBlockStart) || 0;
+  const from = window.scrollY;
+  const to = Math.max(0, from + target.getBoundingClientRect().top - margin);
+  const distance = to - from;
+  if (Math.abs(distance) < 2) return Promise.resolve();
+  if (prefersReducedMotion()) { window.scrollTo(0, to); return Promise.resolve(); }
+  const duration = glideMs(distance);
+  return new Promise(done => {
+    const start = performance.now();
+    let frame = 0;
+    const stop = () => { cancelAnimationFrame(frame); interrupts.forEach(name => window.removeEventListener(name, stop)); done(); };
+    const interrupts = ["wheel", "touchstart", "keydown"] as const;
+    interrupts.forEach(name => window.addEventListener(name, stop, { passive: true, once: true }));
+    const step = (now: number) => {
+      const t = (now - start) / duration;
+      window.scrollTo(0, from + distance * easeInOut(t));
+      if (t < 1) frame = requestAnimationFrame(step); else stop();
+    };
+    frame = requestAnimationFrame(step);
+  });
 }
 
 export const FLASH_MS = 1600;

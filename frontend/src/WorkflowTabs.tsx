@@ -1,10 +1,10 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 
 import { Icon } from "./Icon";
-import { reveal } from "./routes";
+import { glideTo } from "./routes";
 import { DECIDE_FIRST, HOLD_NOTE, nextStepMode, SHORT_TAB_LABELS, stepStates, stepStatusText } from "./stepVisuals";
 import { ARRIVE_MS, LINE_MS, lineFraction, nextMove, positionText, unlockSchedule, type Move } from "./stepperMotion";
-import { navigateTab, tabLocked, tabProgress, WORKFLOW_TABS, type WorkflowTab } from "./workflow";
+import { navigateTab, presentationStep, tabLocked, tabProgress, WORKFLOW_TABS, type WorkflowTab } from "./workflow";
 import type { AgentLogEntry, Resolution } from "./types";
 
 const STEP_ICONS: Record<WorkflowTab, string> = {
@@ -13,7 +13,7 @@ const STEP_ICONS: Record<WorkflowTab, string> = {
 
 const prefersReducedMotion = () => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, auto = false, held = false, decisionRecorded = false, closed = false, unlocking = false, onChange, render }: {
+export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, auto = false, held = false, decisionRecorded = false, closed = false, unlocking = false, presenting = false, onChange, render }: {
   active: WorkflowTab;
   resolution?: Resolution;
   busy: boolean;
@@ -29,6 +29,8 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, au
   unlocking?: boolean;
   decisionRecorded?: boolean;
   closed?: boolean;
+  /** Presentation mode: the arrow keys step through the case, and each step slides in from its side. */
+  presenting?: boolean;
   onChange: (tab: WorkflowTab) => void;
   render: (tab: WorkflowTab) => ReactNode;
 }) {
@@ -88,6 +90,40 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, au
     if (tabLocked(tab, !!resolution) || pending.has(tab)) return;
     onChange(tab);
   }
+  // Glide up to the stepper first, with the old step still in place, then switch. Switching first
+  // shortened the page under the reader, which snapped it up before the scroll even began.
+  const going = useRef(false);
+  function goTo(next: WorkflowTab, { focus = true } = {}) {
+    if (going.current) return;
+    going.current = true;
+    void glideTo(refs.current[next]).then(() => {
+      going.current = false;
+      activate(next);
+      if (focus) refs.current[next]?.focus({ preventScroll: true });
+    });
+  }
+  // Which side the step came from, for the slide (presentation mode only, in CSS).
+  // Kept until the step changes again, so a re-render mid-slide doesn't cut it short.
+  const entered = useRef<{ index: number; enter?: "next" | "prev" }>({ index: activeIndex });
+  if (entered.current.index !== activeIndex) entered.current = { index: activeIndex, enter: activeIndex > entered.current.index ? "next" : "prev" };
+  const enter = entered.current.enter;
+  // Not in a field, a menu or the tab list (which has its own arrows), and not mid-run.
+  const step = useRef<(event: globalThis.KeyboardEvent) => void>(() => {});
+  step.current = event => {
+    if (busy || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.defaultPrevented) return;
+    const target = event.target as HTMLElement | null;
+    if (target?.closest("input, textarea, select, [contenteditable], [role=tablist], [role=menu], dialog")) return;
+    const next = presentationStep(active, event.key, !!resolution);
+    if (!next || pending.has(next)) return;
+    event.preventDefault();
+    goTo(next, { focus: false });
+  };
+  useEffect(() => {
+    if (!presenting) return;
+    const onKey = (event: globalThis.KeyboardEvent) => step.current(event);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [presenting]);
   function navigate(event: KeyboardEvent<HTMLButtonElement>, tab: WorkflowTab) {
     if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
     event.preventDefault();
@@ -144,7 +180,7 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, au
     </div>
     {WORKFLOW_TABS.map((tab, index) => <div role="tabpanel" key={tab.id}
       id={`${id}-${tab.id}-panel`} aria-labelledby={`${id}-${tab.id}-tab`}
-      hidden={active !== tab.id} tabIndex={0} className="workflow-panel">
+      hidden={active !== tab.id} tabIndex={0} className="workflow-panel" data-enter={active === tab.id ? enter : undefined}>
       {active === tab.id && <>
         {render(tab.id)}
         {!busy && !unlocking && index < WORKFLOW_TABS.length - 1 && <div className="next-step">
@@ -153,9 +189,8 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, au
             : <button type="button" className={nextStepMode({ tab: tab.id, hasResult: !!resolution, closed, decisionRecorded }) === "primary" ? "run-button" : "secondary-button"}
             aria-disabled={tabLocked(WORKFLOW_TABS[index + 1].id, !!resolution)}
             disabled={tabLocked(WORKFLOW_TABS[index + 1].id, !!resolution)}
-            // Glide back up to the stepper (instant under reduced motion) and focus the new tab without a second jump.
-            // Next frame: once the new step has rendered, so swapping the content doesn't cancel the scroll.
-            onClick={() => { const next = WORKFLOW_TABS[index + 1].id; activate(next); requestAnimationFrame(() => reveal(refs.current[next], "start")); }}>
+            // Glide back up to the stepper (instant under reduced motion), then open the next step there.
+            onClick={() => goTo(WORKFLOW_TABS[index + 1].id)}>
             Next: {WORKFLOW_TABS[index + 1].label} →
           </button>}
         </div>}

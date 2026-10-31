@@ -97,6 +97,13 @@ export function filterDisputes<T extends { type: string }>(cases: T[], type: str
   return type === "all" ? cases : cases.filter(item => item.type === type);
 }
 
+/**
+ * Presentation mode's entrance: a brand curtain drops over the page and lifts again (CURTAIN_MS in all),
+ * and the larger presentation sizes switch on while it covers the page.
+ */
+export const CURTAIN_MS = 1100;
+export const CURTAIN_COVER_MS = 480;
+
 export function readPresentationPreference(storage: Pick<Storage, "getItem">): boolean {
   try { return storage.getItem("triverity.presentation") === "true"; }
   catch { return false; }

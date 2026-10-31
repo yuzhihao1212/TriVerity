@@ -2,10 +2,10 @@ import { confidenceNote } from "./decisionState";
 import { bottomLine, withoutCitations } from "./hearingDisplay";
 import { decisionTone } from "./outcomeTone";
 import { PARTY_DECISION_LABELS } from "./partyView";
-import { money } from "./presentation";
+import { money, titleCase } from "./presentation";
 import { appliedRuleIds, conditionGroups, OVERLAY_RULES } from "./rulingDetails";
 import type { FinalHeaderOutcome } from "./stepVisuals";
-import type { DisputeCase, Resolution } from "./types";
+import type { Decision, DisputeCase, Resolution } from "./types";
 
 export const CONFIDENCE_HELP = "Confidence describes how clearly the available facts meet the policy rule. It is set by the rule that applied, not an AI prediction or a probability that the ruling is correct. Safety and other escalation rules can still require human review.";
 
@@ -182,4 +182,12 @@ export function rulingCredits(result: Pick<Resolution, "decision" | "explanation
     ? { lead, ai: false, warn: true, text: "AI wasn't available, so this uses standard text. Re-run to try Hy3." }
     : { lead, ai: false, text: "Arguments and explanation use standard text, not AI." };
   return { lead, ai: true, text: "Hy3 wrote some of the text, and the rest is standard." };
+}
+
+/** Presentation mode's stamp on the ruling: one or two words, never the headline again. */
+export const STAMP_WORDS: Record<Decision, string> = {
+  partial_refund: "Partial Refund", full_refund: "Refunded", compensation: "Compensated", no_action: "Charge Stands", needs_review: "Escalated",
+};
+export function stampWord(decision: string): string {
+  return Object.hasOwn(STAMP_WORDS, decision) ? STAMP_WORDS[decision as Decision] : titleCase(decision.replace(/_/g, " "));
 }

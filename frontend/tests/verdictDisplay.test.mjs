@@ -192,3 +192,9 @@ test('the credit line says who decided: the rules, the rules sending it to a per
   assert.equal(v.rulingCredits({ ...sides, decision: 'needs_review' }).lead, 'Sent to a person by the rules.');
   assert.equal(v.rulingCredits({ ...sides, decision: 'needs_review' }, false, true).lead, 'Decided by a reviewer.');
 });
+
+test('the presentation stamp is a short word per outcome, never the headline', () => {
+  assert.equal(v.stampWord('needs_review'), 'Escalated');
+  assert.equal(v.stampWord('partial_refund'), 'Partial Refund');
+  assert.equal(v.stampWord('no_action'), 'Charge Stands');
+});

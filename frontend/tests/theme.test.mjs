@@ -5,7 +5,7 @@ import ts from 'typescript';
 
 const source = await readFile(new URL('../src/theme.ts', import.meta.url), 'utf8');
 const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } });
-const { readTheme, writeTheme, resolveTheme, THEME_KEY } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`);
+const { readTheme, writeTheme, resolveTheme, revealRadius, THEME_KEY } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`);
 
 test('a saved choice wins; otherwise the system setting decides', () => {
   assert.equal(resolveTheme('light', true), 'light');
@@ -26,4 +26,10 @@ test('only light or dark is read back; storage failures never throw', () => {
   const blocked = { getItem: () => { throw new Error('blocked'); }, setItem: () => { throw new Error('blocked'); } };
   assert.equal(readTheme(blocked), null);
   assert.doesNotThrow(() => writeTheme(blocked, 'light'));
+});
+
+test('the new theme grows from the toggle until it reaches the farthest corner', () => {
+  const viewport = { width: 1000, height: 800 };
+  assert.equal(revealRadius({ x: 960, y: 30 }, viewport), Math.ceil(Math.hypot(960, 770)));
+  assert.equal(revealRadius({ x: 500, y: 400 }, viewport), Math.ceil(Math.hypot(500, 400)));
 });

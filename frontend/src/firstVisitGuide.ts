@@ -22,7 +22,7 @@ export function homeGuide({ done, running, canReview, toReview, aiLive }: {
 }): HomeGuide | null {
   if (done || running) return null;
   if (toReview) return { step: 2, text: "Start Reviewing opens the first case that needs a person.", target: "start" };
-  if (canReview) return { step: 1, text: `Press ${aiLive ? "AI Review" : "Review with Rules"} to run the queue. It asks before it starts.`, target: "review" };
+  if (canReview) return { step: 1, text: `Press ${aiLive ? "Run Agents" : "Run with Rules"} to run the queue. It asks before it starts.`, target: "review" };
   return null;
 }
 
