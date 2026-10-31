@@ -64,26 +64,27 @@ export function agentSource(agent: string, result: Resolution): "llm" | "fallbac
   }
 }
 
-export function tabLocked(tab: WorkflowTab, hasResult: boolean): boolean {
-  return tab !== "intake" && !hasResult;
+/** Steps 2-5 wait for a result; Notify also waits while `notifyLocked` (on hold, or no decision yet). */
+export function tabLocked(tab: WorkflowTab, hasResult: boolean, notifyLocked = false): boolean {
+  return (tab !== "intake" && !hasResult) || (tab === "notify" && notifyLocked);
 }
 
 /**
  * Presentation mode: the left and right arrows step through the case like slides. Unlike the tab
  * list's keys it never wraps round, and it skips locked steps; null when there is nowhere to go.
  */
-export function presentationStep(current: WorkflowTab, key: string, hasResult: boolean): WorkflowTab | null {
+export function presentationStep(current: WorkflowTab, key: string, hasResult: boolean, notifyLocked = false): WorkflowTab | null {
   const step = key === "ArrowRight" ? 1 : key === "ArrowLeft" ? -1 : 0;
   if (!step) return null;
   const index = WORKFLOW_TABS.findIndex(tab => tab.id === current);
   for (let next = index + step; next >= 0 && next < WORKFLOW_TABS.length; next += step) {
-    if (!tabLocked(WORKFLOW_TABS[next].id, hasResult)) return WORKFLOW_TABS[next].id;
+    if (!tabLocked(WORKFLOW_TABS[next].id, hasResult, notifyLocked)) return WORKFLOW_TABS[next].id;
   }
   return null;
 }
 
-export function navigateTab(current: WorkflowTab, key: string, hasResult: boolean): WorkflowTab {
-  const available = WORKFLOW_TABS.filter(tab => !tabLocked(tab.id, hasResult));
+export function navigateTab(current: WorkflowTab, key: string, hasResult: boolean, notifyLocked = false): WorkflowTab {
+  const available = WORKFLOW_TABS.filter(tab => tab.id === current || !tabLocked(tab.id, hasResult, notifyLocked));
   const index = Math.max(0, available.findIndex(tab => tab.id === current));
   if (key === "Home") return available[0].id;
   if (key === "End") return available[available.length - 1].id;

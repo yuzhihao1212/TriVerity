@@ -3,27 +3,40 @@
 import { DECISION_LABELS } from "./outcomeTone";
 import type { Decision, DisputeCase } from "./types";
 
-export type DisputeFilter = "all" | DisputeCase["type"];
+/** "on_hold": the cases waiting for a second reviewer, whatever their kind. */
+export type DisputeFilter = "all" | DisputeCase["type"] | "on_hold";
 export type Tone = "ok" | "warn" | "neutral";
 
-export type Category = "route" | "no-show" | "other";
+/** "held" is a status, not a kind: a case on hold sits there instead of under its kind until the hold ends. */
+export type Category = "held" | "route" | "no-show" | "other";
 export function disputeCategory(type: string): Category {
   return type === "route_deviation" ? "route" : type === "no_show_charge" ? "no-show" : "other";
 }
 
-/** Group an already-sorted queue without changing the order inside each category. */
-export function groupByCategory<T extends { type: string }>(cases: readonly T[], filter = "all") {
+/** Whether a case shows under `filter`: all, one kind, or the cases on hold. */
+export function matchesFilter(item: { type: string; dispute_id: string }, filter: string, heldIds: readonly string[] = []): boolean {
+  if (filter === "on_hold") return heldIds.includes(item.dispute_id);
+  return filter === "all" || item.type === filter;
+}
+
+/** The sidebar group a case sits in: On Hold while it waits for a second reviewer, else its kind. */
+export function caseCategory(item: { type: string; dispute_id: string }, heldIds: readonly string[] = []): Category {
+  return heldIds.includes(item.dispute_id) ? "held" : disputeCategory(item.type);
+}
+
+/** Group an already-sorted queue without changing the order inside each category. On Hold comes first. */
+export function groupByCategory<T extends { type: string; dispute_id: string }>(cases: readonly T[], filter = "all", heldIds: readonly string[] = []) {
   const categories: { id: Category; label: string }[] = [
-    { id: "route", label: "Route" }, { id: "no-show", label: "No-show" }, { id: "other", label: "Other" },
+    { id: "held", label: "On Hold" }, { id: "route", label: "Route" }, { id: "no-show", label: "No-show" }, { id: "other", label: "Other" },
   ];
   return categories.map(category => {
-    const items = cases.filter(item => (filter === "all" || item.type === filter) && disputeCategory(item.type) === category.id);
+    const items = cases.filter(item => matchesFilter(item, filter, heldIds) && caseCategory(item, heldIds) === category.id);
     return { ...category, items, count: items.length };
   }).filter(group => group.count > 0);
 }
 
 /** The collapsed rail: one icon per kind of case in the queue, with the open case's kind marked. */
-export function railShortcuts<T extends { type: string }>(cases: readonly T[], current: { id: string; summary: string; type: string }) {
+export function railShortcuts<T extends { type: string; dispute_id: string }>(cases: readonly T[], current: { id: string; summary: string; type: string }) {
   return groupByCategory(cases).map(group => {
     const isCurrent = group.id === disputeCategory(current.type);
     return {
@@ -45,7 +58,12 @@ export const FILTER_OPTIONS: { value: DisputeFilter; label: string; short: strin
   { value: "all", label: "All Disputes", short: null },
   { value: "route_deviation", label: "Route Deviation", short: "Route" },
   { value: "no_show_charge", label: "No-show Charge", short: "No-show" },
+  { value: "on_hold", label: "On Hold", short: "On hold" },
 ];
+/** The menu's options: On Hold only while some case is on hold. */
+export function filterOptions(anyHeld: boolean) {
+  return FILTER_OPTIONS.filter(item => item.value !== "on_hold" || anyHeld);
+}
 
 const option = (value: string) => FILTER_OPTIONS.find(item => item.value === value) ?? FILTER_OPTIONS[0];
 

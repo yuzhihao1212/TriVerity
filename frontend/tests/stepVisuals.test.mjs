@@ -21,7 +21,7 @@ const phases = states => states.map(s => `${s.tab}:${s.phase}`).join(' ');
 
 test('step states with no result: Intake is current, the rest locked', () => {
   const states = byTab(sv.stepStates({ active: 'intake', hasResult: false, busy: false }));
-  assert.deepEqual(states.intake, { tab: 'intake', phase: 'available', reviewed: false, current: true, locked: false, working: false, next: false, joined: false });
+  assert.deepEqual(states.intake, { tab: 'intake', phase: 'available', reviewed: false, current: true, locked: false, lockReason: null, working: false, next: false, joined: false });
   assert.equal(sv.stepStatusText(states.intake), 'current step');
   for (const tab of ['evidence', 'hearing', 'ruling', 'notify']) {
     assert.equal(states[tab].phase, 'locked');
