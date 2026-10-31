@@ -220,3 +220,10 @@ export function confidenceNote(decision: Decision, percent: number, policyRefs: 
   }
   return percent >= 60 ? "Clear enough to decide automatically" : "Below 60%: a human decides";
 }
+
+/** Enough of the panel is on screen for its own buttons to do the job. */
+export function panelShowing(top: number, bottom: number, viewportHeight: number): boolean {
+  const height = bottom - top;
+  const visible = Math.min(bottom, viewportHeight) - Math.max(top, 0);
+  return height > 0 && visible >= height * 0.15;
+}

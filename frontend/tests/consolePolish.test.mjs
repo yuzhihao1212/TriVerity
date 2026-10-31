@@ -163,3 +163,12 @@ test('the limit follows the amount, not the button: a full refund above it needs
   assert.equal(ds.overrideAmountCheck('no_action', '', 21.9, 6.9), null, 'giving less back never needs a second reviewer');
   assert.equal(ds.overrideAmountCheck('investigate', '', 21.9, 6.9), null);
 });
+
+test('the sticky decision bar steps aside once enough of the decision panel is on screen', () => {
+  assert.equal(ds.panelShowing(475, 697, 900), true);
+  assert.equal(ds.panelShowing(1430, 1652, 900), false);
+  assert.equal(ds.panelShowing(870, 1092, 900), false);
+  assert.equal(ds.panelShowing(860, 1082, 900), true);
+  assert.equal(ds.panelShowing(-300, -100, 900), false);
+  assert.equal(ds.panelShowing(0, 0, 900), false);
+});
