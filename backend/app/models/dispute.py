@@ -78,6 +78,8 @@ class DisputeCase(BaseModel):
     type: DisputeType
     # Navigation metadata only. Prompt builders select evidence fields explicitly.
     label: str | None = Field(default=None, max_length=limits.MAX_CASE_LABEL_CHARS)
+    # Queue order only, like the label: never evidence for the agents.
+    raised_at: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
     rider_claim: Statement
     driver_statement: Statement | None = None
     trip: TripData = Field(default_factory=TripData)
@@ -96,3 +98,9 @@ class DisputeCase(BaseModel):
         if contains_link_or_markup(normalise(label)):
             raise ValueError("The label must be plain text, without links or markup.")
         return label or None
+
+
+class SampleCase(DisputeCase):
+    """A sample on the queue: the case, plus whether its chat already holds a threat."""
+
+    safety_flag: bool = False

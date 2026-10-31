@@ -7,7 +7,7 @@ import type { FactLinks } from "./EvidenceList";
 import { Icon } from "./Icon";
 import { HearingComparison } from "./HearingComparison";
 import {
-  bottomLine, cardFacts, factTexts, HEARING_INTRO, HEARING_ROUNDS, HEARING_STEPS, NO_RULE_CITED, partyHeading,
+  bottomLine, cardFacts, factTexts, HEARING_INTRO, HEARING_INTRO_OFF, HEARING_ROUNDS, HEARING_STEPS, NO_RULE_CITED, partyHeading,
   replyQuote, RULE_CHECK_LABELS, WHY_LIMIT, type CardFact,
 } from "./hearingDisplay";
 import { riskTone } from "./outcomeTone";
@@ -67,8 +67,9 @@ function WhyFacts({ facts, party, availableIds, onSelectFact }: { facts: CardFac
   </>;
 }
 
-export function Debate({ resolution, dispute, availableIds, onSelectFact }: { resolution: Resolution; dispute?: DisputeCase } & FactLinks) {
+export function Debate({ resolution, dispute, aiOff = false, availableIds, onSelectFact }: { resolution: Resolution; dispute?: DisputeCase; aiOff?: boolean } & FactLinks) {
   const id = useId();
+  const hasReplies = !!(resolution.rider_case?.rebuttal?.text?.trim() || resolution.driver_case?.rebuttal?.text?.trim());
   const facts = useMemo(() => factTexts(resolution), [resolution]);
   const links: Links = { facts, availableIds, onSelectFact };
   const own = (side: Side) => side === "rider" ? resolution.rider_case : resolution.driver_case;
@@ -120,11 +121,11 @@ export function Debate({ resolution, dispute, availableIds, onSelectFact }: { re
   return (
     <section className="card debate" aria-labelledby={`${id}-title`}>
       <h2 id={`${id}-title`}>Hearing</h2>
-      <p className="hearing-intro">{HEARING_INTRO}</p>
+      <p className="hearing-intro">{aiOff ? HEARING_INTRO_OFF : HEARING_INTRO}</p>
       <ol className="hearing-steps" aria-label="How the hearing works">
-        {HEARING_STEPS.map((step, index) => <li key={step.number} className={step.done ? "is-done" : "is-next"}>
+        {HEARING_STEPS.map((step, index) => <li key={step.number} className={step.done && (step.number !== 2 || hasReplies) ? "is-done" : "is-next"}>
           {index > 0 && <span className="hearing-step-arrow" aria-hidden="true">→</span>}
-          <span className="hearing-step-pill">{step.number} · {step.label}</span>
+          <span className="hearing-step-pill">{step.number} · {step.number === 2 && !hasReplies ? "Replies skipped" : step.label}</span>
         </li>)}
       </ol>
       <HearingComparison key={dispute?.dispute_id} resolution={resolution} disputeId={dispute?.dispute_id} availableIds={availableIds} onSelectFact={onSelectFact} />

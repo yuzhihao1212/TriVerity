@@ -15,9 +15,10 @@ from app.api.streaming import SSE_HEADERS, StreamRoute, event
 from app.core import limits
 from app.core.config import settings
 from app.core.rate_limit import charge_resolves, enforce_resolve_rate_limit
-from app.models.dispute import DisputeCase
+from app.models.dispute import DisputeCase, SampleCase
 from app.models.resolution import AgentLogEntry, PartyResolution, Resolution
 from app.services.budget import budget
+from app.services.evidence import analyse_chat
 from app.services.llm_client import ai_disabled
 from app.services.orchestrator import ServiceBusy, resolve_dispute
 from app.services.sample_service import load_samples
@@ -28,9 +29,10 @@ router = APIRouter(tags=["disputes"])
 _demo_cache: dict[str, tuple[float, Resolution]] = {}
 _demo_lock = threading.Lock()
 
-@router.get("/disputes/samples", response_model=list[DisputeCase])
-def samples() -> list[DisputeCase]:
-    return load_samples()
+@router.get("/disputes/samples", response_model=list[SampleCase])
+def samples() -> list[SampleCase]:
+    # The same keyword check SAFE-1 rules on, so the queue can tag a threat before any run.
+    return [SampleCase(**case.model_dump(), safety_flag=bool(analyse_chat(case.chat_logs).threats)) for case in load_samples()]
 
 @router.post("/disputes/resolve", response_model=Resolution | PartyResolution)
 def resolve(

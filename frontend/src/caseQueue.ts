@@ -37,7 +37,7 @@ export function allowedActions(status: CaseStatus, closed = status === "closed" 
   return { run: !closed, decide: !closed, editNotes: !closed, send: !closed, reopen: closed };
 }
 
-export interface QueueRow { id: string; status: CaseStatus; tier?: TriageTier | null; decision?: Decision | null; audit?: boolean }
+export interface QueueRow { id: string; status: CaseStatus; tier?: TriageTier | null; decision?: Decision | null; audit?: boolean; raisedAt?: string | null }
 
 const STATUS_ORDER: Record<CaseStatus, number> = { decide: 0, appeal_waiting: 0, ready: 1, reviewed: 2, auto: 3, not_run: 4, closed: 5, reopened: 2 };
 const TIER_ORDER: Record<string, number> = { safety: 0, high: 1, standard: 2, low: 3 };
@@ -50,9 +50,30 @@ export function sortQueue<T extends QueueRow>(rows: T[]): T[] {
     || a.index - b.index).map(item => item.row);
 }
 
+/** Safety first, then whoever raised their dispute earliest; undated cases last, in status order. */
+export function oldestFirst<T extends QueueRow>(rows: T[]): T[] {
+  const raised = (row: T) => row.raisedAt ?? "9999";
+  return rows.map((row, index) => ({ row, index })).sort((a, b) =>
+    Number(b.row.tier === "safety") - Number(a.row.tier === "safety")
+    || raised(a.row).localeCompare(raised(b.row))
+    || STATUS_ORDER[a.row.status] - STATUS_ORDER[b.row.status]
+    || a.index - b.index).map(item => item.row);
+}
+
+/** The queue's three lists: what a person still has to act on, what hasn't run, and what is finished. */
+export function queueGroups<T extends QueueRow>(rows: T[]) {
+  const resolved = (row: T) => row.status === "auto" || row.status === "closed";
+  return {
+    review: oldestFirst(rows.filter(row => row.status !== "not_run" && !resolved(row))),
+    fresh: oldestFirst(rows.filter(row => row.status === "not_run")),
+    resolved: oldestFirst(rows.filter(resolved)),
+  };
+}
+
 /** The next case still to do in queue order (not closed or auto-resolved, not the current one); null when none is left. */
 export function nextCase<T extends QueueRow>(rows: T[], currentId: string | null): T | null {
-  return sortQueue(rows).find(row => row.id !== currentId && row.status !== "closed" && row.status !== "auto") ?? null;
+  const { review, fresh } = queueGroups(rows);
+  return [...review, ...fresh].find(row => row.id !== currentId) ?? null;
 }
 
 export interface Tiles { queue: number; ready: number; decide: number; auto: number; done: number; appeals: number }

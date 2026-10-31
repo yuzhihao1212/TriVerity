@@ -104,6 +104,7 @@ export function hearingFact(text: string | null, id: string): { text: string; ic
 // -- Hearing cards (round 8 item 7) ------------------------------------------------------
 
 export const HEARING_INTRO = "Two AI advocates argue for each side, like lawyers. They don't decide: the policy rules do, in the next step.";
+export const HEARING_INTRO_OFF = "AI is off, so each side's case uses template text. It doesn't decide: the policy rules do, in the next step.";
 
 /** The flow pills. The Ruling pill names the next step, never its outcome (evidence first). */
 export const HEARING_STEPS = [

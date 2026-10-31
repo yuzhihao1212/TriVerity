@@ -131,3 +131,18 @@ def test_label_never_enters_any_prompt_including_both_rebuttals_and_collector_ro
         assert advocate.source == advocate.rebuttal.source == "llm"
     assert all(marker not in system + user for _, system, user in prompts)
     assert marker not in result.model_dump_json()
+
+
+def test_every_sample_has_a_raised_date():
+    assert all(case.raised_at for case in SAMPLES.values())
+    assert SAMPLES["DISP-002"].raised_at == "2026-09-13"
+
+
+def test_raised_date_must_be_a_plain_date():
+    with pytest.raises(ValidationError):
+        DisputeCase(**{**SAMPLES["D001"].model_dump(), "raised_at": "soon"})
+
+
+def test_sample_list_flags_only_the_threat_in_chat():
+    flagged = [c["dispute_id"] for c in TestClient(create_app()).get("/api/disputes/samples").json() if c["safety_flag"]]
+    assert flagged == ["D007"]

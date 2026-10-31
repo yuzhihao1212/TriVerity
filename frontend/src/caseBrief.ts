@@ -84,32 +84,52 @@ export function whatHappened(dispute: DisputeCase): string | null {
   return `${sentence[0].toUpperCase()}${sentence.slice(1)}.`;
 }
 
+/** An AI step that ran but used template text; missing or skipped steps don't count. */
+export function usedFallback(resolution: Resolution): boolean {
+  return [resolution.evidence_collection?.source, resolution.explanation_source,
+    resolution.rider_case?.source, resolution.driver_case?.source,
+    resolution.rider_case?.rebuttal?.text?.trim() ? resolution.rider_case.rebuttal.source : null,
+    resolution.driver_case?.rebuttal?.text?.trim() ? resolution.driver_case.rebuttal.source : null].includes("fallback");
+}
+
 /** At most one item per concern; missing/skipped AI steps are not labelled fallback. */
-export function checksBeforeDeciding(resolution?: Resolution): string[] {
+export function checksBeforeDeciding(resolution?: Resolution, aiOff = false): string[] {
   if (!resolution) return [];
   const checks: string[] = [];
   if (resolution.triage?.tier === "safety") checks.push("Safety concern: review first.");
   else if (resolution.decision === "needs_review") checks.push("Escalated: a human reviewer must decide.");
   const highRisk = [resolution.risk?.rider_risk === "high" && "rider", resolution.risk?.driver_risk === "high" && "driver"].filter(Boolean);
   if (highRisk.length) checks.push(`High fraud risk flagged for the ${highRisk.join(" and ")}.`);
-  const fallback = [resolution.evidence_collection?.source, resolution.explanation_source,
-    resolution.rider_case?.source, resolution.driver_case?.source,
-    resolution.rider_case?.rebuttal?.text?.trim() ? resolution.rider_case.rebuttal.source : null,
-    resolution.driver_case?.rebuttal?.text?.trim() ? resolution.driver_case.rebuttal.source : null].includes("fallback");
-  if (fallback) checks.push("An AI step used fallback template text; check its wording.");
+  if (usedFallback(resolution)) checks.push(aiOff ? "AI is off: this case uses template text." : "An AI step used fallback template text; check its wording.");
   return checks;
 }
 
 export interface BriefRow { label: string; text: string; truncate?: boolean; items?: string[] }
 
+/**
+ * Why this case needs a person, in a line, without giving away the ruling (evidence first): no
+ * amount, no outcome, no confidence. Before a run only a threat can be known. Null when the
+ * policy can close the case itself.
+ */
+export function whyHere(dispute: Pick<DisputeCase, "safety_flag">, resolution?: Pick<Resolution, "triage" | "autonomy">): string | null {
+  if (!resolution) return dispute.safety_flag ? "Threatening message in chat" : null;
+  if (resolution.autonomy?.eligible) return resolution.autonomy.audit ? "Selected for a spot check" : null;
+  const reasons = (resolution.triage?.reasons ?? []).filter(reason => !/at stake|^confidence/i.test(reason)).map(reason => reason.replace(/\s*\([A-Z]+-\d+\)$/, ""));
+  if (reasons.length) return reasons.join(" · ");
+  return resolution.autonomy ? "Needs a person to confirm" : null;
+}
+
 /** The proposed ruling row waits until the reviewer has reviewed the Ruling step (evidence first). */
-export function caseBriefRows(dispute: DisputeCase, resolution?: Resolution, { showProposal = false } = {}): BriefRow[] {
+export function caseBriefRows(dispute: DisputeCase, resolution?: Resolution, { showProposal = false, aiOff = false } = {}): BriefRow[] {
   const rows: BriefRow[] = [];
   const happened = whatHappened(dispute);
   if (happened) rows.push({ label: "What happened", text: happened });
   for (const [label, statement] of [["Rider says", dispute.rider_claim], ["Driver says", dispute.driver_statement]] as const) {
-    if (statement?.trim()) rows.push({ label, text: statement.trim(), truncate: true });
+    if (statement?.trim()) rows.push({ label, text: statement.trim() });
+    else if (label === "Driver says" && dispute.rider_claim?.trim()) rows.push({ label, text: "No statement provided" });
   }
+  const why = whyHere(dispute, resolution);
+  if (why) rows.push({ label: "Why it's here", text: why });
   if (resolution && showProposal) {
     const parts = [caseOutcome(dispute.type, resolution.decision, resolution.refund_amount)];
     const rule = resolution.policy_refs?.map(ref => /^\s*([A-Z]+-\d+)\b/.exec(ref)?.[1]).find(Boolean);
@@ -118,7 +138,8 @@ export function caseBriefRows(dispute: DisputeCase, resolution?: Resolution, { s
     if (confidence != null && confidence <= 1) parts.push(`${Math.round(confidence * 100)}% confidence`);
     rows.push({ label: "Proposed ruling", text: parts.join(" · ") });
   }
-  const checks = checksBeforeDeciding(resolution);
+  // The line above already says why; what's left to check is only the wording.
+  const checks = checksBeforeDeciding(resolution, aiOff).filter(check => !why || /template text/.test(check));
   if (checks.length) rows.push({ label: "Check before deciding", text: checks.join(" "), items: checks });
   return rows;
 }

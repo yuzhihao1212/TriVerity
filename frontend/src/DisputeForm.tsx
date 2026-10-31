@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 
 import { AccessCodeField } from "./AccessCodeField";
+import { todayIso } from "./homeState";
 import { autoLabel, metresFromPickup, nextOwnDisputeId } from "./ownDispute";
 import type { ChatMessage, DisputeCase, DisputeType } from "./types";
 
@@ -104,6 +105,7 @@ function toCase(f: Fields, template?: DisputeCase): DisputeCase {
   const dispute: DisputeCase = {
     dispute_id: nextOwnDisputeId(countStore()),
     type: f.type,
+    raised_at: todayIso(new Date()),
     rider_claim: f.riderClaim.trim(),
     driver_statement: f.driverStatement.trim() || null,
     trip,
