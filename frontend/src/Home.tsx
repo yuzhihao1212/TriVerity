@@ -73,7 +73,7 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
   // coming back to the queue later shows it at once.
   const play = useIntroOnce(HOME_SEEN_KEY, "home");
   const [hello] = useState(() => greeting(new Date().getHours()));
-  const guide = homeGuide({ done: guideDone, presentation, running, canReview: newIds.length > 0, toReview: !!startWith, aiLive: aiMode === "live" });
+  const guide = homeGuide({ done: guideDone, running, canReview: newIds.length > 0, toReview: !!startWith, aiLive: aiMode === "live" });
   return <section className={`home${play ? " home-entering" : ""}`} aria-labelledby="home-title">
     {missing && <p className="home-note" role="status">
       <Icon name="info" />Case {missing} not found

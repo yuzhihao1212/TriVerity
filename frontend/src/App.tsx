@@ -650,7 +650,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
             <CaseHeader dispute={selected} resolution={resolution} busy={resolving === selected.dispute_id} streaming={streaming} progress={progress}
               final={resolution ? headerFinalOutcome(resolution, selected, decision.saved, latestSent) : null} />
             <CaseBrief key={selected.dispute_id} dispute={selected} resolution={resolution} showProposal={reviewed.has("ruling")} aiOff={aiMode === "offline"} compact={compactHead} />
-            {caseGuideShows({ done: guideDone, presentation, hasResult: !!resolution, canDecide: actions.decide, decided: !!decision.saved }) && <div className="case-guide" role="status">
+            {caseGuideShows({ done: guideDone, hasResult: !!resolution, canDecide: actions.decide, decided: !!decision.saved }) && <div className="case-guide" role="status">
               <p><strong>Step {GUIDE_STEPS} of {GUIDE_STEPS}.</strong> {LAST_STEP_TEXT}</p>
               <div className="case-guide-actions">
                 {activeTab !== "ruling" && <button type="button" className="secondary-button" onClick={() => changeTab("ruling")}>Go to Ruling</button>}
