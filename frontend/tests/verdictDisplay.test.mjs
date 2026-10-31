@@ -177,3 +177,9 @@ test('a bad-faith escalation lists the high-risk party\'s reasons, and only thei
   assert.deepEqual(v.rulingBrief({ ...fraud, risk: undefined }).riskReasons, []);
 });
 
+test('a rule tooltip sits above its term, or below when there is no room, and stays on screen', async () => {
+  const { tooltipTop } = await load('tooltipPlacement');
+  assert.equal(tooltipTop(300, 320, 80, 800), 212);
+  assert.equal(tooltipTop(40, 60, 80, 800), 68);
+  assert.equal(tooltipTop(40, 60, 900, 800), 8);
+});

@@ -977,10 +977,10 @@ html:has(.decision-bar) { scroll-padding-bottom: 96px; }
 /* Jargon tooltips: hover or keyboard focus. */
 .term { position: relative; border-bottom: 1px dotted currentColor; cursor: help; }
 .term:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 2px; }
-.term-tip { position: absolute; z-index: 20; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); width: max-content; max-width: min(280px, 80vw);
+.term-tip { position: fixed; z-index: 60; width: max-content; max-width: min(280px, 80vw);
   padding: var(--space-2) var(--space-3); border-radius: 8px; background: var(--text); color: var(--bg); font-size: 12px; font-weight: 400;
   line-height: 1.45; text-transform: none; letter-spacing: 0; text-align: left; white-space: normal; visibility: hidden; opacity: 0; pointer-events: none; }
-.term:hover .term-tip, .term:focus .term-tip, .term:focus-within .term-tip { visibility: visible; opacity: 1; }
+.term-tip.is-showing { visibility: visible; opacity: 1; }
 
 /* Notify parties: each party's message on a phone. */
 .phones { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 272px)); justify-content: center; align-items: start; gap: var(--space-10); }
@@ -2013,10 +2013,6 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 @media (prefers-reduced-motion: reduce) {
   .ruling-check-marker, .ruling-check-detail { transition: none; }
 }
-@media (max-width: 760px) {
-  /* Rule explanations stay inside the viewport, above the existing decision bar. */
-  .ruling-checks .term-tip { position: fixed; top: auto; bottom: 150px; left: 16px; right: 16px; width: auto; max-width: none; transform: none; }
-}
 
 /* Evidence option A: all ordinary fact rows share their source card's column tracks. */
 .evidence-display .fact-card { --fact-columns: 100px minmax(0, 1fr) max-content max-content; display: grid; grid-template-columns: var(--fact-columns); column-gap: 12px; }
@@ -2186,8 +2182,6 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .ruling-details > .ruling-rule-tags { display: flex; }
 .ruling-confidence-note { color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .ruling-details > summary::before { transition: none; } }
-.ruling-revamp .term-contained .term-tip { display: none; }
-.ruling-revamp .term-contained:hover .term-tip, .ruling-revamp .term-contained:focus .term-tip { display: block; }
 .ruling-revamp .term { display: inline-flex; align-items: center; min-height: 24px; }
 .ruling-condition-group { margin-top: 14px; }
 .ruling-condition-group-title { margin: 0 0 4px; font-size: 12px; font-weight: 600; color: var(--muted); }
@@ -2645,6 +2639,7 @@ details.ruling-condition-group[open] > summary::before { transform: rotate(90deg
 @media (max-width: 560px) { .case-buddy { right: var(--space-3); bottom: 84px; } .case-buddy-panel { width: calc(100vw - 32px); } }
 
 @media print {
+  .term-tip { display: none; }
   .case-buddy { display: none; }
   @page { margin: 16mm; }
   html, body { background: #fff !important; }
