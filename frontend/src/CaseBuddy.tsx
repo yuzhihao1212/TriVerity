@@ -52,7 +52,7 @@ export function CaseBuddy({ resolution, dispute, stage, tab, availableIds, onSel
           {answer.points.length > 0 && <ul>{answer.points.map(point => <li key={point}>{point}</li>)}</ul>}
           {answer.note && <p className="case-buddy-note">{answer.note}</p>}
           {(answer.rules.length > 0 || answer.facts.length > 0 || answer.step) && <div className="case-buddy-sources">
-            {answer.rules.map(rule => <Chip key={rule} size="sm"><Term rule={rule} contained /></Chip>)}
+            {answer.rules.map(rule => <Chip key={rule} size="sm"><Term rule={rule} /></Chip>)}
             {answer.facts.map(fact => <Chip key={fact} size="sm" tone="neutral"><EvidenceText text={fact} availableIds={availableIds} onSelectFact={onSelectFact} /></Chip>)}
             {answer.step && tab !== "hearing" && <button type="button" className="text-button" onClick={onOpenHearing}>Open the Hearing</button>}
           </div>}

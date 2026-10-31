@@ -114,12 +114,12 @@ export function VerdictSummary({ resolution, dispute, final = null, aiLive = fal
       <summary>Rules and Sources</summary>
       <p className="ruling-confidence-note">{confidence.caption}</p>
       {brief.changeLine && review && !brief.missing && <p className="ruling-change"><Icon name="swap" /><span><strong>What would change it: </strong>{brief.changeLine}</span></p>}
-      <span className="ruling-rule-tags">{policyIds(resolution.policy_refs).map(rule => <Chip key={rule} size="sm"><Term rule={rule} contained /></Chip>)}</span>
+      <span className="ruling-rule-tags">{policyIds(resolution.policy_refs).map(rule => <Chip key={rule} size="sm"><Term rule={rule} /></Chip>)}</span>
       {total > 0 && groups.map((group, groupIndex) => {
         const offset = groups.slice(0, groupIndex).reduce((sum, previous) => sum + previous.checks.length, 0);
         const list = <ul className="ruling-condition-list">{group.checks.map((check, index) => <li key={`${check.rule}-${index}`} style={{ "--condition-delay": `${200 + (offset + index) / Math.max(1, total - 1) * 850}ms` } as CSSProperties}>
             <span className={`ruling-condition-symbol${check.met ? " met" : ""}`} aria-hidden="true">{check.symbol}</span>
-            <div className="ruling-condition-label"><span className="sr-only">{check.status}: </span>{check.label} <Chip size="sm"><Term rule={check.rule} contained /></Chip></div>
+            <div className="ruling-condition-label"><span className="sr-only">{check.status}: </span>{check.label} <Chip size="sm"><Term rule={check.rule} /></Chip></div>
             <span className="ruling-condition-value">{check.value}</span>
             <span className="ruling-fact-ids">{check.fact_ids.map(factId => <Chip key={factId} size="sm" tone="neutral"><EvidenceText text={factId} availableIds={availableIds} onSelectFact={onSelectFact} /></Chip>)}</span>
           </li>)}</ul>;
