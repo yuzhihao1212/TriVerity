@@ -18,8 +18,11 @@ import cloudLockupDark from "./assets/logos/tencent-cloud-dark.webp";
 import { OeroMark } from "./OeroAI";
 import { HERO_ROTATE_MS, HERO_RULINGS, nextHeroIndex } from "./heroRulings";
 import { AUTOMATION_RING, REPEAT_DOTS, RESULTS_BOX, SAMPLE_TICKS, STOPWATCH } from "./resultsVisuals";
+import { CASE_VIEWS, ENGINEERING_PROOF, HEARING_ROUNDS, ROLLOUT, VALUE_STATS } from "./landingStory";
+import "./landingStory.css";
 
 const GITHUB = "https://github.com/yuzhihao1212/TriVerity";
+const DEMO_VIDEO = "https://www.youtube.com/watch?v=z3-8uuPBPAw";
 
 // README.md (live sample evaluation, 16 Oct 2026) and docs/simulation.md
 // (offline, seed 7). Keep the values and their measurement context together.
@@ -55,10 +58,10 @@ interface TrustTile {
 }
 
 export const TRUST_TILES: readonly TrustTile[] = [
-  { icon: "scales", title: "Rules Decide, AI Explains", detail: "Decisions and amounts come from fixed rules. The same facts produce the same ruling, whoever argues the case." },
+  { icon: "scales", title: "Rules Decide, AI Explains", proof: "No AI in the decision", detail: "Decisions and amounts come from fixed rules. The same facts produce the same ruling, whoever argues the case." },
   { icon: "magnifier", title: "Every Argument Fact-checked", detail: "Every argument cites evidence and policy rules, and the Judge checks each cited rule against the facts: it holds for that side, favours the other, or doesn't apply." },
   { icon: "person", title: "Fair to Both Sides", proof: "500/500 fairness checks", detail: "Party history never changed a policy ruling: 500 of 500 simulated disputes got the same decision with histories removed or swapped. History is only used to check for bad-faith patterns." },
-  { icon: "shield", title: "Humans for Risky Cases", detail: "Uncertain or high-risk cases go to a human reviewer with a priority tier. Safety cases come first." },
+  { icon: "shield", title: "Humans for Risky Cases", proof: "Safety cases come first", detail: "Uncertain or high-risk cases go to a human reviewer with a priority tier. Safety cases come first." },
   { icon: "books", title: "Appeals Teach the System", detail: "A reviewer's appeal decision becomes a precedent for similar future cases.", note: "Needs a judge access code in the public demo." },
   { icon: "lock", title: "Tested Against Prompt Injection", proof: "0 of 68 live runs swayed", detail: "23 attack scenarios tested offline. Across 17 attacks and 68 live Hy3 runs, no injection changed a ruling." },
 ];
@@ -89,6 +92,7 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
           <p className="landing-lead"><span>Ride disputes resolved fairly</span> <span>in seconds, not days.</span></p>
           <p className="landing-intro muted">AI agents argue both sides; policy rules decide fairly. Follow the evidence and see why each ruling holds.</p>
           <div className="landing-actions"><a className="landing-primary" href="#/console" onClick={onOpenConsole}>Open the Reviewer Console <span aria-hidden="true">↗</span></a>
+            <a href={DEMO_VIDEO}>Watch the Demo Video <span aria-hidden="true">↗</span></a>
             <a href={GITHUB}>View the Source on GitHub <span aria-hidden="true">↗</span></a></div>
           <BuiltOn />
           </div>
@@ -119,10 +123,33 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
               <ul>{stage.steps.map(step => <li key={step.title}><strong>{step.title}.</strong> {step.detail}</li>)}</ul>
             </details>
           </li>)}</ol>
+          <HearingExcerpt />
+        </section>
+        <section aria-labelledby="views-title">
+          <div className="landing-section-head"><p className="eyebrow">Who it serves</p><h2 id="views-title">One Case. The Right View for Each Person.</h2><p className="muted">The same D001 ruling, as each person sees it.</p></div>
+          <div className="landing-views">{CASE_VIEWS.map(view => <article className="landing-view" key={view.role}>
+            <div className="landing-view-role"><span className="landing-stage-icon" aria-hidden="true"><Icon name={view.icon} /></span><h3>{view.role}</h3></div>
+            <p className="landing-view-need">{view.need}</p>
+            <div className="landing-view-message">
+              <p className="landing-view-tag"><strong>{view.status}</strong><span>Case D001</span></p>
+              <p className="landing-view-line">{view.line}</p>
+              <ul className="landing-view-next">{view.next.map(line => <li key={line}>{line}</li>)}</ul>
+            </div>
+          </article>)}</div>
+          <p className="landing-note">Fraud signals, party history and internal evidence IDs stay out of the rider’s and driver’s messages.</p>
         </section>
         <section aria-labelledby="trust-title">
           <div className="landing-section-head"><p className="eyebrow">What makes it trustworthy</p><h2 id="trust-title">A Ruling You Can Question, Inspect and Appeal.</h2><p className="muted">Select a card for details.</p></div>
           <TrustTiles />
+          <div className="landing-governance">
+            <div><h3>Mapped to Singapore’s AI Governance Guidance</h3>
+              <ul className="chip-row"><li><Chip size="sm" tone="outline">AI Verify principles</Chip></li><li><Chip size="sm" tone="outline">Model AI Governance Framework</Chip></li><li><Chip size="sm" tone="outline">PDPA</Chip></li></ul>
+              <p>A self-assessment of a prototype on synthetic data, not a certification or legal advice.</p>
+              <p><a href={`${GITHUB}/blob/main/docs/responsible-ai.md`}>Read the Responsible AI Scorecard</a></p></div>
+            <div><h3>Known Limits</h3>
+              <p>Synthetic data only, two dispute types and English-only party messages. Chat analysis is keyword-based.</p>
+              <p><a href={`${GITHUB}/blob/main/docs/system-card.md`}>Read the System Card</a></p></div>
+          </div>
         </section>
         <section ref={resultsRef} className="landing-results" aria-labelledby="results-title">
           <div className="landing-section-head"><p className="eyebrow">Measured results</p><h2 id="results-title">Small Sample. Clear Benchmarks.</h2></div>
@@ -134,6 +161,26 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
             {index === 3 && <dd className="landing-result-caption">vs <strong>24–72 h</strong> today (Ryde's brief)</dd>}
           </div>)}</dl>
           <p className="landing-footnote muted">Synthetic data, not production results. Sample accuracy, latency and cost come from live Hy3 measurements; automation and repeatability come from the offline simulation. <a href={`${GITHUB}/blob/main/docs/evaluation.md`}>Evaluation</a> · <a href={`${GITHUB}/blob/main/docs/simulation.md`}>500-dispute simulation</a></p>
+        </section>
+        <section aria-labelledby="rollout-title">
+          <div className="landing-section-head"><p className="eyebrow">Beyond the hackathon</p><h2 id="rollout-title">A Careful Path from Shadow Mode to Scale.</h2><p className="muted">It starts with no customer impact and widens as agreement with reviewers holds.</p></div>
+          <ol className="landing-rollout">{ROLLOUT.map(step => <li key={step.title}>
+            <h3>{step.title}</h3>
+            <p className="landing-rollout-time">{step.time}</p>
+            <p>{step.detail}</p>
+          </li>)}</ol>
+          <dl className="landing-value">{VALUE_STATS.map(stat => <div key={stat.label}><dt>{stat.label}</dt><dd>{stat.value}</dd></div>)}</dl>
+          <p className="landing-note">An illustrative model at 5,000 disputes a day, 78% automated, 5–15 minutes a review and $20–30 an hour. The volume, review time and hourly cost are our assumptions, not Ryde’s. <a href={`${GITHUB}/blob/main/docs/business-case.md`}>Business case</a></p>
+        </section>
+        <section aria-labelledby="proof-title">
+          <div className="landing-section-head"><p className="eyebrow">Under the hood</p><h2 id="proof-title">Built to Be Checked.</h2></div>
+          <dl className="landing-proof">{ENGINEERING_PROOF.map(item => <div key={item.label}>
+            <dt>{item.label}</dt>
+            <dd className="landing-proof-value">{item.value}</dd>
+            <dd className="landing-proof-detail">{item.detail}</dd>
+          </div>)}</dl>
+          <p className="landing-proof-links"><a href={`${GITHUB}/blob/main/docs/architecture.md`}>Architecture Diagram</a><a href={`${GITHUB}/blob/main/docs/security.md`}>Security</a><a href={`${GITHUB}/blob/main/docs/api-contract.md`}>API Contract</a></p>
+          <p className="landing-note">Developed with Tencent Cloud CodeBuddy and WorkBuddy. The AI coding assistants Claude Code, OpenAI Codex and Kiro also helped build and review features. Every change went through a pull request, automated tests and CI. <a href={`${GITHUB}#built-with`}>How we built it</a></p>
         </section>
         <section aria-labelledby="try-title">
           <div className="landing-section-head"><p className="eyebrow">Try these cases</p><h2 id="try-title">Start with a Case, Then Follow the Reasoning.</h2><p className="muted">Opening a case loads its evidence. Agents run only when you press “Run agents”.</p></div>
@@ -148,12 +195,32 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
       </div>
     </main>
     <footer className="landing-footer"><div className="landing-wrap"><div><strong>TriVerity</strong> <span className="byline">By OeroAI</span><p className="muted">a hackathon prototype</p></div>
-      <nav aria-label="Documentation"><a href={`${GITHUB}/blob/main/docs/architecture.md`}>Architecture</a><a href={`${GITHUB}/blob/main/docs/security.md`}>Security</a><a href={`${GITHUB}/blob/main/docs/evaluation.md`}>Evaluation</a></nav>
+      <nav aria-label="Documentation"><a href={`${GITHUB}/blob/main/docs/architecture.md`}>Architecture</a><a href={`${GITHUB}/blob/main/docs/security.md`}>Security</a><a href={`${GITHUB}/blob/main/docs/evaluation.md`}>Evaluation</a><a href={`${GITHUB}/blob/main/docs/responsible-ai.md`}>Responsible AI</a><a href={`${GITHUB}/blob/main/docs/system-card.md`}>System Card</a><a href={`${GITHUB}/blob/main/docs/business-case.md`}>Business Case</a></nav>
     </div>
     <div className="landing-wrap landing-legal">
       <p>Built for Ryde’s challenge at the Tencent Cloud AI Hackathon Singapore 2026. Not affiliated with or endorsed by Ryde.</p>
       <p>© 2026 OeroAI. All rights reserved.</p>
     </div></footer>
+  </div>;
+}
+
+/** What the agents actually said on one case, then what the rules did with it. */
+function HearingExcerpt() {
+  return <div className="landing-hearing">
+    <div className="landing-hearing-head"><h3>From a Real Hearing</h3><p>Excerpts from a live Hy3 run on sample case D001.</p></div>
+    {HEARING_ROUNDS.map(round => <div className="landing-hearing-round" key={round.title}>
+      <h4>{round.title}</h4>
+      <div className="landing-hearing-sides">
+        <figure className="landing-hearing-side"><figcaption><Icon name="person" />For the Rider <Chip size="sm" tone="ai"><HunyuanMark />AI</Chip></figcaption><blockquote>{round.rider}</blockquote></figure>
+        <figure className="landing-hearing-side"><figcaption><Icon name="wheel" />For the Driver <Chip size="sm" tone="ai"><HunyuanMark />AI</Chip></figcaption><blockquote>{round.driver}</blockquote></figure>
+      </div>
+    </div>)}
+    <div className="landing-hearing-ruling">
+      <Icon name="scales" />
+      <div><strong>The rules decide: partial refund $6.30</strong>
+        <p>The route was 44% longer and took 59% longer, so the detour did not save time. Neither advocate sets the outcome.</p></div>
+      <a href="#/console/D001">Open This Case <span aria-hidden="true">→</span></a>
+    </div>
   </div>;
 }
 

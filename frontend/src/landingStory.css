@@ -1,0 +1,87 @@
+/* Landing sections that show the product at work: hearing, views, governance, rollout, proof. */
+.landing-subhead { margin: var(--space-8) 0 var(--space-4); font-size: 18px; font-weight: 500; letter-spacing: -.01em; }
+.landing-note { margin-top: var(--space-4); font-size: 12px; color: var(--muted); max-width: 900px; }
+
+/* Hearing excerpt */
+.landing-hearing { margin-top: var(--space-8); padding: var(--space-6); border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
+.landing-hearing-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-2) var(--space-4); }
+.landing-hearing-head h3 { margin: 0; font-size: 20px; font-weight: 500; letter-spacing: -.01em; }
+.landing-hearing-head p { font-size: 13px; color: var(--muted); }
+.landing-hearing-round { margin-top: var(--space-5); }
+.landing-hearing-round h4 { margin: 0 0 var(--space-3); font-size: 13px; font-weight: 600; color: var(--muted); }
+.landing-hearing-sides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.landing-hearing-side { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: var(--space-4); border-radius: 12px; background: var(--bg); border: 1px solid var(--border); }
+.landing-hearing-side figcaption { display: flex; align-items: center; gap: var(--space-2); font-size: 13px; font-weight: 600; }
+.landing-hearing-side figcaption .icon { width: 16px; height: 16px; }
+.landing-hearing-side blockquote { margin: 0; font-size: 14px; line-height: 1.5; }
+.landing-hearing-ruling { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-5); margin-top: var(--space-5); padding-top: var(--space-5); border-top: 1px solid var(--border); }
+.landing-hearing-ruling .icon { flex: none; width: 24px; height: 24px; color: var(--ok-text); }
+.landing-hearing-ruling div { flex: 1 1 320px; }
+.landing-hearing-ruling strong { color: var(--ok-text); font-size: 18px; font-weight: 600; }
+.landing-hearing-ruling p { font-size: 14px; color: var(--muted); }
+.landing-hearing-ruling a { font-size: 14px; }
+
+/* One case, three views */
+.landing-views { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
+.landing-view { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
+.landing-view-role { display: flex; align-items: center; gap: var(--space-3); }
+.landing-view-role .landing-stage-icon { flex: none; }
+.landing-view h3 { margin: 0; font-size: 20px; font-weight: 500; letter-spacing: -.01em; }
+.landing-view-need { font-size: 14px; color: var(--muted); }
+.landing-view-message { display: flex; flex-direction: column; flex: 1; gap: var(--space-2); padding: var(--space-4); border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
+.landing-view-tag { display: flex; justify-content: space-between; gap: var(--space-2); font-size: 12px; color: var(--muted); }
+.landing-view-tag strong { font-weight: 600; color: var(--text); }
+.landing-view-line { font-size: 17px; font-weight: 600; line-height: 1.3; }
+.landing-view-next { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-1); font-size: 13px; color: var(--muted); }
+
+/* Governance strip, under the trust tiles */
+.landing-governance { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: var(--space-4) var(--space-8); margin-top: var(--space-6); padding: var(--space-5) var(--space-6); border: 1px solid var(--border); border-radius: 16px; }
+.landing-governance h3 { margin: 0 0 var(--space-2); font-size: 16px; font-weight: 600; }
+.landing-governance p { font-size: 14px; color: var(--muted); }
+.landing-governance ul { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0 0 var(--space-3); padding: 0; list-style: none; }
+.landing-governance a { font-size: 14px; }
+
+/* Rollout and value */
+.landing-rollout { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-5); margin: 0; padding: 0; list-style: none; counter-reset: rollout; }
+.landing-rollout li { counter-increment: rollout; display: flex; flex-direction: column; gap: var(--space-1); padding-top: var(--space-3); border-top: 3px solid var(--step-line); }
+.landing-rollout li::before { content: counter(rollout); font-size: 13px; font-weight: 600; color: var(--accent-text); }
+.landing-rollout h3 { margin: 0; font-size: 18px; font-weight: 500; }
+.landing-rollout-time { font-size: 12px; font-weight: 600; color: var(--muted); }
+.landing-rollout p:last-child { font-size: 14px; color: var(--muted); margin-top: var(--space-1); }
+.landing-value { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-5); margin: var(--space-8) 0 0; padding: var(--space-5) var(--space-6); border-radius: 16px; background: var(--surface); }
+.landing-value > div { display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: var(--space-1); }
+.landing-value dt { font-size: 13px; color: var(--muted); }
+.landing-value dd { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+
+/* Engineering proof */
+.landing-proof { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-5); margin: 0; }
+.landing-proof > div { display: flex; flex-direction: column; gap: var(--space-1); }
+.landing-proof dt { order: 2; font-size: 14px; font-weight: 600; }
+.landing-proof .landing-proof-value { order: 1; margin: 0; font-size: 30px; font-weight: 600; letter-spacing: -.02em; color: var(--accent-text); font-variant-numeric: tabular-nums; }
+.landing-proof .landing-proof-detail { order: 3; margin: 0; font-size: 13px; color: var(--muted); }
+.landing-proof-links { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin-top: var(--space-6); font-size: 14px; }
+
+/* The third featured case fills its row instead of sitting alone. */
+@media (min-width: 761px) and (max-width: 1100px) {
+  .landing-case:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .landing-case:last-child:nth-child(odd) h3 { min-height: 0; }
+}
+@media (max-width: 1100px) {
+  .landing-rollout, .landing-proof { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .landing-views, .landing-governance { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .landing-hearing { padding: var(--space-4); }
+  .landing-hearing-sides, .landing-rollout, .landing-value { grid-template-columns: minmax(0, 1fr); }
+  .landing-proof { gap: var(--space-4); }
+  .landing-governance { padding: var(--space-4); }
+  .landing-value { padding: var(--space-4); }
+}
+
+.landing.presentation-mode .landing-hearing-side blockquote, .landing.presentation-mode .landing-hearing-ruling p,
+.landing.presentation-mode .landing-view-need, .landing.presentation-mode .landing-view-next, .landing.presentation-mode .landing-governance p,
+.landing.presentation-mode .landing-rollout p:last-child, .landing.presentation-mode .landing-proof .landing-proof-detail { font-size: 16px; }
+.landing.presentation-mode .landing-note, .landing.presentation-mode .landing-hearing-head p, .landing.presentation-mode .landing-value dt,
+.landing.presentation-mode .landing-rollout-time, .landing.presentation-mode .landing-view-tag { font-size: 14px; }
