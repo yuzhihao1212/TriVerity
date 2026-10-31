@@ -20,7 +20,7 @@ Live sample measurements and offline simulation results; [measurement context be
 
 ## A quick look
 
-Select an image to view it full size. [All eleven screenshots and their provenance](docs/screenshots/README.md).
+Select an image to view it full size. [All fourteen screenshots and their provenance](docs/screenshots/README.md).
 
 <table width="100%">
 <tr>
@@ -29,13 +29,37 @@ Select an image to view it full size. [All eleven screenshots and their provenan
 </tr>
 <tr>
 <td width="50%"><a href="docs/screenshots/04-evidence.png"><img src="docs/screenshots/04-evidence.png" alt="D001 evidence with the GPS route, stop timeline, fare checks and source facts" width="100%"></a><br><strong>Check the evidence</strong></td>
-<td width="50%"><a href="docs/screenshots/05-hearing.png"><img src="docs/screenshots/05-hearing.png" alt="Rider and driver arguments with key facts, evidence categories and rebuttals" width="100%"></a><br><strong>Hear both sides</strong></td>
+<td width="50%"><a href="docs/screenshots/05-hearing.png"><img src="docs/screenshots/05-hearing.png" alt="Rider and driver arguments side by side: who cited what, each side's point, and the detail folded under it" width="100%"></a><br><strong>Hear both sides</strong></td>
 </tr>
 <tr>
-<td width="50%"><a href="docs/screenshots/06-ruling.png"><img src="docs/screenshots/06-ruling.png" alt="Ruling with the outcome, confidence, explanation and accept or override controls" width="100%"></a><br><strong>Review the ruling</strong></td>
+<td width="50%"><a href="docs/screenshots/06-ruling.png"><img src="docs/screenshots/06-ruling.png" alt="Ruling that leads with the outcome and why, what the rules found, what would change it, and accept or override controls" width="100%"></a><br><strong>Review the ruling</strong></td>
 <td width="50%"><a href="docs/screenshots/07-notify.png"><img src="docs/screenshots/07-notify.png" alt="Delivered rider and driver phone messages with an optional reviewer note" width="100%"></a><br><strong>Approve the party messages</strong></td>
 </tr>
+<tr>
+<td width="50%"><a href="docs/screenshots/12-rules-for-this-case.png"><img src="docs/screenshots/12-rules-for-this-case.png" alt="D008 ruling explaining why it needs a person, with each policy rule and its result on this case in a side panel" width="100%"></a><br><strong>See every rule's result on this case</strong></td>
+<td width="50%"><a href="docs/screenshots/13-case-report.png"><img src="docs/screenshots/13-case-report.png" alt="Printable case report for D008 with its status, rules, evidence, arguments and how AI was used" width="100%"></a><br><strong>Save a case report as PDF</strong></td>
+</tr>
 </table>
+
+## New for Demo Day
+
+Added on 31 Oct 2026, after the hackathon submission. None of this changes the policy rules or how a ruling is decided;
+it makes the console easier for a real reviewer to use. The demo video was recorded before these changes.
+
+- **AI Review for the whole queue:** one button runs the waiting sample cases. Routine ones close themselves, and the
+  rest stay in your queue, [safety first, then oldest](docs/screenshots/02-reviewer-home.png).
+- **A confirmation before it runs:** [AI Review says what it will do](docs/screenshots/14-ai-review-confirm.png), with
+  the approximate AI cost and a warning that routine cases close and notify the rider and driver.
+- **A plainer Ruling:** [it opens with the outcome and why](docs/screenshots/06-ruling.png), then what the rules found
+  and what would change it. When a person must decide, it says [why, and what each side asks for](docs/screenshots/12-rules-for-this-case.png).
+- **Bad-faith risk comes with its reasons:** an escalation lists the signals behind it, and says a signal isn't proof.
+- **Rules for This Case:** [each rule's result on this case](docs/screenshots/12-rules-for-this-case.png), with the full
+  policy one click away, so a reviewer doesn't have to remember it.
+- **Case reports:** a [printable report for each case](docs/screenshots/13-case-report.png), saved as PDF from the
+  browser. It opens from the case page or the side menu, says whether the outcome is final, and is marked internal.
+- **Shorter Hearing cards:** [each side's point first](docs/screenshots/05-hearing.png), with the argument and evidence folded beneath it.
+- **A simpler Evidence step:** [a list of findings](docs/screenshots/04-evidence.png), one source at a time, with flagged items first.
+- **Clearer AI labels:** if AI Live is on but a result used fallback text, the Ruling says so and suggests a re-run.
 
 ## Architecture
 
@@ -43,7 +67,7 @@ Select an image to view it full size. [All eleven screenshots and their provenan
 
 [Read the architecture](docs/architecture.md) · [Watch live progress](docs/screenshots/03-live-progress.png) · [Closed review and correction history](docs/screenshots/08-closed-case.png) · [A case that closed itself](docs/screenshots/11-auto-resolved.png)
 
-**On this page:** [Results](#results) · [What it does](#what-it-does) · [Ryde requirements](#ryde-requirements-where-to-see-each) · [Documentation](#documentation) · [Run it locally](#run-it-locally) · [What's next](#whats-next) · [Built with](#built-with)
+**On this page:** [New for Demo Day](#new-for-demo-day) · [Results](#results) · [What it does](#what-it-does) · [Ryde requirements](#ryde-requirements-where-to-see-each) · [Documentation](#documentation) · [Run it locally](#run-it-locally) · [What's next](#whats-next) · [Built with](#built-with)
 
 ## Results
 
@@ -110,12 +134,13 @@ same facts always give the same ruling, and every ruling is explained.
   case, and automatic decisions never become precedents
 - **Observable**: the demo UI shows the evidence, each agent's argument and citations, the fraud risk, and
   whether the AI or the fallback produced each step
-- **Reviewer workflow**: home queue → Evidence → Hearing → Ruling (accept or override) → Notify
+- **Reviewer workflow**: home queue (**AI Review** runs the waiting cases, after a confirmation) → Evidence → Hearing → Ruling (accept or override) → Notify
   (optional reviewer note and privacy check). Internal IDs and assessments in a note block sending;
   everyday words such as "history" only warn. Sending closes the case; a deliberate reopen permits a
   correction, while history keeps every sent message. An investigation or a refund above the reviewer's
   limit puts the case on hold (simulated) and nobody is notified. Parties can appeal after delivery.
-  Review state, including holds, is kept in the browser session.
+  Review state, including holds, is kept in the browser session. Any case with a result can be saved as a
+  [PDF report](docs/screenshots/13-case-report.png).
 
 ## Responsible AI and security
 
@@ -158,7 +183,7 @@ The full threat model is in [docs/security.md](docs/security.md).
 | **Observable inter-agent communication** | [Live progress](docs/screenshots/03-live-progress.png), [Hearing](docs/screenshots/05-hearing.png), [streamed agent log](docs/api-contract.md#post-apidisputesresolvestream); “How this step was decided” on every console step |
 | **Architecture diagram** | [Diagram](docs/architecture.svg), [design explanation](docs/architecture.md) |
 | **Stretch: Evidence Collection agent** | [Per-side tool calls over mock Ryde data APIs](docs/architecture.md#flow) |
-| **Stretch: Fraud & Bad-Faith detection** | [Deterministic risk from history and contradicted claims](docs/architecture.md#flow); [Ruling](docs/screenshots/06-ruling.png). Risk scores feed the Judge; the History card flags high risk. |
+| **Stretch: Fraud & Bad-Faith detection** | [Deterministic risk from history and contradicted claims](docs/architecture.md#flow); [Ruling, with the reasons listed](docs/screenshots/12-rules-for-this-case.png). Risk scores feed the Judge; the Evidence History card stays neutral. |
 | **Stretch: Policy & Precedent agent** | [Retrieval and reviewer feedback](docs/architecture.md#flow); [Ruling](docs/screenshots/06-ruling.png) |
 | **Stretch: Escalation protocol** | [Priority tiers](docs/architecture.md#review-triage-and-the-queue-and-sla-layer-it-feeds): low confidence, threats, missing data or high risk → human review |
 | **Stretch: Learning feedback loop** | [Reviewer decisions and appeals become precedents](docs/architecture.md#flow); [closed-case corrections and history](docs/screenshots/08-closed-case.png) |
@@ -170,7 +195,7 @@ The full threat model is in [docs/security.md](docs/security.md).
 [Documentation index](docs/README.md): architecture, responsible AI, security, evaluation, business case,
 API, deployment, submission and milestones, each with a short description.
 
-**Verified on 30 Oct 2026:** 941 backend tests and 361 frontend tests pass. Tests never call a real LLM.
+**Verified on 31 Oct 2026:** 955 backend tests and 428 frontend tests pass. Tests never call a real LLM.
 
 ## Run it locally
 
@@ -218,8 +243,8 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`, open the reviewer console, pick a sample dispute and press **Run agents**. Each run
-makes 7–9 LLM calls (about 10,000 tokens); switch **AI** to **Offline** in the header to run it free.
+Open `http://localhost:5173`, open the reviewer console, pick a sample dispute and press **Run Agents**. Each run
+makes 7–9 LLM calls (about 10,000 tokens); switch **AI Live** to **AI Off** in the header to run it free.
 
 ### Tests and evaluation
 
@@ -292,7 +317,7 @@ with tests and CI, and measured on live Hy3 before claiming any number.
 - **Turn failures into rules.** Every rule in our prompts and output checks exists because live Hy3 output broke
   it once. For example, advocates cited rules that favoured the other side (9 times in 14 cases) until a prompt
   change cut it to 2 ([prompts.md](docs/prompts.md)).
-- **Verify everything.** We checked every AI change with tests (1,302 in total) and every AI-written claim against
+- **Verify everything.** We checked every AI change with tests (1,383 in total) and every AI-written claim against
   the code. WorkBuddy's consistency review of our own docs found facts that had drifted between files.
 - **Use tools for what they're good at.** CodeBuddy for the AI core, WorkBuddy as a reviewer of our writing,
   Miora for visuals, and Claude Code, OpenAI Codex and Kiro for features, refactors and code review, all

@@ -94,7 +94,7 @@ call at all: the ruling is identical (rules decide), and every `source` and
 `explanation_source` is `"fallback"`, so arguments and explanations use template text.
 Offline runs cost nothing, so they don't count against the daily LLM budget and, in public demo
 mode, bypass the result cache (they never read or fill it). Rate limits and resolve slots
-still apply. The console's **AI Live / Offline** switch sets this. `/resolve/stream` accepts it too.
+still apply. The console's **AI Live / AI Off** switch sets this. `/resolve/stream` accepts it too.
 
 ### Public demo mode (`PUBLIC_DEMO=true`)
 

@@ -123,7 +123,7 @@ TriVerity targets each of these:
   favour the other side (9 wrong-side citations in 14 cases, down to 2 after the prompt change).
 
 **Technology:** Tencent Hy3 through Tencent Cloud TokenHub; Python FastAPI backend; React + TypeScript
-frontend; 941 backend and 361 frontend tests (verified on 30 Oct 2026); a Docker image and Render Blueprint for the live
+frontend; 955 backend and 428 frontend tests (verified on 31 Oct 2026); a Docker image and Render Blueprint for the live
 demo (https://triverity-demo.onrender.com). **Built with:** Tencent Cloud **CodeBuddy**
 (the LLM client, advocate agents, hardening, UI badges and the Fraud & Bad-Faith detector); **WorkBuddy**
 (Hy4 preview) to polish this submission text, review the docs for consistency, prepare judge Q&A and
