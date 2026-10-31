@@ -1750,6 +1750,41 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .case-brief-claim { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .case-brief-row ul { padding-left: var(--space-4); }
 .case-brief-note { color: var(--muted); font-size: 12px; }
+/* Past Intake the brief is one line and the stepper one row, so the step's content comes first. */
+.case-brief.is-compact { display: block; margin-bottom: var(--space-3); padding: var(--space-2) var(--space-3); }
+.case-brief.is-compact > summary { display: flex; align-items: center; gap: var(--space-2); min-height: 24px; cursor: pointer; list-style: none; }
+.case-brief.is-compact > summary::-webkit-details-marker { display: none; }
+.case-brief.is-compact h3 { flex: none; font-size: 13px; }
+.case-brief-line { min-width: 0; overflow: hidden; color: var(--muted); font-size: 13px; white-space: nowrap; text-overflow: ellipsis; }
+.case-brief-chevron { flex: none; width: 14px; height: 14px; transition: rotate .15s ease; }
+.case-brief.is-compact[open] .case-brief-chevron { rotate: 90deg; }
+.case-brief.is-compact[open] .case-brief-line { display: none; }
+.case-brief.is-compact[open] dl { margin-top: var(--space-2); }
+.workflow-bar.is-compact { margin-bottom: var(--space-4); }
+.workflow-bar.is-compact .stepper-position { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.workflow-bar.is-compact .stepper-track, .workflow-bar.is-compact .tab-progress, .workflow-bar.is-compact .step-next, .workflow-bar.is-compact .step-icon { display: none; }
+.workflow-bar.is-compact .stepper-wrap { --circle: 22px; }
+.workflow-bar.is-compact .step { --circle: 22px; flex-direction: row; justify-content: center; gap: var(--space-2); padding: var(--space-1); }
+.workflow-bar.is-compact .step-circle { font-size: 11px; }
+.workflow-bar.is-compact .step-circle .icon { width: 12px; height: 12px; }
+.workflow-bar.is-compact .step-name { margin-top: 0; }
+.workflow-bar.is-compact .step.current .step-circle { transform: none; }
+.workflow-bar.is-compact .step.current { background: var(--surface); }
+@media (max-width: 760px) {
+  .workflow-bar.is-compact .step { flex-direction: column; gap: 2px; }
+  .workflow-bar.is-compact .step-name { flex-direction: row; }
+}
+/* The first-visit guide: the owl's step on the queue, a plain note on a case. */
+.owl-guide { margin: var(--space-2) 0 0; padding-top: var(--space-2); border-top: 1px solid var(--border); color: var(--text); font-size: 13px; }
+.owl-guide .text-button { margin-left: var(--space-1); font-size: 13px; }
+.case-guide { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); margin-bottom: var(--space-3); padding: var(--space-2) var(--space-3); border: 1px solid var(--accent-text); border-radius: 12px; font-size: 13px; }
+.case-guide p { flex: 1 1 280px; margin: 0; }
+.case-guide-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.is-guide-target { outline: 2px solid var(--accent-text); outline-offset: 3px; }
+@media (prefers-reduced-motion: no-preference) {
+  .is-guide-target { animation: guide-pulse 1.8s ease-in-out infinite; }
+}
+@keyframes guide-pulse { 50% { outline-offset: 6px; } }
 .run-cost { position: relative; display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; }
 .run-cost-note { color: var(--muted); font-size: 13px; }
 .run-cost-info { color: var(--muted); flex: none; }

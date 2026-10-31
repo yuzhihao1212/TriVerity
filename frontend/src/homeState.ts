@@ -86,11 +86,31 @@ export function nextToReview<T extends QueueRow>(rows: T[], currentId: string, h
 }
 
 /** Announced when AI Review ends, about the cases that batch ran; null while running or before any run. */
-export function reviewSummary(rows: Pick<QueueRow, "id" | "status">[], ran: readonly string[]): string | null {
+export function reviewSummary(rows: Pick<QueueRow, "id" | "status">[], ran: readonly string[], seconds: number | null = null): string | null {
   const batch = rows.filter(row => ran.includes(row.id) && row.status !== "not_run");
   if (!batch.length) return null;
   const policy = batch.filter(row => row.status === "auto").length;
-  return `Reviewed ${batch.length} ${batch.length === 1 ? "case" : "cases"}: ${batch.length - policy} require attention, ${policy} decided by policy.`;
+  const each = seconds == null ? "" : `, ${seconds < 1 ? "under 1 s" : `about ${Math.round(seconds)} s`} ${batch.length === 1 ? "to run" : "each"}`;
+  return `Reviewed ${batch.length} ${batch.length === 1 ? "case" : "cases"}${each}: ${batch.length - policy} ${batch.length - policy === 1 ? "requires" : "require"} attention, ${policy} decided by policy.`;
+}
+
+/**
+ * How long a case's agents took, first step's start to last step's end (parallel steps overlap).
+ * This comes from the run that made the result, so a saved sample reports its real run, not the
+ * instant it took to fetch. Null when the log has no timings.
+ */
+export function runSeconds(log: { started_at?: string | null; duration_ms?: number | null }[]): number | null {
+  const steps = log.flatMap(step => {
+    const start = step.started_at ? Date.parse(step.started_at) : NaN;
+    return Number.isFinite(start) ? [{ start, end: start + (step.duration_ms ?? 0) }] : [];
+  });
+  if (!steps.length) return null;
+  return (Math.max(...steps.map(step => step.end)) - Math.min(...steps.map(step => step.start))) / 1000;
+}
+
+export function averageRunSeconds(logs: Parameters<typeof runSeconds>[0][]): number | null {
+  const times = logs.map(runSeconds).filter((time): time is number => time != null);
+  return times.length ? times.reduce((sum, time) => sum + time, 0) / times.length : null;
 }
 
 /** The two tiles over the lists; both zero until a case has run. */

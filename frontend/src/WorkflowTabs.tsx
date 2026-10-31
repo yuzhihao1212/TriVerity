@@ -13,7 +13,7 @@ const STEP_ICONS: Record<WorkflowTab, string> = {
 
 const prefersReducedMotion = () => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, auto = false, held = false, decisionRecorded = false, closed = false, unlocking = false, onChange, render }: {
+export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, auto = false, held = false, decisionRecorded = false, closed = false, unlocking = false, compact = false, onChange, render }: {
   active: WorkflowTab;
   resolution?: Resolution;
   busy: boolean;
@@ -29,6 +29,8 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, au
   unlocking?: boolean;
   decisionRecorded?: boolean;
   closed?: boolean;
+  /** Past Intake: one slim row, so the step's content comes first. */
+  compact?: boolean;
   onChange: (tab: WorkflowTab) => void;
   render: (tab: WorkflowTab) => ReactNode;
 }) {
@@ -96,7 +98,7 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, au
     refs.current[next]?.focus();
   }
   return <>
-    <div className="workflow-bar">
+    <div className={`workflow-bar${compact ? " is-compact" : ""}`}>
       <p className="stepper-position" aria-live="polite">{positionText(activeIndex, WORKFLOW_TABS.length, WORKFLOW_TABS[activeIndex].label)}</p>
       <div className="stepper-wrap">
       {/* The pink line: position only, from step 1 to the current step. */}

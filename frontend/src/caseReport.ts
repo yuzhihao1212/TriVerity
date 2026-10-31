@@ -27,10 +27,12 @@ function outcomeText(decision: Decision, amount?: number | null) {
 
 /** A recorded decision is still a draft outcome until this review's messages were sent. */
 export function reportStatus({ resolution, saved, hold, sent, latest }: ReportState) {
+  if (sent?.reviewer?.kind === "auto") return { final: true, label: "Final: Closed Automatically",
+    note: `The rules closed this case with no person involved. Sent to the rider and driver: ${sentOutcomeText(sent)}.` };
   if (sent) return { final: true, label: sent.correction ? "Final: Correction Sent" : "Final",
     note: `Sent to the rider and driver: ${sentOutcomeText(sent)}.` };
   if (latest) return { final: false, label: "Not Final: Reopened",
-    note: `Earlier outcome sent to the rider and driver: ${sentOutcomeText(latest)}. Nothing has been sent in this review.` };
+    note: `Earlier outcome sent to the rider and driver${latest.reviewer?.kind === "auto" ? ", with no person involved" : ""}: ${sentOutcomeText(latest)}. Nothing has been sent in this review.` };
   if (hold) return { final: false, label: "Not Final: On Hold", note: "Waiting for a second reviewer. Nothing has been sent." };
   if (saved) return { final: false, label: "Not Final: Not Yet Sent",
     note: `Decided: ${outcomeText(saved.decision, saved.amount ?? (saved.kind === "accepted" ? resolution.refund_amount : null))}. Nothing has been sent.` };

@@ -55,7 +55,7 @@ export function reviewRows(resolution: Pick<Resolution, "risk" | "precedents" | 
   // The card above shows the outcome and the checks, so "why" here is only the Judge's own words.
   const rows: { id: CheckRowId; question: string; answer: string; tone: "ok" | "warn" | "neutral"; icon: string }[] = [
     { id: "why", question: "In Plain Words", answer: "How the Judge explains the rules and each side’s argument.", tone: "neutral", icon: "scales" },
-    { id: "risk", question: "Anything Suspicious?", answer: signals.length ? `${signals.length} ${signals.length === 1 ? "signal" : "signals"}: ${signals[0]}` : "No risk signals", tone: signals.length ? "warn" : "ok", icon: signals.length ? "warning" : "shield" },
+    { id: "risk", question: "Anything Suspicious?", answer: signals.length ? `${signals.length} ${signals.length === 1 ? "signal" : "signals"}: ${signals.join("; ")}` : "No risk signals", tone: signals.length ? "warn" : "ok", icon: signals.length ? "warning" : "shield" },
     { id: "precedents", question: "Has This Happened Before?", answer: precedentSummary(resolution.precedents), tone: "neutral", icon: "history" },
     { id: "changes", question: "What Would Change the Outcome?", answer: resolution.counterfactuals?.length ? "Explore alternative facts and their outcomes." : "No alternative conditions supplied in this result", tone: "neutral", icon: "arrow" },
   ];

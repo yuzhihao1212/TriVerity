@@ -5,6 +5,7 @@ import { Chip } from "./Chip";
 import { useIntroOnce } from "./EvidenceStories";
 import { GUIDED_DEMO, greeting, greetingLine, guidedDemoSteps, queueSegments, queueSummary, readFolded, rerunnable, reviewButtonLabel, reviewConfirm, reviewNote, reviewSummary, reviewTiles, shortDate, writeFolded } from "./homeState";
 import { Icon } from "./Icon";
+import { homeGuide } from "./firstVisitGuide";
 import { HomeOwl } from "./HomeOwl";
 import { DECISION_LABELS } from "./outcomeTone";
 import { disputeTitle } from "./presentation";
@@ -27,11 +28,11 @@ function writeDemoOpen(open: boolean) {
 }
 
 /** A status bar over the queue, a folded guided demo (hidden for now: GUIDED_DEMO), and the case list. */
-export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissing, onReview, sampleIds, heldIds, runAllProgress, aiMode, fallbacks, typeIcon, presentation = false }: {
+export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissing, onReview, sampleIds, heldIds, runAllProgress, aiMode, fallbacks, typeIcon, presentation = false, guideDone = true, onEndGuide, runSeconds = null }: {
   rows: HomeRow[]; holds?: HoldRecord[]; appealsWaiting: number | null; showStart: boolean;
   missing: string | null; onDismissMissing: () => void;
   onReview: (ids: string[]) => void; sampleIds: ReadonlySet<string>; heldIds: readonly string[]; runAllProgress?: RunAllProgress | null; aiMode: AiMode; fallbacks: number;
-  typeIcon: (type: DisputeCase["type"]) => JSX.Element; presentation?: boolean;
+  typeIcon: (type: DisputeCase["type"]) => JSX.Element; presentation?: boolean; guideDone?: boolean; onEndGuide?: () => void; runSeconds?: number | null;
 }) {
   const summaryParts = queueSummary(rows, appealsWaiting != null);
   const running = !!runAllProgress?.running;
@@ -64,7 +65,7 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
   function toggleDemo() {
     setDemoOpen(open => { writeDemoOpen(!open); return !open; });
   }
-  const ranSummary = runAllProgress && !running ? reviewSummary(rows, runAllProgress.ids) : null;
+  const ranSummary = runAllProgress && !running ? reviewSummary(rows, runAllProgress.ids, runSeconds) : null;
   const ranNote = runAllProgress && !running ? reviewNote(runAllProgress.mode, runAllProgress.ids.length, fallbacks) : null;
   const casesBox = useRef<HTMLElement>(null);
   useRearrange(casesBox, running);
@@ -72,6 +73,7 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
   // coming back to the queue later shows it at once.
   const play = useIntroOnce(HOME_SEEN_KEY, "home");
   const [hello] = useState(() => greeting(new Date().getHours()));
+  const guide = homeGuide({ done: guideDone, presentation, running, canReview: newIds.length > 0, toReview: !!startWith, aiLive: aiMode === "live" });
   return <section className={`home${play ? " home-entering" : ""}`} aria-labelledby="home-title">
     {missing && <p className="home-note" role="status">
       <Icon name="info" />Case {missing} not found
@@ -79,7 +81,7 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
         <Icon name="cross" /></button>
     </p>}
     <div className="home-greeting">
-      <HomeOwl hello={hello} greeting={greetingLine(rows, heldIds)} rows={rows} progress={runAllProgress} presentation={presentation} />
+      <HomeOwl hello={hello} greeting={greetingLine(rows, heldIds)} rows={rows} progress={runAllProgress} presentation={presentation} guide={guide} onSkipGuide={onEndGuide} />
     </div>
     <div className="home-head">
       <h2 id="home-title">Your Queue</h2>
@@ -92,8 +94,8 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
         </span>
       </div>}
       <div className="home-head-actions">
-        {reviewed && startWith && <a className="run-button home-start-reviewing" href={caseHash(startWith.id)}>Start Reviewing<Icon name="arrow" /></a>}
-        <button type="button" ref={runButton} aria-expanded={!!confirm} className={`${reviewed && startWith ? "secondary-button" : "run-button"} home-run-all`} disabled={running || (newIds.length === 0 && rerunIds.length === 0)}
+        {reviewed && startWith && <a className={`run-button home-start-reviewing${guide?.target === "start" ? " is-guide-target" : ""}`} href={caseHash(startWith.id)}>Start Reviewing<Icon name="arrow" /></a>}
+        <button type="button" ref={runButton} aria-expanded={!!confirm} className={`${reviewed && startWith ? "secondary-button" : "run-button"} home-run-all${guide?.target === "review" && !confirm ? " is-guide-target" : ""}`} disabled={running || (newIds.length === 0 && rerunIds.length === 0)}
           title={!running && newIds.length === 0 && rerunIds.length === 0 ? "Nothing is open to re-run" : undefined}
           onClick={() => setConfirming(true)}>
           <Icon name="scales" />{reviewButtonLabel(aiMode, { running, total: runAllProgress?.total ?? 0, fresh: newIds.length, anyRun: reviewed })}
@@ -112,7 +114,7 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
       <p className="home-tile"><strong>{tiles.attention}</strong> require attention</p>
       <p className="home-tile"><strong>{tiles.policy}</strong> decided by policy</p>
     </div>}
-    {ranSummary && <p className="sr-only" role="status">{ranSummary}</p>}
+    {ranSummary && <p className="home-run-note home-run-result" role="status"><Icon name="check" />{ranSummary}</p>}
     {ranNote && <p className="home-run-note"><Icon name="info" />{ranNote}</p>}
     {GUIDED_DEMO && <section className={`home-start${demoOpen ? " open" : ""}`} aria-labelledby="home-start-title">
       <h3 id="home-start-title"><button type="button" className="home-start-toggle" aria-expanded={demoOpen} aria-controls="home-start-body" onClick={toggleDemo}>

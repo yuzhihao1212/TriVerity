@@ -20,7 +20,7 @@ Live sample measurements and offline simulation results; [measurement context be
 
 ## A quick look
 
-Select an image to view it full size. [All fourteen screenshots and their provenance](docs/screenshots/README.md).
+Select an image to view it full size. [All fifteen screenshots and their provenance](docs/screenshots/README.md).
 
 <table width="100%">
 <tr>
@@ -48,15 +48,21 @@ it makes the console easier for a real reviewer to use. The demo video was recor
 
 - **AI Review for the whole queue:** one button runs the waiting sample cases. Routine ones close themselves, and the
   rest stay in your queue, [safety first, then oldest](docs/screenshots/02-reviewer-home.png).
+- **A first-visit guide:** [three short steps](docs/screenshots/15-first-visit-guide.png) from the queue to a decision,
+  following what you've actually done. The owl gives the first two; the last is a plain note on the case.
 - **A confirmation before it runs:** [AI Review says what it will do](docs/screenshots/14-ai-review-confirm.png), with
   the approximate AI cost and a warning that routine cases close and notify the rider and driver.
+- **A measured result:** after a run, [the queue says how many cases ran, how long each took](docs/screenshots/02-reviewer-home.png)
+  and how many need a person. The time comes from the agents' own log, so a saved sample reports its real run.
+- **The answer first:** past Intake, the brief and stepper shrink to one line each, so the verdict appears
+  [without scrolling](docs/screenshots/06-ruling.png) on a laptop screen. The brief opens with a click.
 - **A plainer Ruling:** [it opens with the outcome and why](docs/screenshots/06-ruling.png), then what the rules found
   and what would change it. When a person must decide, it says [why, and what each side asks for](docs/screenshots/12-rules-for-this-case.png).
-- **Bad-faith risk comes with its reasons:** an escalation lists the signals behind it, and says a signal isn't proof.
+- **Bad-faith risk comes with its reasons:** an escalation lists every signal behind it, and says a signal isn't proof.
 - **Rules for This Case:** [each rule's result on this case](docs/screenshots/12-rules-for-this-case.png), with the full
   policy one click away, so a reviewer doesn't have to remember it.
 - **Case reports:** a [printable report for each case](docs/screenshots/13-case-report.png), saved as PDF from the
-  browser. It opens from the case page or the side menu, says whether the outcome is final, and is marked internal.
+  browser. It opens from the case page or the side menu, says whether the outcome is final, says when no person was involved, and is marked internal.
 - **Shorter Hearing cards:** [each side's point first](docs/screenshots/05-hearing.png), with the argument and evidence folded beneath it.
 - **A simpler Evidence step:** [a list of findings](docs/screenshots/04-evidence.png), one source at a time, with flagged items first.
 - **A livelier owl:** click it for a tip about how TriVerity works, watch it follow AI Review from the progress bar, and
@@ -197,7 +203,7 @@ The full threat model is in [docs/security.md](docs/security.md).
 [Documentation index](docs/README.md): architecture, responsible AI, security, evaluation, business case,
 API, deployment, submission and milestones, each with a short description.
 
-**Verified on 31 Oct 2026:** 975 backend tests and 433 frontend tests pass. Tests never call a real LLM.
+**Verified on 31 Oct 2026:** 975 backend tests and 441 frontend tests pass. Tests never call a real LLM.
 
 ## Run it locally
 
@@ -319,7 +325,7 @@ with tests and CI, and measured on live Hy3 before claiming any number.
 - **Turn failures into rules.** Every rule in our prompts and output checks exists because live Hy3 output broke
   it once. For example, advocates cited rules that favoured the other side (9 times in 14 cases) until a prompt
   change cut it to 2 ([prompts.md](docs/prompts.md)).
-- **Verify everything.** We checked every AI change with tests (1,408 in total) and every AI-written claim against
+- **Verify everything.** We checked every AI change with tests (1,416 in total) and every AI-written claim against
   the code. WorkBuddy's consistency review of our own docs found facts that had drifted between files.
 - **Use tools for what they're good at.** CodeBuddy for the AI core, WorkBuddy as a reviewer of our writing,
   Miora for visuals, and Claude Code, OpenAI Codex and Kiro for features, refactors and code review, all
