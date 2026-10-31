@@ -39,3 +39,52 @@ test('the cheer says what the reviewer did, then what is left', () => {
   assert.match(m.cheerLine({ caseId: 'D002', closedByYou: 4, left: 0 }).detail, /Your queue is all clear\.$/);
   assert.notEqual(m.cheerLine({ caseId: 'x', closedByYou: 1, left: 0 }).title, m.cheerLine({ caseId: 'x', closedByYou: 2, left: 0 }).title);
 });
+
+test('five quick clicks ruffle the owl and start the count again; slow clicks never do', () => {
+  let times = [];
+  for (const now of [0, 100, 200, 300]) {
+    const poke = m.registerPoke(times, now);
+    assert.equal(poke.ruffled, false);
+    times = poke.times;
+  }
+  const fifth = m.registerPoke(times, 400);
+  assert.equal(fifth.ruffled, true);
+  assert.deepEqual(fifth.times, []);
+  let slow = [];
+  for (let n = 0; n < 8; n += 1) {
+    const poke = m.registerPoke(slow, n * 1000);
+    assert.equal(poke.ruffled, false);
+    slow = poke.times;
+  }
+});
+
+test('the owl naps only after a quiet minute, when allowed and not watching a run', () => {
+  assert.equal(m.shouldNap(59999, { naps: true, watching: false }), false);
+  assert.equal(m.shouldNap(60000, { naps: true, watching: false }), true);
+  assert.equal(m.shouldNap(90000, { naps: false, watching: false }), false, 'Presentation mode stays awake');
+  assert.equal(m.shouldNap(90000, { naps: true, watching: true }), false);
+});
+
+test('during AI Review the owl has no count until the batch answers', () => {
+  const lines = new Set([0, 1, 2, 3].map(tick => m.watchLine({ done: 0, total: 9, tick })));
+  assert.equal(lines.size, 3);
+  for (const line of lines) assert.doesNotMatch(line, /\d/);
+  assert.equal(m.watchLine({ done: 3, total: 9, tick: 5 }), '3 of 9 ready…');
+});
+
+test('the owl reports how AI Review went, counting only the cases that ran and got a result', () => {
+  const row = (id, status) => ({ id, status });
+  const rows = [row('A', 'auto'), row('B', 'decide'), row('C', 'auto'), row('D', 'not_run'), row('E', 'decide')];
+  assert.equal(m.reviewedLine(rows, ['A', 'B', 'C', 'D']), 'Done. 1 needs you, 2 closed themselves.');
+  assert.equal(m.reviewedLine(rows, ['A', 'B', 'E']), 'Done. 2 need you, 1 closed itself.');
+  assert.equal(m.reviewedLine(rows, ['A', 'C']), 'Done. All 2 closed themselves, so nothing needs you.');
+  assert.equal(m.reviewedLine(rows, ['A']), 'Done. It closed itself, so nothing needs you.');
+  assert.equal(m.reviewedLine(rows, ['B']), 'Done. It needs you.');
+  assert.equal(m.reviewedLine(rows, ['B', 'E']), 'Done. All 2 need you.');
+  assert.equal(m.reviewedLine(rows, ['D']), null);
+});
+
+test('the tips are short enough for the bubble, and none repeats', () => {
+  assert.equal(new Set(m.OWL_TIPS).size, m.OWL_TIPS.length);
+  for (const tip of m.OWL_TIPS) assert.ok(tip.length <= 80, tip);
+});

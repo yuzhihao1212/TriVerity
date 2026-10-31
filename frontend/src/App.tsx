@@ -616,7 +616,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
           </section>}
           {onHome && <Home rows={queueRows} holds={decision.holds()} appealsWaiting={appeals === null ? null : waitingIds.size} showStart={Object.keys(results).length === 0}
             missing={missing} onDismissMissing={() => setMissing(null)} onReview={reviewCases} sampleIds={sampleIds} heldIds={decision.holds().map(hold => hold.disputeId)} runAllProgress={runAll} aiMode={aiMode} typeIcon={type => <TypeIcon type={type} />}
-            fallbacks={runAll ? runAll.ids.filter(id => results[id] && usedFallback(results[id])).length : 0} />}
+            fallbacks={runAll ? runAll.ids.filter(id => results[id] && usedFallback(results[id])).length : 0} presentation={presentation} />}
           {!form && resolving && resolving !== selected?.dispute_id && <p className="small muted">Agents are working on {resolving}. This case remains available.</p>}
           {form && <DisputeForm key={form.template?.dispute_id ?? "blank"} template={form.template} onSubmit={addOwn} onCancel={() => setForm(null)}
             accessCode={accessCode} onAccessCodeChange={changeAccessCode} />}
