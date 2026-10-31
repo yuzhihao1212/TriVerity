@@ -581,7 +581,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
           <div className="sidebar-head">
             <SidebarToggle open={sidebarOpen} onToggle={toggleSidebar} />
             <a className={`icon-button home-button${onHome ? " is-current" : ""}`} href={HOME_HASH} aria-current={onHome ? "page" : undefined}
-              aria-label={onHome ? "Queue" : "Back to queue"} title={onHome ? "Queue" : "Back to queue"}><Icon name="home" /></a>
+              aria-label="Home" title="Home"><Icon name="home" /></a>
             {sidebarOpen
               ? <div className="sidebar-actions">
                   <FilterMenu value={filter} onChange={changeFilter} />
@@ -646,7 +646,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
             {reviewId && <ClosedCase disputeId={selected.dispute_id} sent={sent} latest={latestSent}
               events={sentRecords().events(reviewId)} earlier={sentRecords().earlier(selected.dispute_id, reviewId)}
               appealWaiting={waitingIds.has(selected.dispute_id)} openedAt={reviews().openedAt(reviewId)}
-              nextLabel={following?.label ?? "Back to queue"} onNext={goToFollowing} nextPrimary={activeTab !== "notify" || !following} onReopen={reopenCase} />}
+              nextLabel={following?.label ?? "Home"} onNext={goToFollowing} nextPrimary={activeTab !== "notify" || !following} onReopen={reopenCase} />}
             <CaseHeader dispute={selected} resolution={resolution} busy={resolving === selected.dispute_id} streaming={streaming} progress={progress}
               final={resolution ? headerFinalOutcome(resolution, selected, decision.saved, latestSent) : null} />
             <CaseBrief key={selected.dispute_id} dispute={selected} resolution={resolution} showProposal={reviewed.has("ruling")} aiOff={aiMode === "offline"} compact={compactHead} />
@@ -658,7 +658,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
               </div>
             </div>}
             <WorkflowTabs active={activeTab} resolution={resolution} busy={resolving === selected.dispute_id}
-              closed={closed} auto={autoClosed} held={!!decision.hold} decisionRecorded={!!decision.saved} compact={compactHead}
+              closed={closed} auto={autoClosed} held={!!decision.hold} decisionRecorded={!!decision.saved}
               unlocking={completion?.id === selected.dispute_id}
               liveSteps={resolving === selected.dispute_id ? liveSteps : undefined} reviewed={reviewed} onChange={changeTab}
               render={tab => resolving === selected.dispute_id || completion?.id === selected.dispute_id

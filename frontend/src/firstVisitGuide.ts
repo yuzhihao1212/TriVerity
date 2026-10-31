@@ -35,7 +35,7 @@ export function caseGuideShows({ done, hasResult, canDecide, decided }: {
   return !done && hasResult && canDecide && !decided;
 }
 
-/** Past Intake the reviewer knows the case: the brief and the stepper shrink, so the step's content comes first. */
+/** Past Intake the reviewer knows the case: the brief folds to one line, so the step's content comes first. */
 export function compactCaseHead(tab: string, running: boolean): boolean {
   return tab !== "intake" && !running;
 }

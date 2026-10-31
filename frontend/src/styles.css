@@ -1750,7 +1750,7 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .case-brief-claim { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .case-brief-row ul { padding-left: var(--space-4); }
 .case-brief-note { color: var(--muted); font-size: 12px; }
-/* Past Intake the brief is one line and the stepper one row, so the step's content comes first. */
+/* Past Intake the brief is one line, so the step's content comes first. */
 .case-brief.is-compact { display: block; margin-bottom: var(--space-3); padding: var(--space-2) var(--space-3); }
 .case-brief.is-compact > summary { display: flex; align-items: center; gap: var(--space-2); min-height: 24px; cursor: pointer; list-style: none; }
 .case-brief.is-compact > summary::-webkit-details-marker { display: none; }
@@ -1760,20 +1760,6 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .case-brief.is-compact[open] .case-brief-chevron { rotate: 90deg; }
 .case-brief.is-compact[open] .case-brief-line { display: none; }
 .case-brief.is-compact[open] dl { margin-top: var(--space-2); }
-.workflow-bar.is-compact { margin-bottom: var(--space-4); }
-.workflow-bar.is-compact .stepper-position { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.workflow-bar.is-compact .stepper-track, .workflow-bar.is-compact .tab-progress, .workflow-bar.is-compact .step-next, .workflow-bar.is-compact .step-icon { display: none; }
-.workflow-bar.is-compact .stepper-wrap { --circle: 22px; }
-.workflow-bar.is-compact .step { --circle: 22px; flex-direction: row; justify-content: center; gap: var(--space-2); padding: var(--space-1); }
-.workflow-bar.is-compact .step-circle { font-size: 11px; }
-.workflow-bar.is-compact .step-circle .icon { width: 12px; height: 12px; }
-.workflow-bar.is-compact .step-name { margin-top: 0; }
-.workflow-bar.is-compact .step.current .step-circle { transform: none; }
-.workflow-bar.is-compact .step.current { background: var(--surface); }
-@media (max-width: 760px) {
-  .workflow-bar.is-compact .step { flex-direction: column; gap: 2px; }
-  .workflow-bar.is-compact .step-name { flex-direction: row; }
-}
 /* The first-visit guide: the owl's step on the queue, a plain note on a case. */
 .owl-guide { margin: var(--space-2) 0 0; padding-top: var(--space-2); border-top: 1px solid var(--border); color: var(--text); font-size: 13px; }
 .owl-guide .text-button { margin-left: var(--space-1); font-size: 13px; }
@@ -2372,6 +2358,7 @@ details.ruling-condition-group[open] > summary::before { transform: rotate(90deg
 .mascot-sleep-eye { fill: none; stroke: #3d1c10; stroke-width: 11; stroke-linecap: round; }
 .mascot-zzz { position: absolute; left: 72%; top: 0; pointer-events: none; color: var(--muted); font-weight: 700; font-size: 15px; line-height: 1; }
 .mascot-zzz i { position: absolute; font-style: normal; opacity: 0; }
+.notify-see-customer { margin-left: var(--space-3); font-weight: 600; }
 .mascot-bubble { position: relative; max-width: 460px; padding: var(--space-3) var(--space-4); border: 1px solid var(--border); border-radius: 18px; background: var(--bg);
   box-shadow: 0 6px 18px rgb(0 0 0 / .06); }
 .mascot-bubble::before { content: ""; position: absolute; top: 50%; left: -8px; width: 14px; height: 14px; margin-top: -7px; border-left: 1px solid var(--border); border-bottom: 1px solid var(--border);

@@ -54,8 +54,8 @@ it makes the console easier for a real reviewer to use. The demo video was recor
   the approximate AI cost and a warning that routine cases close and notify the rider and driver.
 - **A measured result:** after a run, [the queue says how many cases ran, how long each took](docs/screenshots/02-reviewer-home.png)
   and how many need a person. The time comes from the agents' own log, so a saved sample reports its real run.
-- **The answer first:** past Intake, the brief and stepper shrink to one line each, so the verdict appears
-  [without scrolling](docs/screenshots/06-ruling.png) on a laptop screen. The brief opens with a click.
+- **The answer first:** past Intake, the brief folds to one line, so the verdict sits
+  [higher on the page](docs/screenshots/06-ruling.png). It opens with a click.
 - **A plainer Ruling:** [it opens with the outcome and why](docs/screenshots/06-ruling.png), then what the rules found
   and what would change it. When a person must decide, it says [why, and what each side asks for](docs/screenshots/12-rules-for-this-case.png).
 - **Bad-faith risk comes with its reasons:** an escalation lists every signal behind it, and says a signal isn't proof.
