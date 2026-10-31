@@ -138,7 +138,6 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
     </section>}
     {holds.length > 0 && <section className="home-holds" aria-labelledby="home-holds-title">
       <h3 id="home-holds-title"><Icon name="pause" />On Hold · Waiting for a Second Reviewer <span className="home-holds-count">{holds.length}</span></h3>
-      <p className="home-holds-note small muted">Simulated in this browser: a hold isn't saved or sent anywhere.</p>
       <ul className="home-holds-list">{holds.map(hold => {
         const row = rows.find(r => r.id === hold.disputeId);
         return <li key={hold.disputeId}>
@@ -156,8 +155,8 @@ export function Home({ rows, holds = [], appealsWaiting, missing, onDismissMissi
         ? <QueueList title="All Cases" rows={held} kind="fresh" split={false} ran={runAllProgress?.ids ?? []} settled={runAllProgress?.done ?? 0} typeIcon={typeIcon} />
         : <>
           {groups.review.length > 0 && <QueueList title="Human Review Required" note="Safety first, then oldest." rows={groups.review} kind="review" typeIcon={typeIcon} />}
-          {groups.fresh.length > 0 && <QueueList title={groups.fresh.length === rows.length ? "All Cases" : "New Cases"} rows={groups.fresh} kind="fresh" typeIcon={typeIcon} />}
-          {groups.resolved.length > 0 && <QueueList title={groups.resolved.some(row => row.status === "closed") ? "Resolved" : "Resolved Automatically"} rows={groups.resolved} kind="resolved" typeIcon={typeIcon} />}
+          {groups.fresh.length > 0 && <QueueList title={groups.fresh.length === rows.length ? "All Cases" : "Pending Cases"} rows={groups.fresh} kind="fresh" typeIcon={typeIcon} />}
+          {groups.resolved.length > 0 && <QueueList title="Resolved" rows={groups.resolved} kind="resolved" typeIcon={typeIcon} />}
         </>}
     </section>
   </section>;

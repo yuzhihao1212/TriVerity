@@ -19,8 +19,10 @@ export interface StepState {
   reviewed: boolean;
   /** The step the reviewer is looking at. */
   current: boolean;
-  /** Not selectable yet (no ruling). */
+  /** Not selectable yet (no ruling; or Notify, while the case is on hold or undecided). */
   locked: boolean;
+  /** Why Notify is locked though the ruling exists; null otherwise. */
+  lockReason: NotifyLock | null;
   /** A run is in progress and the agents are on this step. */
   working: boolean;
   /** The first step still to review: a subtle hint, never on the current step. */
@@ -44,6 +46,16 @@ function liveDone(tab: WorkflowTab, agents: Set<string>): boolean {
   }
 }
 
+/**
+ * Notify, before the messages can go: on hold for a second reviewer, or waiting for the reviewer's
+ * own decision. The stepper says so, so nobody opens a page that only sends them back to Ruling.
+ */
+export type NotifyLock = "hold" | "decide";
+export const NOTIFY_LOCK_TEXT: Record<NotifyLock, { caption: string; tip: string; spoken: string }> = {
+  hold: { caption: "On hold", tip: "Waiting for a second reviewer. Opens once they decide.", spoken: "locked, on hold" },
+  decide: { caption: "After your decision", tip: "Opens once you accept or override the ruling.", spoken: "locked until you decide" },
+};
+
 /** Text shown on Ruling instead of "Next: Notify parties" until the reviewer decides. */
 export const DECIDE_FIRST = "Accept or override the ruling to continue to Notify.";
 export const HOLD_NOTE = "Nobody is notified until a second reviewer decides.";
@@ -61,8 +73,10 @@ export function nextStepMode({ tab, hasResult, closed, decisionRecorded }: {
   return "primary";
 }
 
-export function stepStates({ active, hasResult, busy, liveSteps = [], reviewed = [], nextTab }: {
+export function stepStates({ active, hasResult, busy, liveSteps = [], reviewed = [], nextTab, notifyLock = null }: {
   active: WorkflowTab; hasResult: boolean; busy: boolean; liveSteps?: AgentLogEntry[];
+  /** Notify can't be used yet. Never applied to the step being shown, so the tab list keeps a way in. */
+  notifyLock?: NotifyLock | null;
   /** Overrides the "next" hint, e.g. Ruling while Notify waits for a decision. */
   nextTab?: WorkflowTab;
   /** Steps this case's reviewer has completed (see reviewProgress.ts). */
@@ -73,7 +87,8 @@ export function stepStates({ active, hasResult, busy, liveSteps = [], reviewed =
   // Without a ruling there is nothing to review; with one, Intake is done by definition.
   const done = new Set<WorkflowTab>(hasResult ? ["intake", ...reviewed] : []);
   const isDone = WORKFLOW_TABS.map(({ id }) => done.has(id));
-  const locked = WORKFLOW_TABS.map(({ id }) => id !== "intake" && !hasResult);
+  const reason = hasResult && active !== "notify" ? notifyLock : null;
+  const locked = WORKFLOW_TABS.map(({ id }) => (id !== "intake" && !hasResult) || (id === "notify" && !!reason));
   const complete = isDone.every(Boolean);
   const firstOpen = nextTab ? WORKFLOW_TABS.findIndex(({ id }) => id === nextTab)
     : complete ? -1 : WORKFLOW_TABS.findIndex((_, index) => !isDone[index] && !locked[index]);
@@ -86,6 +101,7 @@ export function stepStates({ active, hasResult, busy, liveSteps = [], reviewed =
       reviewed: isDone[index],
       current: id === active,
       locked: locked[index],
+      lockReason: id === "notify" ? reason : null,
       working: isWorking,
       next: index === firstOpen && id !== active && !busy,
       joined: index > 0 && index <= activeIndex,
@@ -98,6 +114,7 @@ export function stepStatusText(state: StepState): string {
   if (state.working) return "agents working";
   if (state.reviewed) return "reviewed";
   if (state.current) return "current step";
+  if (state.lockReason) return NOTIFY_LOCK_TEXT[state.lockReason].spoken;
   if (state.locked) return "locked";
   return "not reviewed yet";
 }

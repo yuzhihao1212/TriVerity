@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { LiveProgress, ProgressAnnouncements } from "./LiveProgress";
 import type { FinishedTimes } from "./progressEstimate";
@@ -7,7 +7,7 @@ import { AgentsStrip } from "./AgentsStrip";
 import { WorkflowTabs } from "./WorkflowTabs";
 import { savedTab, type WorkflowTab } from "./workflow";
 import { FactLibrary } from "./FactLibrary";
-import { AGENT_ICONS, statusPill, type FinalHeaderOutcome } from "./stepVisuals";
+import { AGENT_ICONS, statusPill, type FinalHeaderOutcome, type NotifyLock } from "./stepVisuals";
 import { AUTO_SUMMARY, createReviewStore, openCounts, reviewKey, reviewSummary, reviewedSteps, REOPENED_STEPS, type ReviewSummary } from "./reviewProgress";
 import { CaseBrief } from "./CaseBriefCard";
 import { caseHeadline, headerFinalOutcome, usedFallback } from "./caseBrief";
@@ -21,7 +21,10 @@ import { RulesPanel, RulesRow } from "./RulesForCase";
 import { RulingChecks } from "./RulingChecks";
 import { VerdictSummary } from "./VerdictSummary";
 import { computedFacts, disputeLabel, disputeTitle, money } from "./presentation";
-import { caseHash, focusSection, HOME_HASH, missingCase, reveal, selectSample } from "./routes";
+import { caseHash, focusSection, HOME_HASH, missingCase, prefersReducedMotion, reveal, selectSample } from "./routes";
+import { CaseHandoff } from "./CaseHandoff";
+import { handoffPlan, shouldHandoff, type HandoffPhase } from "./handoffTiming";
+import { createSeenCases } from "./chartIntro";
 import { allowedActions, caseStatus, pendingAppealIds, sortQueue, STATUS_WORDS, type CaseStatus, queueGroups } from "./caseQueue";
 import { averageRunSeconds, nextToReview, runAgentsLabel } from "./homeState";
 import { Home, type HomeRow, type RunAllProgress } from "./Home";
@@ -40,13 +43,13 @@ import { readGroupOpen, readSidebarOpen, writeGroupOpen, writeSidebarOpen } from
 import { PresentationToggle, ThemeToggle } from "./ThemeToggle";
 import type { Point, Theme } from "./theme";
 import { PartyPreview, sentRecords } from "./PartyPreview";
-import { autoSentRecord, clockText, DELIVERED_ANNOUNCEMENT, sentOutcomeText, staysWithReviewer } from "./notifyState";
+import { autoSentRecord, clockText, DELIVERED_ANNOUNCEMENT, notifyGate, sentOutcomeText, staysWithReviewer } from "./notifyState";
 import { DisputeForm } from "./DisputeForm";
 import { ApiError, getSamples, listAppeals, resolveBatch, resolveDisputeLive, setReviewerAccessCode } from "./services/api";
 import { AutoResolvedNote } from "./AutoResolvedNote";
 import { AccessCodeField } from "./AccessCodeField";
 import { ACCESS_CODE_FIELD_ID, accessCodeMessage, accessCodeProblem, needsAccessCode } from "./consoleHeader";
-import { disputeCategory, groupByCategory, railShortcuts, type Category, disputeItemName, filterLabel, filterShortLabel, TYPE_LABELS, type DisputeFilter } from "./disputeList";
+import { caseCategory, disputeCategory, filterOptions, groupByCategory, matchesFilter, railShortcuts, type Category, disputeItemName, filterLabel, filterShortLabel, TYPE_LABELS, type DisputeFilter } from "./disputeList";
 import { FilterMenu } from "./FilterMenu";
 import { Icon } from "./Icon";
 import { caseGuideShows, compactCaseHead, GUIDE_STEPS, LAST_STEP_TEXT, readGuideDone, writeGuideDone } from "./firstVisitGuide";
@@ -97,6 +100,17 @@ function saveAccessCode(code: string) {
 
 function guideStore() { try { return window.localStorage; } catch { return null; } }
 
+let opened: ReturnType<typeof createSeenCases> | undefined;
+/** Cases opened in this tab (the hand-off plays once per case). */
+function openedCases() {
+  if (!opened) {
+    let storage: Storage | null = null;
+    try { storage = window.sessionStorage; } catch { /* In-memory tracking when storage is blocked. */ }
+    opened = createSeenCases(storage, "triverity.casesOpened");
+  }
+  return opened;
+}
+
 export default function App({ active, sampleId, navigation = 0, presentation, onTogglePresentation, theme, onToggleTheme }: {
   active: boolean; sampleId?: string; navigation?: number; presentation: boolean; onTogglePresentation: () => void;
   theme: Theme; onToggleTheme: (origin: Point | null) => void;
@@ -107,7 +121,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
   // One choice for every page: the panel stays as the reviewer last left it.
   const [sidebarOpen, setSidebarOpen] = useState(() => readSidebarOpen(localStorage));
   const [groupOpen, setGroupOpen] = useState<Record<Category, boolean>>(() => ({
-    route: readGroupOpen("route"), "no-show": readGroupOpen("no-show"), other: readGroupOpen("other"),
+    held: readGroupOpen("held"), route: readGroupOpen("route"), "no-show": readGroupOpen("no-show"), other: readGroupOpen("other"),
   }));
   const [revealCurrent, setRevealCurrent] = useState(false);
   const currentCaseButton = useRef<HTMLButtonElement>(null);
@@ -440,8 +454,35 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [allCases, results, decision.savedFor, sentVersion, waitingIds]);
   const statusOf = (id: string) => queueRows.find(row => row.id === id)?.status ?? "not_run";
+  // Notify's step says why it can't open yet, the same rule its page uses (notifyGate), instead of opening a dead end.
+  const notifyLock: NotifyLock | null = !resolution || closed ? null : decision.hold ? "hold"
+    : notifyGate({ saved: !!decision.saved, unavailable: decisionsUnavailable, rulingVisited: reviewed.has("ruling") }) === "locked" ? "decide" : null;
   const following = selected ? nextToReview(queueRows, selected.dispute_id, decision.holds().map(hold => hold.disputeId)) : null;
   const goToFollowing = () => { window.location.hash = following ? caseHash(following.row.id) : HOME_HASH; };
+
+  // The first time a case opens in this tab, however it was opened, it arrives with a short moment
+  // (CaseHandoff): a veil over it from the first paint, the logo spinning, a tick, then it slides in.
+  // Not for the case the console opened on, and never twice for one case (handoffTiming.shouldHandoff).
+  const [handoff, setHandoff] = useState<{ id: string; phase: HandoffPhase } | null>(null);
+  const handoffTimers = useRef<number[]>([]);
+  const openedOnLoad = useRef(!!sampleId);
+  useEffect(() => () => handoffTimers.current.forEach(timer => window.clearTimeout(timer)), []);
+  useLayoutEffect(() => {
+    const id = selected?.dispute_id;
+    if (!id || !active) return;
+    const play = shouldHandoff({ openedOnLoad: openedOnLoad.current, seen: openedCases().has(id) });
+    openedOnLoad.current = false;
+    openedCases().mark(id);
+    if (!play) return;
+    handoffTimers.current.forEach(timer => window.clearTimeout(timer));
+    handoffTimers.current = [];
+    const plan = handoffPlan(prefersReducedMotion());
+    const at = (ms: number, run: () => void) => { handoffTimers.current.push(window.setTimeout(run, ms)); };
+    setHandoff({ id, phase: plan.ready === 0 ? "ready" : "loading" });
+    if (plan.ready > 0) at(plan.ready, () => setHandoff({ id, phase: "ready" }));
+    at(plan.leave, () => setHandoff(plan.leave === plan.done ? null : { id, phase: "leaving" }));
+    if (plan.done > plan.leave) at(plan.done, () => setHandoff(null));
+  }, [selected?.dispute_id, active]);
 
   // One appeal list feeds the queue and case banner; unavailable (403) shows neither.
   const onHome = active && !form && !selected && !loadingSamples;
@@ -534,12 +575,16 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
     </li>;
   };
   const newDispute = () => { setForm({}); setError(null); };
-  const sidebarGroups = groupByCategory(sortQueue(queueRows).map(row => row.dispute), filter);
+  // A case on hold for a second reviewer sits in its own On Hold group, and can be filtered on.
+  const heldIds = decision.holds().map(hold => hold.disputeId);
+  const sidebarGroups = groupByCategory(sortQueue(queueRows).map(row => row.dispute), filter, heldIds);
+  // The last hold ended while filtering on it: back to every dispute.
+  useEffect(() => { if (filter === "on_hold" && heldIds.length === 0) setFilter("all"); }, [filter, heldIds.length]);
   function openCurrentCase() {
     if (!selected) return;
     select(selected);
-    if (filter !== "all" && selected.type !== filter) setFilter("all");
-    setCategoryOpen(disputeCategory(selected.type), true);
+    if (!matchesFilter(selected, filter, heldIds)) setFilter("all");
+    setCategoryOpen(caseCategory(selected, heldIds), true);
     changeSidebar(true);
     setRevealCurrent(true);
   }
@@ -593,15 +638,15 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
         <nav className="sidebar" aria-label="Disputes">
           <div className="sidebar-head">
             <SidebarToggle open={sidebarOpen} onToggle={toggleSidebar} />
-            <a className={`icon-button home-button${onHome ? " is-current" : ""}`} href={HOME_HASH} aria-current={onHome ? "page" : undefined}
-              aria-label="Home" title="Home"><Icon name="home" /></a>
+            {/* Not on Home itself: a link to the page you're on is just noise. */}
+            {!onHome && <a className="icon-button home-button" href={HOME_HASH} aria-label="Home" title="Home"><Icon name="home" /></a>}
             {sidebarOpen
               ? <div className="sidebar-actions">
-                  <FilterMenu value={filter} onChange={changeFilter} />
+                  <FilterMenu value={filter} onChange={changeFilter} options={filterOptions(heldIds.length > 0)} />
                   <SidebarNewButton onClick={newDispute} />
                   {reportButton}
                 </div>
-              : <>{onHome && <FilterMenu value={filter} onChange={changeFilter} />}<SidebarNewButton onClick={newDispute} />{reportButton}</>}
+              : <>{onHome && <FilterMenu value={filter} onChange={changeFilter} options={filterOptions(heldIds.length > 0)} />}<SidebarNewButton onClick={newDispute} />{reportButton}</>}
           </div>
           {!sidebarOpen && selected && <div className="sidebar-shortcuts">
             {railShortcuts(queueRows.map(row => row.dispute), { id: selected.dispute_id, summary: disputeLabel(selected), type: selected.type }).map(item =>
@@ -613,14 +658,14 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
             {filterShortLabel(filter)}
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7 7 17" /></svg>
           </button>}
-          {selected && filter !== "all" && selected.type !== filter && <p className="sidebar-note">The selected case is outside this filter.</p>}
+          {selected && !matchesFilter(selected, filter, heldIds) && <p className="sidebar-note">The selected case is outside this filter.</p>}
           {!loadingSamples && !sidebarGroups.length && <p className="sidebar-note">No disputes match this filter.</p>}
           {sidebarGroups.map(group => <section className="sidebar-category" data-open={groupOpen[group.id]} key={group.id} aria-labelledby={`sidebar-group-${group.id}`}>
             <h2 className="sidebar-group">
               <button type="button" id={`sidebar-group-${group.id}`} className={`sidebar-group-button sidebar-category-${group.id}`}
                 aria-expanded={groupOpen[group.id]} aria-controls={`sidebar-cases-${group.id}`}
                 onClick={() => setCategoryOpen(group.id, !groupOpen[group.id])}>
-                <span className="sidebar-group-label">{group.id !== "other" && <TypeIcon type={group.id === "route" ? "route_deviation" : "no_show_charge"} />}{group.label} · {group.count}</span><Icon name="chevron" />
+                <span className="sidebar-group-label">{group.id === "held" ? <Icon name="pause" /> : group.id !== "other" && <TypeIcon type={group.id === "route" ? "route_deviation" : "no_show_charge"} />}{group.label} · {group.count}</span><Icon name="chevron" />
               </button>
             </h2>
             <ul id={`sidebar-cases-${group.id}`} className="dispute-list" hidden={!groupOpen[group.id]}>
@@ -630,7 +675,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
           </div>
         </nav>
 
-        <main className="content" id="main-content" tabIndex={-1}>
+        <main className={`content${handoff?.phase === "leaving" ? " case-arriving" : ""}`} id="main-content" tabIndex={-1}>
           <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
             {loadingSamples ? "Loading sample disputes…" : resolving ? `Agents working on ${resolving}.`
               : resolution && deliveredFor === reviewId ? `${DELIVERED_ANNOUNCEMENT}.`
@@ -674,7 +719,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
             </div>}
             <WorkflowTabs active={activeTab} resolution={resolution} busy={resolving === selected.dispute_id}
               closed={closed} auto={autoClosed} held={!!decision.hold} decisionRecorded={!!decision.saved}
-              unlocking={completion?.id === selected.dispute_id} presenting={presentation}
+              unlocking={completion?.id === selected.dispute_id} presenting={presentation} notifyLock={notifyLock}
               liveSteps={resolving === selected.dispute_id ? liveSteps : undefined} reviewed={reviewed} onChange={changeTab}
               render={tab => resolving === selected.dispute_id || completion?.id === selected.dispute_id
                 ? <LiveProgress disputeId={selected.dispute_id} steps={liveSteps} startedAt={runStartedAt} finishedAt={finishedAt}
@@ -742,6 +787,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
             <button type="button" className="icon-button mascot-toast-close" aria-label="Dismiss" title="Dismiss" onClick={() => setCheer(null)}><Icon name="cross" /></button>
           </div>;
         })()}
+        {handoff && <CaseHandoff caseId={handoff.id} phase={handoff.phase} />}
       </div>
     </div>
   );

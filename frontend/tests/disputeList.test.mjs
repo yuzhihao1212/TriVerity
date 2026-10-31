@@ -60,7 +60,7 @@ test('filter labels: short for the chip, long for the menu and names', () => {
   assert.equal(dl.filterLabel('bogus'), 'All Disputes');
   assert.equal(dl.filterButtonLabel('all'), 'Filter disputes');
   assert.equal(dl.filterButtonLabel('route_deviation'), 'Filter disputes: Route Deviation');
-  assert.deepEqual(dl.FILTER_OPTIONS.map(o => o.label), ['All Disputes', 'Route Deviation', 'No-show Charge']);
+  assert.deepEqual(dl.FILTER_OPTIONS.map(o => o.label), ['All Disputes', 'Route Deviation', 'No-show Charge', 'On Hold']);
   assert.equal(dl.isFilter('no_show_charge'), true);
   assert.equal(dl.isFilter('toString'), false);
 });
@@ -82,4 +82,24 @@ test('menu keyboard: arrows wrap, Home and End jump, other keys keep the index',
   assert.equal(dl.menuIndex(-1, 'ArrowDown', 3), 0, 'from no focus, down goes to the first item');
   assert.equal(dl.menuIndex(1, 'x', 3), 1);
   assert.equal(dl.menuIndex(0, 'ArrowDown', 0), -1);
+});
+
+test('a case on hold sits in its own On Hold group first, and the On Hold filter shows only those', () => {
+  const cases = [
+    { dispute_id: 'R1', type: 'route_deviation' }, { dispute_id: 'N1', type: 'no_show_charge' },
+    { dispute_id: 'R2', type: 'route_deviation' },
+  ];
+  const groups = dl.groupByCategory(cases, 'all', ['R2']);
+  assert.deepEqual(groups.map(g => [g.id, g.label, g.items.map(c => c.dispute_id)]),
+    [['held', 'On Hold', ['R2']], ['route', 'Route', ['R1']], ['no-show', 'No-show', ['N1']]]);
+  assert.deepEqual(dl.groupByCategory(cases, 'on_hold', ['R2']).map(g => g.id), ['held']);
+  assert.deepEqual(dl.groupByCategory(cases, 'on_hold', []), []);
+  assert.equal(dl.caseCategory(cases[2], ['R2']), 'held');
+  assert.equal(dl.matchesFilter(cases[0], 'on_hold', ['R2']), false);
+  assert.equal(dl.filterShortLabel('on_hold'), 'On hold');
+});
+
+test('the filter menu offers On Hold only while a case is on hold', () => {
+  assert.equal(dl.filterOptions(false).some(o => o.value === 'on_hold'), false);
+  assert.equal(dl.filterOptions(true).at(-1).value, 'on_hold');
 });

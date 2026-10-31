@@ -1060,6 +1060,9 @@ html:has(.decision-bar) { scroll-padding-bottom: 96px; }
 .sidebar-group-button[aria-expanded="true"] .icon { transform: rotate(90deg); }
 .sidebar-category-route { color: var(--category-route); }
 .sidebar-category-no-show { color: var(--category-no-show); }
+/* Cases on hold for a second reviewer: their own group in the same amber as the hold elsewhere. */
+.sidebar-category-held { color: var(--warn-text); }
+.sidebar-group-label > .icon { width: 18px; height: 18px; flex: none; }
 .sidebar-note { margin: 0; padding-inline: var(--space-2); color: var(--muted); font-size: 11px; }
 .presentation-mode .dispute-item { font-size: 15px; }
 /* The console's main region receives focus after navigation (Router, skip link). It is a
@@ -1159,10 +1162,24 @@ main[tabindex="-1"]:focus { outline: none; }
 }
 .label-short { display: none; }
 .step .tab-progress { color: var(--muted); font-size: 11px; }
-.step.locked { cursor: not-allowed; }
+/* A locked step says why on hover, focus or press (WorkflowTabs), rather than showing a "not allowed" cursor. */
+.step.locked { cursor: help; }
+.step-tip { position: absolute; top: calc(100% - 2px); left: 50%; z-index: 5; width: max-content; max-width: 220px; padding: 6px 10px; border-radius: 8px; background: var(--text); color: var(--bg); font-size: 12px; font-weight: 500; line-height: 1.35; text-align: center; white-space: normal; pointer-events: none; opacity: 0; transform: translate(-50%, -4px); transition: opacity .15s ease, transform .15s ease; }
+.step-tip::before { content: ""; position: absolute; bottom: 100%; left: 50%; margin-left: -5px; border: 5px solid var(--transparent); border-bottom-color: var(--text); }
+.step.locked:hover .step-tip, .step.locked:focus-visible .step-tip, .step.show-tip .step-tip { opacity: 1; transform: translate(-50%, 0); }
+/* The last step's bubble hangs from its right edge, so it never runs off the page. */
+.step:last-child .step-tip { left: auto; right: 0; transform: translateY(-4px); }
+.step:last-child .step-tip::before { left: auto; right: 24px; }
+.step.locked:last-child:hover .step-tip, .step.locked:last-child:focus-visible .step-tip, .step.show-tip:last-child .step-tip { transform: none; }
 .step.locked .step-name { color: var(--muted); }
 /* Locked: a plain grey number, no dashes or padlock (the line under the stepper says why). */
 .step.locked:not(.working) .step-circle { border-color: var(--border); background: var(--bg); color: var(--muted); }
+/* Notify while it can't open (WorkflowTabs notifyLock): on hold in amber with a pause, waiting for the
+   reviewer's decision in grey with a lock; the caption says which, the tooltip says what opens it. */
+.step.locked.is-hold .step-circle { border-color: var(--warn-text); background: var(--warn-soft); color: var(--warn-text); }
+.step.locked.is-hold .step-lock-caption { color: var(--warn-text); font-weight: 600; }
+.step.locked.is-hold .step-name { color: var(--text); }
+.step.locked .step-circle .icon { stroke-width: 2.25; }
 .stepper-hint { display: flex; align-items: center; gap: 6px; margin-top: var(--space-2); }
 .stepper-hint .icon { width: 14px; height: 14px; flex: none; }
 .step:not(.locked):not([aria-selected="true"]):hover { background: var(--surface); }
@@ -1576,7 +1593,6 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .home-holds h3 { display: flex; align-items: center; gap: 8px; margin: 0; }
 .home-holds h3 .icon { width: 18px; height: 18px; color: var(--muted); }
 .home-holds-count { padding: 1px 8px; border-radius: 999px; background: var(--warn-soft); color: var(--warn-text); font-size: 12px; }
-.home-holds-note { margin: 0; }
 .home-holds-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .home-hold { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid color-mix(in srgb, var(--warn-text) 45%, var(--border));
   border-radius: 12px; background: var(--bg); color: var(--text); text-decoration: none; }
@@ -2663,3 +2679,44 @@ details.ruling-condition-group[open] > summary::before { transform: rotate(90deg
 .presentation-mode .case-buddy-answer { font-size: 16px; }
 .presentation-mode .case-buddy-questions button, .presentation-mode .case-buddy-answer .case-buddy-note { font-size: 15px; }
 .presentation-mode .case-buddy-label { font-size: 16px; max-width: 260px; }
+
+/* The hand-off into a case, the first time it opens (CaseHandoff.tsx, handoffTiming.ts): the mark spins for
+   1.5 s over "Gathering materials…", its dots merge into a tick that holds, then the veil lifts as the case
+   slides in. The veil is there from the first paint, with no fade in, so the case never flashes first. */
+.case-handoff { position: fixed; inset: 0; z-index: 900; display: grid; place-items: center; background: color-mix(in srgb, var(--bg) 93%, transparent); }
+.case-handoff.is-leaving { pointer-events: none; animation: handoff-out .45s ease both; }
+@keyframes handoff-out { to { opacity: 0; } }
+.case-handoff-card { display: grid; justify-items: center; gap: var(--space-4); }
+.case-handoff-mark { position: relative; display: grid; place-items: center; width: 64px; height: 64px; }
+.case-handoff-mark .oero-mark { width: 52px; height: 52px; }
+.case-handoff-mark .oero-trio circle { transition: transform .3s cubic-bezier(.5, 0, .75, 0), opacity .3s ease; }
+.case-handoff.is-loading .case-handoff-mark .oero-mark { animation: handoff-spin .9s cubic-bezier(.6, .1, .4, .9) infinite; }
+@keyframes handoff-spin { to { transform: rotate(360deg); } }
+/* Ready: the three circles pull to the centre and fade as the tick's circle pops in and the tick draws. */
+.case-handoff:not(.is-loading) .oero-trio .oero-top { transform: translate(0, 15px) scale(.5); opacity: 0; }
+.case-handoff:not(.is-loading) .oero-trio .oero-left { transform: translate(15px, -13px) scale(.5); opacity: 0; }
+.case-handoff:not(.is-loading) .oero-trio .oero-right { transform: translate(-15px, -13px) scale(.5); opacity: 0; }
+.case-handoff:not(.is-loading) .oero-trio .oero-web { opacity: 0; transition: opacity .2s ease; }
+.case-handoff-tick { position: absolute; inset: 4px; width: 56px; height: 56px; overflow: visible; }
+.case-handoff-tick circle { fill: var(--accent-control); transform-origin: 28px 28px; transform: scale(0); transition: transform .38s .2s cubic-bezier(.3, 1.5, .5, 1); }
+.case-handoff-tick path { fill: none; stroke: var(--on-accent); stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 36; stroke-dashoffset: 36; transition: stroke-dashoffset .35s .45s ease-out; }
+.case-handoff:not(.is-loading) .case-handoff-tick circle { transform: scale(1); }
+.case-handoff:not(.is-loading) .case-handoff-tick path { stroke-dashoffset: 0; }
+.case-handoff.is-ready .case-handoff-tick { animation: handoff-pulse .5s .85s ease-out; }
+@keyframes handoff-pulse { 50% { transform: scale(1.07); } }
+.case-handoff-text { display: grid; color: var(--text); font-size: 16px; font-weight: 600; text-align: center; }
+.case-handoff-text > span { grid-area: 1 / 1; transition: opacity .3s ease, transform .3s ease; }
+.case-handoff-text > span:last-child { opacity: 0; transform: translateY(8px); }
+.case-handoff:not(.is-loading) .case-handoff-text > span:first-child { opacity: 0; transform: translateY(-8px); }
+.case-handoff:not(.is-loading) .case-handoff-text > span:last-child { opacity: 1; transform: none; transition-delay: .15s; }
+.case-handoff-bar { width: 160px; height: 4px; overflow: hidden; border-radius: 2px; background: var(--border); }
+.case-handoff-bar > span { display: block; width: 0; height: 100%; border-radius: 2px; background: var(--accent-control); animation: handoff-bar 1.5s cubic-bezier(.4, 0, .2, 1) forwards; }
+.case-handoff:not(.is-loading) .case-handoff-bar > span { width: 100%; animation: none; }
+@keyframes handoff-bar { to { width: 100%; } }
+.content.case-arriving { animation: handoff-arrive .45s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes handoff-arrive { from { opacity: 0; transform: translateY(24px); } }
+.presentation-mode .case-handoff-text { font-size: 19px; }
+@media (prefers-reduced-motion: reduce) {
+  .case-handoff.is-leaving, .content.case-arriving, .case-handoff.is-ready .case-handoff-tick { animation: none; }
+  .case-handoff *, .case-handoff-tick circle, .case-handoff-tick path { transition: none !important; }
+}

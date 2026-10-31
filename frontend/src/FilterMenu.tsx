@@ -3,13 +3,17 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { FILTER_OPTIONS, filterButtonLabel, menuIndex, type DisputeFilter } from "./disputeList";
 
 /** A funnel button with a small radio menu; replaces the dispute-type <select>. */
-export function FilterMenu({ value, onChange }: { value: DisputeFilter; onChange: (value: DisputeFilter) => void }) {
+export function FilterMenu({ value, onChange, options = FILTER_OPTIONS }: {
+  value: DisputeFilter; onChange: (value: DisputeFilter) => void;
+  /** The choices on offer (disputeList.filterOptions: On Hold only while a case is on hold). */
+  options?: typeof FILTER_OPTIONS;
+}) {
   const [open, setOpen] = useState(false);
   const menuId = useId();
   const wrapper = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const items = useRef<(HTMLButtonElement | null)[]>([]);
-  const checked = Math.max(0, FILTER_OPTIONS.findIndex(item => item.value === value));
+  const checked = Math.max(0, options.findIndex(item => item.value === value));
   const active = value !== "all";
 
   function close() {
@@ -36,10 +40,10 @@ export function FilterMenu({ value, onChange }: { value: DisputeFilter; onChange
     const current = items.current.findIndex(item => item === document.activeElement);
     if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
       event.preventDefault();
-      items.current[menuIndex(current, event.key, FILTER_OPTIONS.length)]?.focus();
+      items.current[menuIndex(current, event.key, options.length)]?.focus();
     } else if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      if (current >= 0) choose(FILTER_OPTIONS[current].value);
+      if (current >= 0) choose(options[current].value);
     } else if (event.key === "Escape" || event.key === "Tab") {
       event.preventDefault();
       close();
@@ -58,7 +62,7 @@ export function FilterMenu({ value, onChange }: { value: DisputeFilter; onChange
       {active && <span className="filter-dot" aria-hidden="true" />}
     </button>
     {open && <div className="filter-popover" role="menu" id={menuId} aria-label="Filter disputes" onKeyDown={onMenuKey}>
-      {FILTER_OPTIONS.map((item, index) => <button type="button" key={item.value} role="menuitemradio" aria-checked={item.value === value}
+      {options.map((item, index) => <button type="button" key={item.value} role="menuitemradio" aria-checked={item.value === value}
         tabIndex={-1} ref={element => { items.current[index] = element; }} className="filter-option"
         onClick={() => choose(item.value)}>
         <svg className="filter-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">

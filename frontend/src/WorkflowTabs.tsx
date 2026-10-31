@@ -2,7 +2,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties
 
 import { Icon } from "./Icon";
 import { glideTo } from "./routes";
-import { DECIDE_FIRST, HOLD_NOTE, nextStepMode, SHORT_TAB_LABELS, stepStates, stepStatusText } from "./stepVisuals";
+import { DECIDE_FIRST, HOLD_NOTE, nextStepMode, NOTIFY_LOCK_TEXT, SHORT_TAB_LABELS, stepStates, stepStatusText, type NotifyLock } from "./stepVisuals";
 import { ARRIVE_MS, LINE_MS, lineFraction, nextMove, positionText, unlockSchedule, type Move } from "./stepperMotion";
 import { navigateTab, presentationStep, tabLocked, tabProgress, WORKFLOW_TABS, type WorkflowTab } from "./workflow";
 import type { AgentLogEntry, Resolution } from "./types";
@@ -13,7 +13,7 @@ const STEP_ICONS: Record<WorkflowTab, string> = {
 
 const prefersReducedMotion = () => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, auto = false, held = false, decisionRecorded = false, closed = false, unlocking = false, presenting = false, onChange, render }: {
+export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, auto = false, held = false, decisionRecorded = false, closed = false, unlocking = false, presenting = false, notifyLock = null, onChange, render }: {
   active: WorkflowTab;
   resolution?: Resolution;
   busy: boolean;
@@ -29,6 +29,8 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, au
   unlocking?: boolean;
   decisionRecorded?: boolean;
   closed?: boolean;
+  /** Notify can't be used yet (on hold, or no decision): its step says why instead of opening a dead end. */
+  notifyLock?: NotifyLock | null;
   /** Presentation mode: the arrow keys step through the case, and each step slides in from its side. */
   presenting?: boolean;
   onChange: (tab: WorkflowTab) => void;
@@ -38,7 +40,17 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, au
   const refs = useRef<Partial<Record<WorkflowTab, HTMLButtonElement | null>>>({});
   // Notify waits for a decision: point the reader to Ruling, as the locked Notify panel does.
   const nextTab = active === "notify" && resolution && !closed && !decisionRecorded ? "ruling" as const : undefined;
-  const states = stepStates({ active, hasResult: !!resolution, busy, liveSteps, reviewed, nextTab });
+  const states = stepStates({ active, hasResult: !!resolution, busy, liveSteps, reviewed, nextTab, notifyLock });
+  const notifyLocked = !!notifyLock;
+  // A locked step pressed (or tapped, where there is no hover) shows why for a moment.
+  const [tipShown, setTipShown] = useState<WorkflowTab | null>(null);
+  const tipTimer = useRef(0);
+  useEffect(() => () => window.clearTimeout(tipTimer.current), []);
+  function showTip(tab: WorkflowTab) {
+    setTipShown(tab);
+    window.clearTimeout(tipTimer.current);
+    tipTimer.current = window.setTimeout(() => setTipShown(null), 2600);
+  }
   const activeIndex = WORKFLOW_TABS.findIndex(tab => tab.id === active);
 
   // The position line and the move between steps (stepperMotion.ts).
@@ -87,7 +99,7 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, au
   }, [unlocking]);
 
   function activate(tab: WorkflowTab) {
-    if (tabLocked(tab, !!resolution) || pending.has(tab)) return;
+    if (tab !== active && (tabLocked(tab, !!resolution, notifyLocked) || pending.has(tab))) return;
     onChange(tab);
   }
   // Glide up to the stepper first, with the old step still in place, then switch. Switching first
@@ -113,7 +125,7 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, au
     if (busy || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.defaultPrevented) return;
     const target = event.target as HTMLElement | null;
     if (target?.closest("input, textarea, select, [contenteditable], [role=tablist], [role=menu], dialog")) return;
-    const next = presentationStep(active, event.key, !!resolution);
+    const next = presentationStep(active, event.key, !!resolution, notifyLocked);
     if (!next || pending.has(next)) return;
     event.preventDefault();
     goTo(next, { focus: false });
@@ -127,7 +139,7 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, au
   function navigate(event: KeyboardEvent<HTMLButtonElement>, tab: WorkflowTab) {
     if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
     event.preventDefault();
-    const next = navigateTab(tab, event.key, !!resolution);
+    const next = navigateTab(tab, event.key, !!resolution, notifyLocked);
     activate(next);
     refs.current[next]?.focus();
   }
@@ -145,19 +157,22 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, au
           const locked = state.locked || waiting;
           const arriving = move?.kind === "forward" && move.to === index;
           const left = move?.kind === "forward" && move.from === index;
-          const classes = ["step", waiting ? "locked" : state.phase, state.current && "current", locked && "locked",
+          const why = state.lockReason ? NOTIFY_LOCK_TEXT[state.lockReason] : null;
+          // Why it won't open, in place of a "not allowed" cursor.
+          const tip = why?.tip ?? (locked && !resolution && !state.working ? (busy ? "Opens when the complete result is ready." : "Opens once you run the agents.") : null);
+          const classes = ["step", waiting ? "locked" : state.phase, state.current && "current", locked && "locked", why && `is-${state.lockReason}`, tip && tipShown === tab.id && "show-tip",
             state.next && "next", arriving && "arriving", left && "left", unlocking && !waiting && index > 0 && "unlocked"].filter(Boolean).join(" ");
           return <button type="button" role="tab" key={tab.id} className={classes}
             id={`${id}-${tab.id}-tab`} aria-controls={`${id}-${tab.id}-panel`}
             aria-selected={active === tab.id} aria-disabled={locked} aria-current={state.current ? "step" : undefined}
             style={{ "--step-index": index } as CSSProperties}
-            aria-describedby={locked ? `${id}-locked` : undefined}
+            aria-describedby={locked && !why ? `${id}-locked` : undefined}
             tabIndex={active === tab.id && !locked ? 0 : -1}
             data-workflow-tab={tab.id}
             ref={element => { refs.current[tab.id] = element; }}
-            onClick={() => activate(tab.id)} onKeyDown={event => navigate(event, tab.id)}>
+            onClick={() => { if (locked && tip) showTip(tab.id); else activate(tab.id); }} onKeyDown={event => navigate(event, tab.id)}>
             <span className="step-circle" aria-hidden="true" key={arriving ? `arrive-${move!.id}` : "circle"}>
-              {state.reviewed && !waiting ? <Icon name="check" /> : index + 1}
+              {state.reviewed && !waiting ? <Icon name="check" /> : why ? <Icon name={state.lockReason === "hold" ? "pause" : "lock"} /> : index + 1}
               {/* Mounted when the reviewer arrives, so it draws once; a re-render never replays it.
                   Going back, the earlier step is current at once: no draw. */}
               {state.current && !state.working && <StepRing kind="current" instant={move?.kind === "back"} />}
@@ -167,10 +182,12 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, au
               <Icon name={STEP_ICONS[tab.id]} className="step-icon" />
               <span className="tab-label"><span className="label-full">{tab.label}</span><span className="label-short" aria-hidden="true">{SHORT_TAB_LABELS[tab.id]}</span></span>
             </span>
-            <span className="sr-only">, Step {index + 1} Of {WORKFLOW_TABS.length}{locked && !state.working ? ", locked" : `, ${auto && state.reviewed ? "completed automatically" : stepStatusText(state)}`}{state.next ? ", next to review" : ""}. </span>
+            <span className="sr-only">, Step {index + 1} Of {WORKFLOW_TABS.length}{why ? `, ${why.spoken}. ${why.tip.replace(/\.$/, "")}` : locked && !state.working ? ", locked" : `, ${auto && state.reviewed ? "completed automatically" : stepStatusText(state)}`}{state.next ? ", next to review" : ""}. </span>
             {/* Only when it says something: "12 facts", "2 arguments"; locked steps stay quiet. */}
-            {tabProgress(tab.id, resolution) && <span className="tab-progress">{tabProgress(tab.id, resolution)}</span>}
+            {why ? <span className="tab-progress step-lock-caption" aria-hidden="true">{why.caption}</span>
+              : tabProgress(tab.id, resolution) && <span className="tab-progress">{tabProgress(tab.id, resolution)}</span>}
             {state.next && <span className="step-next" aria-hidden="true">Next</span>}
+            {tip && <span className="step-tip" aria-hidden="true">{tip}</span>}
           </button>;
         })}
       </div>
@@ -187,8 +204,8 @@ export function WorkflowTabs({ active, resolution, busy, liveSteps, reviewed, au
           {nextStepMode({ tab: tab.id, hasResult: !!resolution, closed, decisionRecorded }) === "hint"
             ? <p className="small muted next-step-hint">{held ? HOLD_NOTE : DECIDE_FIRST}</p>
             : <button type="button" className={nextStepMode({ tab: tab.id, hasResult: !!resolution, closed, decisionRecorded }) === "primary" ? "run-button" : "secondary-button"}
-            aria-disabled={tabLocked(WORKFLOW_TABS[index + 1].id, !!resolution)}
-            disabled={tabLocked(WORKFLOW_TABS[index + 1].id, !!resolution)}
+            aria-disabled={tabLocked(WORKFLOW_TABS[index + 1].id, !!resolution, notifyLocked)}
+            disabled={tabLocked(WORKFLOW_TABS[index + 1].id, !!resolution, notifyLocked)}
             // Glide back up to the stepper (instant under reduced motion), then open the next step there.
             onClick={() => goTo(WORKFLOW_TABS[index + 1].id)}>
             Next: {WORKFLOW_TABS[index + 1].label} →

@@ -190,3 +190,20 @@ test('the glide back to the stepper eases in and out, timed to the distance with
   assert.equal(sm.easeInOut(1), 1);
   assert.ok(sm.easeInOut(.1) < .1 && sm.easeInOut(.9) > .9);
 });
+
+test('Notify is locked while the case is on hold or undecided, with the reason on the step, never on the step shown', async () => {
+  const sv = await load('stepVisuals');
+  const w = await load('workflow');
+  const notify = lock => sv.stepStates({ active: 'ruling', hasResult: true, busy: false, notifyLock: lock }).find(s => s.tab === 'notify');
+  assert.deepEqual([notify('hold').locked, notify('hold').lockReason], [true, 'hold']);
+  assert.deepEqual([notify('decide').locked, notify('decide').lockReason], [true, 'decide']);
+  assert.deepEqual([notify(null).locked, notify(null).lockReason], [false, null]);
+  assert.equal(sv.stepStatusText(notify('hold')), 'locked, on hold');
+  const shown = sv.stepStates({ active: 'notify', hasResult: true, busy: false, notifyLock: 'hold' }).find(s => s.tab === 'notify');
+  assert.equal(shown.locked, false);
+  assert.equal(sv.stepStates({ active: 'ruling', hasResult: false, busy: false, notifyLock: 'hold' }).find(s => s.tab === 'notify').lockReason, null);
+  assert.equal(w.presentationStep('ruling', 'ArrowRight', true, true), null);
+  assert.equal(w.navigateTab('ruling', 'ArrowRight', true, true), 'intake');
+  assert.equal(w.tabLocked('notify', true, true), true);
+  assert.equal(w.tabLocked('ruling', true, true), false);
+});
