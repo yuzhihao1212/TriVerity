@@ -127,7 +127,7 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
             event.preventDefault();
             const target = !sent ? "notify" : event.key === "Home" ? "notify" : event.key === "End" ? "customer" : index === 0 ? "customer" : "notify";
             setView(target); document.getElementById(`${id}-${target}-tab`)?.focus();
-          }}>{item === "notify" ? "Notify" : "Customer view"}</button>)}
+          }}>{item === "notify" ? "Notify" : "Customer View"}</button>)}
       </div>
       <div id={`${id}-view-panel`} role="tabpanel" aria-labelledby={`${id}-${view}-tab`}>
       <h2 id={`${id}-heading`}>{view === "customer" ? "Customer View" : "Notify Parties"}</h2>
@@ -184,8 +184,9 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
       </div>
       {view === "notify" && <p className="small muted notify-privacy">{PRIVACY_NOTE}</p>}
       {view === "notify" && (sent ? <div className="notify-done">
-        <p className="notify-sent">{sentText(sent)}</p>
-        <div><button type="button" className="run-button" onClick={() => { setView("customer"); document.getElementById(`${id}-customer-tab`)?.focus(); }}>Next: Customer view →</button></div>
+        <p className="notify-sent">{sentText(sent)}
+          {/* A look at what was sent, not a step: the only filled button below is the next case. */}
+          <button type="button" className="text-button notify-see-customer" onClick={() => { setView("customer"); document.getElementById(`${id}-customer-tab`)?.focus(); }}>See Customer View →</button></p>
         {waitingAppeals.map(appeal => <div className="notify-appeal" key={appeal.id} role="status">
           <p><Icon name="warning" /><strong>{appealSummary(appeal)}</strong> · {appeal.id}</p>
           <p className="small">“{appeal.reason}”</p>
@@ -195,7 +196,7 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
           <p className="review-complete-title"><Icon name="check" />{closingTitle(dispute.dispute_id, progress)}</p>
           <div className="review-complete-actions">
             {next && <button type="button" className="run-button" onClick={onNext}>{nextLabel ?? `Next Case: ${next} →`}</button>}
-            <button type="button" className="secondary-button" onClick={onBack}>Back to Queue</button>
+            <button type="button" className="secondary-button" onClick={onBack}>Home</button>
           </div>
         </section>
       </div> : <div className="notify-actions">

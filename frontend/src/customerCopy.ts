@@ -52,7 +52,7 @@ export const CUSTOMER_COPY = {
   found: "What We Found", nextSteps: "What Happens Now",
   footer: "Ryde Customer Support", message: "Your Case Update",
   rate: "Rate Our Support", appeal: "Appeal Case", appealWindow: PROMISES.appealWindow,
-  locked: (party: string) => `Available to the ${party} after sending. Try them in the next step: Customer view.`,
+  locked: (party: string) => `Available to the ${party} after sending. Try them in the next step: Customer View.`,
   feedback: {
     title: "How Did We Handle Your Case?", simulatedTag: "(simulated)", ratings: ["Very poor", "Poor", "Okay", "Good", "Great"],
     group: "Support rating", comment: "Anything else? · optional",
