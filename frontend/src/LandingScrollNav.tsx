@@ -7,8 +7,8 @@ export const sectionDomId = (id: LandingSectionId) => `section-${id}`;
 
 /** Sits on the seam under the hero: one quiet step into the page. */
 export function ScrollCue() {
-  return <button type="button" className="landing-scroll-cue" onClick={() => focusSection(sectionDomId("problem"))}>
-    See the Problem<Icon name="chevron" />
+  return <button type="button" className="landing-scroll-cue" onClick={() => focusSection(sectionDomId("results"))}>
+    See the Outcome<Icon name="chevron" />
   </button>;
 }
 

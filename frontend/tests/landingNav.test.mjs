@@ -7,7 +7,9 @@ const { LANDING_SECTIONS, railFill, readingPosition } = await load('landingNav')
 
 test('every rail entry points at a landing section, in page order', async () => {
   const source = await readFile(new URL('../src/Landing.tsx', import.meta.url), 'utf8');
-  const positions = LANDING_SECTIONS.map(section => source.indexOf(`id="section-${section.id}"`));
+  // A section sets its id directly, or a chapter sets it from its own id.
+  const at = id => Math.max(source.indexOf(`id="section-${id}"`), source.indexOf(`<Chapter id="${id}"`));
+  const positions = LANDING_SECTIONS.map(section => at(section.id));
   assert.ok(positions.every(position => position > 0));
   assert.deepEqual(positions, [...positions].sort((a, b) => a - b));
 });

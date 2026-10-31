@@ -1,5 +1,4 @@
-import { useEffect, useReducer, useRef, useState, type CSSProperties, type MouseEvent } from "react";
-import { CLOSED_TRUST_TILE, trustTileState } from "./trustTileState";
+import { useEffect, useRef, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { Chip } from "./Chip";
 import { CASES } from "./landingCases";
 import { Icon } from "./Icon";
@@ -16,22 +15,25 @@ import hunyuanLockupDark from "./assets/logos/tencent-hunyuan-lockup-dark.webp";
 import cloudLockup from "./assets/logos/tencent-cloud.webp";
 import cloudLockupDark from "./assets/logos/tencent-cloud-dark.webp";
 import { OeroMark } from "./OeroAI";
-import { LandingScrollNav, ScrollCue } from "./LandingScrollNav";
-import { HERO_ROTATE_MS, HERO_RULINGS, nextHeroIndex } from "./heroRulings";
-import { AUTOMATION_RING, REPEAT_DOTS, RESULTS_BOX, SAMPLE_TICKS, STOPWATCH } from "./resultsVisuals";
-import { CASE_VIEWS, ENGINEERING_PROOF, HEARING_ROUNDS, ROLLOUT, VALUE_STATS } from "./landingStory";
+import { LandingScrollNav, ScrollCue, sectionDomId } from "./LandingScrollNav";
+import type { LandingSectionId } from "./landingNav";
+import { BeforeAfter, HeroConsole, SavingsCalculator } from "./LandingShowcase";
+import { AUTOMATION_RING, COINS, REPEAT_DOTS, RESULTS_BOX, SAMPLE_TICKS, SHIELD, STOPWATCH } from "./resultsVisuals";
+import { CASE_VIEWS, ENGINEERING_PROOF, HEARING_ROUNDS, ROLLOUT } from "./landingStory";
 import "./landingStory.css";
 
 const GITHUB = "https://github.com/yuzhihao1212/TriVerity";
 const DEMO_VIDEO = "https://www.youtube.com/watch?v=z3-8uuPBPAw";
 
-// README.md (live sample evaluation, 16 Oct 2026) and docs/simulation.md
-// (offline, seed 7). Keep the values and their measurement context together.
+// README.md (live sample evaluation, 16 Oct 2026), docs/simulation.md (offline, seed 7) and
+// docs/security.md (live red-team runs). Keep the values and their measurement context together.
 export const LANDING_RESULTS = [
   { value: "9/9", label: "Sample rulings correct", detail: "Live Hy3 evaluation, including the organisers’ case." },
   { value: "78%", label: "Resolved without a human", detail: "390 of 500 generated disputes, evaluated offline." },
   { value: "100/100", label: "Same facts, same ruling", detail: "Repeated rulings in the offline simulation." },
-  { value: "16–18 s", label: "About $0.002 per dispute", detail: "Live Hy3 measurements; about 10,000 tokens per dispute." },
+  { value: "16–18 s", label: "From evidence to ruling", detail: "Live Hy3 measurements, end to end." },
+  { value: "$0.002", label: "AI cost per dispute", detail: "Live Hy3; about 10,000 tokens per dispute." },
+  { value: "0/68", label: "Live injection runs that swayed a ruling", detail: "17 attacks on live Hy3; 23 tested offline." },
 ] as const;
 
 // Three stages people can grasp at a glance; the six real steps sit under them as chips.
@@ -102,59 +104,8 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
         <ScrollCue />
       </section>
       <div className="landing-wrap landing-sections">
-        <section className="landing-problem" id="section-problem" tabIndex={-1} aria-labelledby="problem-title">
-          <div><p className="eyebrow">The problem</p><h2 id="problem-title">A Disputed Ride Shouldn’t Take Days to Review.</h2></div>
-          <div><p>Ryde’s challenge brief describes <strong>24–72 hour resolutions</strong>, inconsistent rulings and costly manual review of GPS, chat, fares and history.</p>
-            <p className="muted">TriVerity brings that evidence into one reviewable case, with clear rules and an explanation for each party.</p></div>
-          <ProblemVisual />
-        </section>
-        <section id="section-flow" tabIndex={-1} aria-labelledby="flow-title">
-          <div className="landing-section-head"><p className="eyebrow">How it works</p><h2 id="flow-title">Two Sides Heard. One Accountable Decision.</h2><p className="muted">AI handles language. Rules verify the facts and apply policy.</p></div>
-          <ol className="landing-stages">{STAGES.map((stage, index) => <li key={stage.verb} className="landing-stage">
-            <span className="landing-stage-icon" aria-hidden="true"><Icon name={stage.icon} /></span>
-            <h3><span className="sr-only">Stage {index + 1}: </span><span className="landing-stage-verb">{stage.verb}</span> {stage.rest}</h3>
-            <p className="landing-stage-line">{stage.line}</p>
-            <ul className="chip-row landing-stage-steps" aria-label={`Steps in ${stage.verb}`}>{stage.steps.map(step => <li key={step.title}>
-              <Chip size="sm" tone={"ai" in step ? "ai" : "neutral"} icon={"ai" in step ? undefined : "function"} title={step.detail}>
-                {"ai" in step && <HunyuanMark />}
-                {step.title}{"ai" in step && "code" in step && " · AI + rules"}<span className="sr-only">{"ai" in step ? ", Hunyuan AI" : ", rules"}</span>
-              </Chip>
-            </li>)}</ul>
-            <details className="landing-stage-more">
-              <summary>How</summary>
-              <ul>{stage.steps.map(step => <li key={step.title}><strong>{step.title}.</strong> {step.detail}</li>)}</ul>
-            </details>
-          </li>)}</ol>
-          <HearingExcerpt />
-        </section>
-        <section id="section-views" tabIndex={-1} aria-labelledby="views-title">
-          <div className="landing-section-head"><p className="eyebrow">Who it serves</p><h2 id="views-title">One Case. The Right View for Each Person.</h2><p className="muted">The same D001 ruling, as each person sees it.</p></div>
-          <div className="landing-views">{CASE_VIEWS.map(view => <article className="landing-view" key={view.role}>
-            <div className="landing-view-role"><span className="landing-stage-icon" aria-hidden="true"><Icon name={view.icon} /></span><h3>{view.role}</h3></div>
-            <p className="landing-view-need">{view.need}</p>
-            <div className="landing-view-message">
-              <p className="landing-view-tag"><strong>{view.status}</strong><span>Case D001</span></p>
-              <p className="landing-view-line">{view.line}</p>
-              <ul className="landing-view-next">{view.next.map(line => <li key={line}>{line}</li>)}</ul>
-            </div>
-          </article>)}</div>
-          <p className="landing-note">Fraud signals, party history and internal evidence IDs stay out of the rider’s and driver’s messages.</p>
-        </section>
-        <section id="section-trust" tabIndex={-1} aria-labelledby="trust-title">
-          <div className="landing-section-head"><p className="eyebrow">What makes it trustworthy</p><h2 id="trust-title">A Ruling You Can Question, Inspect and Appeal.</h2><p className="muted">Select a card for details.</p></div>
-          <TrustTiles />
-          <div className="landing-governance">
-            <div><h3>Mapped to Singapore’s AI Governance Guidance</h3>
-              <ul className="chip-row"><li><Chip size="sm" tone="outline">AI Verify principles</Chip></li><li><Chip size="sm" tone="outline">Model AI Governance Framework</Chip></li><li><Chip size="sm" tone="outline">PDPA</Chip></li></ul>
-              <p>A self-assessment of a prototype on synthetic data, not a certification or legal advice.</p>
-              <p><a href={`${GITHUB}/blob/main/docs/responsible-ai.md`}>Read the Responsible AI Scorecard</a></p></div>
-            <div><h3>Known Limits</h3>
-              <p>Synthetic data only, two dispute types and English-only party messages. Chat analysis is keyword-based.</p>
-              <p><a href={`${GITHUB}/blob/main/docs/system-card.md`}>Read the System Card</a></p></div>
-          </div>
-        </section>
         <section ref={resultsRef} className="landing-results" id="section-results" tabIndex={-1} aria-labelledby="results-title">
-          <div className="landing-section-head"><p className="eyebrow">Measured results</p><h2 id="results-title">Small Sample. Clear Benchmarks.</h2></div>
+          <div className="landing-section-head"><p className="eyebrow">Measured results</p><h2 id="results-title">Small sample. Clear benchmarks.</h2></div>
           <dl className="landing-metrics">{LANDING_RESULTS.map((result, index) => <div key={result.label} style={{ "--results-delay": `${index * 120}ms` } as CSSProperties}>
             <dt>{result.label}</dt>
             <dd className="landing-result-visual" aria-hidden="true"><ResultVisual index={index} /></dd>
@@ -162,38 +113,65 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
             {index === 1 && <dd className="landing-result-caption">22% go to a human reviewer</dd>}
             {index === 3 && <dd className="landing-result-caption">vs <strong>24–72 h</strong> today (Ryde's brief)</dd>}
           </div>)}</dl>
-          <p className="landing-footnote muted">Synthetic data, not production results. Sample accuracy, latency and cost come from live Hy3 measurements; automation and repeatability come from the offline simulation. <a href={`${GITHUB}/blob/main/docs/evaluation.md`}>Evaluation</a> · <a href={`${GITHUB}/blob/main/docs/simulation.md`}>500-dispute simulation</a></p>
+          <p className="landing-footnote muted">Synthetic data, not production results. Sample accuracy, latency and cost come from live Hy3 measurements; automation and repeatability come from the offline simulation; injection results from live red-team runs. <a href={`${GITHUB}/blob/main/docs/evaluation.md`}>Evaluation</a> · <a href={`${GITHUB}/blob/main/docs/simulation.md`}>500-dispute simulation</a> · <a href={`${GITHUB}/blob/main/docs/security.md`}>Security</a></p>
         </section>
-        <section id="section-rollout" tabIndex={-1} aria-labelledby="rollout-title">
-          <div className="landing-section-head"><p className="eyebrow">Beyond the hackathon</p><h2 id="rollout-title">A Careful Path from Shadow Mode to Scale.</h2><p className="muted">It starts with no customer impact and widens as agreement with reviewers holds.</p></div>
-          <ol className="landing-rollout">{ROLLOUT.map(step => <li key={step.title}>
-            <h3>{step.title}</h3>
-            <p className="landing-rollout-time">{step.time}</p>
+        <Chapter id="problem" number={1} label="The problem" title="A disputed $4 fee shouldn’t take up to three days."
+          lead={<>Reviewers piece together GPS, chat, fares and history by hand, and rulings vary with who reviews. Ryde’s brief puts a resolution at <strong>24–72 hours</strong>.</>}
+          visual={<ProblemVisual />}>
+          <BeforeAfter />
+        </Chapter>
+
+        <Chapter id="flow" number={2} label="How it works" title="Two AIs argue. The rules decide." flip
+          lead="AI handles the language: gathering records and making each side’s case. Fixed policy rules check the facts and set every outcome and amount."
+          visual={<StageFlow />} body={<HearingExcerpt />} />
+
+        <Chapter id="views" number={3} label="Who it serves" title="One ruling, told three ways."
+          lead="The rider, the driver and the reviewer each see what they need. Fraud signals, party history and internal evidence IDs never reach the rider or driver."
+          visual={<div className="chapter-views">{CASE_VIEWS.map(view => <article className="chapter-view" key={view.role}>
+            <p className="chapter-view-role"><Icon name={view.icon} />{view.role}<span>{view.status}</span></p>
+            <p className="chapter-view-line">{view.line}</p>
+          </article>)}</div>} />
+
+        <Chapter id="trust" number={4} label="Trust" title="Every ruling can be questioned." flip
+          lead="Rules make the decision, every argument is fact-checked, and risky cases go to a person, who has the final say."
+          visual={<TrustList />}
+          body={<div className="chapter-governance">
+            <p><strong>Mapped to Singapore’s AI governance guidance:</strong> AI Verify principles, the Model AI Governance Framework and the PDPA. A self-assessment of a prototype on synthetic data, not a certification or legal advice. <a href={`${GITHUB}/blob/main/docs/responsible-ai.md`}>Responsible AI Scorecard</a></p>
+            <p><strong>Known limits:</strong> synthetic data only, two dispute types and English-only party messages. Chat analysis is keyword-based. <a href={`${GITHUB}/blob/main/docs/system-card.md`}>System Card</a></p>
+          </div>} />
+
+        <Chapter id="rollout" number={5} label="Rollout and value" title="Start in shadow mode. Scale when it agrees."
+          lead="It runs beside the current team with no customer impact, then widens as agreement with reviewers holds."
+          visual={<ol className="chapter-rollout">{ROLLOUT.map(step => <li key={step.title}>
+            <h3>{step.title}<span>{step.time}</span></h3>
             <p>{step.detail}</p>
-          </li>)}</ol>
-          <dl className="landing-value">{VALUE_STATS.map(stat => <div key={stat.label}><dt>{stat.label}</dt><dd>{stat.value}</dd></div>)}</dl>
-          <p className="landing-note">An illustrative model at 5,000 disputes a day, 78% automated, 5–15 minutes a review and $20–30 an hour. The volume, review time and hourly cost are our assumptions, not Ryde’s. <a href={`${GITHUB}/blob/main/docs/business-case.md`}>Business case</a></p>
-        </section>
-        <section id="section-proof" tabIndex={-1} aria-labelledby="proof-title">
-          <div className="landing-section-head"><p className="eyebrow">Under the hood</p><h2 id="proof-title">Built to Be Checked.</h2></div>
-          <dl className="landing-proof">{ENGINEERING_PROOF.map(item => <div key={item.label}>
+          </li>)}</ol>}
+          body={<>
+            <SavingsCalculator />
+            <p className="landing-note">An illustrative model: 78% automated, 5–15 minutes a review and $20–30 an hour, starting at 5,000 disputes a day. The volume, review time and hourly cost are our assumptions, not Ryde’s. <a href={`${GITHUB}/blob/main/docs/business-case.md`}>Business case</a></p>
+          </>} />
+
+        <Chapter id="proof" number={6} label="Under the hood" title="Built to be checked." flip
+          lead="Every AI reply is validated before anyone sees it, and every change went through a pull request, automated tests and CI."
+          visual={<dl className="landing-proof">{ENGINEERING_PROOF.map(item => <div key={item.label}>
             <dt>{item.label}</dt>
             <dd className="landing-proof-value">{item.value}</dd>
             <dd className="landing-proof-detail">{item.detail}</dd>
-          </div>)}</dl>
-          <p className="landing-proof-links"><a href={`${GITHUB}/blob/main/docs/architecture.md`}>Architecture Diagram</a><a href={`${GITHUB}/blob/main/docs/security.md`}>Security</a><a href={`${GITHUB}/blob/main/docs/api-contract.md`}>API Contract</a></p>
-          <p className="landing-note">Developed with Tencent Cloud CodeBuddy and WorkBuddy. The AI coding assistants Claude Code, OpenAI Codex and Kiro also helped build and review features. Every change went through a pull request, automated tests and CI. <a href={`${GITHUB}#built-with`}>How we built it</a></p>
-        </section>
-        <section id="section-try" tabIndex={-1} aria-labelledby="try-title">
-          <div className="landing-section-head"><p className="eyebrow">Try these cases</p><h2 id="try-title">Start with a Case, Then Follow the Reasoning.</h2><p className="muted">Opening a case loads its evidence. Agents run only when you press “Run agents”.</p></div>
-          <div className="landing-cases">{CASES.map(sample => <a className="landing-case" key={sample.id} href={sample.href} aria-label={sample.accessibleName}>
+          </div>)}</dl>}
+          body={<>
+            <p className="landing-proof-links"><a href={`${GITHUB}/blob/main/docs/architecture.md`}>Architecture Diagram</a><a href={`${GITHUB}/blob/main/docs/security.md`}>Security</a><a href={`${GITHUB}/blob/main/docs/api-contract.md`}>API Contract</a></p>
+            <p className="landing-note">Developed with Tencent Cloud CodeBuddy and WorkBuddy. The AI coding assistants Claude Code, OpenAI Codex and Kiro also helped build and review features. <a href={`${GITHUB}#built-with`}>How we built it</a></p>
+          </>} />
+
+        <Chapter id="try" number={7} label="Try it" title="Open a case. Follow the reasoning."
+          lead="Opening a case loads its evidence. Agents run only when you press “Run agents”."
+          body={<div className="landing-cases">{CASES.map(sample => <a className="landing-case" key={sample.id} href={sample.href} aria-label={sample.accessibleName}>
             <span className={`landing-case-icon${sample.tone === "warn" ? " warn" : ""}`} aria-hidden="true"><Icon name={sample.icon} /></span>
             <h3>{sample.title}</h3>
             <div className="chip-row landing-case-evidence">{sample.evidence.map(line => <Chip key={line} size="sm" tone="outline">{line}</Chip>)}</div>
             <p className={`landing-case-outcome tone-${sample.tone}`}><span className="landing-case-dot" aria-hidden="true" /><strong>{sample.outcome}</strong></p>
             <span className="landing-case-footer"><span className="landing-case-id">{sample.id}</span><span aria-hidden="true">·</span><span className="landing-case-action">Open case <span aria-hidden="true">→</span></span></span>
-          </a>)}</div>
-        </section>
+          </a>)}</div>} />
       </div>
     </main>
     <LandingScrollNav />
@@ -207,17 +185,69 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
   </div>;
 }
 
+/**
+ * One chapter of the story below the hero: a numbered label, one headline, one line, one
+ * visual beside them (sides alternate with `flip`), and anything longer full width beneath.
+ */
+function Chapter({ id, number, label, title, lead, visual, body, flip, children }: {
+  id: LandingSectionId; number: number; label: string; title: string; lead: ReactNode;
+  visual?: ReactNode; body?: ReactNode; flip?: boolean; children?: ReactNode;
+}) {
+  const titleId = `${id}-title`;
+  return <section className={`chapter${number % 2 ? " is-tinted" : ""}${flip ? " is-flipped" : ""}${visual ? "" : " is-text-only"}`} id={sectionDomId(id)} tabIndex={-1} aria-labelledby={titleId}>
+    <div className="chapter-text">
+      <p className="chapter-label"><span className="chapter-number">{String(number).padStart(2, "0")}</span>{label}</p>
+      <h2 id={titleId}>{title}</h2>
+      <p className="chapter-lead">{lead}</p>
+      {children}
+    </div>
+    {visual && <div className="chapter-visual">{visual}</div>}
+    {body && <div className="chapter-body">{body}</div>}
+  </section>;
+}
+
+/** The three stages as one column: what happens, and whether AI or rules do it. */
+function StageFlow() {
+  return <ol className="chapter-stages">{STAGES.map((stage, index) => <li key={stage.verb}>
+    <span className="landing-stage-icon" aria-hidden="true"><Icon name={stage.icon} /></span>
+    <div>
+      <h3><span className="sr-only">Stage {index + 1}: </span><span className="landing-stage-verb">{stage.verb}</span> {stage.rest}</h3>
+      <p>{stage.line}</p>
+      <ul className="chip-row" aria-label={`Steps in ${stage.verb}`}>{stage.steps.map(step => <li key={step.title}>
+        <Chip size="sm" tone={"ai" in step ? "ai" : "neutral"} icon={"ai" in step ? undefined : "function"} title={step.detail}>
+          {"ai" in step && <HunyuanMark />}
+          {step.title}{"ai" in step && "code" in step && " · AI + rules"}<span className="sr-only">{"ai" in step ? ", Hunyuan AI" : ", rules"}</span>
+        </Chip>
+      </li>)}</ul>
+    </div>
+  </li>)}</ol>;
+}
+
+/** The six safeguards as a list; each opens in place to say how it holds. */
+function TrustList() {
+  return <ul className="chapter-trust">{TRUST_TILES.map(tile => <li key={tile.icon}>
+    <details>
+      <summary><span className="landing-stage-icon" aria-hidden="true"><Icon name={tile.icon} /></span>
+        <span className="chapter-trust-title">{tile.title}{tile.proof && <span className="chapter-trust-proof">{tile.proof}</span>}</span></summary>
+      <p>{tile.detail}{tile.note && <span className="chapter-trust-note">{tile.note}</span>}</p>
+    </details>
+  </li>)}</ul>;
+}
+
 /** What the agents actually said on one case, then what the rules did with it. */
 function HearingExcerpt() {
+  const [first, ...rest] = HEARING_ROUNDS;
+  const round = (r: { title: string; rider: string; driver: string }) => <div className="landing-hearing-round" key={r.title}>
+    <h4>{r.title}</h4>
+    <div className="landing-hearing-sides">
+      <figure className="landing-hearing-side"><figcaption><Icon name="person" />For the Rider <Chip size="sm" tone="ai"><HunyuanMark />AI</Chip></figcaption><blockquote>{r.rider}</blockquote></figure>
+      <figure className="landing-hearing-side"><figcaption><Icon name="wheel" />For the Driver <Chip size="sm" tone="ai"><HunyuanMark />AI</Chip></figcaption><blockquote>{r.driver}</blockquote></figure>
+    </div>
+  </div>;
   return <div className="landing-hearing">
     <div className="landing-hearing-head"><h3>From a Real Hearing</h3><p>Excerpts from a live Hy3 run on sample case D001.</p></div>
-    {HEARING_ROUNDS.map(round => <div className="landing-hearing-round" key={round.title}>
-      <h4>{round.title}</h4>
-      <div className="landing-hearing-sides">
-        <figure className="landing-hearing-side"><figcaption><Icon name="person" />For the Rider <Chip size="sm" tone="ai"><HunyuanMark />AI</Chip></figcaption><blockquote>{round.rider}</blockquote></figure>
-        <figure className="landing-hearing-side"><figcaption><Icon name="wheel" />For the Driver <Chip size="sm" tone="ai"><HunyuanMark />AI</Chip></figcaption><blockquote>{round.driver}</blockquote></figure>
-      </div>
-    </div>)}
+    {round(first)}
+    {rest.length > 0 && <details className="landing-hearing-more"><summary>Read how each side replied</summary>{rest.map(round)}</details>}
     <div className="landing-hearing-ruling">
       <Icon name="scales" />
       <div><strong>The rules decide: partial refund $6.30</strong>
@@ -257,6 +287,17 @@ function useResultsAnimation() {
 }
 
 function ResultVisual({ index }: { index: number }) {
+  if (index === 4) return <svg viewBox={`0 0 ${RESULTS_BOX} ${RESULTS_BOX}`} aria-hidden="true" focusable="false">
+    {COINS.map((coin, i) => <g key={i} className="results-pop" style={{ "--results-item-delay": `${i * 90}ms` } as CSSProperties}>
+      <circle className="results-coin" cx={coin.x} cy={coin.y} r={coin.radius} />
+      <circle className="results-coin-rim" cx={coin.x} cy={coin.y} r={coin.radius - 5} />
+      {i === COINS.length - 1 && <text className="results-coin-mark" x={coin.x} y={coin.y} textAnchor="middle" dominantBaseline="central">$</text>}
+    </g>)}
+  </svg>;
+  if (index === 5) return <svg viewBox={`0 0 ${RESULTS_BOX} ${RESULTS_BOX}`} aria-hidden="true" focusable="false">
+    <path className="results-shield" d={SHIELD.outline} />
+    <path className="results-pop" style={{ "--results-item-delay": "200ms" } as CSSProperties} d={SHIELD.tick} />
+  </svg>;
   const ring = index === 1 ? AUTOMATION_RING : STOPWATCH;
   return <svg viewBox={`0 0 ${RESULTS_BOX} ${RESULTS_BOX}`} aria-hidden="true" focusable="false">
     {index === 0 && SAMPLE_TICKS.map((tick, i) => <g key={tick.id}>
@@ -283,48 +324,6 @@ function ResultVisual({ index }: { index: number }) {
   </svg>;
 }
 
-function TrustTiles() {
-  const [state, dispatch] = useReducer(trustTileState, CLOSED_TRUST_TILE);
-  return <div className="landing-trust">{TRUST_TILES.map(tile => {
-    const id = `trust-${tile.icon}`, open = state.openId === id;
-    return <button type="button" key={id} className={`trust-tile${open ? " is-open" : ""}`}
-      aria-expanded={open} aria-controls={`${id}-detail`} aria-describedby={`${id}-detail`} aria-labelledby={`${id}-title`}
-      onPointerEnter={event => { if (event.pointerType === "mouse" && window.matchMedia("(hover: hover)").matches) dispatch({ type: "hover", id }); }}
-      onPointerLeave={() => dispatch({ type: "leave", id })}
-      onFocus={event => { if (event.currentTarget.matches(":focus-visible")) dispatch({ type: "focus", id }); }}
-      onBlur={() => dispatch({ type: "blur", id })}
-      onClick={() => dispatch({ type: "toggle", id })}
-      onKeyDown={event => {
-        if (event.key === "Escape") { event.preventDefault(); dispatch({ type: "escape" }); }
-        // The description can scroll inside the tile without adding a nested
-        // focus target to this button. Touch/wheel scrolling works natively.
-        const detail = event.currentTarget.querySelector<HTMLElement>(".trust-tile-detail-body");
-        if (open && detail && detail.scrollHeight > detail.clientHeight && ["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
-          event.preventDefault();
-          if (event.key === "Home") detail.scrollTop = 0;
-          else if (event.key === "End") detail.scrollTop = detail.scrollHeight;
-          else detail.scrollTop += event.key === "ArrowDown" ? 40 : -40;
-        }
-      }}>
-      <span className="sr-only" id={`${id}-title`}>{tile.title}</span>
-      <span className="trust-tile-front" aria-hidden="true">
-        <span className="landing-stage-icon trust-tile-icon"><Icon name={tile.icon} /></span>
-        <span className="trust-tile-title">{tile.title}</span>
-        {tile.proof && <span className="trust-tile-proof">{tile.proof}</span>}
-      </span>
-      <span className="trust-tile-detail" id={`${id}-detail`}>
-        <span className="trust-tile-back-title" aria-hidden="true">{tile.title}</span>
-        {tile.proof && <span className="trust-tile-proof">{tile.proof}</span>}
-        <span className="trust-tile-detail-body"><span>{tile.detail}</span>
-          {tile.note && <span className="trust-tile-note"><span aria-hidden="true">ⓘ </span>{tile.note}</span>}
-        </span>
-      </span>
-      <span className="trust-tile-hint" aria-hidden="true">{open ? "✕" : "ⓘ"}</span>
-    </button>;
-  })}</div>;
-}
-
-/** The people a dispute is about, with real rulings TriVerity gave on the sample cases, rotating. */
 /**
  * The model and the cloud it is served on, as the official lockups (never redrawn or recoloured).
  * Both theme versions are rendered and CSS shows one: the app's theme toggle sets data-theme,
@@ -354,64 +353,8 @@ function HeroVisual() {
       width={1536} height={1024} fetchPriority="high" decoding="async"
       alt="A smiling driver turns around in the front seat to greet a rider who is holding a phone at the open rear door." />
     <div className="hero-speed" aria-hidden="true"><span className="hero-dot ok" />Ruled in about 16 s</div>
-    <HeroRulingCard />
+    <HeroConsole />
   </figure>;
-}
-
-/**
- * Cycles through example rulings every HERO_ROTATE_MS. Pauses while hovered or focused,
- * and when the viewer presses pause or picks a case; never rotates under reduced motion.
- */
-function HeroRulingCard() {
-  const [index, setIndex] = useState(0);
-  const [held, setHeld] = useState(false);       // hover or keyboard focus inside
-  const [stopped, setStopped] = useState(false); // the pause button, or a case picked by hand
-  const [reduced, setReduced] = useState(() => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false);
-  useEffect(() => {
-    const query = window.matchMedia?.("(prefers-reduced-motion: reduce)");
-    if (!query) return;
-    const change = (event: MediaQueryListEvent) => setReduced(event.matches);
-    query.addEventListener("change", change);
-    return () => query.removeEventListener("change", change);
-  }, []);
-  const rotating = !reduced && !stopped && HERO_RULINGS.length > 1;
-  useEffect(() => {
-    if (!rotating || held) return;
-    const timer = window.setInterval(() => setIndex(i => nextHeroIndex(i, HERO_RULINGS.length)), HERO_ROTATE_MS);
-    return () => window.clearInterval(timer);
-  }, [rotating, held]);
-  const ruling = HERO_RULINGS[index];
-  if (!ruling) return null;
-  return <section className={`hero-ruling ${ruling.tone}`} aria-roledescription="carousel" aria-label="Example rulings"
-    onMouseEnter={() => setHeld(true)} onMouseLeave={() => setHeld(false)}
-    onFocus={() => setHeld(true)} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setHeld(false); }}>
-    {/* Auto-rotation is not announced; a case the viewer picks is. */}
-    <p className="sr-only" aria-live={stopped ? "polite" : "off"}>{ruling.label}</p>
-    {/* Every slide shares one grid cell, so the card is always as tall as the tallest and never jumps. */}
-    <div className="hero-ruling-slides" aria-hidden="true">
-      {HERO_RULINGS.map((item, i) => <div key={item.id} className={`hero-ruling-slide ${item.tone}${i === index ? " active" : ""}`}>
-        <div className="hero-ruling-head">
-          <span className="hero-ruling-status"><span className={`hero-dot ${item.tone}`} />{item.status}</span>
-          <span className="hero-ruling-id">{item.id} · {item.kind}</span>
-        </div>
-        <p className="hero-ruling-outcome">{item.outcome}{item.amount && <> <strong>{item.amount}</strong></>}</p>
-        <p className="hero-ruling-why">{item.why}</p>
-      </div>)}
-    </div>
-    <div className="hero-ruling-foot">
-      <span className="hero-confidence" aria-hidden="true">{ruling.confidence}</span>
-      <span className="hero-controls">
-        {HERO_RULINGS.map((item, i) => <button key={item.id} type="button" className="hero-pick" aria-pressed={i === index}
-          aria-label={`Show example ${i + 1} of ${HERO_RULINGS.length}: ${item.id}`} onClick={() => { setIndex(i); setStopped(true); }} />)}
-        {!reduced && HERO_RULINGS.length > 1 && <button type="button" className="hero-pause" onClick={() => setStopped(s => !s)}
-          aria-label={stopped ? "Play Example Rulings" : "Pause Example Rulings"}>
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
-            {stopped ? <path d="M8 5.5v13l10-6.5Z" /> : <path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" />}
-          </svg>
-        </button>}
-      </span>
-    </div>
-  </section>;
 }
 
 /** The pain before TriVerity: a no-show fee the rider disputes, then days of waiting (the brief's 24–72 h). */
