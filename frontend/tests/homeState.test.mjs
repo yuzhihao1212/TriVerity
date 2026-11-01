@@ -31,7 +31,7 @@ test('appeals waiting appears only for positive counts when appeals are availabl
 test('guided demo always keeps all three numbered cases and prescribed copy', () => {
   assert.deepEqual(guidedDemoSteps([]).map(({ id, number, title, blurb }) => ({ id, number, title, blurb })), [
     { id: 'D001', number: 1, title: 'A Route Dispute', blurb: 'Rider says the trip was too long' },
-    { id: 'D006', number: 2, title: 'A No-show Fee', blurb: 'Rider disputes a $4.00 fee' },
+    { id: 'D006', number: 2, title: 'A No-show Fee', blurb: 'Rider disputes a $5.00 fee' },
     { id: 'D007', number: 3, title: 'A Safety Flag', blurb: 'Threat in the chat' },
   ]);
   assert.deepEqual(guidedDemoSteps([]).map(step => step.label), ['Start here', null, null]);
