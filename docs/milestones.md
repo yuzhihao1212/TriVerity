@@ -1,7 +1,7 @@
 # Milestones
 
 Measured against the Ryde challenge brief and the hackathon submission requirements.
-Status as of 30 Oct 2026. Submitted 16 Oct 2026; finalist, with the rehearsal on 2 Nov and Demo Day on 3 Nov 2026.
+Status as of 1 Nov 2026. Submitted 16 Oct 2026; finalist, with the rehearsal on 2 Nov and Demo Day on 3 Nov 2026.
 
 ## Required by the brief
 
