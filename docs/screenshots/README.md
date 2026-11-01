@@ -30,8 +30,10 @@ used fallback text. A real run can fall back, and the console labels it when it 
 
 ## Repository cover
 
-[cover.jpg](cover.jpg) is an optimised copy of the cover artwork supplied by the team on 16 October 2026.
-It is separate from the fifteen synthetic UI screenshots above: 1280 × 731 px, **66,709 bytes**, resized
-proportionally from 2016 × 1152 px and exported as JPEG at quality 85 with 4:4:4 chroma sampling.
-No crop or new artwork was applied; embedded metadata is stripped. The original file is unchanged.
-The original PNG was 2,242,934 bytes, so this export reduces the download by **97.0%**.
+[cover.jpg](cover.jpg) is the repository cover, updated on 2 November 2026 to match the app: the console's
+own owl perched on level scales (rider and driver at equal size, in the Hearing step's muted avatar tints),
+the Poppins wordmark with the rose dot, the landing page's tagline, and a footer crediting OeroAI, Tencent
+Hunyuan and Tencent Cloud. It is 1920 × 1080 px, **155,200 bytes**: rendered at 2× in Chrome from the app's
+components and assets, scaled down with Lanczos, and exported as JPEG at quality 85 with 4:4:4 chroma
+sampling and no metadata. It replaces the 16 October cover (1280 × 731 px, 66,709 bytes), which showed an
+earlier drawing of the owl with tilted scales.
