@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 
 import { createSeenCases } from "./chartIntro";
 import { COUNT_UP_MS, countUpText, EVIDENCE_SEEN_KEY, parseCountTarget } from "./countUp";
@@ -6,7 +6,11 @@ import {
   labelledTimeline, timelineClock, timelineTicks, labelRows, nearestPointIndex, offRouteFlags, projectRoutes, ROUTE_SEEN_KEY, routeRuns, sketchLabel,
   stopFacts, totalOffMinutes, type Timeline,
 } from "./gpsStory";
+import { iconStrokes } from "./Icon";
+import { distanceText, trimDecimal } from "./numberFormat";
+import { PICKUP_LIMIT_M, pickupLayout, readingMarks } from "./pickupSketch";
 import { metres, polyline, type GpsPoint, type LatLng } from "./tripVisuals";
+import type { Trip } from "./types";
 
 // ---- Once per case per session -------------------------------------------------
 
@@ -97,6 +101,109 @@ export function RouteSketch({ caseId, points, planned, facts }: { caseId: string
       <span><i className="legend-start" />Start</span><span><i className="legend-end" />End</span>
     </figcaption>
   </figure>;
+}
+
+// ---- Pickup sketch (no-show) ----------------------------------------------------
+
+/** The element's content width in px, so an SVG can draw at 1 unit = 1 px and keep its text readable. */
+function useWidth(fallback: number) {
+  const ref = useRef<HTMLElement>(null);
+  const [width, setWidth] = useState(fallback);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) => setWidth(Math.round(entry.contentRect.width) || fallback));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [fallback]);
+  return [ref, width] as const;
+}
+
+/** An icon from the app's set, centred on (x, y) at `size` px. */
+function Glyph({ name, x, y, size }: { name: string; x: number; y: number; size: number }) {
+  const s = size / 24;
+  return <g transform={`translate(${x - size / 2} ${y - size / 2}) scale(${s})`} fill="none" stroke="currentColor"
+    strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">{iconStrokes(name)}</g>;
+}
+
+/**
+ * The driver never moved, so instead of a route: where they waited compared with the pickup point
+ * and its 100 m zone (NS-1), then how long they waited, one dot per GPS reading.
+ */
+export function PickupSketch({ caseId, trip, points, facts }: { caseId: string; trip?: Trip; points: GpsPoint[]; facts: string[] }) {
+  const play = useRouteIntro(caseId);
+  const blocks = useId().replace(/:/g, "");
+  const [ref, measured] = useWidth(720);
+  const w = Math.max(280, Math.min(measured, 900)), h = w < 520 ? 300 : 340;
+  // Narrow screens put the driver's label above the marker, so leave it a little more room.
+  const layout = pickupLayout(trip, w, h, w < 520 ? 58 : 48);
+  const timeline = labelledTimeline(points, [], facts);
+  const marks = readingMarks(points);
+  const waited = trip?.driver_wait_min ?? timeline?.totalMinutes;
+  if (!layout && !timeline) return null;
+  return <figure ref={ref} className={`pickup-sketch${play ? " pickup-intro" : ""}`}>
+    {layout && <PickupMap layout={layout} blocks={blocks} w={w} h={h} />}
+    {timeline && waited != null && <div className="pickup-wait" role="img"
+      aria-label={`The driver waited ${trimDecimal(waited)} minutes, from ${timeline.start} to ${timeline.end}${marks.length ? `, with ${marks.length} GPS readings at the same spot` : ""}.`}>
+      <span className="pickup-wait-label" aria-hidden="true">Waited</span>
+      <div className="pickup-wait-track" aria-hidden="true">
+        <span className="pickup-wait-fill" />
+        {marks.map((at, index) => <i key={index} style={{ left: `${(at * 100).toFixed(2)}%`, "--dot-index": index } as CSSProperties} />)}
+      </div>
+      <strong className="pickup-wait-value" aria-hidden="true">{trimDecimal(waited)} min</strong>
+      <span className="pickup-wait-axis" aria-hidden="true"><span>{timeline.start}</span><span>{timeline.end}</span></span>
+    </div>}
+    {layout && <figcaption className="route-legend pickup-legend" aria-hidden="true">
+      <span><i className="legend-pickup" />Pickup point</span>
+      <span><i className="legend-zone" />{PICKUP_LIMIT_M} m pickup zone</span>
+      <span><i className="legend-driver" />Where the driver waited</span>
+      {!layout.toScale && <span className="pickup-scale-note">Markers drawn apart; not to scale</span>}
+    </figcaption>}
+  </figure>;
+}
+
+function PickupMap({ layout, blocks, w: PW, h: PH }: { layout: NonNullable<ReturnType<typeof pickupLayout>>; blocks: string; w: number; h: number }) {
+  const { pickup, driver, zoneRadius, distance, inside } = layout;
+  const mid = { x: (pickup.x + driver.x) / 2, y: (pickup.y + driver.y) / 2 };
+  const distanceLabel = distanceText(Math.round(distance));
+  const pillWidth = distanceLabel.length * 9.5 + 22;
+  // The zone label sits on the side of the circle away from the driver, so it never meets the line.
+  const away = Math.hypot(driver.x - pickup.x, driver.y - pickup.y) || 1;
+  const ux = (pickup.x - driver.x) / away, uy = (pickup.y - driver.y) / away;
+  const zoneLabel = { x: pickup.x + ux * (zoneRadius + 16), y: pickup.y + uy * (zoneRadius + 16) + 5 };
+  // Beside the marker when there's room (about 140 px of text), otherwise above or below it.
+  const room = 30 + 140;
+  const driverLabel: { x: number; y: number; anchor: "start" | "end" | "middle" } = driver.x + room <= PW ? { x: driver.x + 30, y: driver.y + 5, anchor: "start" }
+    : driver.x - room >= 0 ? { x: driver.x - 30, y: driver.y + 5, anchor: "end" }
+    : { x: Math.max(75, Math.min(PW - 75, driver.x)), y: driver.y > 50 ? driver.y - 34 : driver.y + 46, anchor: "middle" };
+  return <svg viewBox={`0 0 ${PW} ${PH}`} preserveAspectRatio="xMidYMid meet" role="img"
+    aria-label={`Sketch: the driver waited ${distanceLabel} from the pickup point, ${inside ? "inside" : "outside"} the ${PICKUP_LIMIT_M} m pickup zone.`}>
+    <defs>
+      <pattern id={blocks} width="76" height="58" patternUnits="userSpaceOnUse">
+        <rect className="pickup-block" x="7" y="7" width="62" height="44" rx="7" />
+      </pattern>
+    </defs>
+    <rect className="pickup-ground" x="0" y="0" width={PW} height={PH} rx="10" />
+    <rect x="0" y="0" width={PW} height={PH} rx="10" fill={`url(#${blocks})`} />
+    <circle className="pickup-zone" cx={pickup.x} cy={pickup.y} r={zoneRadius} />
+    <text className="pickup-zone-label" x={zoneLabel.x} y={zoneLabel.y} textAnchor="middle">{PICKUP_LIMIT_M} m pickup zone</text>
+    <g className={`pickup-link${inside ? " inside" : ""}`}>
+      <line x1={pickup.x} y1={pickup.y} x2={driver.x} y2={driver.y} />
+      <rect x={mid.x - pillWidth / 2} y={mid.y - 14} width={pillWidth} height={28} rx={14} />
+      <text x={mid.x} y={mid.y + 5.5} textAnchor="middle">{distanceLabel}</text>
+    </g>
+    <g className="pickup-pin">
+      <path d={`M${pickup.x},${pickup.y} c-4,-9 -15,-15 -15,-29 a15,15 0 1 1 30,0 c0,14 -11,20 -15,29 z`} />
+      <Glyph name="person" x={pickup.x} y={pickup.y - 29} size={17} />
+      <text className="pickup-point-label" x={pickup.x} y={pickup.y + 20} textAnchor="middle">Pickup point</text>
+    </g>
+    <g className="pickup-driver">
+      <circle className="pickup-driver-halo" cx={driver.x} cy={driver.y} r={27} />
+      <circle cx={driver.x} cy={driver.y} r={19} />
+      <Glyph name="wheel" x={driver.x} y={driver.y} size={22} />
+      <text x={driverLabel.x} y={driverLabel.y} textAnchor={driverLabel.anchor}>Driver waited here</text>
+    </g>
+  </svg>;
 }
 
 // ---- Timeline -------------------------------------------------------------------

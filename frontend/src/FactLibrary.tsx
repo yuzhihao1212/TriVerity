@@ -9,11 +9,12 @@ import { alignedFact, gpsRow, rawWindowLabel, relatedLinkLabel } from "./evidenc
 import { EvidenceDisclosure, EvidenceInfo } from "./EvidenceDisclosure";
 import { Chip, InternalBadge } from "./Chip";
 import { valueChipTone } from "./chipStyle";
-import { GpsTimeline, RouteSketch } from "./EvidenceStories";
+import { GpsTimeline, PickupSketch, RouteSketch } from "./EvidenceStories";
 import { caseFindings, nextFinding } from "./evidenceFindings";
 import { fareChecks, fareHeadline, fareTotalLine } from "./fareStory";
 import { gpsHeadline } from "./gpsStory";
 import { Icon } from "./Icon";
+import { isParked } from "./pickupSketch";
 import { historyLine, historySentence, parseHistory } from "./historyStory";
 import { SOURCE_LABELS, type EvidenceItem } from "./presentation";
 import { reveal } from "./routes";
@@ -176,13 +177,16 @@ function GpsBody({ groups, context }: { groups: FactGroup[]; context: RowContext
   const { dispute } = context;
   const points = dispute?.gps_points ?? [];
   const planned = dispute?.trip.planned_route ?? [];
+  // A driver waiting for a no-show never moves: show where they waited, not a route or trip timeline.
+  const parked = !!dispute && planned.length < 2 && isParked(points);
   return <>
     <p className="story-headline"><PlainSentence text={headline ?? "The GPS records for this trip are shown below."} /></p>
-    {dispute && <RouteSketch caseId={dispute.dispute_id} points={points} planned={planned} facts={all} />}
-    {dispute && <GpsTimeline points={points} planned={planned} facts={all} />}
+    {dispute && parked && <PickupSketch caseId={dispute.dispute_id} trip={dispute.trip} points={points} facts={all} />}
+    {dispute && !parked && <RouteSketch caseId={dispute.dispute_id} points={points} planned={planned} facts={all} />}
+    {dispute && !parked && <GpsTimeline points={points} planned={planned} facts={all} />}
     {!!visual.length && <ul className="fact-library-list gps-fact-grid">
       {visual.map(group => <FactShell key={key(group.primary)} fact={group.primary} related={group.related} context={context} className="gps-number-row">
-        <GpsFactContent row={gpsRow(group.primary.text, all, dispute)!} />
+        <GpsFactContent row={gpsRow(group.primary.text, all, dispute)!} picture={!parked} />
       </FactShell>)}
     </ul>}
     {raw.map(group => <EvidenceDisclosure key={key(group.primary)} label={rawWindowLabel(group.primary.text, all)!}>
@@ -414,8 +418,9 @@ function OriginalFact({ fact, context }: { fact: EvidenceItem; context: RowConte
   </li>;
 }
 
-function GpsFactContent({ row }: { row: NonNullable<ReturnType<typeof gpsRow>> }) {
-  const timeline = row.timeline;
+/** `picture` false drops the small trip track, e.g. when the pickup sketch above already shows the wait. */
+function GpsFactContent({ row, picture = true }: { row: NonNullable<ReturnType<typeof gpsRow>>; picture?: boolean }) {
+  const timeline = picture ? row.timeline : null;
   return <>
     <span className="aligned-fact-label">{row.label}</span>
     <span className="gps-fact-number">{row.value}<small>{row.small}{row.kind === "coverage" && <EvidenceInfo label="About off-plan GPS readings">{row.threshold}</EvidenceInfo>}</small></span>

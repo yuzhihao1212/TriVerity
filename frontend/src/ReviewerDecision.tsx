@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
 
 import {
-  decisionBar, overrideAmountCheck, INVESTIGATION_CHECKS, OVERRIDE_LABELS, overrideChoices, overrideError,
+  checkLabel, decisionBar, overrideAmountCheck, INVESTIGATION_CHECKS, MAX_OTHER_CHECK, OTHER_CHECK, OVERRIDE_LABELS, overrideChoices, overrideError,
   overrideLine, readHeld, readSaved, REASON_PLACEHOLDER, rulingLine, secondApprovalLimit, shortProposal, writeHeld, writeSaved,
   type FinalDecision, type HoldRecord, type OverrideChoice, type SavedDecision,
   panelShowing,
@@ -16,13 +16,13 @@ import { ApiError, recordReviewerDecision } from "./services/api";
 import type { DisputeCase, Resolution } from "./types";
 
 interface Entry {
-  mode: "idle" | "override"; choice: OverrideChoice | null; amount: string; check: string | null; reason: string;
+  mode: "idle" | "override"; choice: OverrideChoice | null; amount: string; check: string | null; checkOther: string; reason: string;
   busy: boolean; saved: SavedDecision | null; error: string | null;
 }
 
 export type DecisionController = ReturnType<typeof useReviewerDecision>;
 
-const blank: Entry = { mode: "idle", choice: null, amount: "", check: null, reason: "", busy: false, saved: null, error: null };
+const blank: Entry = { mode: "idle", choice: null, amount: "", check: null, checkOther: "", reason: "", busy: false, saved: null, error: null };
 
 const heldStorage = () => { try { return window.sessionStorage; } catch { return null; } };
 
@@ -110,6 +110,7 @@ export function useReviewerDecision({ runKey, dispute, resolution, onDecided, on
     setChoice: (choice: OverrideChoice) => runKey && patch(runKey, { choice, error: null }),
     setAmount: (amount: string) => runKey && patch(runKey, { amount }),
     setCheck: (check: string) => runKey && patch(runKey, { check }),
+    setCheckOther: (checkOther: string) => runKey && patch(runKey, { checkOther }),
     setReason: (reason: string) => runKey && patch(runKey, { reason }),
     setMode: (mode: Entry["mode"]) => runKey && patch(runKey, { mode, error: null }),
     accept() {
@@ -118,11 +119,11 @@ export function useReviewerDecision({ runKey, dispute, resolution, onDecided, on
     /** Confirm the override form: an investigation or a large refund goes on hold instead. */
     submit() {
       if (locked || !runKey || !dispute || !entry.choice || entry.busy) return;
-      if (overrideError({ choice: entry.choice, check: entry.check, reason: entry.reason, amount: amountCheck })) return;
+      if (overrideError({ choice: entry.choice, check: entry.check, other: entry.checkOther, reason: entry.reason, amount: amountCheck })) return;
       const reason = entry.reason.trim();
       const at = clockText(new Date());
       if (entry.choice === "investigate") {
-        putHold({ disputeId: dispute.dispute_id, why: entry.check ?? "Needs further investigation", reason, amount: null, at });
+        putHold({ disputeId: dispute.dispute_id, why: checkLabel(entry.check, entry.checkOther), reason, amount: null, at });
         patch(runKey, { mode: "idle" });
       } else if ((entry.choice === "partial_refund" || entry.choice === "full_refund") && amountCheck?.state === "second") {
         putHold({ disputeId: dispute.dispute_id, why: `$${amountCheck.value!.toFixed(2)} refund needs a second approval`, reason, amount: amountCheck.value, at });
@@ -261,10 +262,10 @@ function OverrideForm({ id, resolution, controller, ruling, confidence, heading 
   id: string; resolution: Resolution; controller: DecisionController; ruling: string; confidence: number;
   heading: RefObject<HTMLHeadingElement>;
 }) {
-  const { escalated, choice, amount, check, reason, busy, error, fare, amountCheck } = controller;
+  const { escalated, choice, amount, check, checkOther, reason, busy, error, fare, amountCheck } = controller;
   const [tried, setTried] = useState(false);
   const choices = overrideChoices(resolution.decision);
-  const problem = overrideError({ choice, check, reason, amount: amountCheck });
+  const problem = overrideError({ choice, check, other: checkOther, reason, amount: amountCheck });
   const rulingRefund = resolution.refund_amount != null && resolution.refund_amount > 0 ? resolution.refund_amount : null;
   const limit = secondApprovalLimit(rulingRefund);
   const fullCheck = choice === "full_refund" ? amountCheck : null;
@@ -334,6 +335,8 @@ function OverrideForm({ id, resolution, controller, ruling, confidence, heading 
           <div className="override-chips" role="group" aria-labelledby={`${id}-check`}>{INVESTIGATION_CHECKS.map(item =>
             <button key={item} type="button" className="override-chip is-small" aria-pressed={check === item} disabled={busy}
               onClick={() => controller.setCheck(item)}>{titleCase(item)}</button>)}</div>
+          {check === OTHER_CHECK && <input type="text" className="override-other" maxLength={MAX_OTHER_CHECK} value={checkOther} disabled={busy} autoFocus
+            aria-label="Describe what needs checking" placeholder="Describe what needs checking" onChange={event => controller.setCheckOther(event.target.value)} />}
           <p className="override-note is-warn"><Icon name="pause" />No one is notified yet. The case goes on hold in the home page list until a second reviewer decides.</p>
         </div>}
       </fieldset>

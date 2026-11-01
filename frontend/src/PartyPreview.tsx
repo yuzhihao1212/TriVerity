@@ -127,7 +127,7 @@ export function PartyPreview({ resolution, dispute, reviewKey, saved, unavailabl
             event.preventDefault();
             const target = !sent ? "notify" : event.key === "Home" ? "notify" : event.key === "End" ? "customer" : index === 0 ? "customer" : "notify";
             setView(target); document.getElementById(`${id}-${target}-tab`)?.focus();
-          }}>{item === "notify" ? "Notify" : "Customer View"}</button>)}
+          }}>{item === "notify" ? "Reviewer View" : "Customer View"}</button>)}
       </div>
       <div id={`${id}-view-panel`} role="tabpanel" aria-labelledby={`${id}-${view}-tab`}>
       <h2 id={`${id}-heading`}>{view === "customer" ? "Customer View" : "Notify Parties"}</h2>

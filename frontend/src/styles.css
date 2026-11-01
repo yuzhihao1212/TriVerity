@@ -875,6 +875,7 @@ textarea { width: 100%; resize: vertical; }
 .override-step-label .muted { font-weight: 400; }
 .override-step textarea { width: 100%; box-sizing: border-box; }
 .override-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.override-other { flex-basis: 100%; width: 100%; box-sizing: border-box; }
 .override-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 4px 14px; border: 1px solid var(--control-border); border-radius: 999px;
   background: var(--bg); color: var(--text); font: inherit; font-size: 13px; cursor: pointer; }
 .override-chip.is-small { min-height: 30px; font-size: 12px; }
@@ -1220,6 +1221,9 @@ main[tabindex="-1"]:focus { outline: none; }
 .chip-dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .chip.pulse .chip-dot { animation: dot-pulse 1.2s ease-in-out infinite; }
 @keyframes dot-pulse { 50% { opacity: .35; transform: scale(.7); } }
+/* A green chip that pulses is waiting, not working: a slow, soft glow instead of the busy blink. */
+.chip.tone-ok.pulse .chip-dot { animation: dot-glow 2.6s ease-in-out infinite; }
+@keyframes dot-glow { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok-text) 45%, transparent); } 70%, 100% { box-shadow: 0 0 0 6px transparent; } }
 .chip.tone-neutral { background: var(--neutral-soft); color: var(--text); }
 .chip.tone-ok { background: var(--ok-soft); color: var(--ok-text); }
 .chip.tone-warn { background: var(--warn-soft); color: var(--warn-text); }
@@ -1655,8 +1659,18 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 
 /* Closed cases remain readable. Native dialog supplies modal focus containment and Esc. */
 .closed-case { display: grid; gap: var(--space-4); margin-block: var(--space-4) var(--space-6); padding: var(--space-5); border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
-.closed-case.is-closed { border-left: 4px solid var(--ok-text); }
+.closed-case.is-closed { border-color: color-mix(in srgb, var(--ok-text) 45%, var(--border)); background: linear-gradient(135deg, var(--ok-soft), var(--surface) 70%); }
 .closed-case-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
+.closed-seal { flex: none; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: var(--ok-text); color: var(--bg); box-shadow: 0 0 0 4px var(--ok-soft), 0 0 0 6px color-mix(in srgb, var(--ok-text) 55%, transparent); margin: 6px; }
+.closed-seal .icon { width: 28px; height: 28px; stroke-width: 2.5; }
+.closed-case.is-closed .closed-case-text { flex: 1; }
+.closed-case.is-closed h2 { color: var(--ok-text); font-size: 13px; letter-spacing: .12em; text-transform: uppercase; }
+.closed-case-text p.closed-outcome { margin: 0; font-size: 26px; font-weight: 700; line-height: 1.2; }
+.closed-facts { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin: var(--space-1) 0 0; padding: 0; list-style: none; font-size: 13px; color: var(--muted); }
+.closed-facts li { display: inline-flex; align-items: center; gap: var(--space-2); }
+.closed-facts .icon { width: 16px; height: 16px; flex: none; color: var(--ok-text); }
+.quiet-button { padding: 6px 12px; border: 0; border-radius: 999px; background: none; color: var(--accent-text); font-weight: 600; font-size: 13px; cursor: pointer; }
+.quiet-button:hover { background: var(--accent-soft); }
 .closed-case-text { min-width: 0; display: grid; gap: var(--space-2); }
 .closed-case h2 { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: 18px; }
 .closed-case h2 > .icon { width: 20px; height: 20px; flex: none; }
@@ -1678,9 +1692,12 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .closed-dialog h2 { font-size: 22px; margin-bottom: var(--space-4); }
 .closed-dialog p { font-size: 14px; }
 .closed-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-3); margin-top: var(--space-6); }
-.presentation-mode .closed-case-text p, .presentation-mode .closed-events, .presentation-mode .closed-snapshot h3, .presentation-mode .closed-dialog p { font-size: 16px; }
+.presentation-mode .closed-facts, .presentation-mode .closed-case-text p, .presentation-mode .closed-events, .presentation-mode .closed-snapshot h3, .presentation-mode .closed-dialog p { font-size: 16px; }
 @media (max-width: 760px) {
   .closed-case-head { flex-direction: column; }
+  .closed-seal { width: 44px; height: 44px; }
+  .closed-seal .icon { width: 22px; height: 22px; }
+  .closed-case-text p.closed-outcome { font-size: 22px; }
   .closed-reopen { width: 100%; }
   .closed-dialog-actions > button { flex: 1; }
 }
@@ -1805,6 +1822,46 @@ path.results-pop { fill: none; stroke: var(--accent-text); stroke-width: 2.5; st
 .route-stop rect { fill: var(--bg); }
 .route-stop text { stroke: none; font-size: 18px; }
 .gps-timeline { margin: 0; display: grid; gap: var(--space-2); }
+
+/* Pickup sketch (no-show): where the driver waited against the 100 m pickup zone, then the wait. */
+.pickup-sketch { margin: 0 0 var(--space-3); padding: var(--space-3); border-radius: 8px; background: var(--bg); display: grid; gap: var(--space-3); }
+.pickup-sketch svg { display: block; width: 100%; height: auto; }
+.pickup-ground { fill: var(--surface); }
+.pickup-block { fill: var(--bg); opacity: .75; }
+.pickup-zone { fill: var(--party-rider-soft); stroke: var(--party-rider-edge); stroke-width: 2; stroke-dasharray: 6 5; }
+.pickup-zone-label { fill: var(--muted); font-size: 13px; font-weight: 600; paint-order: stroke; stroke: var(--surface); stroke-width: 5px; }
+.pickup-link line { stroke: var(--warn-text); stroke-width: 3; stroke-dasharray: 2 7; stroke-linecap: round; }
+.pickup-link rect { fill: var(--bg); stroke: var(--warn-text); stroke-width: 2; }
+.pickup-link text { fill: var(--warn-text); font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pickup-link.inside line, .pickup-link.inside rect { stroke: var(--muted); }
+.pickup-link.inside text { fill: var(--text); }
+.pickup-pin path { fill: var(--hearing-rider-ink); stroke: var(--bg); stroke-width: 2.5; }
+.pickup-pin g { color: var(--bg); }
+.pickup-point-label, .pickup-driver text { fill: var(--text); font-size: 14px; font-weight: 600; paint-order: stroke; stroke: var(--surface); stroke-width: 5px; }
+.pickup-driver { color: var(--hearing-driver-ink); }
+.pickup-driver circle { fill: var(--hearing-driver-bg); stroke: var(--hearing-driver-ink); stroke-width: 2; }
+.pickup-driver .pickup-driver-halo { fill: var(--hearing-driver-bg); stroke: none; opacity: .55; }
+.pickup-wait { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-1) var(--space-3); }
+.pickup-wait-label { font-size: 13px; font-weight: 600; color: var(--muted); }
+.pickup-wait-value { font-size: 18px; font-variant-numeric: tabular-nums; }
+.pickup-wait-track { position: relative; height: 14px; border-radius: 7px; background: var(--hearing-driver-bg); box-shadow: inset 0 0 0 1px var(--hearing-driver-border); }
+.pickup-wait-fill { position: absolute; inset: 0; border-radius: inherit; background: var(--hearing-driver-ink); opacity: .22; }
+.pickup-wait-track i { position: absolute; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: var(--hearing-driver-ink); box-shadow: 0 0 0 2px var(--bg); }
+.pickup-wait-axis { grid-column: 2; display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pickup-legend .legend-pickup { width: 10px; height: 10px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--hearing-rider-ink); }
+.pickup-legend .legend-zone { width: 14px; height: 14px; border-radius: 50%; border: 2px dashed var(--party-rider-edge); background: var(--party-rider-soft); }
+.pickup-legend .legend-driver { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--hearing-driver-ink); background: var(--hearing-driver-bg); }
+.pickup-scale-note { font-style: italic; }
+@media (prefers-reduced-motion: no-preference) {
+  /* Once per case per session: the zone, then the distance, then the driver's stop and readings. */
+  .pickup-intro .pickup-zone { animation: pickup-grow .5s ease-out both; transform-box: fill-box; transform-origin: center; }
+  .pickup-intro .pickup-link { animation: evidence-fade .35s ease-out .45s both; }
+  .pickup-intro .pickup-driver { animation: pickup-drop .4s cubic-bezier(.3, 1.4, .6, 1) .7s both; transform-box: fill-box; transform-origin: center; }
+  .pickup-intro .pickup-wait-fill { animation: evidence-route-draw .8s ease-out .9s both; transform-origin: left center; }
+  .pickup-intro .pickup-wait-track i { animation: evidence-fade .2s ease-out both; animation-delay: calc(.9s + var(--dot-index) * 90ms); }
+}
+@keyframes pickup-grow { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes pickup-drop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .timeline-heading { font-size: 13px; font-weight: 600; }
 .timeline-direct-labels { display: flex; align-items: flex-end; color: var(--text); font-size: 12px; line-height: 1.4; }
 .timeline-direct-labels > span { min-width: 0; text-align: center; overflow-wrap: normal; }
@@ -2656,7 +2713,7 @@ details.ruling-condition-group[open] > summary::before { transform: rotate(90deg
 @keyframes click-pulse { to { transform: scale(4); opacity: 0; } }
 .app.presentation-mode { overflow-x: clip; }
 .ruling-hero { position: relative; }
-.ruling-stamp { position: absolute; top: -18px; right: 0; padding: 4px 14px; border: 3px solid currentColor; border-radius: 8px; color: var(--accent-text); font-size: 22px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; pointer-events: none; opacity: 0; transform: rotate(-8deg); animation: ruling-stamp .5s cubic-bezier(.2, 1.6, .4, 1) 2s forwards; }
+.ruling-stamp { position: absolute; top: 14px; right: 40px; padding: 4px 14px; border: 3px solid currentColor; border-radius: 8px; color: var(--accent-text); font-size: 22px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; pointer-events: none; opacity: 0; transform: rotate(-8deg); animation: ruling-stamp .5s cubic-bezier(.2, 1.6, .4, 1) 2s forwards; }
 .ruling-stamp.is-placed { opacity: .92; animation: none; }
 .ruling-stamp.tone-ok { color: var(--ok-text); }
 .ruling-stamp.tone-warn { color: var(--warn-text); }

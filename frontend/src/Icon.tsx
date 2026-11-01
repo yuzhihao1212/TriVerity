@@ -52,6 +52,9 @@ const PATHS: Record<string, ReactNode> = {
   edit: <><path d="M4 20h4L19 9l-4-4L4 16Z" /><path d="m13.5 6.5 4 4" /></>,
 };
 
+/** An icon's strokes alone, for placing inside a larger SVG on the 24-unit grid. */
+export const iconStrokes = (name: string): ReactNode => PATHS[name] ?? PATHS.generic;
+
 export function Icon({ name, className }: { name: string; className?: string }) {
   return <svg className={className ? `icon ${className}` : "icon"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"
     strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">{PATHS[name] ?? PATHS.generic}</svg>;

@@ -125,7 +125,7 @@ test('status pill keeps the previous exact wording as its detail', () => {
   assert.deepEqual(sv.statusPill({ busy: false, streaming: true, hasResult: true }), { label: 'Ruling ready', tone: 'ok', pulse: false, detail: 'Saved result · no new request' });
   assert.equal(sv.statusPill({ busy: true, streaming: true, hasResult: true }).label, 'Agents working · live');
   assert.equal(sv.statusPill({ busy: true, streaming: false, hasResult: false }).detail, 'Agents working · standard resolve');
-  assert.equal(sv.statusPill({ busy: false, streaming: true, hasResult: false }).label, 'Ready for intake');
+  assert.deepEqual(sv.statusPill({ busy: false, streaming: true, hasResult: false }), { label: 'Ready for intake', tone: 'ok', pulse: true, detail: 'Ready for intake' });
 });
 
 test('agent roles, icons and badges', () => {

@@ -18,7 +18,12 @@ export const OVERRIDE_LABELS: Record<OverrideChoice, string> = {
   partial_refund: "Partial refund", full_refund: "Full refund", no_action: "No change to the charge", investigate: "Needs further investigation",
 };
 /** What a reviewer can ask a second reviewer to check. */
-export const INVESTIGATION_CHECKS = ["GPS data looks wrong", "Missing chat or call records", "Possible fraud pattern", "Safety concern"] as const;
+export const OTHER_CHECK = "Other";
+export const INVESTIGATION_CHECKS = ["GPS data looks wrong", "Missing chat or call records", "Possible fraud pattern", "Safety concern", OTHER_CHECK] as const;
+export const MAX_OTHER_CHECK = 60;
+/** The label a hold shows: the reviewer's own words for "Other". */
+export const checkLabel = (check: string | null, other: string): string =>
+  check === OTHER_CHECK ? other.trim() || OTHER_CHECK : check ?? "Needs further investigation";
 export const MIN_REASON = 10;
 export const MIN_PARTIAL = 0.5;
 /** A partial refund above this multiple of the ruling's refund needs a second reviewer. */
@@ -123,13 +128,14 @@ export function overrideAmountCheck(choice: OverrideChoice | null, text: string,
 }
 
 /** What blocks confirming an override, in the order the reviewer fills the form. */
-export function overrideError({ choice, check, reason, amount }: {
-  choice: OverrideChoice | null; check: string | null; reason: string; amount: AmountCheck | null;
+export function overrideError({ choice, check, other = "", reason, amount }: {
+  choice: OverrideChoice | null; check: string | null; other?: string; reason: string; amount: AmountCheck | null;
 }): string | null {
   if (!choice) return "Choose what should happen instead.";
   if (choice === "partial_refund" && (!amount || amount.value == null)) return amount?.message ?? "Enter the refund amount.";
   if (choice === "full_refund" && amount && amount.value == null) return amount.message;
   if (choice === "investigate" && !check) return "Choose what needs checking.";
+  if (choice === "investigate" && check === OTHER_CHECK && !other.trim()) return "Say what needs checking.";
   if (reason.trim().length < MIN_REASON) return `Say a bit more about why (at least ${MIN_REASON} characters). It's kept with the case and the precedent.`;
   return null;
 }
