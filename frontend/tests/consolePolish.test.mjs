@@ -139,6 +139,10 @@ test('override form: what blocks confirming, in order', () => {
   assert.match(ds.overrideError({ choice: 'no_action', check: null, reason: 'short', amount: null }), /at least \d+ characters/);
   assert.equal(ds.overrideError({ choice: 'partial_refund', check: null, reason, amount: ok }), null);
   assert.equal(ds.overrideError({ choice: 'investigate', check: 'Safety concern', reason, amount: null }), null);
+  assert.match(ds.overrideError({ choice: 'investigate', check: ds.OTHER_CHECK, other: '  ', reason, amount: null }), /Say what needs checking/);
+  assert.equal(ds.overrideError({ choice: 'investigate', check: ds.OTHER_CHECK, other: 'Driver app crashed', reason, amount: null }), null);
+  assert.equal(ds.checkLabel(ds.OTHER_CHECK, ' Driver app crashed '), 'Driver app crashed');
+  assert.equal(ds.checkLabel('Safety concern', 'ignored'), 'Safety concern');
 });
 
 test('decision lines and the bar while a case is on hold', () => {

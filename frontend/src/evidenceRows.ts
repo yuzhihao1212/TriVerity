@@ -52,6 +52,8 @@ export function alignedFact(fact: EvidenceItem, dispute?: DisputeCase, related: 
   if (path && valid(dispute?.trip.expected_distance_km) && dispute.trip.expected_distance_km > 0
     && Math.round((num(path[1]) / dispute.trip.expected_distance_km - 1) * 100) === Number(path[2]))
     return compared("Route length", dispute.trip.expected_distance_km, num(path[1]), "km", Number(path[2]));
+  const still = /^GPS path 0(?:\.0+)? km over (\d+) points$/.exec(text);
+  if (still) return { label: "Readings", text: `${still[1]} GPS readings, all from the same spot` };
   const item = /^Fare line: (.+) \$([\d,.]+)$/.exec(text);
   if (item) return { label: item[1], text: `$${num(item[2]).toFixed(2)}` };
   const labels: [RegExp, string][] = [

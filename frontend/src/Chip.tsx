@@ -10,7 +10,7 @@ type ChipProps = Omit<HTMLAttributes<HTMLElement>, "className" | "children"> & {
   icon?: string;
   /** A leading status dot (decorative; the text carries the meaning). */
   dot?: boolean;
-  /** Pulse the dot (only while agents are working; off under reduced motion). */
+  /** Pulse the dot (while agents are working, or a green chip is waiting for the reviewer; off under reduced motion). */
   pulse?: boolean;
   as?: "span" | "li" | "strong";
   className?: string;

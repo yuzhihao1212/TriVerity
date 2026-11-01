@@ -152,7 +152,7 @@ export function statusPill({ busy, streaming, hasResult }: { busy: boolean; stre
     ? { label: "Agents working · live", tone: "accent", pulse: true, detail: "Agents working · live" }
     : { label: "Agents working", tone: "accent", pulse: true, detail: "Agents working · standard resolve" };
   if (hasResult) return { label: "Ruling ready", tone: "ok", pulse: false, detail: "Saved result · no new request" };
-  return { label: "Ready for intake", tone: "neutral", pulse: false, detail: "Ready for intake" };
+  return { label: "Ready for intake", tone: "ok", pulse: true, detail: "Ready for intake" };
 }
 
 // ---- Agent cards ----------------------------------------------------------

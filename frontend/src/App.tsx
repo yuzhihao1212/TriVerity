@@ -702,7 +702,7 @@ export default function App({ active, sampleId, navigation = 0, presentation, on
               <li><a href={HOME_HASH}>Console</a></li>
               <li aria-current="page">{selected.dispute_id}</li>
             </ol></nav>
-            {canReport && <button type="button" ref={caseReportButton} className="secondary-button case-report-trigger" onClick={() => openReport("case")}><Icon name="printer" />Export PDF</button>}
+            {canReport && <button type="button" ref={caseReportButton} className="quiet-button case-report-trigger" onClick={() => openReport("case")}><Icon name="printer" />Export PDF</button>}
             </div>
             {reviewId && <ClosedCase disputeId={selected.dispute_id} sent={sent} latest={latestSent}
               events={sentRecords().events(reviewId)} earlier={sentRecords().earlier(selected.dispute_id, reviewId)}
