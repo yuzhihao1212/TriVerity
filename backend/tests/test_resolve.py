@@ -24,7 +24,7 @@ def load(name: str) -> dict:
         ("route_deviation_002.json", "no_action", "RD-1", None),       # within tolerance
         ("route_deviation_003.json", "no_action", "RD-2", None),       # longer but faster
         ("no_show_001.json", "needs_review", "NS-4", None),            # wait time missing
-        ("no_show_002.json", "full_refund", "NS-1", 4.0),              # driver ~380 m away
+        ("no_show_002.json", "full_refund", "NS-1", 5.0),              # driver ~380 m away
         ("no_show_003.json", "no_action", "NS-3", None),               # all conditions met
     ],
 )

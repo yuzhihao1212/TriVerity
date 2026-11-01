@@ -13,7 +13,7 @@
     "driver_wait_min": 6
   },
   "fare": {
-    "cancellation_fee": 4.0
+    "cancellation_fee": 5.0
   },
   "chat_logs": [
     {"sender": "driver", "message": "I'm here, where are you?"}

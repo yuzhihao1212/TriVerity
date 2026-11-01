@@ -43,7 +43,7 @@ def test_every_message_is_greeting_found_next_with_no_ids_or_verdict_words(dispu
 
 @pytest.mark.parametrize(("dispute_id", "rider_found", "driver_found"), [
     ("D001", "you're getting $6.30 back", "the rider is getting $6.30 back"),     # partial refund
-    ("D005", "you're getting $4.00 back", "the rider is getting $4.00 back"),     # full refund
+    ("D005", "you're getting $5.00 back", "the rider is getting $5.00 back"),     # full refund
     ("D003", "the charge stays as it is", "the charge stays as it is"),           # no change
     ("D006", "so the no-show fee applies", "so the no-show fee applies"),         # no change, no "justified"
 ])

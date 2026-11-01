@@ -31,8 +31,8 @@ def test_labels_only_name_rules_in_the_policy():
 def test_citations_are_classified_by_side():
     expected = evaluate.load_expected()["D005"]  # rider: NS-1; driver: NS-2, NS-3
     result = Resolution(
-        decision="full_refund", recommended_action="Refund the no-show fee of $4.00.",
-        refund_amount=4.0, confidence=0.85, explanation="", explanation_source="llm",
+        decision="full_refund", recommended_action="Refund the no-show fee of $5.00.",
+        refund_amount=5.0, confidence=0.85, explanation="", explanation_source="llm",
         policy_refs=["NS-1: text"],
         rider_case=AgentCase(agent="rider", summary="", source="llm", policy_refs=["NS-1: t", "NS-3: t"]),
         driver_case=AgentCase(agent="driver", summary="", source="llm", policy_refs=["NS-2: t", "NS-4: t"]),

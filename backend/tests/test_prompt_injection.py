@@ -334,8 +334,8 @@ def test_rules_cited_by_an_advocate_may_be_named(mention, accepted):
                            "policy_refs": ["NS-2: x", "NS-3: y"]})
     narration = json.dumps({
         "explanation": f"NS-1 applies: the driver arrived 380 m from pickup; {mention}.",
-        "rider_explanation": "Your dispute was upheld and you will be refunded $4.00, the no-show fee.",
-        "driver_explanation": "The rider has been refunded $4.00 because you stopped too far from the pickup point.",
+        "rider_explanation": "Your dispute was upheld and you will be refunded $5.00, the no-show fee.",
+        "driver_explanation": "The rider has been refunded $5.00 because you stopped too far from the pickup point.",
     })
     result = run(load("no_show_002.json"), advocate=lambda *a, **k: advocate, judge=lambda *a, **k: narration)
     assert result.decision == "full_refund"

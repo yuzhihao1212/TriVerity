@@ -19,7 +19,7 @@ from app.services.text_safety import normalise
     [
         # "no" in "no-show" was read as a negation, so a refund looked denied (D005, live).
         ("full_refund", "The no-show fee was refunded because that condition was not met."),
-        ("full_refund", "Your no-show fee of $4.00 will be refunded."),
+        ("full_refund", "Your no-show fee of $5.00 will be refunded."),
         # "get back to you" is a reply, not money (escalated and no-refund cases).
         ("needs_review", "A human reviewer will look at this and get back to you."),
         ("no_action", "The fare stands. Our support team will get back to you if you have questions."),

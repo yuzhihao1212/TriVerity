@@ -96,6 +96,6 @@ export function tileCounts(rows: Pick<QueueRow, "status">[]): Tiles {
 /** The three cases in the guided demo, in presentation order. Titles say what each case is, never its outcome. */
 export const START_HERE: { id: string; title: string; blurb: string; icon: string }[] = [
   { id: "D001", title: "A Route Dispute", blurb: "Rider says the trip was too long", icon: "route" },
-  { id: "D006", title: "A No-show Fee", blurb: "Rider disputes a $4.00 fee", icon: "receipt" },
+  { id: "D006", title: "A No-show Fee", blurb: "Rider disputes a $5.00 fee", icon: "receipt" },
   { id: "D007", title: "A Safety Flag", blurb: "Threat in the chat", icon: "warning" },
 ];

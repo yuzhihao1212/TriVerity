@@ -115,7 +115,7 @@ export function Landing({ presentation, onTogglePresentation, theme, onToggleThe
           </div>)}</dl>
           <p className="landing-footnote muted">Synthetic data, not production results. Sample accuracy, latency and cost come from live Hy3 measurements; automation and repeatability come from the offline simulation; injection results from live red-team runs. <a href={`${GITHUB}/blob/main/docs/evaluation.md`}>Evaluation</a> · <a href={`${GITHUB}/blob/main/docs/simulation.md`}>500-dispute simulation</a> · <a href={`${GITHUB}/blob/main/docs/security.md`}>Security</a></p>
         </section>
-        <Chapter id="problem" number={1} label="The problem" title="A disputed $4 fee shouldn’t take up to three days."
+        <Chapter id="problem" number={1} label="The problem" title="A disputed $5 fee shouldn’t take up to three days."
           lead={<>Reviewers piece together GPS, chat, fares and history by hand, and rulings vary with who reviews. Ryde’s brief puts a resolution at <strong>24–72 hours</strong>.</>}
           visual={<ProblemVisual />}>
           <BeforeAfter />
@@ -364,9 +364,9 @@ function ProblemVisual() {
       width={1400} height={741} loading="lazy" decoding="async"
       alt="A rider frowns at a phone while adjusting their glasses, confused by what they are reading." />
     <div className="problem-notice" role="img"
-      aria-label="Illustration: a ride-app notification. No-show fee charged, $4.00: your driver marked you as a no-show. Dispute filed; typical wait 24 to 72 hours.">
+      aria-label="Illustration: a ride-app notification. No-show fee charged, $5.00: your driver marked you as a no-show. Dispute filed; typical wait 24 to 72 hours.">
       <div className="problem-notice-head" aria-hidden="true"><span className="problem-notice-app">Ryde</span><span>now</span></div>
-      <p className="problem-notice-title" aria-hidden="true">No-show fee charged: <strong>$4.00</strong></p>
+      <p className="problem-notice-title" aria-hidden="true">No-show fee charged: <strong>$5.00</strong></p>
       <p className="problem-notice-body" aria-hidden="true">“Your driver marked you as a no-show.”</p>
       <p className="problem-notice-foot" aria-hidden="true"><span className="problem-wait">⏱</span> Dispute filed · typical wait <strong>24–72 h</strong></p>
     </div>

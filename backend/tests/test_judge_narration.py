@@ -152,7 +152,7 @@ def test_judge_may_name_rules_an_advocate_cited():
     reply = {
         "explanation": "NS-1 decides this: the driver stopped 378 m away. The driver's advocate cited NS-2 and "
                        "NS-3, but waiting and messaging don't matter when the driver was not at the pickup point.",
-        "rider_explanation": "Your no-show fee of $4.00 will be refunded because the driver stopped 378 m away.",
+        "rider_explanation": "Your no-show fee of $5.00 will be refunded because the driver stopped 378 m away.",
         "driver_explanation": "The rider's dispute was upheld because you stopped 378 m from the pickup point.",
     }
     with patch("app.agents.judge_narration.complete", return_value=json.dumps(reply)):
@@ -164,7 +164,7 @@ def test_judge_still_cannot_name_a_rule_nobody_cited():
     case, ruling, rider, driver, narrate = _no_show_ruling_with_advocates()
     reply = {
         "explanation": "NS-1 and NS-4 decide this: the driver stopped 378 m away.",
-        "rider_explanation": "Your no-show fee of $4.00 will be refunded.",
+        "rider_explanation": "Your no-show fee of $5.00 will be refunded.",
         "driver_explanation": "The rider's dispute was upheld.",
     }
     with patch("app.agents.judge_narration.complete", return_value=json.dumps(reply)):

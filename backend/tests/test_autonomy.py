@@ -114,13 +114,13 @@ def test_not_eligible_when_refund_exceeds_cap():
 
 def test_not_eligible_when_refund_exceeds_fare_below_max():
     """When the fare is below max_refund, the cap is the fare itself."""
-    c = case("no_show_002.json")  # fare.actual = null, cancellation_fee = 4.0 → cap = min(10, 4) = 4
-    r = ruling(decision="full_refund", refs=("NS-1",), refund=4.0, confidence=0.85)
-    # $4.00 == cap, so it's eligible
+    c = case("no_show_002.json")  # fare.actual = null, cancellation_fee = 5.0 → cap = min(10, 5) = 5
+    r = ruling(decision="full_refund", refs=("NS-1",), refund=5.0, confidence=0.85)
+    # $5.00 == cap, so it's eligible
     a = auto_resolve(r, c)
     assert a.eligible is True
     # Now push it over
-    r2 = ruling(decision="full_refund", refs=("NS-1",), refund=5.0, confidence=0.85)
+    r2 = ruling(decision="full_refund", refs=("NS-1",), refund=6.0, confidence=0.85)
     a2 = auto_resolve(r2, c)
     assert a2.eligible is False
 

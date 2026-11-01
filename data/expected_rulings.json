@@ -4,7 +4,7 @@
   "D002": {"decision": "needs_review", "refund": null, "policy_refs": ["NS-4"], "tier": "standard", "supports": {"rider": ["NS-3"], "driver": ["NS-1"]}},
   "D003": {"decision": "no_action", "refund": null, "policy_refs": ["RD-1"], "tier": null, "supports": {"rider": [], "driver": ["RD-1"]}},
   "D004": {"decision": "no_action", "refund": null, "policy_refs": ["RD-2"], "tier": null, "supports": {"rider": [], "driver": ["RD-2"]}},
-  "D005": {"decision": "full_refund", "refund": 4.0, "policy_refs": ["NS-1"], "tier": null, "supports": {"rider": ["NS-1"], "driver": ["NS-2", "NS-3"]}},
+  "D005": {"decision": "full_refund", "refund": 5.0, "policy_refs": ["NS-1"], "tier": null, "supports": {"rider": ["NS-1"], "driver": ["NS-2", "NS-3"]}},
   "D006": {"decision": "no_action", "refund": null, "policy_refs": ["NS-1", "NS-2", "NS-3"], "tier": null, "supports": {"rider": [], "driver": ["NS-1", "NS-2", "NS-3"]}},
   "D007": {"decision": "needs_review", "refund": 6.9, "policy_refs": ["RD-3", "SAFE-1", "FRAUD-1"], "tier": "safety", "supports": {"rider": ["RD-3"], "driver": []}},
   "D008": {"decision": "needs_review", "refund": 6.3, "policy_refs": ["RD-3", "FRAUD-1"], "tier": "high", "supports": {"rider": ["RD-3"], "driver": []}},
