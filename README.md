@@ -146,8 +146,11 @@ same facts always give the same ruling, and every ruling is explained.
 - **Reviewer workflow**: home queue (**Run Agents** runs the waiting cases, after a confirmation) → Evidence → Hearing → Ruling (accept or override) → Notify
   (optional reviewer note and privacy check). Internal IDs and assessments in a note block sending;
   everyday words such as "history" only warn. Sending closes the case; a deliberate reopen permits a
-  correction, while history keeps every sent message. An investigation or a refund above the reviewer's
-  limit puts the case on hold (simulated) and nobody is notified. Parties can appeal after delivery.
+  correction, while history keeps every sent message, and the closed case shows the outcome, when it closed,
+  who decided and what was sent. An investigation (with a chosen reason, or the reviewer's own words under
+  "Other") or a refund above the reviewer's limit puts the case on hold (simulated): nobody is notified, and
+  the case moves to an **On Hold** group in the side menu. A step that can't open yet says why. Parties
+  can appeal after delivery.
   Review state, including holds, is kept in the browser session. Any case with a result can be saved as a
   [PDF report](docs/screenshots/13-case-report.png).
 
@@ -181,14 +184,14 @@ The full threat model is in [docs/security.md](docs/security.md).
 | Ryde brief | Where to see it |
 | --- | --- |
 | **Rider Advocate, Driver Advocate and Judge agents** | [Hearing](docs/screenshots/05-hearing.png), [Ruling](docs/screenshots/06-ruling.png), [agent source](backend/app/agents/) |
-| **GPS and telemetry**: actual vs optimal route, unexpected stops, duration vs estimate | [Evidence: route sketch, timeline and GPS card](docs/screenshots/04-evidence.png) |
+| **GPS and telemetry**: actual vs optimal route, unexpected stops, duration vs estimate | [Evidence: route sketch, timeline and GPS card](docs/screenshots/04-evidence.png); for a no-show, a pickup sketch of where the driver waited against the 100 m pickup zone, and how long |
 | **Chat logs**: sentiment, agreements, disagreements, threats | [Evidence](docs/screenshots/04-evidence.png); [computed chat facts and SAFE-1](docs/architecture.md#flow) |
 | **Payment and fare data**: breakdown validation, surge, promo codes | [Evidence: Fare card verdict and checks](docs/screenshots/04-evidence.png) |
 | **Historical behaviour**: dispute history, ratings, account age | [Evidence: History card](docs/screenshots/04-evidence.png); [500/500 policy fairness checks](docs/simulation.md) |
 | **Advocates gather their own evidence and cite policy** | [Per-side collection tools](docs/architecture.md#flow); [Hearing key facts and cited rules](docs/screenshots/05-hearing.png) |
 | **Ruling with a confidence score and a plain-language explanation** | [Ruling: outcome, confidence, reason, what would change it](docs/screenshots/06-ruling.png) |
 | **Recommended action and an explanation to both parties** | [Ruling: e.g. partial refund $6.30](docs/screenshots/06-ruling.png); [Notify: reviewer-approved party messages](docs/screenshots/07-notify.png) |
-| **At least two dispute categories, end to end** | [Sample data](data/disputes/): route deviation (D001, D003, D004, D007, D008), no-show charge (D002, D005, D006); [organisers' DISP-002](data/organiser/disp_002.json) |
+| **At least two dispute categories, end to end** | [Sample data](data/disputes/): route deviation (D001, D003, D004, D007, D008), no-show charge (D002, D005, D006), whose $5.00 fee and 5-minute free wait follow the [organisers' DISP-002](data/organiser/disp_002.json) |
 | **Observable inter-agent communication** | [Live progress](docs/screenshots/03-live-progress.png), [Hearing](docs/screenshots/05-hearing.png), [streamed agent log](docs/api-contract.md#post-apidisputesresolvestream); “How this step was decided” on every console step |
 | **Architecture diagram** | [Diagram](docs/architecture.svg), [design explanation](docs/architecture.md) |
 | **Stretch: Evidence Collection agent** | [Per-side tool calls over mock Ryde data APIs](docs/architecture.md#flow) |
@@ -204,7 +207,7 @@ The full threat model is in [docs/security.md](docs/security.md).
 [Documentation index](docs/README.md): architecture, responsible AI, security, evaluation, business case,
 API, deployment, submission and milestones, each with a short description.
 
-**Verified on 31 Oct 2026:** 975 backend tests and 471 frontend tests pass. Tests never call a real LLM.
+**Verified on 1 Nov 2026:** 978 backend tests and 497 frontend tests pass. Tests never call a real LLM.
 
 ## Run it locally
 

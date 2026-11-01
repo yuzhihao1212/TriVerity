@@ -93,20 +93,23 @@ TriVerity targets each of these:
 - Each case walks through **Intake → Evidence → Hearing → Ruling → Notify parties**, with live progress
   while the agents run and a log showing whether each step came from the AI, a fallback, or code.
 - **Evidence** explains itself: a route sketch drawn from the GPS data against the planned route, a trip
-  timeline with stops, a fare verdict with checks (lines add up, surge, promo), neutral party-history cards (highlighted only when the fraud check flags a party),
+  timeline with stops (for a no-show, a pickup sketch of where the driver waited against the 100 m pickup
+  zone, and how long), a fare verdict with checks (lines add up, surge, promo), neutral party-history cards (highlighted only when the fraud check flags a party),
   and an audit trail of what the evidence collector looked up for each side.
 - **Hearing** shows each side's key facts first, then evidence grouped by source, and which facts only one
   side relies on.
 - **Ruling** leads with the outcome, the confidence and a checklist of the conditions the rules checked. The
   reviewer accepts or overrides it, and every human decision becomes a precedent. An investigation, or a
   refund above the reviewer's limit, puts the case on hold for a second reviewer (simulated), and nobody is
-  notified. A case that closed by itself shows why.
+  notified. The reviewer picks what needs checking, or writes it under "Other", and held cases gather in an
+  **On Hold** group in the side menu. A case that closed by itself shows why.
 - **Notify parties**: the reviewer approves the messages each party receives, can add a short personal note
   (internal IDs and assessments such as fraud signals block sending; everyday words such as "history" only
   warn), and sends. Parties can appeal
   only after receiving the outcome.
-- **Closed cases**: a sent case reopens read-only with a "Case closed" banner; a deliberate Reopen allows a
-  correction, and the history keeps every message that was sent.
+- **Closed cases**: a sent case opens read-only under a "Case closed" card with the outcome, when it
+  closed, who decided and what was sent; a deliberate Reopen allows a correction, and the history keeps
+  every message that was sent.
 - An **AI Live / Off** switch lets the whole flow run without AI cost; rulings are identical, and only
   the wording falls back to templates.
 
@@ -123,7 +126,7 @@ TriVerity targets each of these:
   favour the other side (9 wrong-side citations in 14 cases, down to 2 after the prompt change).
 
 **Technology:** Tencent Hy3 through Tencent Cloud TokenHub; Python FastAPI backend; React + TypeScript
-frontend; 975 backend and 471 frontend tests (verified on 31 Oct 2026); a Docker image and Render Blueprint for the live
+frontend; 978 backend and 497 frontend tests (verified on 1 Nov 2026); a Docker image and Render Blueprint for the live
 demo (https://triverity-demo.onrender.com). **Built with:** Tencent Cloud **CodeBuddy**
 (the LLM client, advocate agents, hardening, UI badges and the Fraud & Bad-Faith detector); **WorkBuddy**
 (Hy4 preview) to polish this submission text, review the docs for consistency, prepare judge Q&A and
