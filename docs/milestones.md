@@ -48,5 +48,5 @@ Status as of 1 Nov 2026. Submitted 16 Oct 2026; finalist, with the rehearsal on 
 | ✅ | Project title and blurb under 10 words ([submission.md](submission.md)) | Lead |
 | ✅ | Project description: overview, pain points, solution design incl. how prompts drive generation ([prompts.md](prompts.md)), business value | Lead, from the docs |
 | ✅ | 16:9 cover image (380×216) | Lead (Miora) |
-| ✅ | Demo video, 5–8 minutes (optional) | [Video](https://www.youtube.com/watch?v=z3-8uuPBPAw) |
+| ✅ | Demo video, 5–8 minutes (optional) | [Video](https://www.youtube.com/watch?v=aszYaflceGc), re-cut on 5 Nov 2026 ([version submitted on 16 Oct](https://www.youtube.com/watch?v=z3-8uuPBPAw)) |
 | ✅ | Live demo link (optional, bonus points) | [triverity-demo.onrender.com](https://triverity-demo.onrender.com); deployed by hand, so each deploy is a manual step ([demo-deployment.md](demo-deployment.md)) |
