@@ -289,6 +289,9 @@ pip install -r requirements-mcp.txt
 python -m app.mcp_servers.evidence
 ```
 
+Set `EVIDENCE_TOOLS=mcp` and TriVerity's own Evidence agent calls its tools through this server
+too, with the same rulings as the in-process default.
+
 ## Repository layout
 
 ```text

@@ -5,8 +5,8 @@ picks which ones to call, and code computes every fact. This server puts those s
 behind the [Model Context Protocol](https://modelcontextprotocol.io), so any MCP client can use
 them: WorkBuddy, CodeBuddy, an agent on Tencent Cloud ADP, or TriVerity's own agents.
 
-It's phase 1 of a longer plan. Phase 2 points the Evidence agent at this server, and later phases
-connect WorkBuddy and ADP.
+Phases 1 and 2 of a longer plan are done: the server, and TriVerity's own Evidence agent calling
+it as an MCP client. Later phases add a server for support teams and connect WorkBuddy and ADP.
 
 ## What it serves
 
@@ -95,9 +95,35 @@ async def main():
 anyio.run(main)
 ```
 
+## The Evidence agent as an MCP client
+
+By default the Evidence agent calls its tools in-process. Set `EVIDENCE_TOOLS=mcp` in
+`backend/.env` and every call goes through this server instead:
+
+```bash
+EVIDENCE_TOOLS=mcp                            # the server runs in-process, over MCP's memory transport
+EVIDENCE_MCP_URL=http://127.0.0.1:8765/mcp    # optional: a server you started over HTTP
+```
+
+The agent still plans the calls and validates them first. Only the transport changes, so the
+rulings don't. The MCP path only takes a call when it can show the server holds the same case:
+
+- **Bundled samples only.** The server serves the samples by ID, so a judge's own dispute or an
+  edited sample runs its tools locally.
+- **A data check first.** Before the first call, the server's `case_overview` has to match what the
+  backend computes from its own copy of the case. If it doesn't, the case runs locally.
+- **Local fallback.** An error, a timeout (10 s per batch), an unreachable server or a malformed
+  answer runs that call locally, with the same answer. After a connection failure the rest of
+  the collection runs locally, so a down server costs one timeout at most.
+- **Loopback only.** `EVIDENCE_MCP_URL` has to be a loopback address, the same rule as the server.
+
+Each tool call records how it ran (`via: "local"` or `"mcp"`). When any went through the server,
+the agent log says how many. Without the MCP SDK installed, `mcp` mode runs locally and logs a
+warning. The live demo keeps the default, so it doesn't change.
+
 ## Tests
 
-`backend/tests/test_evidence_mcp.py` covers:
+`backend/tests/test_evidence_mcp.py` covers the server:
 
 - the tool list and read-only annotations
 - line-by-line equivalence with the direct tools
@@ -107,12 +133,23 @@ anyio.run(main)
 - the loopback-only rule
 - a real stdio subprocess client
 
-The tests skip if the MCP SDK isn't installed.
+`backend/tests/test_evidence_tools_mcp.py` covers the client path:
+
+- the same full resolution for every sample, local and over MCP, on the default plan and on an
+  LLM plan that calls all six tools, time windows included
+- a real streamable-HTTP server in a subprocess, with evidence identical to local
+- a sample posted to the API, resolved through the server
+- local fallback for an edited case, a server holding different data, an unreachable server, a
+  tool error and a malformed answer
+- non-loopback URLs refused without a connection, an unknown mode, and a missing SDK
+
+The tests skip if the MCP SDK isn't installed. CI installs it through `requirements-dev.txt`.
 
 ## What's next
 
-1. **Phase 2:** the Evidence agent calls this server as an MCP client behind a setting, with local
-   calls as the default and a test that proves both paths give the same rulings.
+1. ~~**Phase 2:**~~ Done. The Evidence agent calls this server as an MCP client behind
+   `EVIDENCE_TOOLS`, with local calls as the default and tests that prove both paths give the
+   same rulings.
 2. **Phase 3:** a second server for support teams (`list_held_cases`, `get_case_summary`,
    `get_ruling`), still with no tool that decides or closes a case.
 3. **Phase 4:** WorkBuddy (a scheduled morning brief of held cases), CodeBuddy, and a custom MCP

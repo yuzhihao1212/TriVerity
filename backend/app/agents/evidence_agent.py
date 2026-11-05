@@ -15,14 +15,14 @@ from __future__ import annotations
 import json
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from datetime import time
 
 from app.core import limits
 from app.core.safe_log import safe_reason
 from app.models.dispute import DisputeCase
 from app.models.resolution import EvidenceCollection, ToolCallRecord
-from app.services.data_sources import TOOLS, DataSources, data_available, parse_hhmm, window_args
+from app.services.data_sources import TOOLS, DataSources, data_available, window_args
 from app.services.evidence import CaseFacts
+from app.services.evidence_tools import LocalRunner, McpRunner, runner_for
 from app.services.llm_client import OFFLINE_PLACEHOLDER, _strip_fences, carry_context, complete
 from app.services.text_safety import echoes, find_link_or_markup, normalise, sanitise
 
@@ -75,6 +75,7 @@ def collect_evidence(case: DisputeCase, facts: CaseFacts,
     """Run the agent (for one advocate when ``party`` is given) and return its record plus the
     collected lines grouped by source."""
     sources = DataSources.for_case(case)
+    runner = runner_for(case, sources)   # in-process, or through the evidence MCP server
     calls: list[ToolCallRecord] = []
     rounds = 0
     agent_source = "llm"
@@ -83,11 +84,11 @@ def collect_evidence(case: DisputeCase, facts: CaseFacts,
         if plan is None:
             if round_no == 1:
                 agent_source = "fallback"
-                calls = _run(sources, _default_plan(case, sources), round_no=1, reason_default=True)
+                calls = _run(runner, _default_plan(case, sources), round_no=1, reason_default=True)
                 rounds = 1
             break
         requested, done = plan
-        new = _run(sources, requested, round_no=round_no, already=calls)
+        new = _run(runner, requested, round_no=round_no, already=calls)
         calls += new
         rounds = round_no
         if done or not new or len(calls) >= limits.EVIDENCE_AGENT_MAX_CALLS:
@@ -157,13 +158,14 @@ def _validate(request: object) -> tuple[str, dict, str] | None:
     return None if window is None else (tool.name, window, reason)
 
 
-def _run(sources: DataSources, requested: list, *, round_no: int,
+def _run(runner: LocalRunner | McpRunner, requested: list, *, round_no: int,
          already: list[ToolCallRecord] = (), reason_default: bool = False) -> list[ToolCallRecord]:
+    """Validate and de-duplicate a round's requested calls, then run them as one batch."""
     seen = {(c.tool, json.dumps(c.args, sort_keys=True)) for c in already}
     budget = min(limits.EVIDENCE_AGENT_MAX_CALLS_PER_ROUND, limits.EVIDENCE_AGENT_MAX_CALLS - len(already))
-    records: list[ToolCallRecord] = []
+    planned: list[tuple[str, dict, str]] = []
     for request in requested:
-        if len(records) >= budget:
+        if len(planned) >= budget:
             break
         valid = _validate(request)
         if valid is None:
@@ -173,23 +175,16 @@ def _run(sources: DataSources, requested: list, *, round_no: int,
         if key in seen:
             continue
         seen.add(key)
-        tool = TOOLS[name]
-        call_args = {k: _as_time(v) for k, v in args.items()}
-        try:
-            results = tool.run(sources, call_args)
-        except Exception as exc:  # a tool bug must never break the dispute
-            logger.warning("evidence tool %s failed: %s", name, safe_reason(exc))
-            results = []
-        records.append(ToolCallRecord(
-            round=round_no, tool=name, args=args, source=tool.source,
+        planned.append(valid)
+    results = runner.run_batch([(name, args) for name, args, _ in planned])
+    return [
+        ToolCallRecord(
+            round=round_no, tool=name, args=args, source=TOOLS[name].source,
             reason=reason or ("default plan" if reason_default else ""),
-            results=results[: limits.EVIDENCE_TOOL_MAX_LINES],
-        ))
-    return records
-
-
-def _as_time(value: str) -> time:
-    return parse_hhmm(value)  # validated already
+            results=lines[: limits.EVIDENCE_TOOL_MAX_LINES], via=via,
+        )
+        for (name, args, reason), (lines, via) in zip(planned, results)
+    ]
 
 
 def _default_plan(case: DisputeCase, sources: DataSources) -> list[dict]:
