@@ -22,6 +22,13 @@ secretGroup = 1
 keywords = ["demo_access_codes"]
 
 [[rules]]
+id = "mcp-tokens-assignment"
+description = "MCP_TOKENS or EVIDENCE_MCP_TOKEN set to real-looking bearer tokens"
+regex = '''(?i)(?:EVIDENCE_MCP_TOKEN|MCP_TOKENS)\s*[=:]\s*['"]?([A-Za-z0-9_\-]{32,}[A-Za-z0-9_,\-]*)'''
+secretGroup = 1
+keywords = ["mcp_token"]
+
+[[rules]]
 id = "tencent-cloud-secret-id"
 description = "Tencent Cloud API SecretId"
 regex = '''\b(AKID[A-Za-z0-9]{32})\b'''
