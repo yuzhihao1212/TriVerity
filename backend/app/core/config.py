@@ -33,6 +33,12 @@ class Settings(BaseSettings):
     global_per_minute: int | None = None
     per_code_per_minute: int | None = None
     per_code_per_day: int | None = None
+    # Evidence tools (phase 2 of the MCP plan, docs/mcp.md). "local" calls them in-process;
+    # "mcp" calls them through the evidence MCP server as an MCP client. Rulings are the same.
+    evidence_tools: str = "local"
+    # With EVIDENCE_TOOLS=mcp: the server's streamable-HTTP URL, loopback only until it has
+    # authentication (e.g. http://127.0.0.1:8765/mcp). Empty runs the server in-process.
+    evidence_mcp_url: str = ""
     database_url: str = "sqlite:///./ryde_disputes.db"
 
 settings = Settings()

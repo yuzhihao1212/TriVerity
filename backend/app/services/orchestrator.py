@@ -74,8 +74,10 @@ def resolve_dispute(case: DisputeCase, on_step: Callable[[AgentLogEntry], None] 
             calls = [c for c in collection.calls if c.party == party]
             names = ", ".join(f"{c.tool}({', '.join(c.args.values())})" if c.args else c.tool for c in calls)
             return f"{len(calls)} tool calls ({names or 'none'})"
+        via_mcp = sum(c.via == "mcp" for c in collection.calls)
+        transport = f"; {via_mcp} of {len(collection.calls)} via the evidence MCP server" if via_mcp else ""
         log("evidence_collector", f"[{collection.source}] rider's request: {tools('rider')}; "
-                                  f"driver's request: {tools('driver')}", started, ms)
+                                  f"driver's request: {tools('driver')}{transport}", started, ms)
 
         # The advocates and the fraud assessor are all independent of each other,
         # so run them concurrently.

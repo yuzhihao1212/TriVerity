@@ -109,6 +109,7 @@ EVIDENCE_WINDOW_MAX_MIN = 60          # longest time window a tool may be asked 
 EVIDENCE_TOOL_MAX_LINES = 8           # lines one tool call may return
 EVIDENCE_QUOTE_MAX_CHARS = 200        # a quoted chat message or app event
 EVIDENCE_REASON_MAX_CHARS = 160       # the agent's reason for a call
+EVIDENCE_MCP_TIMEOUT_S = 10           # one batch of calls to the evidence MCP server, then local
 
 # -- Concurrency (503 with Retry-After when full) -----------------------------
 MAX_CONCURRENT_RESOLVES = 3

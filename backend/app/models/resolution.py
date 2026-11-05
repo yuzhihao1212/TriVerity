@@ -91,6 +91,8 @@ class ToolCallRecord(BaseModel):
     results: list[str] = Field(default_factory=list)
     # The advocate whose evidence request made this call (each side gathers its own).
     party: Literal["rider", "driver"] | None = None
+    # How the call ran: in-process, or through the evidence MCP server (EVIDENCE_TOOLS=mcp).
+    via: Literal["local", "mcp"] = "local"
 
 class EvidenceCollection(BaseModel):
     """What the Evidence Collection agent gathered, and whether the LLM planned it."""
