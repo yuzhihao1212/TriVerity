@@ -278,15 +278,18 @@ python scripts/evaluate.py --runs 3
 
 Optional: `pip install pre-commit && pre-commit install` adds the gitleaks secret check to every commit.
 
-### Evidence MCP server
+### MCP servers
 
-The six evidence tools also run as a read-only MCP server, so WorkBuddy, CodeBuddy or any MCP
-client can call them ([setup and rules](docs/mcp.md)):
+Two read-only MCP servers let WorkBuddy, CodeBuddy or any MCP client work with TriVerity
+([setup and rules](docs/mcp.md)). The evidence server serves the six evidence tools. The
+support server serves the review queue: which cases are held for a person, what each is
+about, and the ruling.
 
 ```bash
 cd backend
 pip install -r requirements-mcp.txt
 python -m app.mcp_servers.evidence
+python -m app.mcp_servers.support
 ```
 
 Set `EVIDENCE_TOOLS=mcp` and TriVerity's own Evidence agent calls its tools through this server
