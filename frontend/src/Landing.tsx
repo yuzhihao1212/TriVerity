@@ -23,7 +23,7 @@ import { CASE_VIEWS, ENGINEERING_PROOF, HEARING_ROUNDS, ROLLOUT } from "./landin
 import "./landingStory.css";
 
 const GITHUB = "https://github.com/yuzhihao1212/TriVerity";
-const DEMO_VIDEO = "https://www.youtube.com/watch?v=z3-8uuPBPAw";
+const DEMO_VIDEO = "https://www.youtube.com/watch?v=aszYaflceGc";
 
 // README.md (live sample evaluation, 16 Oct 2026), docs/simulation.md (offline, seed 7) and
 // docs/security.md (live red-team runs). Keep the values and their measurement context together.

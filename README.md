@@ -8,7 +8,7 @@ AI agents argue both sides; policy rules decide fairly.
 🏆 **Champion: First Prize (SGD 10,000) and Excellence Award** at the Tencent Cloud AI CAN DO IT Hackathon Singapore 2026,
 co-hosted by AI Singapore: picked from the Top 10 finalists of ~150 teams (400+ registrations).
 
-**▶ [Live demo](https://triverity-demo.onrender.com)** · **🎬 [Demo video](https://www.youtube.com/watch?v=z3-8uuPBPAw)** ·
+**▶ [Live demo](https://triverity-demo.onrender.com)** · **🎬 [Demo video](https://www.youtube.com/watch?v=aszYaflceGc)** ·
 **🖼️ [Tencent Cloud project gallery](https://tch.tencentcloud.com/works/398)** ·
 **📄 [AI tool usage evidence](docs/submission/ai-tool-evidence.pdf)** · **📋 [Ryde requirements →](#ryde-requirements-where-to-see-each)**
 
@@ -48,7 +48,7 @@ Select an image to view it full size. [All fifteen screenshots and their provena
 ## New for Demo Day
 
 Added on 31 Oct 2026, after the hackathon submission. None of this changes the policy rules or how a ruling is decided;
-it makes the console easier for a real reviewer to use. The demo video was recorded before these changes.
+it makes the console easier for a real reviewer to use. The [demo video](https://www.youtube.com/watch?v=aszYaflceGc) walks through them.
 
 - **Run Agents on the whole queue:** one button runs the waiting sample cases. Routine ones close themselves, and the
   rest stay in your queue, [safety first, then oldest](docs/screenshots/02-reviewer-home.png).
