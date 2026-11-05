@@ -5,7 +5,11 @@
 **Ride disputes resolved fairly in seconds, not days.**
 AI agents argue both sides; policy rules decide fairly.
 
+🏆 **Champion: First Prize (SGD 10,000) and Excellence Award** at the Tencent Cloud AI CAN DO IT Hackathon Singapore 2026,
+co-hosted by AI Singapore: picked from the Top 10 finalists of ~150 teams (400+ registrations).
+
 **▶ [Live demo](https://triverity-demo.onrender.com)** · **🎬 [Demo video](https://www.youtube.com/watch?v=z3-8uuPBPAw)** ·
+**🖼️ [Tencent Cloud project gallery](https://tch.tencentcloud.com/works/398)** ·
 **📄 [AI tool usage evidence](docs/submission/ai-tool-evidence.pdf)** · **📋 [Ryde requirements →](#ryde-requirements-where-to-see-each)**
 
 *A hackathon prototype by OeroAI, built for Ryde's challenge at the Tencent Cloud AI Hackathon Singapore 2026.
