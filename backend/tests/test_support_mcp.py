@@ -212,3 +212,39 @@ def test_stdio_server_answers_a_real_client():
     names, result = anyio.run(go)
     assert "get_ruling" in names
     assert not result.is_error and result.structured_content["held"][0]["case_id"] == "D007"
+
+
+# -- The morning brief prompt ------------------------------------------------------
+
+def _prompt():
+    async def go():
+        async with Client(support.build_server()) as client:
+            prompts = (await client.list_prompts()).prompts
+            result = await client.get_prompt("morning_brief", {})
+            return prompts, result
+    return anyio.run(go)
+
+
+def test_morning_brief_is_the_only_prompt_and_takes_no_arguments():
+    prompts, _ = _prompt()
+    assert [(p.name, p.arguments or []) for p in prompts] == [("morning_brief", [])]
+
+
+def test_morning_brief_carries_the_held_queue_in_order():
+    _, result = _prompt()
+    [message] = result.messages
+    text = message.content.text
+    held = [h["case_id"] for h in _call("list_held_cases")["held"]]
+    positions = [text.index(f'"case_id": "{case_id}"') for case_id in held]
+    assert positions == sorted(positions)
+    assert "{queue}" not in text
+
+
+def test_morning_brief_keeps_a_person_in_charge_and_party_text_untrusted():
+    text = _prompt()[1].messages[0].content.text
+    assert "proposed" in text and "A reviewer decides" in text
+    assert "never" in text and "instructions" in text
+    for case in SAMPLES.values():   # the queue it embeds holds no party text
+        assert case.rider_claim not in text
+        if case.driver_statement:
+            assert case.driver_statement not in text

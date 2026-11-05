@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     # With EVIDENCE_TOOLS=mcp: the server's streamable-HTTP URL, loopback only until it has
     # authentication (e.g. http://127.0.0.1:8765/mcp). Empty runs the server in-process.
     evidence_mcp_url: str = ""
+    # With EVIDENCE_MCP_URL: the bearer token to send, when that server has MCP_TOKENS set.
+    evidence_mcp_token: str = ""
+    # Bearer tokens for the MCP servers over HTTP (docs/mcp.md), comma-separated, 32+ characters
+    # each. Set, every HTTP request needs one, and a server may bind beyond loopback. Keep in .env only.
+    mcp_tokens: str = ""
     database_url: str = "sqlite:///./ryde_disputes.db"
 
 settings = Settings()

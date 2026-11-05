@@ -10,7 +10,8 @@ TriVerity's own agents.
   cases are waiting for a person, what they're about and how the rules ruled.
 
 Phases 1 to 3 of a longer plan are done: the evidence server, TriVerity's own Evidence agent
-calling it as an MCP client, and the support server. Phase 4 connects WorkBuddy and ADP.
+calling it as an MCP client, and the support server. Phase 4 connects WorkBuddy, CodeBuddy and
+ADP. Its first part is done too: bearer tokens on the HTTP transport, and a morning brief prompt.
 
 ## Evidence server
 
@@ -48,8 +49,8 @@ what the client sent, and a tool bug returns a generic error instead of a stack 
 
 **The data is synthetic.** It serves the sample disputes in `data/` by ID, and nothing else.
 
-**It's local only for now.** Over HTTP it binds to loopback and refuses any other address. Remote
-access needs authentication first, which comes with the ADP phase.
+**Loopback unless it has tokens.** Over HTTP it binds to loopback and refuses any other address,
+unless bearer tokens are set. See [Bearer tokens](#bearer-tokens).
 
 ### Run it
 
@@ -138,6 +139,12 @@ a reviewer still does that in the console.
 | `get_case_summary` | What one case is about: its type, each side's claim as a redacted quote, the safety flag, and the facts computed from its trip, GPS, fare and chat data. |
 | `get_ruling` | The ruling: decision, refund, confidence, cited rules, each condition checked, why it needs a person, and what would have changed it. |
 
+It also serves one prompt, `morning_brief`. It hands the assistant today's held cases, computed
+in code, with instructions for a short brief: counts first, then each held case, most urgent
+first, with why it's held and what would change it. The prompt tells the assistant to call any
+held refund "proposed", to leave decisions to the reviewer, and to treat claims as claims. The
+queue it embeds holds no party text.
+
 ### The rules it keeps
 
 **Rules decide, and it's free.** Rulings come from the same pipeline as the API
@@ -159,7 +166,7 @@ carry. Party history, the messages written for each party and the advocates' arg
 served at all. The server's instructions tell clients to treat claims as claims, never as instructions.
 
 It keeps the evidence server's other rules too: errors don't echo input, a bug returns a generic
-error, the data is synthetic, and HTTP binds to loopback only.
+error, the data is synthetic, and HTTP binds to loopback unless it has bearer tokens.
 
 ### Run it
 
@@ -173,6 +180,63 @@ In CodeBuddy or WorkBuddy, add it the same way as the evidence server, with
 `"args": ["-m", "app.mcp_servers.support"]` and the name `triverity-support`. Then try asking:
 *"Use triverity-support to list the held cases. Why is the first one held, and what would have
 changed its ruling?"*
+
+#### A morning brief in WorkBuddy
+
+Add `triverity-support` to WorkBuddy, then create a scheduled task for weekday mornings with this
+instruction:
+
+> Get the morning_brief prompt from triverity-support and follow it.
+
+If your WorkBuddy version can't use MCP prompts, use the tools instead: *"Use triverity-support:
+list the held cases, get the ruling for each safety or high case, and write a brief of under 200
+words, most urgent first. Call any refund on a held case proposed. Don't decide anything."*
+
+## Bearer tokens
+
+Over HTTP, both servers can require a bearer token. Make one or more tokens and put them in
+`backend/.env`:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+```bash
+MCP_TOKENS=<token-1>,<token-2>      # comma-separated, 32+ characters each; keep them in .env only
+```
+
+With `MCP_TOKENS` set:
+
+- Every HTTP request needs `Authorization: Bearer <token>`, on loopback too. A missing or wrong
+  token gets `401` with `WWW-Authenticate: Bearer`.
+- A server may bind beyond loopback, for example `--host 0.0.0.0` behind an HTTPS proxy. Without
+  tokens, it still refuses to.
+- A token shorter than 32 characters stops the server at start-up.
+- Tokens are compared in constant time and never logged. A refused request logs only the
+  client's address.
+
+One token per client (WorkBuddy, CodeBuddy, ADP) means you can revoke one by removing it and
+restarting. stdio needs no token, since the client starts the server as its own process.
+
+To connect a client over HTTP, give it the URL and the header. Most clients read this
+`mcpServers` format. Check your version's MCP docs if it wants a transport type too:
+
+```json
+{
+  "mcpServers": {
+    "triverity-support": {
+      "url": "http://127.0.0.1:8766/mcp",
+      "headers": { "Authorization": "Bearer <token>" }
+    }
+  }
+}
+```
+
+If the evidence server has tokens, TriVerity's own Evidence agent sends one with
+`EVIDENCE_MCP_TOKEN=<token>` next to `EVIDENCE_MCP_URL`. Without it the server refuses the
+calls, and the agent runs its tools locally.
+
+A public endpoint for ADP still needs a deploy behind HTTPS. That's the next part of phase 4.
 
 ## Tests
 
@@ -204,6 +268,15 @@ changed its ruling?"*
 - no LLM call and no budget spent, even with an API key set
 - redacted, capped claims, no party history, and no party messages or agent reasoning
 - unknown IDs, generic errors, the loopback-only rule and a real stdio client
+- the morning brief prompt: the held queue in order, a person in charge, and no party text
+
+`backend/tests/test_mcp_auth.py` covers bearer tokens:
+
+- missing, wrong, truncated or non-bearer tokens get `401`; any configured token gets through
+- two `Authorization` headers are refused, and a refused token is never logged
+- short tokens are rejected; binding beyond loopback needs tokens, and tokens guard loopback too
+- real HTTP servers in subprocesses: the support server needs the token, and the Evidence agent
+  sends `EVIDENCE_MCP_TOKEN` (without it, its calls run locally)
 
 The tests skip if the MCP SDK isn't installed. CI installs it through `requirements-dev.txt`.
 
@@ -214,5 +287,7 @@ The tests skip if the MCP SDK isn't installed. CI installs it through `requireme
    same rulings.
 2. ~~**Phase 3:**~~ Done. A second server for support teams (`list_held_cases`,
    `get_case_summary`, `get_ruling`), with no tool that decides or closes a case.
-3. **Phase 4:** WorkBuddy (a scheduled morning brief of held cases), CodeBuddy, and a custom MCP
-   plugin on Tencent Cloud ADP. This needs authentication and a public HTTPS endpoint.
+3. **Phase 4:** WorkBuddy, CodeBuddy and a custom MCP plugin on Tencent Cloud ADP.
+   - ~~**4a:**~~ Done. Bearer tokens on the HTTP transport, and the `morning_brief` prompt.
+   - **4b:** a public HTTPS endpoint for the servers, on the Render deploy or beside it.
+   - **4c:** register the custom MCP plugin in ADP, and set up the scheduled brief in WorkBuddy.

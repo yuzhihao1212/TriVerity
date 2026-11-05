@@ -27,6 +27,7 @@ import importlib.util
 import ipaddress
 import logging
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import AsyncExitStack
 from functools import lru_cache
 from typing import Literal
 from urllib.parse import urlsplit
@@ -112,10 +113,18 @@ class McpRunner:
     async def _call_all(self, calls: list[Call]) -> list[list[str] | None]:
         from mcp import Client  # optional dependency, checked in runner_for
 
-        server = _inproc_server() if self.target == INPROC else self.target
         answers: list[list[str] | None] = []
         with anyio.fail_after(limits.EVIDENCE_MCP_TIMEOUT_S):
-            async with Client(server, read_timeout_seconds=limits.EVIDENCE_MCP_TIMEOUT_S) as client:
+            async with AsyncExitStack() as stack:
+                if self.target == INPROC:
+                    server = _inproc_server()
+                else:
+                    from mcp.client.streamable_http import streamable_http_client
+                    # The SDK doesn't close a client it was handed, so the stack does.
+                    http = await stack.enter_async_context(_http_client())
+                    server = streamable_http_client(self.target, http_client=http)
+                client = await stack.enter_async_context(
+                    Client(server, read_timeout_seconds=limits.EVIDENCE_MCP_TIMEOUT_S))
                 if not self._verified:
                     overview = await client.call_tool("case_overview", {"case_id": self.case_id})
                     body = overview.structured_content if not overview.is_error else None
@@ -148,6 +157,14 @@ def _facts(result: object, name: str, case_id: str) -> list[str] | None:
 def _inproc_server():
     from app.mcp_servers.evidence import build_server
     return build_server()
+
+
+def _http_client():
+    """An HTTP client with the MCP transport's timeouts, sending EVIDENCE_MCP_TOKEN when it's set."""
+    from mcp.shared._httpx_utils import create_mcp_http_client
+
+    token = settings.evidence_mcp_token.strip()
+    return create_mcp_http_client(headers={"Authorization": f"Bearer {token}"} if token else None)
 
 
 def _run_sync(fn, *args):

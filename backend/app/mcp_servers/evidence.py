@@ -13,8 +13,8 @@ Rules this server keeps:
 * Synthetic data only. It serves the sample disputes in ``data/``, by ID. Free text a
   party wrote (the complaint, chat messages) never leaves except as the redacted,
   length-capped quotes the tools already produce.
-* Local by default. ``streamable-http`` binds to loopback only until the server has
-  authentication (phase 4 of the MCP plan).
+* Local by default. ``streamable-http`` binds to loopback unless bearer tokens are set
+  (``MCP_TOKENS``); with tokens set, every HTTP request needs one (``_common.py``).
 
 Run it:
 
