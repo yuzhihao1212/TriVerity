@@ -27,6 +27,7 @@ A judge's route: [product and results](../README.md) → [architecture](architec
 | [Security scan record](security-scans.md) | Dated dependency and secret-scanning commands and outcomes. |
 | [Red-team findings](redteam/findings.md) | Prompt-injection attack outcomes and the changes they motivated. |
 | [Prompts](prompts.md) | Each agent's narrow role, checked output, fallbacks and lessons from testing. |
+| [Evidence MCP server](mcp.md) | The six evidence tools over the Model Context Protocol for WorkBuddy, CodeBuddy and other MCP clients: read-only, same facts as the agent. |
 | [API contract](api-contract.md) | Request/response shapes, streaming steps, access modes, limits, reviewer feedback and appeals. |
 | [Demo deployment](demo-deployment.md) | Public-demo hosting, access codes, cached samples, prewarming and the run checklist. |
 

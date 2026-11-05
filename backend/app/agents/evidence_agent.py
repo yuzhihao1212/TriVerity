@@ -21,7 +21,7 @@ from app.core import limits
 from app.core.safe_log import safe_reason
 from app.models.dispute import DisputeCase
 from app.models.resolution import EvidenceCollection, ToolCallRecord
-from app.services.data_sources import TOOLS, DataSources, data_available, parse_hhmm
+from app.services.data_sources import TOOLS, DataSources, data_available, parse_hhmm, window_args
 from app.services.evidence import CaseFacts
 from app.services.llm_client import OFFLINE_PLACEHOLDER, _strip_fences, carry_context, complete
 from app.services.text_safety import echoes, find_link_or_markup, normalise, sanitise
@@ -153,13 +153,8 @@ def _validate(request: object) -> tuple[str, dict, str] | None:
     args = request.get("args") if isinstance(request.get("args"), dict) else {}
     if not tool.window:
         return tool.name, {}, reason
-    start, end = parse_hhmm(args.get("start")), parse_hhmm(args.get("end"))
-    if start is None or end is None or start >= end:
-        return None
-    span = (end.hour * 60 + end.minute) - (start.hour * 60 + start.minute)
-    if span > limits.EVIDENCE_WINDOW_MAX_MIN:
-        return None
-    return tool.name, {"start": f"{start:%H:%M}", "end": f"{end:%H:%M}"}, reason
+    window = window_args(args)
+    return None if window is None else (tool.name, window, reason)
 
 
 def _run(sources: DataSources, requested: list, *, round_no: int,
