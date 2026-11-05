@@ -278,6 +278,17 @@ python scripts/evaluate.py --runs 3
 
 Optional: `pip install pre-commit && pre-commit install` adds the gitleaks secret check to every commit.
 
+### Evidence MCP server
+
+The six evidence tools also run as a read-only MCP server, so WorkBuddy, CodeBuddy or any MCP
+client can call them ([setup and rules](docs/mcp.md)):
+
+```bash
+cd backend
+pip install -r requirements-mcp.txt
+python -m app.mcp_servers.evidence
+```
+
 ## Repository layout
 
 ```text

@@ -70,6 +70,24 @@ def parse_hhmm(value: object) -> time | None:
     return time(int(match.group(1)), int(match.group(2))) if match else None
 
 
+def window_args(args: object) -> dict[str, str] | None:
+    """A tool's time window as {"start", "end"} in HH:MM, or None if it isn't allowed.
+
+    Shared by every caller of the tools (the Evidence agent and the MCP server), so a
+    window has the same rules however it arrives: valid 24-hour times, start before
+    end, and no longer than limits.EVIDENCE_WINDOW_MAX_MIN.
+    """
+    if not isinstance(args, dict):
+        return None
+    start, end = parse_hhmm(args.get("start")), parse_hhmm(args.get("end"))
+    if start is None or end is None or start >= end:
+        return None
+    span = (end.hour * 60 + end.minute) - (start.hour * 60 + start.minute)
+    if span > limits.EVIDENCE_WINDOW_MAX_MIN:
+        return None
+    return {"start": f"{start:%H:%M}", "end": f"{end:%H:%M}"}
+
+
 def _clock(moment: datetime) -> time:
     return moment.time().replace(second=0, microsecond=0)
 

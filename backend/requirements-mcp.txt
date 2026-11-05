@@ -1,0 +1,22 @@
+# Evidence MCP server (app/mcp_servers/evidence.py): the runtime plus the MCP Python SDK, pinned.
+# Not part of the demo image (the Dockerfile installs requirements.txt only), so the live
+# demo doesn't change. Install with: pip install -r requirements-mcp.txt
+# Frozen on 2026-11-05 (Python 3.14) on top of requirements.txt, which it didn't change.
+-r requirements.txt
+attrs==26.1.0
+cffi==2.1.1
+cryptography==50.0.2
+httpcore2==2.16.0
+httpx2==2.16.0
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
+mcp==2.3.0
+mcp-types==2.3.0
+pycparser==3.12
+PyJWT==2.15.1
+python-multipart==0.0.33
+pywin32==311 ; sys_platform == "win32"
+referencing==0.37.0
+rpds-py==2026.9.1
+sse-starlette==3.6.0
+truststore==0.10.5
