@@ -1,0 +1,165 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1680" width="1400" height="1680" font-family="Poppins, 'Open Sans', Helvetica, Arial, sans-serif" role="img" aria-labelledby="title description">
+  <title id="title">TriVerity: evidence, debate, deterministic ruling and the reviewer feedback loop</title>
+  <desc id="description">Code computes facts. Per-side Evidence Collection uses Tencent Hy3 to plan mock API lookups. Rider and Driver advocates argue and rebut. Fraud and Policy and Precedent checks feed rule-based judging; Hy3 explains. Triage leads to a reviewer queue, Evidence, Hearing, Ruling and Notify. Sending closes the case. Reopen permits a correction; appeals and reviewer decisions feed precedents. Public-demo feedback is disabled.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10z" fill="#31373E"/></marker>
+    <marker id="arrow-grey" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10z" fill="#8A939E"/></marker>
+    <style>
+      .det { fill: #F3F5F7; stroke: #31373E; stroke-width: 1.5; }
+      .llm { fill: #FDF0F4; stroke: #E93864; stroke-width: 1.8; }
+      .frame { fill: #FFFFFF; stroke: #31373E; stroke-width: 1.5; }
+      .h { font-size: 21px; font-weight: 700; fill: #31373E; }
+      .t { font-size: 18px; fill: #334155; }
+      .note { font-size: 18px; fill: #606774; }
+      .flow { stroke: #31373E; stroke-width: 1.8; fill: none; marker-end: url(#arrow); }
+      .rules { stroke: #8A939E; stroke-width: 1.6; stroke-dasharray: 6 4; fill: none; marker-end: url(#arrow-grey); }
+    </style>
+  </defs>
+  <rect width="1400" height="1680" fill="#FFFFFF"/>
+  <text x="40" y="43" font-size="28" font-weight="700" fill="#E93864">TriVerity</text>
+  <text x="40" y="78" font-size="24" font-weight="600" fill="#31373E">Multi-Agent Autonomous Dispute Resolution System</text>
+  <text x="40" y="112" class="note">Digital Native Track (Ryde)</text>
+  <rect x="525" y="94" width="18" height="18" rx="3" class="llm"/><text x="554" y="110" class="t">Uses Tencent Hy3</text>
+  <rect x="770" y="94" width="18" height="18" rx="3" class="det"/><text x="799" y="110" class="t">Deterministic code</text>
+  <path d="M1035,103 H1080" class="rules"/><text x="1094" y="110" class="t">Policy / feedback</text>
+  <g data-node="case"><rect x="40" y="150" width="420" height="130" rx="14" class="det"/>
+  <text x="60" y="182" class="h">Dispute filed</text>
+  <text x="60" y="211" class="t">Rider claim · driver statement</text>
+  <text x="60" y="236" class="t">Trip / GPS · fare · chat · history</text>
+  <text x="60" y="261" class="t">Synthetic samples + organiser adapter</text>
+  </g>
+  <g data-node="facts"><rect x="500" y="150" width="420" height="130" rx="14" class="det"/>
+  <text x="520" y="182" class="h">Evidence loader</text>
+  <text x="520" y="211" class="t">GPS: path, stops, gaps · trip time</text>
+  <text x="520" y="236" class="t">Fare: surge + promo · chat · history</text>
+  <text x="520" y="261" class="t">Computed facts with source IDs</text>
+  </g>
+  <g data-node="policy"><rect x="960" y="150" width="400" height="130" rx="14" class="det"/>
+  <text x="980" y="182" class="h">A mock Ryde policy</text>
+  <text x="980" y="211" class="t">Shared by advocates and Judge</text>
+  <text x="980" y="236" class="t">RD-1…RD-5 · NS-1…NS-4</text>
+  <text x="980" y="261" class="t">SAFE / FRAUD / ESC / PREC / REF</text>
+  </g>
+  <path d="M460,215 H496" class="flow"/>
+  <path d="M710,280 V305 H480 V326" class="flow"/>
+  <g data-node="collection"><rect x="40" y="330" width="880" height="150" rx="14" class="llm"/>
+  <text x="60" y="362" class="h">Evidence Collection agent, per side</text>
+  <text x="60" y="391" class="t">Tencent Hy3 chooses each side’s lookups</text>
+  <text x="60" y="416" class="t">Up to two rounds per side</text>
+  <text x="60" y="441" class="t">Validated results add evidence, not rulings</text>
+  </g>
+  <g data-node="tools"><rect x="550" y="349" width="350" height="111" rx="14" class="det"/>
+  <text x="570" y="381" class="h">Deterministic tools</text>
+  <text x="570" y="410" class="t">Trip / GPS / fares / chat / events</text>
+  <text x="570" y="435" class="t">Mock APIs; contact quotes redacted</text>
+  </g>
+  <path d="M920,250 H940 V590 H956" class="flow"/>
+  <path d="M940,590 V755 H956" class="flow"/>
+  <path d="M480,480 V505 H250 V526" class="flow"/>
+  <path d="M480,505 H710 V526" class="flow"/>
+  <g data-node="rider"><rect x="40" y="530" width="420" height="130" rx="14" class="llm"/>
+  <text x="60" y="562" class="h">Rider Advocate</text>
+  <text x="60" y="591" class="t">Argues only for the rider</text>
+  <text x="60" y="616" class="t">Cites evidence + supporting rules</text>
+  <text x="60" y="641" class="t">Checked JSON / IDs; fallback on failure</text>
+  </g>
+  <g data-node="driver"><rect x="500" y="530" width="420" height="130" rx="14" class="llm"/>
+  <text x="520" y="562" class="h">Driver Advocate</text>
+  <text x="520" y="591" class="t">Argues only for the driver</text>
+  <text x="520" y="616" class="t">Cites evidence + supporting rules</text>
+  <text x="520" y="641" class="t">Checked JSON / IDs; fallback on failure</text>
+  </g>
+  <g data-node="fraud"><rect x="960" y="530" width="400" height="130" rx="14" class="det"/>
+  <text x="980" y="562" class="h">Fraud &amp; bad-faith detector</text>
+  <text x="980" y="591" class="t">History + contradicted claims</text>
+  <text x="980" y="616" class="t">High risk → human review</text>
+  <text x="980" y="641" class="t">Does not decide amounts</text>
+  </g>
+  <path d="M250,660 V706" class="flow"/>
+  <path d="M710,660 V706" class="flow"/>
+  <g data-node="rebuttal"><rect x="40" y="710" width="880" height="110" rx="14" class="llm"/>
+  <text x="60" y="742" class="h">Rebuttal round: Rider ↔ Driver</text>
+  <text x="60" y="771" class="t">Each side answers the opposing case once, citing evidence IDs</text>
+  <text x="60" y="796" class="t">Checked replies; skipped after an advocate fallback</text>
+  </g>
+  <g data-node="precedent"><rect x="960" y="710" width="400" height="150" rx="14" class="det"/>
+  <text x="980" y="742" class="h">Policy &amp; Precedent agent</text>
+  <text x="980" y="771" class="t">3 closest rulings / 162 synthetic</text>
+  <text x="980" y="796" class="t">Retrieval + consistency in code</text>
+  <text x="980" y="821" class="t">Reviewer feedback grows the KB</text>
+  <text x="980" y="846" class="t">Feedback can trigger review (PREC-1)</text>
+  </g>
+  <path d="M480,820 V906" class="flow"/>
+  <path d="M1160,660 V685 H925 V885 H780 V906" class="flow"/>
+  <path d="M1160,860 V885 H1060 V906" class="flow"/>
+  <g data-node="judge"><rect x="40" y="910" width="1320" height="210" rx="16" class="frame"/>
+  <text x="60" y="939" class="h">Judge: rules decide; Tencent Hy3 explains</text>
+  </g>
+  <g data-node="rules"><rect x="60" y="958" width="610" height="142" rx="14" class="det"/>
+  <text x="80" y="990" class="h">① Policy decision + counterfactuals</text>
+  <text x="80" y="1019" class="t">Decision · amount · confidence · applied rules</text>
+  <text x="80" y="1044" class="t">Mock policy, not narratives; REF-1 caps refunds</text>
+  <text x="80" y="1069" class="t">What would change this ruling? Computed in code</text>
+  </g>
+  <g data-node="narration"><rect x="710" y="958" width="630" height="142" rx="14" class="llm"/>
+  <text x="730" y="990" class="h">② Tencent Hy3 explains</text>
+  <text x="730" y="1019" class="t">Answers both arguments and replies; cites precedents</text>
+  <text x="730" y="1044" class="t">Separate party messages; internal signals excluded</text>
+  <text x="730" y="1069" class="t">Checked output → deterministic text on failure</text>
+  </g>
+  <path d="M670,1030 H706" class="flow"/>
+  <path d="M960,250 H950 V892 H20 V1030 H56" class="rules"/>
+  <path d="M700,1120 V1156" class="flow"/>
+  <g data-node="triage"><rect x="40" y="1160" width="1320" height="65" rx="14" class="det"/>
+  <text x="60" y="1187" class="h">Triage tiers: safety → high → standard → low</text>
+  <text x="60" y="1212" class="t">Escalations get a tier + score; safety first. Internal only; persistent routing and SLA clocks are future work.</text>
+  </g>
+  <path d="M190,1225 V1245 H20 V1365 H36" class="flow"/>
+  <text x="40" y="1275" class="h">Reviewer console: visible evidence, human control</text>
+  <g data-node="home"><rect x="40" y="1300" width="300" height="130" rx="14" class="det"/>
+  <text x="60" y="1332" class="h">Home queue</text>
+  <text x="60" y="1361" class="t">Pick the next case</text>
+  <text x="60" y="1386" class="t">Not run → Intake</text>
+  <text x="60" y="1411" class="t">Closed cases at the bottom</text>
+  </g>
+  <g data-node="inspect"><rect x="380" y="1300" width="300" height="130" rx="14" class="det"/>
+  <text x="400" y="1332" class="h">Evidence / Hearing</text>
+  <text x="400" y="1361" class="t">Inspect facts by source</text>
+  <text x="400" y="1386" class="t">Compare both advocates</text>
+  <text x="400" y="1411" class="t">Live steps + AI / Code badges</text>
+  </g>
+  <g data-node="review"><rect x="720" y="1300" width="300" height="130" rx="14" class="det"/>
+  <text x="740" y="1332" class="h">Ruling</text>
+  <text x="740" y="1361" class="t">Accept / override</text>
+  <text x="740" y="1386" class="t">Give a reviewer reason</text>
+  <text x="740" y="1411" class="t">Final decision → precedent</text>
+  </g>
+  <g data-node="notify"><rect x="1060" y="1300" width="300" height="130" rx="14" class="det"/>
+  <text x="1080" y="1332" class="h">Notify parties</text>
+  <text x="1080" y="1361" class="t">Reviewer notes + privacy check</text>
+  <text x="1080" y="1386" class="t">Approve &amp; send (simulated)</text>
+  <text x="1080" y="1411" class="t">Sending closes the case</text>
+  </g>
+  <path d="M340,1365 H376" class="flow"/>
+  <path d="M680,1365 H716" class="flow"/>
+  <path d="M1020,1365 H1056" class="flow"/>
+  <path d="M1210,1430 V1476" class="flow"/>
+  <g data-node="closed"><rect x="1060" y="1480" width="300" height="100" rx="14" class="det"/>
+  <text x="1080" y="1512" class="h">Closed / reopen</text>
+  <text x="1080" y="1541" class="t">Read-only + sent history</text>
+  <text x="1080" y="1566" class="t">Reopen → correction</text>
+  </g>
+  <g data-node="appeal"><rect x="720" y="1480" width="300" height="100" rx="14" class="det"/>
+  <text x="740" y="1512" class="h">Appeal</text>
+  <text x="740" y="1541" class="t">After delivery; human review</text>
+  <text x="740" y="1566" class="t">Decision → precedent</text>
+  </g>
+  <path d="M1060,1510 H1024" class="flow"/>
+  <path d="M1060,1550 H1040 V1455 H700 V1405 H716" class="flow"/>
+  <path d="M1020,1330 H1040 V1243 H1380 V785 H1364" class="rules"/>
+  <path d="M870,1580 V1605 H1380 V1243" class="rules"/>
+  <text x="40" y="1510" class="note">Learning feedback: reviewer decisions + appeal outcomes</text>
+  <text x="40" y="1540" class="note">Feedback is in memory; review history stays in the browser session.</text>
+  <text x="40" y="1637" class="note">AI Live / Offline: same rules; template wording offline. Public demo: cached samples; appeals / feedback off.</text>
+  <text x="40" y="1665" class="note">All pink stages use Tencent Hy3 via Tencent Cloud TokenHub · 7–9 LLM calls · about 10,000 tokens per dispute.</text>
+</svg>
