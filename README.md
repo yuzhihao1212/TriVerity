@@ -11,7 +11,7 @@ co-hosted by AI Singapore: picked from the Top 10 finalists of ~150 teams (400+ 
 **▶ [Live demo](https://triverity-demo.onrender.com)** · **🎬 [Demo video](https://www.youtube.com/watch?v=aszYaflceGc)** ·
 **🖼️ [Tencent Cloud project gallery](https://tch.tencentcloud.com/works/398)**
 
-*A hackathon prototype by OeroAI, built for Ryde's challenge at the Tencent Cloud AI Hackathon Singapore 2026.
+*A hackathon prototype by [team OeroAI](#team), built for Ryde's challenge at the Tencent Cloud AI Hackathon Singapore 2026.
 Not affiliated with or endorsed by Ryde. All dispute data is synthetic.*
 
 > **About this repository.** This is TriVerity's public showcase: the overview, screenshots and demo video.
@@ -139,6 +139,16 @@ only extracts facts from photos, and the policy rules still decide.
 
 Also next: server-side lookup of trip data, persistence and SLA clocks for the review queue, and shadow-mode
 agreement measured against Ryde's reviewers.
+
+## Team
+
+TriVerity was built by team **OeroAI** for the Tencent Cloud AI CAN DO IT Hackathon Singapore 2026.
+
+| Name | Role | LinkedIn |
+| --- | --- | --- |
+| Yu ZhiHao | Team lead. Multi-agent pipeline (advocates, Judge, policy rules), reviewer console and landing page, MCP servers, docs and submission | [LinkedIn](https://www.linkedin.com/in/yuzhihao/) |
+| Shreya | Security and deployment. API hardening, prompt-injection red team and threat model, judge access codes, Docker and Render public demo | [LinkedIn](https://www.linkedin.com/in/sshreyx/) |
+| Lennon | Evaluation and triage. Evaluation harness, organisers' dataset adapter, escalation triage, chat sentiment, open-source model benchmarks | [LinkedIn](https://www.linkedin.com/in/lennoly/) |
 
 ## Built with
 
